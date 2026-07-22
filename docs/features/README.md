@@ -1,0 +1,32 @@
+# Danh sách tính năng
+
+Mỗi tính năng có file đặc tả riêng. Mức ưu tiên: **[M]** Must · **[S]** Should · **[C]** Could.
+
+| # | Tính năng | File | Ưu tiên | Trụ cột phiếu |
+|---|-----------|------|---------|---------------|
+| 01 | Xác thực & phân quyền | [01-auth.md](01-auth.md) | [M] | |
+| 02 | Quản lý Quiz & Câu hỏi | [02-quiz-management.md](02-quiz-management.md) | [M] | |
+| 03 | Chơi quiz (đơn) | [03-gameplay.md](03-gameplay.md) | [M] | |
+| 04 | Phòng đấu real-time (Multiplayer) | [04-multiplayer-realtime.md](04-multiplayer-realtime.md) | [M] | ✅ Real-time |
+| 05 | AI sinh đề từ học liệu (RAG) | [05-ai-rag-generation.md](05-ai-rag-generation.md) | [M] | ✅ AI/RAG |
+| 06 | AI chấm & giải thích tự luận | [06-ai-grading.md](06-ai-grading.md) | [M] | ✅ AI |
+| 07 | Gợi ý cá nhân hóa (Neo4j) | [07-recommendation-neo4j.md](07-recommendation-neo4j.md) | [M] | ✅ Neo4j |
+| 08 | Trợ lý học tập RAG chatbot | [08-ai-chatbot-rag.md](08-ai-chatbot-rag.md) | [M] | ✅ AI/RAG |
+| 09 | Thống kê & báo cáo | [09-analytics.md](09-analytics.md) | [S] | |
+| 10 | Quản trị (Admin) | [10-admin.md](10-admin.md) | [S] | |
+| 11 | Flashcard & lặp lại ngắt quãng (SRS) | [11-flashcard-srs.md](11-flashcard-srs.md) | [S] | ➕ AI/RAG |
+| 12 | Chống gian lận thi (Anti-Cheat) | [12-anti-cheat.md](12-anti-cheat.md) | [S] | ➕ AI + Real-time |
+| 13 | Gamification (XP, badge, streak, daily) | [13-gamification.md](13-gamification.md) | [S] | ➕ Gắn kết |
+| 14 | Lớp học & giao bài (Classroom) | [14-classroom.md](14-classroom.md) | [S] | ➕ Giáo dục |
+| 15 | Bảng xếp hạng theo mùa | [15-seasonal-leaderboard.md](15-seasonal-leaderboard.md) | [S] | ➕ Redis |
+| 16 | Thông báo & nhắc ôn tập | [16-notifications.md](16-notifications.md) | [S] | ➕ SRS + Real-time |
+
+## Mẫu cấu trúc mỗi file feature
+
+- **Mục tiêu** — vấn đề tính năng giải quyết.
+- **User story / Use case** — ai làm gì.
+- **Yêu cầu chức năng (FR)** — chi tiết.
+- **Luồng xử lý** — các bước.
+- **API liên quan** — trỏ tới [api.md](../api.md).
+- **Dữ liệu liên quan** — trỏ tới [database.md](../database.md).
+- **Ghi chú kỹ thuật / Ràng buộc.**
