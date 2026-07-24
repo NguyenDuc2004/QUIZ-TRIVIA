@@ -5,7 +5,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     Client (Browser)                         │
-│         React SPA + TypeScript + Vite + TailwindCSS          │
+│     React SPA + TypeScript + Vite + Ant Design + Tailwind    │
 └──────────────┬───────────────────────────┬──────────────────┘
               │ HTTPS (REST + SSE)         │ WebSocket (STOMP)
               ▼                            ▼

@@ -21,7 +21,7 @@ Dùng chung đặt ở `src/shared` (client axios, ui, utils).
 2. Viết hàm API dùng axios instance tập trung (không hardcode URL, đọc từ env).
 3. Bọc bằng TanStack Query: `useQuery` (đọc), `useMutation` (ghi) + invalidate cache.
 4. Form: React Hook Form + **Zod** schema validate.
-5. UI: TailwindCSS + shadcn/ui; trạng thái loading/error rõ ràng.
+5. UI: Ant Design (component) + TailwindCSS (layout/spacing); trạng thái loading/error rõ ràng.
 6. **Real-time (nếu là phòng đấu):** `@stomp/stompjs` + SockJS, subscribe `/topic/room/{code}`.
 7. **Chatbot:** `EventSource` (SSE) nhận stream token; render dần.
 

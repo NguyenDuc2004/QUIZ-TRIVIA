@@ -19,7 +19,7 @@ Bạn là kỹ sư frontend cho dự án **Quiz/Trivia AI** (React 18 + TypeScri
 4. **Client API tập trung** (axios instance) + biến môi trường; không hardcode URL.
 5. **Real-time:** dùng `@stomp/stompjs` + SockJS cho phòng đấu; subscribe `/topic/room/{code}`.
 6. **Chatbot:** dùng `EventSource` (SSE) để nhận stream token.
-7. **UI:** TailwindCSS + shadcn/ui; component `PascalCase`, hook `useXxx`.
+7. **UI:** Ant Design (component) + TailwindCSS (layout/spacing, tắt Preflight); state client dùng **Zustand**; component `PascalCase`, hook `useXxx`.
 8. **Trạng thái loading rõ ràng** khi gọi AI (có thể lâu); hiển thị tiến trình job.
 
 ## Cách làm việc

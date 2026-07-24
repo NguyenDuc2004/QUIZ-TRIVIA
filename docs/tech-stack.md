@@ -20,7 +20,7 @@
 | Tài liệu API | springdoc-openapi (Swagger UI) | |
 | Test | JUnit 5, Mockito, Testcontainers | |
 | Load test | **k6 / Gatling / JMeter** | Kiểm thử chịu tải real-time |
-| Build | Maven (hoặc Gradle) | |
+| Build | Maven | |
 
 ## 2. Tích hợp AI
 
@@ -30,7 +30,7 @@
 | Provider dự phòng | **xAI Grok API** | Gói miễn phí, fallback khi Gemini lỗi |
 | Embedding | Gemini embedding | Tạo vector cho RAG |
 | HTTP client | Spring `WebClient` | Gọi REST của LLM |
-| Abstraction (tùy chọn) | Spring AI | Có thể dùng để chuẩn hóa, vẫn bọc thêm orchestrator riêng cho logic fallback |
+| Abstraction | ~~Spring AI~~ (không dùng) | Gọi trực tiếp qua `WebClient`, tự viết `AiOrchestrator` để kiểm soát fallback/quota |
 
 ## 3. Frontend
 
@@ -39,13 +39,16 @@
 | Framework | React 18 + TypeScript |
 | Build tool | Vite |
 | Data fetching | TanStack Query (React Query) |
-| State | Zustand (hoặc Redux Toolkit) |
+| State | Zustand |
 | Routing | React Router |
-| UI | TailwindCSS + shadcn/ui (hoặc Ant Design) |
+| UI | **Ant Design** (component) + TailwindCSS (layout/spacing) |
 | Form | React Hook Form + Zod |
 | HTTP | Axios / Fetch |
 | Real-time | `@stomp/stompjs` + SockJS |
 | Streaming | EventSource (SSE) cho chatbot |
+
+> **Antd + Tailwind:** Dùng Ant Design cho component (Table, Form, Modal…), Tailwind chỉ cho layout/spacing.
+> Tắt Tailwind Preflight (`corePlugins: { preflight: false }` trong `tailwind.config`) để tránh reset CSS đè lên style của Antd. Tùy biến theme qua `ConfigProvider` của Antd.
 
 ## 4. Hạ tầng & CSDL
 
