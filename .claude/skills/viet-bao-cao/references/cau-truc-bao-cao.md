@@ -87,7 +87,7 @@ Nguồn: `docs/phieu_giao_de_tai/phieu_giao_de_tai.md` (Trưởng đơn vị: TS
 - 1.2. Trí tuệ nhân tạo tạo sinh (Generative AI) & LLM — «LLM là gì; ứng dụng trong đề tài: sinh đề, chấm tự luận, chatbot. Gemini 2.5 Flash/Pro (chính) → Grok (dự phòng).» — `features/05, 06, 08`
 - 1.3. RAG (Retrieval-Augmented Generation) — «truy xuất học liệu + sinh có dẫn nguồn để chống ảo giác (grounding); vai trò trong sinh đề & chatbot; embedding + tìm kiếm ngữ nghĩa.» — `features/05-ai-rag-generation.md`
 - 1.4. Spring Boot — «framework backend Java 21; auto-config, REST, phân lớp Controller→Service→Repository; vai trò: API, nghiệp vụ, tích hợp AI.»
-- 1.5. React + TypeScript (Vite) — «SPA, component, TanStack Query, Zustand, Ant Design + Tailwind. LƯU Ý: đề tài dùng React + Vite, KHÔNG phải Next.js.»
+- 1.5. React + TypeScript (Vite) — «SPA, component, TanStack Query, Zustand, Ant Design v6 + Tailwind v4. Đề tài dùng **React 19 + Vite 8**. LƯU Ý: KHÔNG phải Next.js.»
 - 1.6. PostgreSQL & pgvector — «RDBMS lưu dữ liệu nghiệp vụ; pgvector lưu vector học liệu phục vụ RAG.»
 - 1.7. Neo4j (CSDL đồ thị) — «mô hình đồ thị User–Topic–Quiz, Cypher; vai trò: phân tích hành vi, gợi ý quiz & lộ trình học.» — `features/07-recommendation-neo4j.md`
 - 1.8. Redis — «in-memory key-value; vai trò: cache, quota AI, trạng thái phòng đấu, **Pub/Sub đồng bộ real-time**, Sorted Set cho leaderboard.»

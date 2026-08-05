@@ -11,13 +11,13 @@ Nền tảng web trắc nghiệm tích hợp trí tuệ nhân tạo — đồ á
 
 ## Công nghệ
 
-Java 21 · Spring Boot 3 · React 18 + Vite + TypeScript · PostgreSQL 16 + pgvector · Neo4j 5 · Redis 7 · Docker Compose
+Java 21 · Spring Boot 3.5 · React 19 + Vite + TypeScript · Ant Design · PostgreSQL 16 + pgvector · Neo4j 5 · Redis 7 · Docker Compose
 
 ## Chạy dự án
 
 ```bash
 cp .env.example .env          # rồi điền GEMINI_API_KEY, GROK_API_KEY
-docker compose up -d          # PostgreSQL (5432) · Neo4j (7474/7687) · Redis (6379)
+docker compose up -d          # PostgreSQL (5434) · Neo4j (7474/7687) · Redis (6379)
 
 cd backend && ./mvnw spring-boot:run        # API: http://localhost:8080 · Swagger: /swagger-ui.html
 cd frontend && npm install && npm run dev   # Web: http://localhost:5173

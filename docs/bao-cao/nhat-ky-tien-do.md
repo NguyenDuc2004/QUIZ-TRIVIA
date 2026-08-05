@@ -49,8 +49,9 @@ _(ghi lại khi kết thúc ngày)_
 
 ### Nhiệm vụ
 - [x] `docker compose up -d` — 3 container lên, kiểm tra kết nối từng CSDL
-- [ ] Khởi tạo project Spring Boot trong `backend/` (Maven, Java 21, package `com.datn.quizai`)
-- [ ] Khởi tạo project React + Vite + TypeScript trong `frontend/`
+- [x] Khởi tạo project Spring Boot trong `backend/` (Maven, Java 21, package `com.datn.quizai`)
+- [x] Khởi tạo project React + Vite + TypeScript trong `frontend/`
+- [x] BE khởi động được, FE gọi được BE qua proxy, test `contextLoads` pass
 
 ### Đã làm được
 - Tạo `.env` từ `.env.example` (đã gitignore).
@@ -61,16 +62,24 @@ _(ghi lại khi kết thúc ngày)_
   - Redis 7: `PING` → `PONG`.
 - Chốt quy ước phát triển: monorepo `backend/` + `frontend/`, lát cắt dọc từng tính năng — `docs/conventions.md §6–§7`.
 
+- Dựng khung `backend/`: Spring Boot 3.5.16, Java 21, Maven wrapper, 14 package theo `architecture.md §3`, `application.yml` đọc cấu hình từ biến môi trường.
+- Dựng khung `frontend/`: React 19 + Vite 8 + TS, Ant Design v6, Tailwind v4 (không nạp preflight), TanStack Query, React Router 7, Zustand, RHF + Zod, axios client tập trung, proxy `/api` `/ws` `/actuator` sang :8080.
+- `SecurityConfig` nền: chốt luật Guest — `/api/v1/auth/**` và `GET /api/v1/quizzes*` mở, còn lại `authenticated()`.
+- **Kiểm chứng chạy thật:** `mvn test` pass (`contextLoads`), `npm run build` pass, BE trả `{"status":"UP"}`, FE dev server gọi BE qua proxy OK.
+- Ma trận quyền đo bằng curl: `/actuator/health` 200 · `/api/v1/quizzes` 404 (qua được security, chưa có controller) · `/api/v1/users/me` **401** · `/v3/api-docs` 200.
+
 ### Nợ / chuyển sang ngày sau
-- Khởi tạo `backend/` (Spring Boot) và `frontend/` (React+Vite) — chưa có thư mục code nào.
 - Migration Flyway `V1__init.sql` (bảng `users`) — schema hiện vẫn rỗng.
+- Slice Auth: JWT filter, `AuthService`, endpoint `/auth/*`, trang đăng nhập/đăng ký FE, test.
 
 ### Vướng mắc
-- Tiến độ đang chậm so với `ke-hoach-tien-do.md` (kế hoạch tuần 1 là 20–26/07, nay đã 05/08) → cần dồn Auth + Quiz trong các ngày tới.
+- **Xung đột cổng 5432:** máy đã cài sẵn PostgreSQL 17 (5432) và 18 (5433) chạy dạng service Windows → JDBC nối nhầm vào Postgres của máy, báo `password authentication failed for user "quiz"`. **Cách xử lý:** publish container ra **cổng 5434** (không tắt service nào của máy), sửa `docker-compose.yml`, `.env`, `application.yml`.
+- Tiến độ chậm so với `ke-hoach-tien-do.md` (kế hoạch tuần 1 là 20–26/07, nay đã 05/08) → cần dồn Auth + Quiz trong các ngày tới.
 
 ### Ghi chú báo cáo
-- **Mục 3.1 (Môi trường triển khai):** Docker Desktop 28.0.1 trên Windows 11; image `pgvector/pgvector:pg16` (PostgreSQL 16.14 + pgvector 0.8.6), `neo4j:5`, `redis:7-alpine`; cổng 5432 / 7474+7687 / 6379.
+- **Mục 3.1 (Môi trường triển khai):** Docker Desktop 28.0.1 trên Windows 11; image `pgvector/pgvector:pg16` (PostgreSQL 16.14 + pgvector 0.8.6), `neo4j:5`, `redis:7-alpine`; cổng **5434** / 7474+7687 / 6379. Backend Spring Boot 3.5.16 + JDK 21.0.3, Maven 3.9.11; Frontend Node 22.17 + Vite 8.
 - **Mục 1.6:** pgvector bật bằng `CREATE EXTENSION vector` lúc container khởi tạo lần đầu, dùng toán tử `<=>` (cosine distance) cho retrieval RAG.
+- **Mục 2.3 / 3.4 (bảo mật):** có số liệu thực nghiệm đầu tiên — bảng mã trạng thái chứng minh Guest bị chặn đúng thiết kế (401 với `/users/me`, đi qua với `/quizzes`).
 
 ---
 

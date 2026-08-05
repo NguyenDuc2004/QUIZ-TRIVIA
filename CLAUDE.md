@@ -22,8 +22,8 @@ SV Nguyễn Khắc Minh Đức · GVHD ThS. Nguyễn Đức Lưu · Thời gian 
 ## 2. Stack (không tự đổi)
 
 - **Backend** `backend/`: Java 21, Spring Boot 3.x, Maven, Spring Web + Security + Data JPA + Data Neo4j + Data Redis + WebSocket (STOMP), Flyway, Jakarta Validation, springdoc-openapi, Resilience4j, Apache Tika.
-- **Frontend** `frontend/`: React 18 + TypeScript + Vite, TanStack Query, Zustand, React Router, **Ant Design** (component) + TailwindCSS (chỉ layout/spacing, tắt preflight), React Hook Form + Zod, `@stomp/stompjs` + SockJS, EventSource cho SSE.
-- **Dữ liệu**: PostgreSQL 16 + pgvector · Neo4j 5 · Redis 7 — chạy qua `docker compose up -d`.
+- **Frontend** `frontend/`: React 19 + TypeScript + Vite 8, TanStack Query, Zustand, React Router 7, **Ant Design v6** (component) + Tailwind v4 (chỉ layout/spacing, **không nạp preflight** — xem `src/index.css`), React Hook Form + Zod, `@stomp/stompjs` + SockJS, EventSource cho SSE.
+- **Dữ liệu**: PostgreSQL 16 + pgvector (**cổng 5434**, vì máy dev đã có PostgreSQL 17/18 giữ 5432/5433) · Neo4j 5 (7687) · Redis 7 (6379) — chạy qua `docker compose up -d`.
 - **AI**: Google Gemini (chính) → xAI Grok (dự phòng), gọi qua `WebClient` trong `AiOrchestrator` tự viết. **KHÔNG** dùng Spring AI, **KHÔNG** LangChain4j.
 - Không dùng: Next.js, RabbitMQ, microservices, MongoDB.
 

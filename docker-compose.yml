@@ -8,7 +8,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-quiz}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quiz123}
     ports:
-      - "5432:5432"
+      # Máy dev đã cài sẵn PostgreSQL 17 (5432) và 18 (5433) dạng service Windows,
+      # nên container publish ra 5434 để không xung đột. Trong container vẫn là 5432.
+      - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d
