@@ -7,6 +7,7 @@ import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
 import { DIFFICULTY_COLOR, DIFFICULTY_LABEL } from '@/features/quiz/constants'
 import { useQuizSummary } from '@/features/quiz/hooks/useQuizQueries'
+import { useAuthStore } from '@/features/auth/store/authStore'
 import type { AttemptMode, AttemptSummary, LeaderboardEntry } from '../api/attemptApi'
 import { MODE_HINT, MODE_LABEL, STATUS_COLOR, STATUS_LABEL, formatDuration } from '../constants'
 import { useAttemptHistory, useLeaderboard, useStartAttempt } from '../hooks/useAttemptQueries'
@@ -19,6 +20,7 @@ const { Text, Paragraph } = Typography
  */
 export default function QuizIntroPage() {
   const { id: quizId } = useParams<{ id: string }>()
+  const currentUser = useAuthStore((state) => state.user)
   const { data: quiz, isPending, error } = useQuizSummary(quizId)
   const { data: history } = useAttemptHistory({ quizId, size: 5 })
   const { data: leaderboard } = useLeaderboard(quizId)
@@ -35,6 +37,7 @@ export default function QuizIntroPage() {
 
   const minutes = quiz.timeLimitSec ? Math.round(quiz.timeLimitSec / 60) : null
   const inProgress = history?.content.find((attempt) => attempt.status === 'IN_PROGRESS')
+  const isOwner = currentUser?.id === quiz.ownerId
 
   return (
     <Space direction="vertical" size="large" className="w-full">
@@ -54,6 +57,19 @@ export default function QuizIntroPage() {
           </Space>
         }
       />
+
+      {isOwner && (
+        <Alert
+          type="info"
+          showIcon
+          message="Đây là quiz của bạn. Bạn vẫn làm bài được để tự kiểm đề — đáp án bị giấu y như với người học, và bài của bạn cũng lên bảng xếp hạng."
+          action={
+            <Link to={`/my-quizzes/${quizId}`}>
+              <Button size="small">Soạn câu hỏi</Button>
+            </Link>
+          }
+        />
+      )}
 
       {inProgress && (
         <Alert

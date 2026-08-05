@@ -67,6 +67,8 @@ GET    /api/v1/quizzes/{id}/leaderboard Bảng xếp hạng (tối đa 50 dòng)
 **Quyền:** toàn bộ mục này yêu cầu **đăng nhập** — Guest không làm bài, không xem bảng xếp hạng.
 Quiz PRIVATE của người khác trả **404**. Bài làm là dữ liệu riêng: người khác *và cả chủ quiz/Admin*
 truy cập đều nhận **404** (thống kê cho Creator nằm ở features/09).
+Không giới hạn theo vai trò: **chủ quiz làm được bài trên quiz của mình** (kể cả PRIVATE) để tự kiểm đề,
+và cũng bị giấu đáp án như mọi người.
 
 **Chế độ (`mode`)**
 

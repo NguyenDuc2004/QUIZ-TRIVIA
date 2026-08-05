@@ -67,6 +67,11 @@ ràng, dễ giải thích cho người học, và khớp với cách chấm tr�
 tính là "toán": bỏ dấu sẽ biến câu sai thành câu đúng. Muốn chấp nhận nhiều cách viết thì người soạn đề
 thêm từng dòng đáp án.
 
-**8. `SHORT_ANSWER` tạm 0 điểm, đánh dấu `PENDING_AI`.** Chưa có AI nên không thể chấm; hệ thống nói rõ
+**8. Chủ quiz làm được bài trên quiz của chính mình**, kể cả quiz PRIVATE — đây là cách tự kiểm đề
+trước khi xuất bản. Không có ưu tiên nào: đáp án vẫn bị giấu y như với người học, bài vẫn lên bảng xếp
+hạng. Lối vào là nút **"Làm thử"** ở trang *Quiz của tôi* và màn soạn quiz. Không chặn vì chặn cũng vô
+nghĩa (chủ quiz vốn xem được đáp án ở màn soạn đề) mà lại mất một chức năng hữu ích.
+
+**9. `SHORT_ANSWER` tạm 0 điểm, đánh dấu `PENDING_AI`.** Chưa có AI nên không thể chấm; hệ thống nói rõ
 trên giao diện là câu đó đang chờ chấm và điểm cuối có thể cao hơn, thay vì lặng lẽ tính sai.
 Câu tự luận **bỏ trống** thì chốt sai ngay, không đẩy sang AI.

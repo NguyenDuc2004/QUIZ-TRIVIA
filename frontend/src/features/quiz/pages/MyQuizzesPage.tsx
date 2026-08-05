@@ -75,12 +75,18 @@ export default function MyQuizzesPage() {
     {
       title: '',
       key: 'actions',
-      width: 200,
+      width: 260,
       render: (_, row) => (
         <Space size="small">
           <Link to={`/my-quizzes/${row.id}`} className="text-sm font-bold">
             Soạn câu hỏi
           </Link>
+          {/* Chủ quiz làm được bài trên quiz của mình, kể cả quiz riêng tư — dùng để tự kiểm đề */}
+          {row.questionCount > 0 && (
+            <Link to={`/quizzes/${row.id}`} className="text-sm font-bold">
+              Làm thử
+            </Link>
+          )}
           <Button type="link" size="small" onClick={() => setEditing(row)}>
             Sửa
           </Button>

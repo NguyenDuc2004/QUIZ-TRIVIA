@@ -30,6 +30,7 @@ export interface QuizSummary {
   aiGenerated: boolean
   timeLimitSec: number | null
   questionCount: number
+  ownerId: string
   ownerDisplayName: string
   createdAt: string
 }

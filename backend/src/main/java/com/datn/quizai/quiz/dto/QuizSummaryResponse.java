@@ -22,6 +22,7 @@ public record QuizSummaryResponse(
         boolean aiGenerated,
         Integer timeLimitSec,
         int questionCount,
+        UUID ownerId,
         String ownerDisplayName,
         OffsetDateTime createdAt
 ) {
@@ -46,6 +47,7 @@ public record QuizSummaryResponse(
                 quiz.isAiGenerated(),
                 quiz.getTimeLimitSec(),
                 questionCount,
+                quiz.getOwner().getId(),
                 quiz.getOwner().getDisplayName(),
                 quiz.getCreatedAt());
     }
