@@ -61,6 +61,9 @@ export default function AppLayout() {
           <NavLink to="/quizzes" className={navLinkClass}>
             Khám phá
           </NavLink>
+          <NavLink to="/my-attempts" className={navLinkClass}>
+            Lịch sử làm bài
+          </NavLink>
           {canCreate && (
             <>
               <NavLink to="/my-quizzes" className={navLinkClass}>

@@ -56,13 +56,48 @@ DELETE /api/v1/questions/{id}           Xóa — 409 nếu đang dùng trong qui
 
 ## 4. Chơi quiz (đơn) — `/attempts`
 ```
-POST   /api/v1/quizzes/{id}/attempts   Bắt đầu làm bài
-POST   /api/v1/attempts/{id}/answers   Nộp câu trả lời
-POST   /api/v1/attempts/{id}/submit    Nộp bài & chấm
-GET    /api/v1/attempts/{id}           Kết quả chi tiết
-GET    /api/v1/attempts                 Lịch sử làm bài
-GET    /api/v1/quizzes/{id}/leaderboard Bảng xếp hạng
+POST   /api/v1/quizzes/{id}/attempts    Bắt đầu làm bài (body { mode })            ✅
+GET    /api/v1/attempts/{id}            Bài làm: chưa nộp = đề, đã nộp = kết quả   ✅
+POST   /api/v1/attempts/{id}/answers    Trả lời một câu                            ✅
+POST   /api/v1/attempts/{id}/submit     Nộp bài & chấm                             ✅
+GET    /api/v1/attempts                 Lịch sử làm bài của tôi (quizId + trang)   ✅
+GET    /api/v1/quizzes/{id}/leaderboard Bảng xếp hạng (tối đa 50 dòng)             ✅
 ```
+
+**Quyền:** toàn bộ mục này yêu cầu **đăng nhập** — Guest không làm bài, không xem bảng xếp hạng.
+Quiz PRIVATE của người khác trả **404**. Bài làm là dữ liệu riêng: người khác *và cả chủ quiz/Admin*
+truy cập đều nhận **404** (thống kê cho Creator nằm ở features/09).
+
+**Chế độ (`mode`)**
+
+| Giá trị | Hành vi |
+|---|---|
+| `EXAM` (mặc định) | Chỉ lưu câu trả lời, chấm một lần khi nộp. Sửa đáp án thoải mái trước khi nộp. |
+| `PRACTICE` | Chấm ngay từng câu, trả về đáp án đúng + giải thích. Câu đã chấm không trả lời lại (409). |
+
+**Luật không lộ đáp án.** Khi `attempt.status = IN_PROGRESS`, các trường `correctOptionIds`,
+`explanation`, `correct`, `score` của mọi câu đều là `null`; câu `FILL_BLANK`/`SHORT_ANSWER` còn bị
+trả `options: []` vì đáp án của chúng nằm trong `options`. Sau khi nộp mới hiện đầy đủ.
+
+**Chấm điểm** (chi tiết ở [features/03-gameplay.md](features/03-gameplay.md))
+
+| Loại | Cách chấm |
+|---|---|
+| `SINGLE_CHOICE`, `TRUE_FALSE` | Chọn đúng 1 lựa chọn và phải là lựa chọn đúng |
+| `MULTIPLE_CHOICE` | Trọn gói: tập lựa chọn phải trùng khít tập đáp án đúng |
+| `FILL_BLANK` | Khớp một đáp án được chấp nhận, bỏ qua hoa/thường và khoảng trắng thừa (**giữ dấu tiếng Việt**) |
+| `SHORT_ANSWER` | Máy không chấm → `gradedBy = PENDING_AI`, tạm 0 điểm, chờ features/06 |
+
+**Mã lỗi riêng:** `400` quiz chưa có câu hỏi / id lựa chọn không thuộc câu hỏi / câu một đáp án mà
+chọn nhiều · `404` quiz hoặc bài làm không tồn tại (hoặc không phải của mình), câu hỏi ngoài đề ·
+`409` bài đã kết thúc, hết giờ, hoặc trả lời lại câu đã chấm ở chế độ luyện tập.
+
+**Ghi chú thiết kế**
+- Gọi lại `POST /quizzes/{id}/attempts` khi đang có bài dở trên quiz đó → **trả lại bài cũ để làm tiếp**
+  (mỗi người tối đa một bài `IN_PROGRESS` trên một quiz).
+- `POST /attempts/{id}/submit` **idempotent**: gọi lại trên bài đã nộp trả đúng kết quả cũ.
+- Hết giờ (`expires_at`) thì lần gọi `GET`/`submit` kế tiếp tự chốt bài sang `EXPIRED` và vẫn chấm
+  phần đã làm; `POST /answers` khi đó trả 409.
 
 ## 5. Phòng đấu real-time — REST + WebSocket
 

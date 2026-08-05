@@ -57,17 +57,20 @@
 
 ---
 
-## Tuần 3 — Chơi quiz đơn (03–09/08) 🔴
+## Tuần 3 — Chơi quiz đơn (03–09/08) 🟢
 
-- **T2 03/08** — [ ] Schema `attempt`, `attempt_answer` · [ ] API bắt đầu / nộp bài
-- **T3 04/08** — [ ] Chấm tự động (trắc nghiệm) + tính điểm · [ ] Lưu lịch sử làm bài
-- **T4 05/08** — [ ] API kết quả + giải thích đáp án · [ ] Chế độ luyện tập & làm bài tính giờ
-- **T5 06/08** — [ ] FE: màn làm bài (timer, điều hướng câu) · [ ] FE: màn kết quả + review đáp án
-- **T6 07/08** — [ ] Leaderboard cơ bản + thống kê cá nhân · [ ] FE: trang lịch sử làm bài
-- **T7 08/08** — [ ] Unit/integration test luồng làm bài (Testcontainers) · [ ] Fix bug
+- **T2 03/08** — [x] Schema `attempt`, `attempt_answer` · [x] API bắt đầu / nộp bài
+- **T3 04/08** — [x] Chấm tự động (trắc nghiệm) + tính điểm · [x] Lưu lịch sử làm bài
+- **T4 05/08** — [x] API kết quả + giải thích đáp án · [x] Chế độ luyện tập & làm bài tính giờ
+- **T5 06/08** — [x] FE: màn làm bài (timer, điều hướng câu) · [x] FE: màn kết quả + review đáp án
+- **T6 07/08** — [x] Leaderboard cơ bản · [x] FE: trang lịch sử làm bài · [ ] Thống kê cá nhân *(để cùng features/09)*
+- **T7 08/08** — [x] Unit/integration test luồng làm bài (Testcontainers) · [x] Fix bug
 - **CN 09/08** — [ ] Đệm / review tuần
 
-**Tổng kết tuần 3:** _(...)_ — **Mốc: xong nền web cơ bản (auth + quiz + chơi đơn).**
+**Tổng kết tuần 3:** Làm gộp trong ngày 06/08, sớm hơn kế hoạch. Xong FR-13…FR-19 (trừ xếp hạng theo
+danh mục và giờ riêng từng câu). 85/85 test pass, 48/48 ca kiểm chứng HTTP thật.
+Còn nợ: chấm tự luận bằng AI (features/06) và xem lại giao diện bằng mắt trên trình duyệt.
+— **Mốc: xong nền web cơ bản (auth + quiz + chơi đơn).** ✅
 
 ---
 

@@ -5,6 +5,9 @@ import LoginPage from '@/features/auth/pages/LoginPage'
 import ProfilePage from '@/features/auth/pages/ProfilePage'
 import RegisterPage from '@/features/auth/pages/RegisterPage'
 import { useIsAuthenticated } from '@/features/auth/store/authStore'
+import AttemptPage from '@/features/attempt/pages/AttemptPage'
+import MyAttemptsPage from '@/features/attempt/pages/MyAttemptsPage'
+import QuizIntroPage from '@/features/attempt/pages/QuizIntroPage'
 import BrowseQuizzesPage from '@/features/quiz/pages/BrowseQuizzesPage'
 import MyQuizzesPage from '@/features/quiz/pages/MyQuizzesPage'
 import QuestionBankPage from '@/features/quiz/pages/QuestionBankPage'
@@ -47,6 +50,10 @@ export default function App() {
         <Route path="/" element={<Navigate to="/quizzes" replace />} />
         {/* Bộ mặt "học viên": lưới card */}
         <Route path="/quizzes" element={<BrowseQuizzesPage />} />
+        <Route path="/quizzes/:id" element={<QuizIntroPage />} />
+        {/* Một đường dẫn cho cả lúc đang làm và lúc xem kết quả — phân biệt theo attempt.status */}
+        <Route path="/attempts/:id" element={<AttemptPage />} />
+        <Route path="/my-attempts" element={<MyAttemptsPage />} />
         {/* Bộ mặt "bảng điều khiển": bảng quản lý */}
         <Route path="/my-quizzes" element={<MyQuizzesPage />} />
         <Route path="/my-quizzes/:id" element={<QuizEditorPage />} />
