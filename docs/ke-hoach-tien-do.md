@@ -30,12 +30,13 @@
 
 ## Tuần 1 — Nền tảng & hạ tầng (20–26/07) 🟡
 
-- **T2 20/07** — [ ] Khởi tạo repo, cấu trúc thư mục BE (Spring Boot) + FE (React/Vite) · [x] Docker Compose: PostgreSQL, Neo4j, Redis chạy được *(xong 05/08)*
-- **T3 21/07** — [ ] Cấu hình Flyway + migration đầu tiên (extension `pgvector`, bảng `users`, `roles`) · [ ] Cấu hình OpenAPI/Swagger
-- **T4 22/07** — [ ] Spring Security + JWT (access + refresh token) · [ ] Cấu trúc package chuẩn (Controller→Service→Repository)
-- **T5 23/07** — [ ] API đăng ký / đăng nhập / refresh · [ ] RBAC (Guest/Learner/Creator/Admin)
-- **T6 24/07** — [ ] FE: layout, routing, trang Đăng nhập/Đăng ký · [ ] Kết nối FE↔BE (axios/TanStack Query), lưu token
-- **T7 25/07** — [ ] Guard route theo role · [ ] Viết unit test cho AuthService
+- **T2 20/07** — [x] Khởi tạo repo, cấu trúc thư mục BE (Spring Boot) + FE (React/Vite) *(xong 05/08)* · [x] Docker Compose: PostgreSQL, Neo4j, Redis chạy được *(xong 05/08)*
+- **T3 21/07** — [x] Cấu hình Flyway + migration đầu tiên (`V1__init.sql`: extension `pgvector`, bảng `users`) · [x] Cấu hình OpenAPI/Swagger *(xong 05/08)*
+- **T4 22/07** — [x] Spring Security + JWT (access + refresh token có rotation) · [x] Cấu trúc package chuẩn (Controller→Service→Repository) *(xong 05/08)*
+- **T5 23/07** — [x] API đăng ký / đăng nhập / refresh / đăng xuất / đổi mật khẩu · [x] RBAC (Guest/Learner/Creator/Admin) *(xong 05/08)*
+- **T6 24/07** — [x] FE: routing, trang Đăng nhập/Đăng ký, trang hồ sơ · [x] Kết nối FE↔BE (axios + TanStack Query), lưu token, tự refresh khi 401 *(xong 05/08)*
+- **T7 25/07** — [x] Guard route (`ProtectedRoute`) · [x] Test: 30 test pass (AuthService, UserRepository/Testcontainers, AuthController, integration) *(xong 05/08)*
+  - Còn nợ: FR-4 quên/đặt lại mật khẩu (cần SMTP), FR-3 OAuth2 Google (mức [S])
 - **CN 26/07** — [ ] Đệm / dọn nợ / review tuần
 
 **Tổng kết tuần 1:** _(ghi lại việc chưa xong, chuyển sang tuần sau)_

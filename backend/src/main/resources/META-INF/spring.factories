@@ -1,0 +1,3 @@
+# EnvironmentPostProcessor vẫn dùng cơ chế spring.factories (khác với AutoConfiguration.imports)
+org.springframework.boot.env.EnvironmentPostProcessor=\
+com.datn.quizai.config.DotenvEnvironmentPostProcessor

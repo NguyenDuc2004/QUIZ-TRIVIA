@@ -1,36 +1,44 @@
 package com.datn.quizai.config;
 
+import com.datn.quizai.auth.JwtAuthenticationFilter;
+import com.datn.quizai.common.dto.ApiError;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
+import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
- * Cấu hình bảo mật nền.
+ * Cấu hình bảo mật: API stateless dùng Bearer JWT.
  * <p>
- * Quy tắc (docs/features/01-auth.md): Guest chưa đăng nhập chỉ được xem danh sách/giới thiệu
- * quiz công khai và gọi các endpoint xác thực — mọi thứ còn lại yêu cầu đăng nhập.
- * <p>
- * TODO(slice Auth): gắn JwtAuthenticationFilter + AuthenticationEntryPoint trả lỗi chuẩn.
+ * Luật Guest (docs/features/01-auth.md): chưa đăng nhập chỉ gọi được `/auth/**` và
+ * `GET /api/v1/quizzes*` — mọi thứ còn lại phải có access token hợp lệ.
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity   // bật @PreAuthorize cho phân quyền theo vai trò
 public class SecurityConfig {
 
-    /** Chỉ các đường dẫn GET này mở cho Guest. */
+    /** Các đường dẫn GET mở cho Guest. */
     private static final String[] PUBLIC_GET = {
             "/api/v1/quizzes",
             "/api/v1/quizzes/*",
@@ -40,25 +48,62 @@ public class SecurityConfig {
             "/swagger-ui.html"
     };
 
+    private final ObjectMapper objectMapper;
+
+    public SecurityConfig(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
     @Bean
     SecurityFilterChain filterChain(
             HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthenticationFilter,
             @Qualifier("appCorsConfigurationSource") CorsConfigurationSource corsSource) throws Exception {
         http
                 // API stateless dùng Bearer token → không cần CSRF (docs/security.md §2)
-                .csrf(AbstractHttpConfigurer -> AbstractHttpConfigurer.disable())
+                .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsSource))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .httpBasic(Customizer.withDefaults())
+                .httpBasic(basic -> basic.disable())
+                .formLogin(form -> form.disable())
                 .authorizeHttpRequests(auth -> auth
                         // Không chặn dispatch nội bộ tới /error, nếu không mọi 404/500 của
                         // người dùng chưa đăng nhập đều bị biến thành 401.
                         .requestMatchers("/error").permitAll()
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login",
+                                "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
                         .anyRequest().authenticated()
-                );
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(unauthorizedEntryPoint())
+                        .accessDeniedHandler(forbiddenHandler())
+                )
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
+    }
+
+    /** Chưa đăng nhập / token sai → 401 theo response lỗi chuẩn (docs/api.md §10). */
+    private AuthenticationEntryPoint unauthorizedEntryPoint() {
+        return (request, response, authException) -> writeError(response, 401, "Unauthorized",
+                "Bạn cần đăng nhập để sử dụng chức năng này", request.getRequestURI());
+    }
+
+    /** Đã đăng nhập nhưng thiếu quyền → 403. */
+    private AccessDeniedHandler forbiddenHandler() {
+        return (request, response, deniedException) -> writeError(response, 403, "Forbidden",
+                "Bạn không có quyền thực hiện hành động này", request.getRequestURI());
+    }
+
+    private void writeError(HttpServletResponse response, int status, String error,
+                            String message, String path) throws java.io.IOException {
+        response.setStatus(status);
+        // Khai báo charset rõ ràng + ghi qua OutputStream để Jackson tự encode UTF-8,
+        // tránh tiếng Việt bị lỗi font ở client.
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
+        objectMapper.writeValue(response.getOutputStream(), ApiError.of(status, error, message, path,
+                UUID.randomUUID().toString().substring(0, 8)));
     }
 
     /**

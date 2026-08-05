@@ -11,12 +11,12 @@ Cho phép người dùng đăng ký, đăng nhập an toàn và phân quyền tr
 - Hệ thống phân quyền Learner / Creator / Admin.
 
 ## Yêu cầu chức năng
-- **FR-1** [M] Đăng ký bằng email + mật khẩu; xác thực email (tùy chọn).
-- **FR-2** [M] Đăng nhập/đăng xuất; cấp Access Token (JWT) + Refresh Token.
-- **FR-3** [S] Đăng nhập qua OAuth2 (Google).
-- **FR-4** [M] Quên/đặt lại mật khẩu qua email.
-- **FR-5** [M] Quản lý hồ sơ cá nhân (tên, avatar, mật khẩu).
-- **FR-6** [M] Phân quyền theo vai trò (RBAC).
+- **FR-1** [M] ✅ Đăng ký bằng email + mật khẩu (email chuẩn hóa chữ thường, băm BCrypt). Xác thực email: chưa làm (tùy chọn).
+- **FR-2** [M] ✅ Đăng nhập/đăng xuất; Access Token (JWT HS256, 15 phút) + Refresh Token (Redis, 14 ngày, có rotation).
+- **FR-3** [S] ⏳ Đăng nhập qua OAuth2 (Google) — chưa làm, mức Should.
+- **FR-4** [M] ⏳ Quên/đặt lại mật khẩu qua email — **chưa làm vì cần cấu hình SMTP** (chọn nhà cung cấp mail + biến môi trường).
+- **FR-5** [M] ✅ Quản lý hồ sơ: `PUT /users/me` (tên, avatar) + `POST /auth/change-password`.
+- **FR-6** [M] ✅ Phân quyền theo vai trò: enum LEARNER/CREATOR/ADMIN trong token, `@EnableMethodSecurity` cho `@PreAuthorize`; tự đăng ký ADMIN bị hạ xuống LEARNER.
 
 ## Luồng xử lý (đăng nhập)
 1. Người dùng gửi email + mật khẩu.

@@ -4,19 +4,22 @@ REST, prefix `/api/v1`, trả JSON, xác thực Bearer JWT. Tài liệu tự sin
 
 ## 1. Xác thực — `/auth`
 ```
-POST   /api/v1/auth/register        Đăng ký
-POST   /api/v1/auth/login           Đăng nhập → access + refresh token
-POST   /api/v1/auth/refresh         Làm mới token
-POST   /api/v1/auth/logout          Đăng xuất
-POST   /api/v1/auth/forgot-password Quên mật khẩu
-POST   /api/v1/auth/reset-password  Đặt lại mật khẩu
+POST   /api/v1/auth/register        Đăng ký → 201 + access & refresh token          ✅
+POST   /api/v1/auth/login           Đăng nhập → access + refresh token              ✅
+POST   /api/v1/auth/refresh         Làm mới token (rotation: token cũ bị thu hồi)   ✅
+POST   /api/v1/auth/logout          Đăng xuất → 204, thu hồi refresh token          ✅
+POST   /api/v1/auth/change-password Đổi mật khẩu (cần đăng nhập) → 204              ✅
+POST   /api/v1/auth/forgot-password Quên mật khẩu                                   ⏳ cần cấu hình SMTP
+POST   /api/v1/auth/reset-password  Đặt lại mật khẩu bằng token gửi qua email       ⏳ cần cấu hình SMTP
 ```
+> `register`, `login`, `refresh`, `logout` mở cho Guest; `change-password` yêu cầu Bearer token.
+> Access token sống 15 phút, refresh token 14 ngày (lưu Redis key `session:{token}`).
 
 ## 2. Người dùng — `/users`
 ```
-GET    /api/v1/users/me             Hồ sơ hiện tại
-PUT    /api/v1/users/me             Cập nhật hồ sơ
-GET    /api/v1/users/me/progress    Tiến độ học tập
+GET    /api/v1/users/me             Hồ sơ hiện tại                                  ✅
+PUT    /api/v1/users/me             Cập nhật tên hiển thị / ảnh đại diện            ✅
+GET    /api/v1/users/me/progress    Tiến độ học tập                                 ⏳ sau khi có attempt
 ```
 
 ## 3. Quiz & Câu hỏi — `/quizzes`, `/questions`
