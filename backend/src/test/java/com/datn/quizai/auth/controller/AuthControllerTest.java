@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * response lỗi chuẩn từ {@link GlobalExceptionHandler} (docs/api.md §10).
  * <p>
  * Tắt security filter ở đây để test riêng phần MVC — luật phân quyền được kiểm
- * trong {@link AuthFlowIntegrationTest}.
+ * trong {@link com.datn.quizai.auth.AuthFlowIntegrationTest}.
  */
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
