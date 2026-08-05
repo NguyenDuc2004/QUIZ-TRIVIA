@@ -35,12 +35,23 @@
 
 | Tác nhân | Mô tả | Quyền chính |
 |----------|-------|-------------|
-| **Guest** | Khách chưa đăng nhập | Xem quiz công khai, chơi thử giới hạn |
+| **Guest** | Khách chưa đăng nhập | **Chỉ xem** danh sách & thông tin giới thiệu quiz công khai (tiêu đề, mô tả, danh mục, độ khó, số câu). **Không được làm bài, không xem nội dung câu hỏi, không vào phòng đấu** |
 | **Learner** | Người học đã đăng ký | Chơi quiz, vào phòng đấu, xem tiến độ, chatbot, nhận gợi ý |
 | **Creator** | Người tạo nội dung | Quyền Learner + tạo/sửa quiz, sinh đề bằng AI, tạo phòng, xem thống kê |
 | **Admin** | Quản trị | Quản lý user & nội dung, cấu hình AI provider, giám sát log & chi phí |
 
 > Một user có thể vừa là Learner vừa là Creator.
+
+**Quy tắc bắt buộc đăng nhập:** mọi hành vi tạo ra dữ liệu học tập đều yêu cầu tài khoản — làm bài (attempt), vào phòng đấu, chatbot, gợi ý, flashcard. Guest chỉ được duyệt nội dung công khai để biết hệ thống có gì rồi đăng ký.
+
+| Endpoint | Guest |
+|---|---|
+| `GET /api/v1/quizzes`, `GET /api/v1/quizzes/{id}` (visibility = public) | ✅ cho phép — nhưng **không trả về danh sách câu hỏi** |
+| `POST /api/v1/quizzes/{id}/attempts` và toàn bộ `/api/v1/attempts/**` | ❌ 401 |
+| `/api/v1/rooms/**`, WebSocket `/ws` | ❌ 401 (JWT xác thực ngay lúc handshake) |
+| `/api/v1/ai/**`, `/api/v1/recommendations/**`, `/api/v1/users/me` | ❌ 401 |
+
+> Hệ quả kỹ thuật: `quiz_attempts.user_id` **NOT NULL** — không có attempt ẩn danh, không cần gộp dữ liệu khách vào tài khoản sau khi đăng ký. Mọi thống kê, leaderboard và đồ thị Neo4j đều gắn với một user thật.
 
 ## 6. Định nghĩa & từ viết tắt
 

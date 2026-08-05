@@ -34,3 +34,18 @@ Bảng `users` — xem [database.md](../database.md) mục 1.2.
 - Mật khẩu băm BCrypt; không lưu plaintext.
 - Phân quyền controller bằng `@PreAuthorize`.
 - Chi tiết bảo mật: [security.md](../security.md).
+
+## Quy tắc truy cập cho Guest (chưa đăng nhập)
+
+`SecurityConfig` chỉ `permitAll` đúng các đường dẫn sau, **mọi thứ còn lại `authenticated()`**:
+
+```
+POST /api/v1/auth/register, /login, /refresh, /forgot-password, /reset-password
+GET  /api/v1/quizzes, /api/v1/quizzes/{id}      (chỉ bản ghi visibility = public)
+GET  /v3/api-docs/**, /swagger-ui/**            (tài liệu API, môi trường dev)
+```
+
+- **Guest không được làm bài**: `POST /quizzes/{id}/attempts` và toàn bộ `/attempts/**` yêu cầu đăng nhập → trả **401**.
+- `GET /quizzes/{id}` với Guest **không kèm danh sách câu hỏi** (tránh lộ đề); chỉ trả tiêu đề, mô tả, danh mục, độ khó, số câu, thời lượng.
+- Quiz `visibility = private` với Guest trả **404** (không phải 403) để không lộ sự tồn tại của tài nguyên.
+- WebSocket `/ws`: xác thực JWT ngay tại handshake, Guest bị từ chối kết nối.

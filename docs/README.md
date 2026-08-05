@@ -17,8 +17,11 @@ Bộ tài liệu này được tách nhỏ theo chủ đề để dễ đọc, d
 | [api.md](api.md) | Đặc tả REST API & WebSocket (STOMP) |
 | [security.md](security.md) | Xác thực, phân quyền, bảo mật AI |
 | [roadmap.md](roadmap.md) | Lộ trình theo tuần, kiểm thử hiệu năng & độ chính xác AI |
-| [conventions.md](conventions.md) | Quy ước code, đặt tên, cấu trúc — dùng khi vibe coding |
+| [ke-hoach-tien-do.md](ke-hoach-tien-do.md) | Kế hoạch chi tiết theo từng ngày (20/07 → 20/09) |
+| [conventions.md](conventions.md) | Quy ước code, cấu trúc thư mục, **quy trình lát cắt dọc & Definition of Done** |
 | [features/](features/) | Đặc tả chi tiết từng tính năng (mỗi file 1 feature) |
+| [bao-cao/](bao-cao/) | Nhật ký tiến độ & nội dung báo cáo ĐATN (khung ở skill `viet-bao-cao`) |
+| [phieu_giao_de_tai/](phieu_giao_de_tai/) | Phiếu giao đề tài (nguồn gốc của mục tiêu & kết quả dự kiến) |
 
 ## Danh sách tính năng
 
