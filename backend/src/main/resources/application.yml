@@ -3,8 +3,7 @@ spring:
     name: quizai
 
   datasource:
-    # Cổng 5434: máy dev đã có PostgreSQL 17/18 cài sẵn giữ 5432/5433 (xem docker-compose.yml)
-    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5434/quizdb}
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/quizdb}
     username: ${POSTGRES_USER:quiz}
     password: ${POSTGRES_PASSWORD:quiz123}
 

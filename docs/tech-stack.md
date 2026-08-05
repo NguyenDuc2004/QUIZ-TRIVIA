@@ -54,7 +54,7 @@
 
 | Thành phần | Công nghệ | Vai trò |
 |-----------|-----------|---------|
-| CSDL quan hệ | **PostgreSQL 16 + pgvector** | Dữ liệu nghiệp vụ + vector học liệu. Container publish ra **cổng 5434** (máy dev đã có PostgreSQL 17/18 cài sẵn giữ 5432/5433) |
+| CSDL quan hệ | **PostgreSQL 16 + pgvector** | Dữ liệu nghiệp vụ + vector học liệu (cổng 5432) |
 | CSDL đồ thị | **Neo4j 5** | Hành vi, gợi ý, lộ trình học |
 | Cache / Real-time | **Redis** | Cache, session, quota, trạng thái phòng, Pub/Sub |
 | Container | Docker + Docker Compose | Chạy toàn bộ stack local |
@@ -65,7 +65,7 @@
 
 ```
 # Database
-POSTGRES_URL   # jdbc:postgresql://localhost:5434/quizdb
+POSTGRES_URL   # jdbc:postgresql://localhost:5432/quizdb
 POSTGRES_USER, POSTGRES_PASSWORD
 NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
 REDIS_HOST, REDIS_PORT

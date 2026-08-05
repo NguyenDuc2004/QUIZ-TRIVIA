@@ -17,7 +17,7 @@ Java 21 · Spring Boot 3.5 · React 19 + Vite + TypeScript · Ant Design · Post
 
 ```bash
 cp .env.example .env          # rồi điền GEMINI_API_KEY, GROK_API_KEY
-docker compose up -d          # PostgreSQL (5434) · Neo4j (7474/7687) · Redis (6379)
+docker compose up -d          # PostgreSQL (5432) · Neo4j (7474/7687) · Redis (6379)
 
 cd backend && ./mvnw spring-boot:run        # API: http://localhost:8080 · Swagger: /swagger-ui.html
 cd frontend && npm install && npm run dev   # Web: http://localhost:5173
