@@ -134,12 +134,12 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
       onCancel={onClose}
       destroyOnHidden
     >
-      <Form layout="vertical" className="!mt-4">
+      <Form layout="vertical" className="mt-4!">
         <Form.Item label="Loại câu hỏi">
           <Select value={type} options={QUESTION_TYPE_OPTIONS} onChange={handleTypeChange} />
         </Form.Item>
 
-        <Alert type="info" showIcon className="!mb-4" message={QUESTION_TYPE_HINT[type]} />
+        <Alert type="info" showIcon className="mb-4!" message={QUESTION_TYPE_HINT[type]} />
 
         <Form.Item
           label="Nội dung câu hỏi"

@@ -4,7 +4,9 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConfigProvider } from 'antd'
 import viVN from 'antd/locale/vi_VN'
+import '@fontsource-variable/inter'
 import App from './App.tsx'
+import { appTheme } from './shared/theme/antdTheme'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -16,7 +18,8 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ConfigProvider locale={viVN} theme={{ token: { colorPrimary: '#4f46e5' } }}>
+      {/* Token giao diện tập trung ở shared/theme/antdTheme.ts (docs/ui-design-system.md) */}
+      <ConfigProvider locale={viVN} theme={appTheme}>
         <BrowserRouter>
           <App />
         </BrowserRouter>

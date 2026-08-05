@@ -1,57 +1,52 @@
 import { useState } from 'react'
-import { Button, Input, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd'
+import { Link } from 'react-router-dom'
+import { Button, Input, Popconfirm, Select, Space, Table, Tag } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
-import type { Difficulty, Question, QuestionType } from '../api/quizApi'
-import {
-  DIFFICULTY_COLOR,
-  DIFFICULTY_LABEL,
-  DIFFICULTY_OPTIONS,
-  QUESTION_TYPE_LABEL,
-  QUESTION_TYPE_OPTIONS,
-} from '../constants'
-import { useDeleteQuestion, useQuestionBank } from '../hooks/useQuizQueries'
-import QuestionFormModal from '../components/QuestionFormModal'
+import type { Difficulty, QuizSummary, Visibility } from '../api/quizApi'
+import { DIFFICULTY_COLOR, DIFFICULTY_LABEL, DIFFICULTY_OPTIONS, VISIBILITY_LABEL } from '../constants'
+import { useCategories, useDeleteQuiz, useQuizList } from '../hooks/useQuizQueries'
+import QuizFormModal from '../components/QuizFormModal'
 
-const { Text } = Typography
-
-/** Ngân hàng câu hỏi — bộ mặt **bảng điều khiển** (docs/ui-design-system.md §1). */
-export default function QuestionBankPage() {
+/**
+ * Trang "Quiz của tôi" — bộ mặt **bảng điều khiển**: bảng dày thông tin, nút viền mảnh
+ * (docs/ui-design-system.md §1). Hiển thị cả quiz riêng tư.
+ */
+export default function MyQuizzesPage() {
   const [page, setPage] = useState(0)
   const [keyword, setKeyword] = useState('')
-  const [type, setType] = useState<QuestionType | undefined>()
+  const [categoryId, setCategoryId] = useState<string | undefined>()
   const [difficulty, setDifficulty] = useState<Difficulty | undefined>()
-  const [editing, setEditing] = useState<Question | null>(null)
+  const [editing, setEditing] = useState<QuizSummary | null>(null)
   const [creating, setCreating] = useState(false)
 
-  const { data, isFetching } = useQuestionBank({
+  const { data: categories } = useCategories()
+  const { data, isFetching } = useQuizList({
+    mine: true,
     page,
     size: 10,
     q: keyword || undefined,
-    type,
+    categoryId,
     difficulty,
   })
-  const deleteQuestion = useDeleteQuestion()
+  const deleteQuiz = useDeleteQuiz()
 
-  const columns: ColumnsType<Question> = [
+  const columns: ColumnsType<QuizSummary> = [
     {
-      title: 'Nội dung',
-      dataIndex: 'content',
-      render: (content: string, row) => (
-        <Space direction="vertical" size={0}>
-          <Text className="font-bold!">{content}</Text>
-          <Text className="text-ink-soft text-xs">
-            {row.options.filter((o) => o.correct).length} đáp án đúng / {row.options.length} lựa chọn
-          </Text>
-        </Space>
+      title: 'Tiêu đề',
+      dataIndex: 'title',
+      render: (title: string, row) => (
+        <Link to={`/my-quizzes/${row.id}`} className="font-bold">
+          {title}
+        </Link>
       ),
     },
     {
-      title: 'Loại',
-      dataIndex: 'type',
+      title: 'Danh mục',
+      dataIndex: 'categoryName',
       width: 140,
-      render: (value: QuestionType) => <Tag>{QUESTION_TYPE_LABEL[value]}</Tag>,
+      render: (value: string | null) => value ?? <span className="text-ink-soft">—</span>,
     },
     {
       title: 'Độ khó',
@@ -61,36 +56,41 @@ export default function QuestionBankPage() {
         <Tag color={DIFFICULTY_COLOR[value]}>{DIFFICULTY_LABEL[value]}</Tag>
       ),
     },
+    { title: 'Số câu', dataIndex: 'questionCount', width: 90, align: 'center' },
     {
-      title: 'Chủ đề',
-      dataIndex: 'topic',
-      width: 130,
-      render: (value: string | null) => value ?? <span className="text-ink-soft">—</span>,
+      title: 'Hiển thị',
+      dataIndex: 'visibility',
+      width: 120,
+      render: (value: Visibility) => (
+        <Tag color={value === 'PUBLIC' ? 'purple' : undefined}>{VISIBILITY_LABEL[value]}</Tag>
+      ),
     },
-    { title: 'Điểm', dataIndex: 'points', width: 70, align: 'center' },
     {
-      title: 'Nguồn',
-      dataIndex: 'source',
-      width: 110,
-      render: (value: string) =>
-        value === 'AI_GENERATED' ? <Tag color="purple">AI sinh</Tag> : <Tag>Tự soạn</Tag>,
+      title: 'Thời gian',
+      dataIndex: 'timeLimitSec',
+      width: 130,
+      render: (value: number | null) =>
+        value ? `${Math.round(value / 60)} phút` : <span className="text-ink-soft">Không giới hạn</span>,
     },
     {
       title: '',
       key: 'actions',
-      width: 130,
+      width: 200,
       render: (_, row) => (
         <Space size="small">
+          <Link to={`/my-quizzes/${row.id}`} className="text-sm font-bold">
+            Soạn câu hỏi
+          </Link>
           <Button type="link" size="small" onClick={() => setEditing(row)}>
             Sửa
           </Button>
           <Popconfirm
-            title="Xóa câu hỏi này?"
-            description="Không xóa được nếu câu hỏi đang nằm trong quiz."
+            title="Xóa quiz này?"
+            description="Câu hỏi vẫn còn trong ngân hàng."
             okText="Xóa"
             cancelText="Hủy"
             okButtonProps={{ danger: true }}
-            onConfirm={() => deleteQuestion.mutate(row.id)}
+            onConfirm={() => deleteQuiz.mutate(row.id)}
           >
             <Button type="link" size="small" danger>
               Xóa
@@ -104,11 +104,11 @@ export default function QuestionBankPage() {
   return (
     <Space direction="vertical" size="large" className="w-full">
       <PageHeader
-        title="Ngân hàng câu hỏi"
-        description="Câu hỏi soạn ở đây dùng lại được cho nhiều quiz."
+        title="Quiz của tôi"
+        description="Quiz bạn tạo, gồm cả quiz đang ở chế độ riêng tư."
         actions={
           <Button type="primary" onClick={() => setCreating(true)}>
-            Thêm câu hỏi
+            Tạo quiz
           </Button>
         }
       />
@@ -117,8 +117,8 @@ export default function QuestionBankPage() {
         <div className="flex flex-wrap gap-2 border-b border-line p-3">
           <Input.Search
             allowClear
-            placeholder="Tìm trong nội dung câu hỏi"
-            style={{ width: 280 }}
+            placeholder="Tìm theo tiêu đề"
+            style={{ width: 260 }}
             onSearch={(value) => {
               setKeyword(value)
               setPage(0)
@@ -126,14 +126,14 @@ export default function QuestionBankPage() {
           />
           <Select
             allowClear
-            placeholder="Loại câu hỏi"
+            placeholder="Danh mục"
             style={{ width: 180 }}
-            value={type}
+            value={categoryId}
             onChange={(value) => {
-              setType(value)
+              setCategoryId(value)
               setPage(0)
             }}
-            options={QUESTION_TYPE_OPTIONS}
+            options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
           />
           <Select
             allowClear
@@ -148,7 +148,7 @@ export default function QuestionBankPage() {
           />
         </div>
 
-        <Table<Question>
+        <Table<QuizSummary>
           rowKey="id"
           size="middle"
           loading={isFetching}
@@ -157,11 +157,11 @@ export default function QuestionBankPage() {
           locale={{
             emptyText: (
               <EmptyState
-                title="Ngân hàng câu hỏi còn trống"
-                hint="Soạn câu hỏi ở đây rồi lắp vào quiz bất kỳ."
+                title="Bạn chưa tạo quiz nào"
+                hint="Tạo quiz rồi thêm câu hỏi từ ngân hàng câu hỏi."
                 action={
                   <Button type="primary" onClick={() => setCreating(true)}>
-                    Thêm câu hỏi đầu tiên
+                    Tạo quiz đầu tiên
                   </Button>
                 }
               />
@@ -177,9 +177,9 @@ export default function QuestionBankPage() {
         />
       </div>
 
-      <QuestionFormModal
+      <QuizFormModal
         open={creating || editing !== null}
-        question={editing}
+        quiz={editing}
         onClose={() => {
           setCreating(false)
           setEditing(null)

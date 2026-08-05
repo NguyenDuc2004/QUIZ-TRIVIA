@@ -5,9 +5,10 @@ import LoginPage from '@/features/auth/pages/LoginPage'
 import ProfilePage from '@/features/auth/pages/ProfilePage'
 import RegisterPage from '@/features/auth/pages/RegisterPage'
 import { useIsAuthenticated } from '@/features/auth/store/authStore'
+import BrowseQuizzesPage from '@/features/quiz/pages/BrowseQuizzesPage'
+import MyQuizzesPage from '@/features/quiz/pages/MyQuizzesPage'
 import QuestionBankPage from '@/features/quiz/pages/QuestionBankPage'
 import QuizEditorPage from '@/features/quiz/pages/QuizEditorPage'
-import QuizListPage from '@/features/quiz/pages/QuizListPage'
 import AppLayout from '@/shared/components/AppLayout'
 
 /** Đã đăng nhập thì không cần vào lại trang đăng nhập/đăng ký. */
@@ -35,7 +36,7 @@ export default function App() {
         }
       />
 
-      {/* Khu vực cần đăng nhập, dùng chung layout có thanh điều hướng */}
+      {/* Khu vực cần đăng nhập, dùng chung layout có header sticky */}
       <Route
         element={
           <ProtectedRoute>
@@ -44,8 +45,10 @@ export default function App() {
         }
       >
         <Route path="/" element={<Navigate to="/quizzes" replace />} />
-        <Route path="/quizzes" element={<QuizListPage />} />
-        <Route path="/my-quizzes" element={<QuizListPage mine />} />
+        {/* Bộ mặt "học viên": lưới card */}
+        <Route path="/quizzes" element={<BrowseQuizzesPage />} />
+        {/* Bộ mặt "bảng điều khiển": bảng quản lý */}
+        <Route path="/my-quizzes" element={<MyQuizzesPage />} />
         <Route path="/my-quizzes/:id" element={<QuizEditorPage />} />
         <Route path="/question-bank" element={<QuestionBankPage />} />
         <Route path="/profile" element={<ProfilePage />} />

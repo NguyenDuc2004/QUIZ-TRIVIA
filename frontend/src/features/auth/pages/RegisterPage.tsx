@@ -1,7 +1,7 @@
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
-import { Button, Card, Form, Input, Radio, Typography } from 'antd'
+import { Button, Form, Input, Radio, Typography } from 'antd'
 import { useRegister } from '../hooks/useAuthMutations'
 import { registerSchema, type RegisterForm } from '../schema'
 
@@ -15,23 +15,37 @@ export default function RegisterPage() {
     formState: { errors },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { displayName: '', email: '', password: '', confirmPassword: '', role: 'LEARNER' },
+    defaultValues: {
+      displayName: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      role: 'LEARNER',
+    },
   })
 
+  const boldLabel = (text: string) => <span className="font-bold">{text}</span>
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-md">
-        <Title level={3} className="!mb-1">
+    <div className="flex min-h-screen items-center justify-center bg-surface-subtle p-4">
+      <div className="w-full max-w-md border border-line bg-white p-8">
+        <div className="mb-1 flex items-center justify-center gap-1">
+          <span className="text-2xl font-extrabold text-ink">Quiz</span>
+          <span className="text-2xl font-extrabold text-brand">AI</span>
+        </div>
+        <Title level={3} className="mb-1! text-center! font-bold!">
           Tạo tài khoản
         </Title>
-        <Paragraph type="secondary">Học và thi đấu cùng trợ lý AI</Paragraph>
+        <Paragraph className="mb-6! text-center text-ink-soft text-xs">
+          Miễn phí — bắt đầu học và tạo quiz ngay
+        </Paragraph>
 
         <Form
           layout="vertical"
           onFinish={handleSubmit(({ confirmPassword: _confirm, ...body }) => register.mutate(body))}
         >
           <Form.Item
-            label="Tên hiển thị"
+            label={boldLabel('Tên hiển thị')}
             validateStatus={errors.displayName && 'error'}
             help={errors.displayName?.message}
           >
@@ -42,7 +56,11 @@ export default function RegisterPage() {
             />
           </Form.Item>
 
-          <Form.Item label="Email" validateStatus={errors.email && 'error'} help={errors.email?.message}>
+          <Form.Item
+            label={boldLabel('Email')}
+            validateStatus={errors.email && 'error'}
+            help={errors.email?.message}
+          >
             <Controller
               name="email"
               control={control}
@@ -53,7 +71,7 @@ export default function RegisterPage() {
           </Form.Item>
 
           <Form.Item
-            label="Mật khẩu"
+            label={boldLabel('Mật khẩu')}
             validateStatus={errors.password && 'error'}
             help={errors.password?.message ?? 'Tối thiểu 8 ký tự'}
           >
@@ -67,7 +85,7 @@ export default function RegisterPage() {
           </Form.Item>
 
           <Form.Item
-            label="Nhập lại mật khẩu"
+            label={boldLabel('Nhập lại mật khẩu')}
             validateStatus={errors.confirmPassword && 'error'}
             help={errors.confirmPassword?.message}
           >
@@ -80,15 +98,20 @@ export default function RegisterPage() {
             />
           </Form.Item>
 
-          <Form.Item label="Bạn muốn dùng hệ thống để">
+          <Form.Item label={boldLabel('Bạn muốn dùng hệ thống để')}>
             <Controller
               name="role"
               control={control}
               render={({ field }) => (
-                <Radio.Group {...field}>
-                  <Radio value="LEARNER">Học &amp; thi đấu</Radio>
-                  <Radio value="CREATOR">Tạo quiz, sinh đề AI</Radio>
-                </Radio.Group>
+                <Radio.Group
+                  {...field}
+                  optionType="button"
+                  buttonStyle="solid"
+                  options={[
+                    { value: 'LEARNER', label: 'Học & thi đấu' },
+                    { value: 'CREATOR', label: 'Tạo quiz, sinh đề AI' },
+                  ]}
+                />
               )}
             />
           </Form.Item>
@@ -98,10 +121,13 @@ export default function RegisterPage() {
           </Button>
         </Form>
 
-        <Paragraph className="!mt-4 !mb-0 text-center">
-          Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
-        </Paragraph>
-      </Card>
+        <div className="mt-6 border-t border-line pt-4 text-center text-sm">
+          Đã có tài khoản?{' '}
+          <Link to="/login" className="font-bold underline">
+            Đăng nhập
+          </Link>
+        </div>
+      </div>
     </div>
   )
 }

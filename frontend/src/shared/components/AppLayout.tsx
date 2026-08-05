@@ -1,5 +1,6 @@
-import { Link, Outlet, useLocation } from 'react-router-dom'
-import { Button, Layout, Menu, Space, Tag, Typography } from 'antd'
+import { useState } from 'react'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Button, Input, Layout, Space, Tag, Typography } from 'antd'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
 import { useAuthStore } from '@/features/auth/store/authStore'
 
@@ -12,49 +13,74 @@ const ROLE_LABEL: Record<string, string> = {
   ADMIN: 'Quản trị viên',
 }
 
-/** Khung chung cho các trang sau khi đăng nhập. */
+const ROLE_COLOR: Record<string, string> = {
+  LEARNER: 'green',
+  CREATOR: 'geekblue',
+  ADMIN: 'volcano',
+}
+
+/**
+ * Khung chung sau khi đăng nhập — header trắng dính trên, ô tìm kiếm ở giữa,
+ * menu bên phải (docs/ui-design-system.md §6).
+ */
 export default function AppLayout() {
   const user = useAuthStore((state) => state.user)
   const logout = useLogout()
-  const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const [keyword, setKeyword] = useState('')
 
   const canCreate = user?.role === 'CREATOR' || user?.role === 'ADMIN'
 
-  const items = [
-    { key: '/quizzes', label: <Link to="/quizzes">Khám phá quiz</Link> },
-    ...(canCreate
-      ? [
-          { key: '/my-quizzes', label: <Link to="/my-quizzes">Quiz của tôi</Link> },
-          { key: '/question-bank', label: <Link to="/question-bank">Ngân hàng câu hỏi</Link> },
-        ]
-      : []),
-    { key: '/profile', label: <Link to="/profile">Hồ sơ</Link> },
-  ]
-
-  // Route con của /my-quizzes/:id vẫn phải sáng mục "Quiz của tôi"
-  const selectedKey = items.map((item) => item.key).find((key) => pathname.startsWith(key)) ?? '/quizzes'
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `text-sm font-bold whitespace-nowrap ${
+      isActive ? 'text-brand-strong' : 'text-ink hover:text-brand-strong'
+    }`
 
   return (
     <Layout className="min-h-screen">
-      <Header className="flex items-center gap-6 px-6">
-        <Link to="/quizzes" className="text-white text-base font-semibold whitespace-nowrap">
-          Quiz/Trivia AI
+      <Header className="sticky top-0 z-10 flex items-center gap-6 border-b border-line bg-white! px-6!">
+        <Link to="/quizzes" className="flex items-center gap-1 whitespace-nowrap">
+          <span className="text-lg font-extrabold text-ink">Quiz</span>
+          <span className="text-lg font-extrabold text-brand">AI</span>
         </Link>
-        <Menu
-          theme="dark"
-          mode="horizontal"
-          selectedKeys={[selectedKey]}
-          items={items}
-          className="flex-1 min-w-0"
+
+        {/* Ô tìm kiếm dạng viên thuốc, gửi từ khoá sang trang Khám phá quiz */}
+        <Input.Search
+          allowClear
+          placeholder="Tìm quiz theo tiêu đề"
+          className="max-w-xl flex-1"
+          style={{ borderRadius: 9999 }}
+          value={keyword}
+          onChange={(event) => setKeyword(event.target.value)}
+          onSearch={(value) =>
+            navigate(value ? `/quizzes?q=${encodeURIComponent(value)}` : '/quizzes')
+          }
         />
-        <Space>
+
+        <nav className="flex items-center gap-5">
+          <NavLink to="/quizzes" className={navLinkClass}>
+            Khám phá
+          </NavLink>
+          {canCreate && (
+            <>
+              <NavLink to="/my-quizzes" className={navLinkClass}>
+                Quiz của tôi
+              </NavLink>
+              <NavLink to="/question-bank" className={navLinkClass}>
+                Ngân hàng câu hỏi
+              </NavLink>
+            </>
+          )}
+        </nav>
+
+        <Space size={8} className="ml-auto shrink-0">
           {user && (
-            <Space size={4}>
-              <Text className="!text-white">{user.displayName}</Text>
-              <Tag color={user.role === 'ADMIN' ? 'volcano' : user.role === 'CREATOR' ? 'geekblue' : 'green'}>
+            <Link to="/profile" className="flex items-center gap-2">
+              <Text className="text-ink! text-sm font-bold">{user.displayName}</Text>
+              <Tag color={ROLE_COLOR[user.role]} className="mr-0!">
                 {ROLE_LABEL[user.role] ?? user.role}
               </Tag>
-            </Space>
+            </Link>
           )}
           <Button size="small" loading={logout.isPending} onClick={() => logout.mutate()}>
             Đăng xuất
@@ -62,7 +88,7 @@ export default function AppLayout() {
         </Space>
       </Header>
 
-      <Content className="p-6">
+      <Content className="px-6 py-8">
         <div className="mx-auto max-w-6xl">
           <Outlet />
         </div>

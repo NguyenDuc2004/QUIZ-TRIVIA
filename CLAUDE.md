@@ -10,6 +10,7 @@ SV Nguyễn Khắc Minh Đức · GVHD ThS. Nguyễn Đức Lưu · Thời gian 
 | Mục tiêu, phạm vi, tác nhân & quyền | [docs/overview.md](docs/overview.md) |
 | Kiến trúc, cấu trúc package, luồng dữ liệu | [docs/architecture.md](docs/architecture.md) |
 | **Quy ước code + quy trình lát cắt dọc** | [docs/conventions.md](docs/conventions.md) |
+| **Chuẩn giao diện (bắt buộc khi làm FE)** | [docs/ui-design-system.md](docs/ui-design-system.md) |
 | Công nghệ & phiên bản | [docs/tech-stack.md](docs/tech-stack.md) |
 | Schema PostgreSQL / Neo4j / Redis | [docs/database.md](docs/database.md) |
 | Endpoint REST & STOMP | [docs/api.md](docs/api.md) |
@@ -59,6 +60,7 @@ Làm **trọn một tính năng** rồi mới sang tính năng khác. Thứ tự
 - Mọi lời gọi LLM đi qua `AiProvider`/`AiOrchestrator`, không gọi thẳng API trong service nghiệp vụ.
 - Tác vụ AI nặng chạy nền, trả `jobId`.
 - **Guest (chưa đăng nhập) chỉ được `GET` danh sách/giới thiệu quiz công khai** — không làm bài, không xem nội dung câu hỏi, không vào phòng đấu. Mọi thứ khác `authenticated()`.
+- **Giao diện theo [ui-design-system.md](docs/ui-design-system.md)**: không hardcode màu/bo góc/shadow trong component; nút hành động chính màu đen, tím chỉ cho link; trang người học dùng lưới card, trang quản lý dùng bảng; dùng lại `PageHeader`/`EmptyState`; **không bịa dữ liệu** (rating, số lượt học) cho đẹp giao diện.
 - Không commit secret. `.env` đã gitignore; `.env.example` là bản mẫu.
 - Commit theo Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`…), tiếng Việt.
 

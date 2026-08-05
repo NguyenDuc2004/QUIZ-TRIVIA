@@ -1,27 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import {
-  Alert,
-  Button,
-  Card,
-  Empty,
-  List,
-  Modal,
-  Space,
-  Table,
-  Tag,
-  Typography,
-} from 'antd'
+import { Alert, Button, List, Modal, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { getApiErrorMessage } from '@/shared/api/client'
+import EmptyState from '@/shared/components/EmptyState'
+import PageHeader from '@/shared/components/PageHeader'
 import type { Question } from '../api/quizApi'
-import { DIFFICULTY_COLOR, DIFFICULTY_LABEL, QUESTION_TYPE_LABEL } from '../constants'
+import { DIFFICULTY_COLOR, DIFFICULTY_LABEL, QUESTION_TYPE_LABEL, VISIBILITY_LABEL } from '../constants'
 import { useQuestionBank, useQuizDetail, useSetQuizQuestions } from '../hooks/useQuizQueries'
 import QuestionFormModal from '../components/QuestionFormModal'
 
-const { Title, Paragraph, Text } = Typography
+const { Text } = Typography
 
-/** Màn soạn quiz: chọn câu hỏi từ ngân hàng, sắp thứ tự, rồi lưu cả danh sách. */
+/**
+ * Màn soạn quiz — bộ mặt **bảng điều khiển** (docs/ui-design-system.md §1):
+ * chọn câu hỏi từ ngân hàng, sắp thứ tự, rồi lưu cả danh sách một lần.
+ */
 export default function QuizEditorPage() {
   const { id: quizId } = useParams<{ id: string }>()
   const { data, isPending, error } = useQuizDetail(quizId)
@@ -55,8 +49,16 @@ export default function QuizEditorPage() {
   }
 
   const columns: ColumnsType<Question> = [
-    { title: '#', width: 50, render: (_, __, index) => index + 1 },
-    { title: 'Nội dung', dataIndex: 'content' },
+    {
+      title: '#',
+      width: 50,
+      render: (_, __, index) => <Text className="text-ink-soft text-xs">{index + 1}</Text>,
+    },
+    {
+      title: 'Nội dung',
+      dataIndex: 'content',
+      render: (content: string) => <Text className="font-bold!">{content}</Text>,
+    },
     {
       title: 'Loại',
       dataIndex: 'type',
@@ -75,13 +77,17 @@ export default function QuizEditorPage() {
     {
       title: 'Thứ tự',
       key: 'order',
-      width: 150,
+      width: 160,
       render: (_, __, index) => (
         <Space size={4}>
           <Button size="small" disabled={index === 0} onClick={() => move(index, -1)}>
             ↑
           </Button>
-          <Button size="small" disabled={index === selected.length - 1} onClick={() => move(index, 1)}>
+          <Button
+            size="small"
+            disabled={index === selected.length - 1}
+            onClick={() => move(index, 1)}
+          >
             ↓
           </Button>
           <Button
@@ -103,61 +109,59 @@ export default function QuizEditorPage() {
 
   return (
     <Space direction="vertical" size="large" className="w-full">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <Title level={3} className="!mb-1">
-            {data?.quiz.title ?? 'Đang tải…'}
-          </Title>
-          <Paragraph type="secondary" className="!mb-0">
-            <Link to="/my-quizzes">← Quiz của tôi</Link>
+      <PageHeader
+        title={data?.quiz.title ?? 'Đang tải…'}
+        description={
+          <span className="flex flex-wrap items-center gap-2">
+            <Link to="/my-quizzes" className="font-bold">
+              ← Quiz của tôi
+            </Link>
             {data && (
               <>
-                {' · '}
-                {data.quiz.categoryName ?? 'Chưa có danh mục'} ·{' '}
-                <Tag color={DIFFICULTY_COLOR[data.quiz.difficulty]}>
+                <span className="text-ink-soft">·</span>
+                <span className="text-ink-soft">
+                  {data.quiz.categoryName ?? 'Chưa có danh mục'}
+                </span>
+                <Tag color={DIFFICULTY_COLOR[data.quiz.difficulty]} className="mr-0!">
                   {DIFFICULTY_LABEL[data.quiz.difficulty]}
                 </Tag>
-                <Tag color={data.quiz.visibility === 'PUBLIC' ? 'blue' : 'default'}>
-                  {data.quiz.visibility === 'PUBLIC' ? 'Công khai' : 'Riêng tư'}
+                <Tag color={data.quiz.visibility === 'PUBLIC' ? 'purple' : undefined} className="mr-0!">
+                  {VISIBILITY_LABEL[data.quiz.visibility]}
                 </Tag>
               </>
             )}
-          </Paragraph>
-        </div>
-        <Space>
-          <Button onClick={() => setPickerOpen(true)}>Chọn từ ngân hàng</Button>
-          <Button onClick={() => setCreatingQuestion(true)}>Soạn câu hỏi mới</Button>
-          <Button
-            type="primary"
-            disabled={!isDirty}
-            loading={setQuestions.isPending}
-            onClick={() =>
-              quizId && setQuestions.mutate({ id: quizId, questionIds: selected.map((q) => q.id) })
-            }
-          >
-            Lưu danh sách
-          </Button>
-        </Space>
-      </div>
+          </span>
+        }
+        actions={
+          <>
+            <Button onClick={() => setPickerOpen(true)}>Chọn từ ngân hàng</Button>
+            <Button onClick={() => setCreatingQuestion(true)}>Soạn câu hỏi mới</Button>
+            <Button
+              type="primary"
+              disabled={!isDirty}
+              loading={setQuestions.isPending}
+              onClick={() =>
+                quizId && setQuestions.mutate({ id: quizId, questionIds: selected.map((q) => q.id) })
+              }
+            >
+              Lưu danh sách
+            </Button>
+          </>
+        }
+      />
 
       {isDirty && (
-        <Alert
-          type="warning"
-          showIcon
-          message="Danh sách câu hỏi đã thay đổi nhưng chưa lưu."
-        />
+        <Alert type="warning" showIcon message="Danh sách câu hỏi đã thay đổi nhưng chưa lưu." />
       )}
 
-      <Card
-        title={
-          <Space>
-            <span>Câu hỏi trong quiz</span>
-            <Text type="secondary">
-              {selected.length} câu · tổng {totalPoints} điểm
-            </Text>
-          </Space>
-        }
-      >
+      <div className="border border-line bg-white">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <Text className="font-bold!">Câu hỏi trong quiz</Text>
+          <Text className="text-ink-soft text-xs">
+            {selected.length} câu · tổng {totalPoints} điểm
+          </Text>
+        </div>
+
         <Table<Question>
           rowKey="id"
           size="middle"
@@ -166,10 +170,20 @@ export default function QuizEditorPage() {
           dataSource={selected}
           pagination={false}
           locale={{
-            emptyText: <Empty description="Chưa có câu hỏi nào — chọn từ ngân hàng hoặc soạn mới" />,
+            emptyText: (
+              <EmptyState
+                title="Quiz chưa có câu hỏi nào"
+                hint="Chọn câu hỏi có sẵn từ ngân hàng, hoặc soạn câu mới."
+                action={
+                  <Button type="primary" onClick={() => setPickerOpen(true)}>
+                    Chọn từ ngân hàng
+                  </Button>
+                }
+              />
+            ),
           }}
         />
-      </Card>
+      </div>
 
       <QuestionPickerModal
         open={pickerOpen}
@@ -228,7 +242,14 @@ function QuestionPickerModal({
       <List
         loading={isFetching}
         dataSource={available}
-        locale={{ emptyText: 'Không còn câu hỏi nào để thêm' }}
+        locale={{
+          emptyText: (
+            <EmptyState
+              title="Không còn câu hỏi nào để thêm"
+              hint="Mọi câu trong ngân hàng đã nằm trong quiz này."
+            />
+          ),
+        }}
         pagination={{
           current: (data?.page ?? 0) + 1,
           pageSize: data?.size ?? 8,
@@ -244,19 +265,20 @@ function QuestionPickerModal({
                   isChecked ? checked.filter((q) => q.id !== question.id) : [...checked, question],
                 )
               }
-              className="cursor-pointer"
-              style={{ background: isChecked ? '#f0f5ff' : undefined, paddingInline: 8 }}
+              className={`cursor-pointer px-2! ${isChecked ? 'bg-surface-subtle' : ''}`}
             >
               <List.Item.Meta
-                title={question.content}
+                title={<span className="font-bold">{question.content}</span>}
                 description={
                   <Space size={4}>
-                    <Tag>{QUESTION_TYPE_LABEL[question.type]}</Tag>
-                    <Tag color={DIFFICULTY_COLOR[question.difficulty]}>
+                    <Tag className="mr-0!">{QUESTION_TYPE_LABEL[question.type]}</Tag>
+                    <Tag color={DIFFICULTY_COLOR[question.difficulty]} className="mr-0!">
                       {DIFFICULTY_LABEL[question.difficulty]}
                     </Tag>
-                    <Text type="secondary">{question.points} điểm</Text>
-                    {question.topic && <Text type="secondary">· {question.topic}</Text>}
+                    <Text className="text-ink-soft text-xs">{question.points} điểm</Text>
+                    {question.topic && (
+                      <Text className="text-ink-soft text-xs">· {question.topic}</Text>
+                    )}
                   </Space>
                 }
               />

@@ -22,6 +22,13 @@
 - **Type:** định nghĩa type khớp response backend; validate form bằng Zod.
 - **Đặt tên:** component `PascalCase`, hook `useXxx`, file component trùng tên component.
 - **Không hardcode URL API:** dùng client tập trung (axios instance) + biến môi trường.
+- **Giao diện: bắt buộc theo [ui-design-system.md](ui-design-system.md).** Tóm tắt luật cứng:
+  - Không hardcode mã màu, `borderRadius`, `boxShadow` trong component — dùng token antd (`shared/theme/antdTheme.ts`) hoặc class Tailwind sinh từ `@theme` (`text-ink`, `border-line`…).
+  - Nút hành động chính là **nút đen** (`type="primary"`); tím chỉ dùng cho link và trạng thái active.
+  - Trang cho người học → **lưới card**; trang quản lý → **bảng**. Chọn sai kiểu là lỗi giao diện.
+  - Mọi trang mới dùng `PageHeader`; danh sách rỗng dùng `EmptyState`. Không tự dựng lại.
+  - **Không bịa dữ liệu để cho đẹp** (điểm đánh giá, số lượt học…) — chỉ hiển thị dữ liệu backend thật sự trả về.
+  - Cú pháp Tailwind v4: viết `mb-1!` chứ không phải `!mb-1`.
 
 ## 3. Git
 

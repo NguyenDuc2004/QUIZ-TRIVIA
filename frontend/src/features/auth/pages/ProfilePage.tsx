@@ -1,16 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Alert, Button, Card, Descriptions, Space, Tag, Typography } from 'antd'
+import { Alert, Button, Descriptions, Space, Spin, Tag, Typography } from 'antd'
 import { getApiErrorMessage } from '@/shared/api/client'
+import PageHeader from '@/shared/components/PageHeader'
 import { authApi } from '../api/authApi'
 import { useAuthStore } from '../store/authStore'
 
-const { Title, Paragraph } = Typography
+const { Paragraph } = Typography
 
 const ROLE_LABEL: Record<string, string> = {
   LEARNER: 'Người học',
   CREATOR: 'Người tạo nội dung',
   ADMIN: 'Quản trị viên',
+}
+
+const ROLE_COLOR: Record<string, string> = {
+  LEARNER: 'green',
+  CREATOR: 'geekblue',
+  ADMIN: 'volcano',
 }
 
 export default function ProfilePage() {
@@ -32,43 +39,50 @@ export default function ProfilePage() {
 
   return (
     <Space direction="vertical" size="large" className="w-full">
-      <Title level={3} className="!mb-0">
-        Hồ sơ của tôi
-      </Title>
+      <PageHeader title="Hồ sơ của tôi" description="Thông tin tài khoản đang đăng nhập." />
 
       {error && <Alert type="error" showIcon message={getApiErrorMessage(error)} />}
 
-      <Card loading={isPending && !cachedUser}>
-        {user && (
-          <Descriptions column={1} size="small">
-            <Descriptions.Item label="Tên hiển thị">{user.displayName}</Descriptions.Item>
-            <Descriptions.Item label="Email">{user.email}</Descriptions.Item>
-            <Descriptions.Item label="Vai trò">
-              <Tag color={user.role === 'ADMIN' ? 'volcano' : user.role === 'CREATOR' ? 'geekblue' : 'green'}>
-                {ROLE_LABEL[user.role] ?? user.role}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Ngày tạo">
-              {new Date(user.createdAt).toLocaleString('vi-VN')}
-            </Descriptions.Item>
-          </Descriptions>
+      <div className="border border-line bg-white p-5">
+        {isPending && !cachedUser ? (
+          <Spin />
+        ) : (
+          user && (
+            <Descriptions column={1} size="small" colon={false}>
+              <Descriptions.Item label={<span className="text-ink-soft">Tên hiển thị</span>}>
+                <span className="font-bold">{user.displayName}</span>
+              </Descriptions.Item>
+              <Descriptions.Item label={<span className="text-ink-soft">Email</span>}>
+                {user.email}
+              </Descriptions.Item>
+              <Descriptions.Item label={<span className="text-ink-soft">Vai trò</span>}>
+                <Tag color={ROLE_COLOR[user.role]} className="mr-0!">
+                  {ROLE_LABEL[user.role] ?? user.role}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label={<span className="text-ink-soft">Ngày tạo</span>}>
+                {new Date(user.createdAt).toLocaleString('vi-VN')}
+              </Descriptions.Item>
+            </Descriptions>
+          )
         )}
-      </Card>
+      </div>
 
-      <Card title="Bắt đầu từ đâu">
-        <Paragraph className="!mb-3">
+      <div className="border border-line bg-white p-5">
+        <Paragraph className="mb-3! font-bold!">Bắt đầu từ đâu</Paragraph>
+        <Paragraph className="mb-4! text-ink-soft">
           {canCreate
-            ? 'Bạn có thể soạn câu hỏi vào ngân hàng rồi lắp thành quiz, hoặc xem các quiz công khai.'
+            ? 'Soạn câu hỏi vào ngân hàng rồi lắp thành quiz, hoặc xem các quiz công khai.'
             : 'Khám phá các quiz công khai để luyện tập.'}
         </Paragraph>
         <Space wrap>
           <Link to="/quizzes">
-            <Button>Khám phá quiz</Button>
+            <Button type="primary">Khám phá quiz</Button>
           </Link>
           {canCreate && (
             <>
               <Link to="/my-quizzes">
-                <Button type="primary">Quiz của tôi</Button>
+                <Button>Quiz của tôi</Button>
               </Link>
               <Link to="/question-bank">
                 <Button>Ngân hàng câu hỏi</Button>
@@ -79,7 +93,7 @@ export default function ProfilePage() {
             Tài liệu API
           </Button>
         </Space>
-      </Card>
+      </div>
     </Space>
   )
 }

@@ -78,7 +78,7 @@ export default function QuizFormModal({ open, quiz, onClose }: Props) {
       onCancel={onClose}
       destroyOnHidden
     >
-      <Form layout="vertical" className="!mt-4">
+      <Form layout="vertical" className="mt-4!">
         <Form.Item label="Tiêu đề" validateStatus={errors.title && 'error'} help={errors.title?.message}>
           <Controller
             name="title"
