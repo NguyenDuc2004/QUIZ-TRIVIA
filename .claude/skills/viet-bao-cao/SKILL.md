@@ -54,9 +54,16 @@ Báo cáo dài → **viết theo từng phần, xác nhận xong mới sang ph�
 5. **Xuất `.docx`** theo preset trong `references/dinh-dang-haui.md` khi user yêu cầu.
 6. **Chạy checklist** dưới đây trước khi báo xong.
 
-### Khi chức năng vừa code xong (cập nhật báo cáo tăng dần)
+### Thời điểm viết báo cáo
 
-Tra bảng **"Map chức năng → mục báo cáo"** ở cuối `references/cau-truc-bao-cao.md`, cập nhật đúng các mục đó (đặc tả UC, biểu đồ, bảng CSDL, screenshot, kịch bản test), rồi nhắc user tích vào `docs/bao-cao/nhat-ky-tien-do.md`.
+**Báo cáo viết SAU CÙNG, không viết dần từng chương trong lúc code.** Trong lúc code, bằng chứng được tích lũy ở `docs/bao-cao/nhat-ky-tien-do.md` (số liệu, quyết định kỹ thuật, kết quả test, lỗi đã gặp) và `docs/bao-cao/hinh-anh/`.
+
+Cuối kỳ, sản phẩm giao là **một bộ báo cáo** gồm:
+1. File báo cáo (Markdown → `.docx`) theo khung 3 chương.
+2. Thư mục ảnh `docs/bao-cao/hinh-anh/` (sơ đồ + ảnh chụp giao diện).
+3. Tài liệu **test plan / test case** cho mục 3.4 — tổng hợp từ nhật ký + `backend/src/test/`.
+
+Khi dựng báo cáo, tra bảng **"Map chức năng → mục báo cáo"** ở cuối `references/cau-truc-bao-cao.md` để biết mỗi chức năng đã code cần đưa vào mục nào.
 
 ## Checklist trước khi giao bản báo cáo
 

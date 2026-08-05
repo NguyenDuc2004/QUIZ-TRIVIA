@@ -1,6 +1,6 @@
 package com.datn.quizai.auth.dto;
 
-import com.datn.quizai.user.Role;
+import com.datn.quizai.user.domain.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

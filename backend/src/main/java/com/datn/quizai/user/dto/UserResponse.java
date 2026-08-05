@@ -1,7 +1,7 @@
 package com.datn.quizai.user.dto;
 
-import com.datn.quizai.user.Role;
-import com.datn.quizai.user.User;
+import com.datn.quizai.user.domain.Role;
+import com.datn.quizai.user.domain.User;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;

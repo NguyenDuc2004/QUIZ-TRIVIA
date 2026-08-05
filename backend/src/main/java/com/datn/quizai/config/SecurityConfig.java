@@ -1,6 +1,6 @@
 package com.datn.quizai.config;
 
-import com.datn.quizai.auth.JwtAuthenticationFilter;
+import com.datn.quizai.auth.security.JwtAuthenticationFilter;
 import com.datn.quizai.common.dto.ApiError;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
@@ -38,10 +38,17 @@ import java.util.UUID;
 @EnableMethodSecurity   // bật @PreAuthorize cho phân quyền theo vai trò
 public class SecurityConfig {
 
-    /** Các đường dẫn GET mở cho Guest. */
+    /**
+     * Các đường dẫn GET mở cho Guest.
+     * <p>
+     * Lưu ý: {@code /api/v1/quizzes/*} chỉ trả thông tin giới thiệu quiz công khai;
+     * câu hỏi nằm ở {@code /api/v1/quizzes/{id}/questions} (không khớp mẫu này) nên
+     * vẫn yêu cầu đăng nhập + quyền sở hữu.
+     */
     private static final String[] PUBLIC_GET = {
             "/api/v1/quizzes",
             "/api/v1/quizzes/*",
+            "/api/v1/categories",
             "/actuator/health",
             "/v3/api-docs/**",
             "/swagger-ui/**",

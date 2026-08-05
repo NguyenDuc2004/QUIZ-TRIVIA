@@ -45,12 +45,12 @@
 
 ## Tuần 2 — Quiz & Câu hỏi (27/07–02/08) 🔴
 
-- **T2 27/07** — [ ] Thiết kế schema: `quiz`, `question`, `answer_option`, `category` · [ ] Migration Flyway
-- **T3 28/07** — [ ] API CRUD Quiz (Creator) · [ ] Phân trang, tìm kiếm, lọc theo danh mục
-- **T4 29/07** — [ ] API CRUD Câu hỏi (5 loại: single/multiple/true-false/fill-blank/short-answer) · [ ] Validate DTO
-- **T5 30/07** — [ ] FE: trang danh sách quiz + tìm kiếm/lọc · [ ] FE: form tạo/sửa quiz
-- **T6 31/07** — [ ] FE: form tạo/sửa câu hỏi theo từng loại · [ ] Upload ảnh cho câu hỏi (nếu cần)
-- **T7 01/08** — [ ] Phân quyền chỉnh sửa (chỉ chủ sở hữu/Admin) · [ ] Unit test QuizService
+- **T2 27/07** — [x] Thiết kế schema: `categories`, `quizzes`, `questions`, `question_options`, `quiz_questions` · [x] Migration Flyway `V2` *(xong 06/08)*
+- **T3 28/07** — [x] API CRUD Quiz (Creator) · [x] Phân trang, tìm kiếm, lọc theo danh mục & độ khó *(xong 06/08)*
+- **T4 29/07** — [x] API CRUD Câu hỏi (5 loại + luật riêng từng loại) · [x] Validate DTO *(xong 06/08)*
+- **T5 30/07** — [x] FE: trang danh sách quiz + tìm kiếm/lọc · [x] FE: form tạo/sửa quiz *(xong 06/08)*
+- **T6 31/07** — [x] FE: form câu hỏi theo từng loại + màn soạn quiz (chọn câu, đổi thứ tự) · [ ] `[tùy chọn]` Upload ảnh cho câu hỏi
+- **T7 01/08** — [x] Phân quyền chỉnh sửa (chủ sở hữu/Admin) · [x] Test: 55/55 pass (thêm 25 ca kiểm chứng HTTP) *(xong 06/08)*
 - **CN 02/08** — [ ] Đệm / review tuần
 
 **Tổng kết tuần 2:** _(...)_

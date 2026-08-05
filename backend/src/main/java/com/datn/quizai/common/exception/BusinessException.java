@@ -34,4 +34,9 @@ public class BusinessException extends RuntimeException {
     public static BusinessException badRequest(String message) {
         return new BusinessException(HttpStatus.BAD_REQUEST, message);
     }
+
+    /** Đã đăng nhập nhưng không phải chủ sở hữu tài nguyên / thiếu quyền. */
+    public static BusinessException forbidden(String message) {
+        return new BusinessException(HttpStatus.FORBIDDEN, message);
+    }
 }

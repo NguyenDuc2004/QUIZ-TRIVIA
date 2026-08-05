@@ -69,7 +69,8 @@ Thứ tự bắt buộc trong mỗi lát cắt:
 3. **Frontend** — `frontend/src/features/<feature>/` : api client → hooks (TanStack Query) → components → pages → gắn route (skill `react-feature`).
 4. **Nối FE ↔ BE** — chạy thật, bấm được happy path trên trình duyệt.
 5. **Test & chạy test** — viết test theo tầng rồi **chạy cho pass** (skill `backend-testing`): Service (Mockito) → Repository (`@DataJpaTest` + Testcontainers) → Controller (`@WebMvcTest`) → Security/STOMP/SSE nếu tính năng có.
-6. **Cập nhật tài liệu** — `docs/bao-cao/nhat-ky-tien-do.md` (tích `[x]`, ghi chú số liệu) + mục báo cáo tương ứng theo bảng "Map chức năng → mục báo cáo" (skill `viet-bao-cao`) + `docs/ke-hoach-tien-do.md`.
+6. **Cập nhật tài liệu & thu bằng chứng** — `docs/bao-cao/nhat-ky-tien-do.md` (tích `[x]`, ghi số liệu + quyết định kỹ thuật) và `docs/ke-hoach-tien-do.md`; lưu ảnh chụp giao diện vào `docs/bao-cao/hinh-anh/`.
+   > **Báo cáo ĐATN viết sau cùng**, không viết dần từng chương. Cuối kỳ mới tổng hợp thành một bộ gồm: file báo cáo + thư mục ảnh + tài liệu test plan / test case. Vì vậy trong mỗi lát cắt chỉ cần **ghi đủ bằng chứng** (số liệu, kết quả test, ảnh) để cuối kỳ dựng lại được, đừng dừng lại soạn chương báo cáo.
 
 ### Định nghĩa "xong" (Definition of Done) của một tính năng
 
@@ -78,7 +79,7 @@ Thứ tự bắt buộc trong mỗi lát cắt:
 - [ ] UI gọi được API, happy path chạy mượt trên trình duyệt
 - [ ] Test đã viết **và đã chạy pass** (không chỉ viết rồi để đó)
 - [ ] Phân quyền đúng vai trò (Guest/Learner/Creator/Admin)
-- [ ] Nhật ký tiến độ + mục báo cáo liên quan đã cập nhật
+- [ ] Nhật ký tiến độ đã cập nhật (kèm số liệu/kết quả test làm bằng chứng cho báo cáo cuối kỳ)
 - [ ] Commit theo Conventional Commits (§3)
 
 > Chỉ khi cả 7 mục trên đã ✅ mới được bắt đầu tính năng kế tiếp. Nếu bị chặn, ghi `[!]` vào nhật ký kèm lý do thay vì bỏ dở sang việc khác.

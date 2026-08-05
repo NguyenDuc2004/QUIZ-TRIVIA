@@ -30,14 +30,19 @@ SV Nguyễn Khắc Minh Đức · GVHD ThS. Nguyễn Đức Lưu · Thời gian 
 ## 3. Cấu trúc thư mục
 
 ```
-backend/src/main/java/com/datn/quizai/{config,auth,user,quiz,attempt,realtime,ai,recommend,analytics,common}
-backend/src/main/resources/db/migration/V{n}__*.sql     # Flyway
-frontend/src/features/<feature>/{api,components,hooks,pages}
-frontend/src/shared/                                     # dùng chung
+backend/src/main/java/com/datn/quizai/
+   <feature>/{controller,service,repository,domain,dto}   # nhóm theo tính năng, trong đó chia theo tầng
+   config/ · common/                                      # KHÔNG chia tầng (không phải tính năng)
+backend/src/main/resources/db/migration/V{n}__*.sql       # Flyway
+backend/src/test/java/...                                 # phản chiếu đúng cấu trúc trên
+frontend/src/features/<feature>/{api,components,hooks,pages,store}
+frontend/src/shared/                                       # dùng chung
 docs/ · infra/ · docker-compose.yml
 ```
 
-Một tính năng = **thêm package vào `backend/` + thêm folder vào `frontend/src/features/`**, tên trùng nhau. Không tạo repo/thư mục riêng cho từng tính năng.
+Tính năng đã có: `auth`, `user`, `quiz`. Sắp tới: `attempt`, `realtime`, `ai`, `recommend`, `analytics` — xem cây đầy đủ ở [architecture.md §3](docs/architecture.md).
+
+Một tính năng = **thêm package vào `backend/` (kèm 5 thư mục tầng) + thêm folder vào `frontend/src/features/`**, tên trùng nhau. Không tạo repo/thư mục riêng cho từng tính năng.
 
 ## 4. Quy trình bắt buộc — lát cắt dọc
 
