@@ -1,0 +1,105 @@
+package com.datn.quizai.common.exception;
+
+import com.datn.quizai.common.dto.ApiError;
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+/** Chuyển mọi exception thành response lỗi chuẩn (docs/api.md §10). */
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiError> handleBusiness(BusinessException ex, HttpServletRequest request) {
+        String traceId = newTraceId();
+        log.warn("[{}] {} {} → {}: {}", traceId, request.getMethod(), request.getRequestURI(),
+                ex.getStatus().value(), ex.getMessage());
+        return ResponseEntity.status(ex.getStatus()).body(ApiError.of(
+                ex.getStatus().value(), ex.getStatus().getReasonPhrase(), ex.getMessage(),
+                request.getRequestURI(), traceId));
+    }
+
+    /** Lỗi validate DTO request → 400 kèm chi tiết từng field. */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex,
+                                                     HttpServletRequest request) {
+        Map<String, String> fieldErrors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors()
+                .forEach(fe -> fieldErrors.putIfAbsent(fe.getField(), fe.getDefaultMessage()));
+
+        String traceId = newTraceId();
+        log.warn("[{}] Dữ liệu không hợp lệ tại {}: {}", traceId, request.getRequestURI(), fieldErrors);
+        return ResponseEntity.badRequest().body(ApiError.validation(
+                "Dữ liệu gửi lên không hợp lệ", request.getRequestURI(), traceId, fieldErrors));
+    }
+
+    /** Body không đọc được (JSON sai cú pháp, sai encoding, thiếu body) → 400 chứ không phải 500. */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException ex,
+                                                        HttpServletRequest request) {
+        String traceId = newTraceId();
+        log.warn("[{}] Không đọc được body tại {}: {}", traceId, request.getRequestURI(),
+                ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.badRequest().body(ApiError.of(
+                400, "Bad Request", "Nội dung gửi lên không đọc được (JSON không hợp lệ hoặc sai bảng mã UTF-8)",
+                request.getRequestURI(), traceId));
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiError> handleBadCredentials(BadCredentialsException ex,
+                                                        HttpServletRequest request) {
+        String traceId = newTraceId();
+        log.warn("[{}] Đăng nhập thất bại tại {}", traceId, request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiError.of(
+                401, "Unauthorized", "Email hoặc mật khẩu không đúng",
+                request.getRequestURI(), traceId));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex,
+                                                      HttpServletRequest request) {
+        String traceId = newTraceId();
+        log.warn("[{}] Truy cập bị từ chối tại {}", traceId, request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of(
+                403, "Forbidden", "Bạn không có quyền thực hiện hành động này",
+                request.getRequestURI(), traceId));
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ApiError> handleNotFound(NoHandlerFoundException ex,
+                                                  HttpServletRequest request) {
+        String traceId = newTraceId();
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(
+                404, "Not Found", "Không tìm thấy tài nguyên", request.getRequestURI(), traceId));
+    }
+
+    /** Chốt cuối: không để lộ stack trace ra client, nhưng phải log đầy đủ kèm traceId. */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleUnexpected(Exception ex, HttpServletRequest request) {
+        String traceId = newTraceId();
+        log.error("[{}] Lỗi không lường trước tại {} {}", traceId, request.getMethod(),
+                request.getRequestURI(), ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiError.of(
+                500, "Internal Server Error", "Đã có lỗi xảy ra, vui lòng thử lại sau",
+                request.getRequestURI(), traceId));
+    }
+
+    private String newTraceId() {
+        return UUID.randomUUID().toString().substring(0, 8);
+    }
+}

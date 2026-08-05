@@ -36,7 +36,7 @@
 
 | Thành phần | Công nghệ |
 |-----------|-----------|
-| Framework | React 18 + TypeScript |
+| Framework | React 19 + TypeScript |
 | Build tool | Vite |
 | Data fetching | TanStack Query (React Query) |
 | State | Zustand |
@@ -47,14 +47,14 @@
 | Real-time | `@stomp/stompjs` + SockJS |
 | Streaming | EventSource (SSE) cho chatbot |
 
-> **Antd + Tailwind:** Dùng Ant Design cho component (Table, Form, Modal…), Tailwind chỉ cho layout/spacing.
-> Tắt Tailwind Preflight (`corePlugins: { preflight: false }` trong `tailwind.config`) để tránh reset CSS đè lên style của Antd. Tùy biến theme qua `ConfigProvider` của Antd.
+> **Antd + Tailwind:** Dùng Ant Design v6 cho component (Table, Form, Modal…), Tailwind v4 chỉ cho layout/spacing.
+> Tailwind v4 không còn `tailwind.config.js`; để **không nạp Preflight** (reset CSS sẽ đè style của Antd), trong `src/index.css` chỉ import `theme.css` + `utilities.css` thay vì `tailwindcss`. Tùy biến theme qua `ConfigProvider` của Antd.
 
 ## 4. Hạ tầng & CSDL
 
 | Thành phần | Công nghệ | Vai trò |
 |-----------|-----------|---------|
-| CSDL quan hệ | **PostgreSQL 16 + pgvector** | Dữ liệu nghiệp vụ + vector học liệu |
+| CSDL quan hệ | **PostgreSQL 16 + pgvector** | Dữ liệu nghiệp vụ + vector học liệu (cổng 5432) |
 | CSDL đồ thị | **Neo4j 5** | Hành vi, gợi ý, lộ trình học |
 | Cache / Real-time | **Redis** | Cache, session, quota, trạng thái phòng, Pub/Sub |
 | Container | Docker + Docker Compose | Chạy toàn bộ stack local |
@@ -65,7 +65,8 @@
 
 ```
 # Database
-POSTGRES_URL, POSTGRES_USER, POSTGRES_PASSWORD
+POSTGRES_URL   # jdbc:postgresql://localhost:5432/quizdb
+POSTGRES_USER, POSTGRES_PASSWORD
 NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
 REDIS_HOST, REDIS_PORT
 

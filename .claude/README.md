@@ -28,6 +28,10 @@ Quy trình tái sử dụng, tự kích hoạt theo ngữ cảnh hoặc gọi `/
 | `neo4j-cypher` | Truy vấn/đồng bộ đồ thị Neo4j |
 | `rest-api-conventions` | Thiết kế/rà soát REST endpoint |
 | `react-feature` | Tạo tính năng frontend |
+| `backend-testing` | Viết test theo tầng cho từng chức năng backend (JUnit/Mockito/Testcontainers/STOMP/SSE) |
+| `data-seeding` | Seed dữ liệu mẫu (OpenTDB, generator user/attempt, học liệu RAG) |
+| `eval-and-load-test` | Load test real-time (P95/throughput) + đánh giá độ chính xác AI → số liệu báo cáo |
+| `viet-bao-cao` | Viết báo cáo ĐATN theo khung 3 chương HaUI + xuất Word đúng định dạng |
 
 ## Nguồn mã nguồn mở tham khảo
 - [rrezartprebreza/spring-boot-skills](https://github.com/rrezartprebreza/spring-boot-skills) — skills Spring Boot (layered, JWT, Flyway, Redis, Spring AI, testing). Khớp stack nhất.

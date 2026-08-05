@@ -4,33 +4,55 @@ REST, prefix `/api/v1`, trả JSON, xác thực Bearer JWT. Tài liệu tự sin
 
 ## 1. Xác thực — `/auth`
 ```
-POST   /api/v1/auth/register        Đăng ký
-POST   /api/v1/auth/login           Đăng nhập → access + refresh token
-POST   /api/v1/auth/refresh         Làm mới token
-POST   /api/v1/auth/logout          Đăng xuất
-POST   /api/v1/auth/forgot-password Quên mật khẩu
-POST   /api/v1/auth/reset-password  Đặt lại mật khẩu
+POST   /api/v1/auth/register        Đăng ký → 201 + access & refresh token          ✅
+POST   /api/v1/auth/login           Đăng nhập → access + refresh token              ✅
+POST   /api/v1/auth/refresh         Làm mới token (rotation: token cũ bị thu hồi)   ✅
+POST   /api/v1/auth/logout          Đăng xuất → 204, thu hồi refresh token          ✅
+POST   /api/v1/auth/change-password Đổi mật khẩu (cần đăng nhập) → 204              ✅
+POST   /api/v1/auth/forgot-password Quên mật khẩu                                   ⏳ cần cấu hình SMTP
+POST   /api/v1/auth/reset-password  Đặt lại mật khẩu bằng token gửi qua email       ⏳ cần cấu hình SMTP
 ```
+> `register`, `login`, `refresh`, `logout` mở cho Guest; `change-password` yêu cầu Bearer token.
+> Access token sống 15 phút, refresh token 14 ngày (lưu Redis key `session:{token}`).
 
 ## 2. Người dùng — `/users`
 ```
-GET    /api/v1/users/me             Hồ sơ hiện tại
-PUT    /api/v1/users/me             Cập nhật hồ sơ
-GET    /api/v1/users/me/progress    Tiến độ học tập
+GET    /api/v1/users/me             Hồ sơ hiện tại                                  ✅
+PUT    /api/v1/users/me             Cập nhật tên hiển thị / ảnh đại diện            ✅
+GET    /api/v1/users/me/progress    Tiến độ học tập                                 ⏳ sau khi có attempt
 ```
 
-## 3. Quiz & Câu hỏi — `/quizzes`, `/questions`
+## 3. Danh mục, Quiz & Câu hỏi
 ```
-GET    /api/v1/quizzes              Danh sách (filter: category, difficulty, q)
-POST   /api/v1/quizzes              Tạo quiz
-GET    /api/v1/quizzes/{id}         Chi tiết
-PUT    /api/v1/quizzes/{id}         Cập nhật
-DELETE /api/v1/quizzes/{id}         Xóa
-GET    /api/v1/questions            Ngân hàng câu hỏi
-POST   /api/v1/questions            Tạo câu hỏi
-PUT    /api/v1/questions/{id}       Sửa
-DELETE /api/v1/questions/{id}       Xóa
+GET    /api/v1/categories               Danh mục (công khai)                            ✅
+
+GET    /api/v1/quizzes                  Danh sách (categoryId, difficulty, q, mine)     ✅
+GET    /api/v1/quizzes/{id}             Giới thiệu quiz, KHÔNG kèm câu hỏi              ✅
+GET    /api/v1/quizzes/{id}/questions   Câu hỏi + đáp án đúng (chủ sở hữu/Admin)        ✅
+POST   /api/v1/quizzes                  Tạo quiz (mặc định PRIVATE)                     ✅
+PUT    /api/v1/quizzes/{id}             Cập nhật metadata                               ✅
+PUT    /api/v1/quizzes/{id}/questions   Đặt lại danh sách & thứ tự câu hỏi              ✅
+DELETE /api/v1/quizzes/{id}             Xóa quiz (câu hỏi vẫn còn trong ngân hàng)      ✅
+
+GET    /api/v1/questions                Ngân hàng câu hỏi của tôi (type, difficulty,
+                                        topic, q + phân trang)                          ✅
+POST   /api/v1/questions                Tạo câu hỏi                                     ✅
+GET    /api/v1/questions/{id}           Chi tiết câu hỏi                                ✅
+PUT    /api/v1/questions/{id}           Sửa (thay toàn bộ lựa chọn)                     ✅
+DELETE /api/v1/questions/{id}           Xóa — 409 nếu đang dùng trong quiz              ✅
 ```
+
+**Quyền:** `GET /categories`, `GET /quizzes`, `GET /quizzes/{id}` mở cho Guest (quiz PRIVATE của người khác trả **404**). Còn lại yêu cầu vai trò **CREATOR/ADMIN** và **quyền sở hữu** (sửa/xóa của người khác → **403**). `GET /quizzes?mine=true` yêu cầu đăng nhập.
+
+**Luật theo loại câu hỏi** (validate ở service, trả 400 nếu vi phạm):
+
+| Loại | Ràng buộc |
+|---|---|
+| `SINGLE_CHOICE` | ≥ 2 lựa chọn, đúng 1 đáp án đúng |
+| `MULTIPLE_CHOICE` | ≥ 3 lựa chọn, ≥ 2 đáp án đúng, còn ≥ 1 lựa chọn sai |
+| `TRUE_FALSE` | đúng 2 lựa chọn, 1 đáp án đúng |
+| `FILL_BLANK` | ≥ 1 đáp án; hệ thống tự đánh dấu tất cả là đúng (các cách viết được chấp nhận) |
+| `SHORT_ANSWER` | đúng 1 đáp án mẫu, dùng làm căn cứ khi AI chấm |
 
 ## 4. Chơi quiz (đơn) — `/attempts`
 ```

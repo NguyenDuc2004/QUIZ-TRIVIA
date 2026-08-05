@@ -1,0 +1,16 @@
+/*
+ * Tailwind v4 — CHỈ nạp theme + utilities, KHÔNG nạp preflight.
+ * Lý do: preflight reset CSS sẽ đè lên style của Ant Design (xem docs/tech-stack.md §3).
+ * Tailwind dùng cho layout/spacing; component lấy từ Ant Design.
+ */
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}

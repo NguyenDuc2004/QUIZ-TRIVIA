@@ -1,0 +1,269 @@
+import { useEffect } from 'react'
+import { Controller, useFieldArray, useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Radio,
+  Select,
+  Space,
+} from 'antd'
+import type { Question, QuestionBody, QuestionType } from '../api/quizApi'
+import { DIFFICULTY_OPTIONS, QUESTION_TYPE_HINT, QUESTION_TYPE_OPTIONS } from '../constants'
+import { useCreateQuestion, useUpdateQuestion } from '../hooks/useQuizQueries'
+import { questionSchema, type QuestionForm } from '../schema'
+
+interface Props {
+  open: boolean
+  /** null = tạo mới */
+  question: Question | null
+  onClose: () => void
+}
+
+/** Bộ lựa chọn mặc định khi đổi loại câu hỏi. */
+function defaultOptions(type: QuestionType) {
+  switch (type) {
+    case 'TRUE_FALSE':
+      return [
+        { content: 'Đúng', correct: true },
+        { content: 'Sai', correct: false },
+      ]
+    case 'SINGLE_CHOICE':
+      return [
+        { content: '', correct: true },
+        { content: '', correct: false },
+      ]
+    case 'MULTIPLE_CHOICE':
+      return [
+        { content: '', correct: true },
+        { content: '', correct: true },
+        { content: '', correct: false },
+      ]
+    case 'FILL_BLANK':
+      return [{ content: '', correct: true }]
+    case 'SHORT_ANSWER':
+      return [{ content: '', correct: true }]
+  }
+}
+
+export default function QuestionFormModal({ open, question, onClose }: Props) {
+  const createQuestion = useCreateQuestion()
+  const updateQuestion = useUpdateQuestion()
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<QuestionForm>({
+    resolver: zodResolver(questionSchema),
+    defaultValues: {
+      type: 'SINGLE_CHOICE',
+      content: '',
+      explanation: '',
+      difficulty: 'MEDIUM',
+      topic: '',
+      points: 1,
+      options: defaultOptions('SINGLE_CHOICE'),
+    },
+  })
+
+  const { fields, append, remove, replace } = useFieldArray({ control, name: 'options' })
+  const type = watch('type')
+  const options = watch('options')
+
+  useEffect(() => {
+    if (!open) return
+    reset({
+      type: question?.type ?? 'SINGLE_CHOICE',
+      content: question?.content ?? '',
+      explanation: question?.explanation ?? '',
+      difficulty: question?.difficulty ?? 'MEDIUM',
+      topic: question?.topic ?? '',
+      points: question?.points ?? 1,
+      options: question
+        ? question.options.map((o) => ({ content: o.content, correct: o.correct }))
+        : defaultOptions('SINGLE_CHOICE'),
+    })
+  }, [open, question, reset])
+
+  /** Đổi loại câu hỏi → dựng lại bộ lựa chọn cho khớp luật của loại đó. */
+  const handleTypeChange = (nextType: QuestionType) => {
+    setValue('type', nextType)
+    replace(defaultOptions(nextType))
+  }
+
+  const submit = handleSubmit(async (values) => {
+    const body: QuestionBody = {
+      type: values.type,
+      content: values.content,
+      explanation: values.explanation || null,
+      difficulty: values.difficulty,
+      topic: values.topic || null,
+      points: values.points,
+      options: values.options.map((o) => ({ content: o.content, correct: o.correct })),
+    }
+
+    if (question) {
+      await updateQuestion.mutateAsync({ id: question.id, body })
+    } else {
+      await createQuestion.mutateAsync(body)
+    }
+    onClose()
+  })
+
+  const isChoiceBased = type === 'SINGLE_CHOICE' || type === 'MULTIPLE_CHOICE' || type === 'TRUE_FALSE'
+  const canAddOption = type !== 'TRUE_FALSE' && type !== 'SHORT_ANSWER'
+
+  return (
+    <Modal
+      open={open}
+      width={720}
+      title={question ? 'Sửa câu hỏi' : 'Thêm câu hỏi vào ngân hàng'}
+      okText={question ? 'Lưu' : 'Thêm'}
+      cancelText="Hủy"
+      confirmLoading={createQuestion.isPending || updateQuestion.isPending}
+      onOk={submit}
+      onCancel={onClose}
+      destroyOnHidden
+    >
+      <Form layout="vertical" className="!mt-4">
+        <Form.Item label="Loại câu hỏi">
+          <Select value={type} options={QUESTION_TYPE_OPTIONS} onChange={handleTypeChange} />
+        </Form.Item>
+
+        <Alert type="info" showIcon className="!mb-4" message={QUESTION_TYPE_HINT[type]} />
+
+        <Form.Item
+          label="Nội dung câu hỏi"
+          validateStatus={errors.content && 'error'}
+          help={errors.content?.message}
+        >
+          <Controller
+            name="content"
+            control={control}
+            render={({ field }) => <Input.TextArea {...field} rows={2} />}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label={
+            type === 'FILL_BLANK'
+              ? 'Các đáp án được chấp nhận'
+              : type === 'SHORT_ANSWER'
+                ? 'Đáp án mẫu'
+                : 'Các lựa chọn'
+          }
+          validateStatus={errors.options && 'error'}
+          help={errors.options?.message ?? (errors.options as unknown as { root?: { message?: string } })?.root?.message}
+        >
+          <Space direction="vertical" className="w-full">
+            {fields.map((fieldItem, index) => (
+              <Space key={fieldItem.id} align="start" className="w-full">
+                {/* Đánh dấu đáp án đúng: radio cho loại 1 đáp án, checkbox cho loại nhiều đáp án */}
+                {isChoiceBased &&
+                  (type === 'MULTIPLE_CHOICE' ? (
+                    <Controller
+                      name={`options.${index}.correct`}
+                      control={control}
+                      render={({ field }) => (
+                        <Checkbox
+                          checked={field.value}
+                          onChange={(event) => field.onChange(event.target.checked)}
+                        />
+                      )}
+                    />
+                  ) : (
+                    <Radio
+                      checked={options?.[index]?.correct ?? false}
+                      onChange={() =>
+                        replace(
+                          (options ?? []).map((option, i) => ({ ...option, correct: i === index })),
+                        )
+                      }
+                    />
+                  ))}
+
+                <Controller
+                  name={`options.${index}.content`}
+                  control={control}
+                  render={({ field }) =>
+                    type === 'SHORT_ANSWER' ? (
+                      <Input.TextArea {...field} rows={2} style={{ width: 560 }} />
+                    ) : (
+                      <Input
+                        {...field}
+                        style={{ width: 520 }}
+                        disabled={type === 'TRUE_FALSE'}
+                        placeholder={
+                          type === 'FILL_BLANK' ? 'Một cách viết đáp án được chấp nhận' : 'Nội dung lựa chọn'
+                        }
+                      />
+                    )
+                  }
+                />
+
+                {canAddOption && fields.length > 1 && (
+                  <Button type="text" danger onClick={() => remove(index)}>
+                    Xóa
+                  </Button>
+                )}
+              </Space>
+            ))}
+
+            {canAddOption && (
+              <Button type="dashed" onClick={() => append({ content: '', correct: false })}>
+                + {type === 'FILL_BLANK' ? 'Thêm đáp án được chấp nhận' : 'Thêm lựa chọn'}
+              </Button>
+            )}
+          </Space>
+        </Form.Item>
+
+        <Space size="large" align="start" className="w-full">
+          <Form.Item label="Độ khó">
+            <Controller
+              name="difficulty"
+              control={control}
+              render={({ field }) => (
+                <Radio.Group {...field} optionType="button" options={DIFFICULTY_OPTIONS} />
+              )}
+            />
+          </Form.Item>
+
+          <Form.Item label="Điểm" validateStatus={errors.points && 'error'} help={errors.points?.message}>
+            <Controller
+              name="points"
+              control={control}
+              render={({ field }) => (
+                <InputNumber {...field} min={1} onChange={(value) => field.onChange(value ?? 1)} />
+              )}
+            />
+          </Form.Item>
+
+          <Form.Item label="Chủ đề" help="Dùng để lọc và cho hệ gợi ý Neo4j sau này">
+            <Controller
+              name="topic"
+              control={control}
+              render={({ field }) => <Input {...field} placeholder="Ví dụ: Vòng lặp" style={{ width: 220 }} />}
+            />
+          </Form.Item>
+        </Space>
+
+        <Form.Item label="Giải thích đáp án" help="Hiện cho người học sau khi nộp bài">
+          <Controller
+            name="explanation"
+            control={control}
+            render={({ field }) => <Input.TextArea {...field} rows={2} />}
+          />
+        </Form.Item>
+      </Form>
+    </Modal>
+  )
+}

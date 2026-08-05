@@ -46,12 +46,25 @@
 
 ## 3. Cấu trúc package backend
 
+**Nguyên tắc:** nhóm theo **tính năng**, bên trong mỗi tính năng chia tiếp theo **tầng** (`controller` / `service` / `repository` / `domain` / `dto`). Nhờ vậy sửa một tính năng chỉ mở một thư mục, mà vẫn thấy rõ ranh giới các tầng.
+
 ```
 com.datn.quizai
-├── config          # SecurityConfig, WebSocketConfig, CorsConfig, OpenApiConfig, AsyncConfig, CacheConfig
+├── config          # SecurityConfig, OpenApiConfig, DotenvEnvironmentPostProcessor,
+│                   # (sau) WebSocketConfig, AsyncConfig, CacheConfig
 ├── auth            # Xác thực, JWT, RBAC
-├── user            # Quản lý người dùng, hồ sơ
-├── quiz            # Quiz, Question, QuestionOption, Category
+│   ├── controller  #   AuthController
+│   ├── service     #   AuthService, JwtService, RefreshTokenService
+│   ├── security    #   JwtAuthenticationFilter
+│   └── dto         #   RegisterRequest, LoginRequest, AuthResponse...
+├── user            # Người dùng, hồ sơ
+│   ├── controller · service · repository · domain (User, Role) · dto
+├── quiz            # Quiz, Question, QuestionOption, QuizQuestion, Category
+│   ├── controller  #   QuizController, QuestionController, CategoryController
+│   ├── service     #   QuizService, QuestionService, CategoryService
+│   ├── repository  #   QuizRepository, QuestionRepository, CategoryRepository
+│   ├── domain      #   entity + enum (Difficulty, Visibility, QuestionType, QuestionSource)
+│   └── dto
 ├── attempt         # Làm bài, chấm điểm, lịch sử (attempt, attempt_answer)
 ├── realtime        # Multiplayer: WebSocket (STOMP), Room, GameEngine, Redis Pub/Sub
 ├── ai              # Lớp AI
@@ -62,9 +75,12 @@ com.datn.quizai
 │   └── chat        #   Trợ lý học tập RAG chatbot (SSE)
 ├── recommend       # Gợi ý cá nhân hóa dựa trên Neo4j (graph repository, Cypher)
 ├── analytics       # Thống kê, báo cáo
-├── common          # Exception handler, DTO chung, tiện ích, base entity
+├── common          # BaseEntity, OwnershipGuard, dto/ (ApiError, PageResponse), exception/
 └── QuizAiApplication.java
 ```
+
+> `common` và `config` **không** chia theo tầng vì không phải tính năng nghiệp vụ.
+> Thư mục test trong `src/test/java` phản chiếu đúng cấu trúc này.
 
 ## 4. Các luồng dữ liệu quan trọng
 
