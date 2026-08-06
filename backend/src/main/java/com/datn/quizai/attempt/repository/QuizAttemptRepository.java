@@ -87,6 +87,10 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, UUID> 
      * Bảng xếp hạng một quiz (FR-19): mỗi người chỉ lấy <b>một</b> bài tốt nhất —
      * điểm cao nhất, đồng điểm thì bài nộp sớm hơn xếp trên.
      * <p>
+     * <b>Loại bài của chính chủ quiz</b> ({@code a.user_id <> q.owner_id}): họ soạn đề nên biết
+     * trước đáp án, để lên bảng thì cuộc đua mất công bằng. Chủ quiz vẫn làm bài và xem điểm của
+     * mình trong lịch sử bình thường.
+     * <p>
      * Viết bằng SQL thuần vì JPQL không có {@code distinct on} của PostgreSQL.
      */
     @Query(value = """
@@ -95,8 +99,10 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, UUID> 
                    a.started_at, a.submitted_at
             from quiz_attempts a
                      join users u on u.id = a.user_id
+                     join quizzes q on q.id = a.quiz_id
             where a.quiz_id = :quizId
               and a.status in ('SUBMITTED', 'EXPIRED')
+              and a.user_id <> q.owner_id
             order by a.user_id, a.total_score desc, a.submitted_at asc
             """, nativeQuery = true)
     List<LeaderboardRow> findBestAttemptPerUser(@Param("quizId") UUID quizId);

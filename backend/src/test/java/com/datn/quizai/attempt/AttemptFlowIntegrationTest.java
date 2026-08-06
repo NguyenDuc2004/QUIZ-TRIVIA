@@ -416,6 +416,44 @@ class AttemptFlowIntegrationTest {
                 .andExpect(jsonPath("$[1].totalScore").value(0));
     }
 
+    @Test
+    @DisplayName("Bài của chính chủ quiz không lên bảng xếp hạng (biết trước đáp án)")
+    void shouldExcludeQuizOwnerFromLeaderboard() throws Exception {
+        String quizId = createQuiz("Quiz chủ tự làm", "PUBLIC", null);
+        String questionId = createQuestion("SINGLE_CHOICE", "Câu chủ quiz tự làm", 5);
+        attachQuestions(quizId, questionId);
+
+        // Chủ quiz làm và được điểm tuyệt đối
+        JsonNode ownerAttempt = startAttempt(quizId, "EXAM", creatorToken);
+        String ownerAttemptId = ownerAttempt.get("attempt").get("id").asText();
+        answerWithCorrectOptions(ownerAttemptId, questionId, creatorToken);
+        submit(ownerAttemptId, creatorToken);
+
+        // Bảng xếp hạng vẫn rỗng vì chưa có người học nào nộp
+        mockMvc.perform(get("/api/v1/quizzes/{id}/leaderboard", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        // Người học nộp bài 0 điểm vẫn đứng hạng 1, không bị bài tuyệt đối của chủ quiz chen lên
+        JsonNode learnerAttempt = startAttempt(quizId, "EXAM", learnerToken);
+        submit(learnerAttempt.get("attempt").get("id").asText(), learnerToken);
+
+        mockMvc.perform(get("/api/v1/quizzes/{id}/leaderboard", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].rank").value(1))
+                .andExpect(jsonPath("$[0].totalScore").value(0));
+
+        // Chủ quiz vẫn thấy điểm của mình trong lịch sử cá nhân
+        mockMvc.perform(get("/api/v1/attempts").param("quizId", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].totalScore").value(5));
+    }
+
     // ===== Helper =====
 
     private String register(String email, String role) throws Exception {
@@ -500,12 +538,17 @@ class AttemptFlowIntegrationTest {
      * Bài đang làm không trả về cờ đúng/sai, nên lấy đáp án đúng từ API dành cho chủ quiz.
      */
     private void answerWithCorrectOptions(String attemptId, String questionId) throws Exception {
+        answerWithCorrectOptions(attemptId, questionId, learnerToken);
+    }
+
+    private void answerWithCorrectOptions(String attemptId, String questionId, String token)
+            throws Exception {
         List<String> correctIds = correctOptionIdsOf(questionId);
         String payload = "{\"questionId\":\"%s\",\"optionIds\":[\"%s\"]}"
                 .formatted(questionId, String.join("\",\"", correctIds));
 
         mockMvc.perform(post("/api/v1/attempts/{id}/answers", attemptId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk());

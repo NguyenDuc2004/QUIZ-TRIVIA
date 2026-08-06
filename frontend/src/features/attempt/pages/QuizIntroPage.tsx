@@ -62,7 +62,7 @@ export default function QuizIntroPage() {
         <Alert
           type="info"
           showIcon
-          message="Đây là quiz của bạn. Bạn vẫn làm bài được để tự kiểm đề — đáp án bị giấu y như với người học, và bài của bạn cũng lên bảng xếp hạng."
+          message="Đây là quiz của bạn. Bạn vẫn làm bài được để tự kiểm đề — đáp án bị giấu y như với người học. Bài của bạn không tính vào bảng xếp hạng vì bạn đã biết trước đáp án."
           action={
             <Link to={`/my-quizzes/${quizId}`}>
               <Button size="small">Soạn câu hỏi</Button>
@@ -110,7 +110,11 @@ export default function QuizIntroPage() {
                 emptyText: (
                   <EmptyState
                     title="Chưa ai hoàn thành quiz này"
-                    hint="Nộp bài đầu tiên để đứng đầu bảng."
+                    hint={
+                      isOwner
+                        ? 'Bảng xếp hạng chỉ tính bài của người học khác, không tính bài của bạn.'
+                        : 'Nộp bài đầu tiên để đứng đầu bảng.'
+                    }
                   />
                 ),
               }}

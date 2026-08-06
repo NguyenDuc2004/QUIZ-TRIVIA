@@ -68,7 +68,7 @@
 - **CN 09/08** — [ ] Đệm / review tuần
 
 **Tổng kết tuần 3:** Làm gộp trong ngày 06/08, sớm hơn kế hoạch. Xong FR-13…FR-19 (trừ xếp hạng theo
-danh mục và giờ riêng từng câu). 85/85 test pass, 48/48 ca kiểm chứng HTTP thật.
+danh mục và giờ riêng từng câu). 86/86 test pass, 48/48 ca kiểm chứng HTTP thật.
 Còn nợ: chấm tự luận bằng AI (features/06) và xem lại giao diện bằng mắt trên trình duyệt.
 — **Mốc: xong nền web cơ bản (auth + quiz + chơi đơn).** ✅
 

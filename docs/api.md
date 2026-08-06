@@ -61,14 +61,15 @@ GET    /api/v1/attempts/{id}            Bài làm: chưa nộp = đề, đã n�
 POST   /api/v1/attempts/{id}/answers    Trả lời một câu                            ✅
 POST   /api/v1/attempts/{id}/submit     Nộp bài & chấm                             ✅
 GET    /api/v1/attempts                 Lịch sử làm bài của tôi (quizId + trang)   ✅
-GET    /api/v1/quizzes/{id}/leaderboard Bảng xếp hạng (tối đa 50 dòng)             ✅
+GET    /api/v1/quizzes/{id}/leaderboard Xếp hạng người học, tối đa 50 dòng         ✅
 ```
 
 **Quyền:** toàn bộ mục này yêu cầu **đăng nhập** — Guest không làm bài, không xem bảng xếp hạng.
 Quiz PRIVATE của người khác trả **404**. Bài làm là dữ liệu riêng: người khác *và cả chủ quiz/Admin*
 truy cập đều nhận **404** (thống kê cho Creator nằm ở features/09).
 Không giới hạn theo vai trò: **chủ quiz làm được bài trên quiz của mình** (kể cả PRIVATE) để tự kiểm đề,
-và cũng bị giấu đáp án như mọi người.
+và cũng bị giấu đáp án như mọi người — nhưng bài của họ **không lên bảng xếp hạng** vì đã biết trước
+đáp án (điểm vẫn lưu trong lịch sử cá nhân).
 
 **Chế độ (`mode`)**
 
