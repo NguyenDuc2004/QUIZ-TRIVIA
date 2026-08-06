@@ -10,9 +10,14 @@ POST   /api/v1/auth/refresh         Làm mới token (rotation: token cũ bị t
 POST   /api/v1/auth/logout          Đăng xuất → 204, thu hồi refresh token          ✅
 POST   /api/v1/auth/logout-all       Đăng xuất mọi thiết bị (mất máy)                ✅
 POST   /api/v1/auth/change-password Đổi mật khẩu (cần đăng nhập) → 204              ✅
-POST   /api/v1/auth/forgot-password Quên mật khẩu                                   ⏳ cần cấu hình SMTP
-POST   /api/v1/auth/reset-password  Đặt lại mật khẩu bằng token gửi qua email       ⏳ cần cấu hình SMTP
+POST   /api/v1/auth/forgot-password Gửi mã OTP đặt lại mật khẩu → 204               ✅
+POST   /api/v1/auth/reset-password  Đặt lại mật khẩu bằng mã OTP → 204              ✅
 ```
+
+**Quên mật khẩu (FR-4).** `forgot-password` **luôn trả 204** dù email có tài khoản hay không — báo
+"email không tồn tại" là mở đường cho việc dò danh sách người dùng. Mã 6 chữ số, sống 10 phút, dùng
+một lần; sai quá 5 lần thì mã bị huỷ; xin mã lại trong vòng 60 giây trả **429**. Đặt lại thành công
+sẽ **thu hồi phiên trên mọi thiết bị**.
 > `register`, `login`, `refresh`, `logout` mở cho Guest; `change-password` yêu cầu Bearer token.
 > Access token sống 15 phút, refresh token 14 ngày (lưu Redis key `session:{token}`).
 

@@ -57,6 +57,7 @@
 | CSDL quan hệ | **PostgreSQL 16 + pgvector** | Dữ liệu nghiệp vụ + vector học liệu (cổng 5432) |
 | CSDL đồ thị | **Neo4j 5** | Hành vi, gợi ý, lộ trình học |
 | Cache / Real-time | **Redis** | Cache, session, quota, trạng thái phòng, Pub/Sub |
+| Gửi email | **Spring Mail + Gmail SMTP** | Mã OTP đặt lại mật khẩu. Dùng *App Password* vì Google đã chặn đăng nhập SMTP bằng mật khẩu tài khoản từ 2022 |
 | Lưu file người dùng | **Thư mục đĩa local** (`app.storage.upload-dir`, mặc định `backend/uploads/`) | Ảnh bìa quiz, sau này là ảnh câu hỏi. Backend phục vụ tĩnh tại `/uploads/**`. Chọn đĩa local thay vì S3/MinIO vì đồ án chạy một máy chủ duy nhất; đổi sang object storage sau chỉ cần thay `FileStorageService` |
 | Container | Docker + Docker Compose | Chạy toàn bộ stack local |
 | CI/CD | GitHub Actions (tùy chọn) | |
@@ -70,6 +71,15 @@ POSTGRES_URL   # jdbc:postgresql://localhost:5432/quizdb
 POSTGRES_USER, POSTGRES_PASSWORD
 NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
 REDIS_HOST, REDIS_PORT
+
+# Gửi email (OTP quên mật khẩu)
+MAIL_USERNAME          # địa chỉ Gmail dùng để gửi
+MAIL_PASSWORD          # App Password 16 ký tự, KHÔNG phải mật khẩu Gmail
+                       # https://myaccount.google.com/apppasswords (cần bật xác minh 2 bước)
+MAIL_FROM_NAME         # tên hiện ở ô Người gửi, mặc định "Quiz AI"
+OTP_TTL_MINUTES        # mặc định 10
+OTP_MAX_ATTEMPTS       # mặc định 5
+OTP_RESEND_COOLDOWN    # mặc định 60 (giây)
 
 # Địa chỉ công khai — QUAN TRỌNG khi deploy
 FRONTEND_BASE_URL      # https://quiz.example.com — địa chỉ đưa vào mã QR phòng đấu.

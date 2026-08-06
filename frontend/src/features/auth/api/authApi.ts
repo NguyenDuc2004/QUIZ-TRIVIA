@@ -44,4 +44,15 @@ export const authApi = {
     apiClient.post<void>('/auth/logout', { refreshToken }).then((res) => res.data),
 
   me: () => apiClient.get<UserProfile>('/users/me').then((res) => res.data),
+
+  /**
+   * Xin mã OTP đặt lại mật khẩu.
+   * Backend luôn trả 204 dù email có tồn tại hay không — đừng dựng giao diện dựa vào việc
+   * "email này có trong hệ thống", vì chính chỗ đó là lỗ hổng dò danh sách người dùng.
+   */
+  forgotPassword: (email: string) =>
+    apiClient.post<void>('/auth/forgot-password', { email }).then((res) => res.data),
+
+  resetPassword: (body: { email: string; otp: string; newPassword: string }) =>
+    apiClient.post<void>('/auth/reset-password', body).then((res) => res.data),
 }

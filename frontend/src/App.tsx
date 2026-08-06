@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { Result } from 'antd'
 import ProtectedRoute from '@/features/auth/components/ProtectedRoute'
+import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage'
 import LoginPage from '@/features/auth/pages/LoginPage'
 import ProfilePage from '@/features/auth/pages/ProfilePage'
 import RegisterPage from '@/features/auth/pages/RegisterPage'
@@ -35,6 +36,9 @@ export default function App() {
           </GuestOnlyRoute>
         }
       />
+      {/* Quên mật khẩu để công khai: người cần nó chính là người không đăng nhập được */}
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
       <Route
         path="/register"
         element={

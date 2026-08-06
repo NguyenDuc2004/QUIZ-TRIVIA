@@ -4,6 +4,8 @@ import com.datn.quizai.auth.service.AuthService;
 import com.datn.quizai.auth.service.JwtService;
 import com.datn.quizai.auth.dto.AuthResponse;
 import com.datn.quizai.auth.dto.ChangePasswordRequest;
+import com.datn.quizai.auth.dto.ForgotPasswordRequest;
+import com.datn.quizai.auth.dto.ResetPasswordRequest;
 import com.datn.quizai.auth.dto.LoginRequest;
 import com.datn.quizai.auth.dto.RefreshRequest;
 import com.datn.quizai.auth.dto.RegisterRequest;
@@ -52,6 +54,21 @@ public class AuthController {
     @Operation(summary = "Đăng xuất — thu hồi refresh token")
     public ResponseEntity<Void> logout(@Valid @RequestBody RefreshRequest request) {
         authService.logout(request.refreshToken());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Quên mật khẩu — gửi mã OTP tới email. "
+            + "Luôn trả 204 dù email có tồn tại hay không, để không lộ danh sách người dùng.")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Đặt lại mật khẩu bằng mã OTP. Thu hồi mọi phiên đang đăng nhập.")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
         return ResponseEntity.noContent().build();
     }
 

@@ -20,6 +20,7 @@
 | 07/08 (chiều) | **Lát cắt AI + RAG sinh đề** — đã gọi Gemini thật | 7/7 | 🟢 xong |
 | 07/08 (tối) | Mã PIN + QR, khách vãng lai, avatar, phòng chờ live | 7/7 | 🟢 xong |
 | 07/08 (đêm) | Hồi quy toàn bộ + bít lỗ hổng phiên đăng nhập | 5/5 | 🟢 xong |
+| 08/08 | **FR-4 quên mật khẩu qua OTP email** (Gmail App Password) | 6/6 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -475,6 +476,65 @@ Cộng với **144/144** test JUnit và build frontend pass.
 - **Mục 3.4:** 144 test tự động + **183 ca kiểm chứng HTTP/WebSocket trên hệ thống đang chạy**, chia 9 bộ theo tính năng. Bảng ở trên dùng được trực tiếp.
 - **Mục 2.3 (bảo mật):** ba lỗi sửa ở đây đều là ví dụ tốt — thu hồi phiên khi đổi mật khẩu (quan niệm người dùng vs hành vi hệ thống), mã lỗi đúng ngữ nghĩa (405 vs 500), và chịu lỗi tạm thời của bên thứ ba (retry + backoff).
 - **Mục "khó khăn & cách giải quyết":** lỗi trong chính script kiểm chứng là dẫn chứng đáng viết — công cụ đo cũng có thể sai, và một con số "toàn đạt" không tự nó là bằng chứng.
+
+---
+
+## 📅 T7 — 08/08/2026 — FR-4: Quên mật khẩu qua mã OTP gửi email
+
+**Mục tiêu:** Gỡ nốt FR-4 — món nợ từ lát cắt 1, bị chặn suốt vì chưa chốt nhà cung cấp SMTP. Nay chọn **Gmail App Password**.
+
+### Nhiệm vụ
+- [x] Thêm `spring-boot-starter-mail`, cấu hình Gmail SMTP
+- [x] `PasswordResetOtpService` — sinh/lưu/xác minh OTP trên Redis
+- [x] `MailService` + mẫu email HTML
+- [x] `POST /auth/forgot-password` và `POST /auth/reset-password`
+- [x] Frontend: trang quên mật khẩu hai bước
+- [x] Test 153/153 pass (thêm 9 ca) + 15/15 ca kiểm chứng HTTP thật
+
+### Bốn lớp bảo vệ, mỗi lớp chặn một kiểu tấn công khác nhau
+
+| Chặn gì | Cách làm |
+|---|---|
+| Dò danh sách người dùng | `forgot-password` **luôn trả 204**, dù email có tài khoản hay không |
+| Đọc trộm Redis | OTP lưu **dạng băm BCrypt**, không lưu thô |
+| Dò 6 chữ số (chỉ 10⁶ khả năng) | Sai quá **5 lần** thì huỷ mã, bắt xin lại |
+| Bơm email vào hòm thư người khác | Giãn cách **60 giây** giữa hai lần xin mã (429) |
+
+Thêm: mã sống 10 phút, dùng **một lần**, và đặt lại xong **thu hồi phiên trên mọi thiết bị**.
+
+Một chi tiết nhỏ nhưng đáng nói: `reset-password` xác minh mã **trước** khi tra người dùng. Làm ngược
+lại thì thời gian phản hồi giữa "email không tồn tại" và "mã sai" khác nhau, đủ để dò email qua độ trễ
+— công sức "luôn trả 204" ở bước trước thành vô ích.
+
+### Hai lỗi phát hiện khi chạy thật
+
+1. **`resetPassword` thiếu `@Transactional`** nên mật khẩu mới không được ghi xuống: API trả 204,
+   nhưng đăng nhập bằng mật khẩu mới vẫn 401. Test tích hợp bắt được ngay.
+2. **Thêm `starter-mail` làm `/actuator/health` trả 503.** Spring tự thêm `MailHealthIndicator`, nó
+   thử kết nối SMTP mỗi lần gọi health; chưa cấu hình mail là **cả ứng dụng bị báo DOWN** trong khi
+   mọi thứ khác chạy tốt. Sửa: tắt `management.health.mail.enabled`.
+   > Đây là lỗi nguy hiểm kiểu âm thầm: health check là thứ load balancer và Docker dùng để quyết
+   > định gỡ instance hay khởi động lại container. Nếu không phát hiện, bản deploy sẽ bị restart
+   > liên tục mà nhìn log ứng dụng không thấy gì sai.
+
+### Hồi quy sau khi thêm tính năng — 198/198
+Chạy lại toàn bộ 10 bộ kiểm chứng, không bộ nào vỡ. Cộng **153/153** test JUnit.
+
+### Nợ / chuyển sang ngày sau
+- **Chưa gửi thư thật** — cần điền `MAIL_USERNAME` và `MAIL_PASSWORD` (App Password) vào `.env`.
+  Hiện chưa cấu hình thì `MailService` chỉ ghi mã ra log, đủ để kiểm luồng nhưng chưa phải bằng chứng
+  email tới được hòm thư.
+- **FR-3 đăng nhập Google** — việc kế tiếp, cần Client ID/Secret từ Google Cloud Console.
+- Chưa xem giao diện trang quên mật khẩu bằng mắt.
+
+### Ghi chú báo cáo
+- **Mục 2.3 (bảo mật):** bảng bốn lớp bảo vệ ở trên dùng được trực tiếp. Điểm nhấn: OTP cũng được băm
+  như mật khẩu, và việc thứ tự kiểm tra ảnh hưởng tới lộ thông tin qua độ trễ.
+- **Mục 2.6:** thêm UC_QuenMatKhau với luồng thay thế đầy đủ (email không tồn tại, mã sai, mã hết hạn,
+  xin mã quá dày).
+- **Mục 3.4:** 153 test tự động + 198 ca kiểm chứng trên hệ thống chạy thật (10 bộ).
+- **"Khó khăn & cách giải quyết":** lỗi health check 503 là ví dụ rất tốt — thêm một dependency có thể
+  đổi hành vi của thứ tưởng như không liên quan.
 
 ---
 

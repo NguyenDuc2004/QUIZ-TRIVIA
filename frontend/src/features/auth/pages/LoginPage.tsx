@@ -68,6 +68,12 @@ export default function LoginPage() {
             />
           </Form.Item>
 
+          <div className="mb-3 text-right">
+            <Link to="/forgot-password" className="text-sm font-bold">
+              Quên mật khẩu?
+            </Link>
+          </div>
+
           <Button type="primary" htmlType="submit" size="large" block loading={login.isPending}>
             Đăng nhập
           </Button>

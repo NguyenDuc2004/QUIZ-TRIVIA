@@ -14,7 +14,22 @@ Cho phép người dùng đăng ký, đăng nhập an toàn và phân quyền tr
 - **FR-1** [M] ✅ Đăng ký bằng email + mật khẩu (email chuẩn hóa chữ thường, băm BCrypt). Xác thực email: chưa làm (tùy chọn).
 - **FR-2** [M] ✅ Đăng nhập/đăng xuất; Access Token (JWT HS256, 15 phút) + Refresh Token (Redis, 14 ngày, có rotation).
 - **FR-3** [S] ⏳ Đăng nhập qua OAuth2 (Google) — chưa làm, mức Should.
-- **FR-4** [M] ⏳ Quên/đặt lại mật khẩu qua email — **chưa làm vì cần cấu hình SMTP** (chọn nhà cung cấp mail + biến môi trường).
+- **FR-4** [M] ✅ Quên/đặt lại mật khẩu bằng **mã OTP 6 chữ số gửi qua email** (Gmail SMTP + App Password).
+
+### Quên mật khẩu qua OTP — bốn lớp bảo vệ
+
+| Chặn kiểu tấn công gì | Cách làm |
+|---|---|
+| Dò danh sách người dùng | `forgot-password` **luôn trả 204**, dù email có tài khoản hay không |
+| Đọc trộm Redis | OTP lưu **dạng băm BCrypt**, không lưu thô |
+| Dò 6 chữ số | Sai quá **5 lần** thì huỷ mã, bắt xin lại |
+| Bơm email vào hòm thư người khác | Giãn cách **60 giây** giữa hai lần xin mã (429) |
+
+Thêm: mã sống 10 phút, chỉ dùng **một lần**, và đặt lại mật khẩu xong thì **thu hồi phiên trên mọi
+thiết bị** — người vừa lấy lại tài khoản cần chắc kẻ chiếm dụng bị đá ra.
+
+`reset-password` xác minh mã **trước** khi tra người dùng: làm ngược lại thì thời gian phản hồi giữa
+"email không tồn tại" và "mã sai" khác nhau, đủ để dò email qua độ trễ.
 - **FR-5** [M] ✅ Quản lý hồ sơ: `PUT /users/me` (tên, avatar) + `POST /auth/change-password`.
 - **FR-6** [M] ✅ Phân quyền theo vai trò: enum LEARNER/CREATOR/ADMIN trong token, `@EnableMethodSecurity` cho `@PreAuthorize`; tự đăng ký ADMIN bị hạ xuống LEARNER.
 
