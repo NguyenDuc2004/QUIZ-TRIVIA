@@ -213,6 +213,7 @@ export default function RoomPage() {
         <>
           <RoomInviteCard
             roomCode={room.roomCode}
+            joinUrl={room.joinUrl}
             allowGuests={room.allowGuests}
             playerCount={players.length}
           />

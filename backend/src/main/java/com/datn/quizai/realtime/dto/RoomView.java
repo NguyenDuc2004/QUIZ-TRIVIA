@@ -18,6 +18,12 @@ import java.util.stream.IntStream;
  */
 public record RoomView(
         String roomCode,
+        /**
+         * Đường dẫn mã QR trỏ tới. Do <b>backend</b> dựng vì nó biết địa chỉ LAN thật của máy —
+         * frontend lấy {@code window.location.origin} sẽ ra {@code localhost} khi host mở trang
+         * bằng localhost, và điện thoại quét sẽ trỏ về chính nó.
+         */
+        String joinUrl,
         UUID quizId,
         String quizTitle,
         UUID hostId,
@@ -30,9 +36,11 @@ public record RoomView(
         LiveQuestionView currentQuestion,
         int answeredCount
 ) {
-    public static RoomView of(GameRoom room, RoomState state, LiveQuestionView currentQuestion) {
+    public static RoomView of(GameRoom room, RoomState state, LiveQuestionView currentQuestion,
+                              String joinUrl) {
         return new RoomView(
                 room.getRoomCode(),
+                joinUrl,
                 room.getQuiz().getId(),
                 room.getQuiz().getTitle(),
                 room.getHost().getId(),

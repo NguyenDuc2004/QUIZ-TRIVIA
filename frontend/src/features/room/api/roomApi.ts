@@ -52,6 +52,12 @@ export interface LiveQuestion {
 
 export interface RoomView {
   roomCode: string
+  /**
+   * Đường dẫn mã QR trỏ tới, do BACKEND dựng từ địa chỉ LAN thật của máy.
+   * Không tự ghép từ `window.location.origin`: host mở trang bằng localhost thì QR cũng mang
+   * localhost, và điện thoại quét sẽ trỏ về chính nó.
+   */
+  joinUrl: string
   quizId: string
   quizTitle: string
   hostId: string

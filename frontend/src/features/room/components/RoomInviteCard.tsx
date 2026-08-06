@@ -3,59 +3,62 @@ import { Alert, Button, Tag, Typography, message } from 'antd'
 
 const { Text, Title } = Typography
 
-/** Địa chỉ mà chỉ chính máy này hiểu — điện thoại quét sẽ trỏ về chính nó và báo không tìm thấy. */
-function isLocalOnly(hostname: string) {
-  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+/** Địa chỉ chỉ chính máy này hiểu — điện thoại quét sẽ trỏ về chính nó. */
+function isLocalOnly(url: string) {
+  return /^https?:\/\/(localhost|127\.0\.0\.1|\[?::1\]?)(:|\/|$)/.test(url)
 }
 
 /**
  * Thẻ mời vào phòng: mã PIN 6 số cỡ lớn + mã QR.
  * <p>
- * QR vẽ ở <b>client</b> bằng {@code qrcode.react} chứ không xin ảnh từ server. Nội dung QR chỉ là
- * một đường dẫn, nên sinh ở đâu cũng cho kết quả như nhau — vẽ tại chỗ thì khỏi truyền ảnh qua
- * mạng, khỏi thêm thư viện vào backend, và co giãn theo màn hình vì là SVG.
+ * <b>Đường dẫn trong QR do backend quyết định</b> ({@code room.joinUrl}), không phải lấy từ
+ * {@code window.location.origin}. Lý do: origin phụ thuộc cách <i>host</i> mở trang — mở bằng
+ * {@code localhost} (chuyện hoàn toàn tự nhiên khi dev) thì QR cũng mang {@code localhost} và điện
+ * thoại quét sẽ trỏ về chính nó. Backend biết địa chỉ LAN thật của máy nên quyết định đúng.
  * <p>
- * QR lấy đúng địa chỉ đang mở ({@code window.location.origin}). Nếu host đang mở bằng
- * {@code localhost} thì QR cũng mã hoá {@code localhost} — điện thoại quét sẽ trỏ về chính nó và
- * báo không tìm thấy. Trường hợp đó thẻ này cảnh báo thẳng thay vì để người dùng tự đoán.
+ * QR vẫn vẽ ở client bằng {@code qrcode.react}: nội dung chỉ là một đường dẫn nên vẽ tại chỗ khỏi
+ * truyền ảnh qua mạng, và là SVG nên chiếu máy chiếu không vỡ.
  */
 export default function RoomInviteCard({
   roomCode,
+  joinUrl,
   allowGuests,
   playerCount,
 }: {
   roomCode: string
+  /** Do backend dựng. Rỗng khi backend không dò được địa chỉ LAN nào (máy không nối mạng). */
+  joinUrl: string
   allowGuests: boolean
   playerCount: number
 }) {
-  const joinUrl = `${window.location.origin}/join/${roomCode}`
-  const localOnly = isLocalOnly(window.location.hostname)
+  // Backend không dò được địa chỉ nào thì đành ghép với origin hiện tại
+  const url = joinUrl?.trim() ? joinUrl : `${window.location.origin}/join/${roomCode}`
+  const unreachableByPhone = isLocalOnly(url)
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(joinUrl)
+      await navigator.clipboard.writeText(url)
       message.success('Đã sao chép đường dẫn vào phòng')
     } catch {
       // clipboard API cần HTTPS hoặc localhost; hiện thẳng link để người dùng tự chép
-      message.info(joinUrl)
+      message.info(url)
     }
   }
 
   return (
     <div className="flex flex-col gap-4">
-      {localOnly && (
+      {unreachableByPhone && (
         <Alert
           type="warning"
           showIcon
           message="Điện thoại sẽ không quét được mã QR này"
           description={
             <>
-              Bạn đang mở trang bằng <Text code>localhost</Text>, nên QR cũng trỏ về{' '}
-              <Text code>localhost</Text> — trên điện thoại địa chỉ đó là chính chiếc điện thoại.
+              Máy chủ không tìm được địa chỉ mạng LAN nào, nên đường dẫn đang là{' '}
+              <Text code>{url}</Text> — trên điện thoại địa chỉ đó là chính chiếc điện thoại.
               <br />
-              Hãy mở lại trang bằng <b>địa chỉ IP trong mạng LAN</b> của máy này (ví dụ{' '}
-              <Text code>http://192.168.0.101:5173</Text>), rồi QR sẽ tự trỏ đúng. Điện thoại phải
-              nối cùng Wi-Fi.
+              Kiểm tra máy đã nối Wi-Fi/LAN chưa, hoặc đặt biến môi trường{' '}
+              <Text code>FRONTEND_BASE_URL</Text> rồi khởi động lại backend.
             </>
           }
         />
@@ -76,12 +79,12 @@ export default function RoomInviteCard({
         <div className="flex flex-col items-center gap-2">
           {/* Nền trắng + viền là bắt buộc để camera điện thoại bắt được mã */}
           <div className="border border-line bg-white p-2">
-            <QRCodeSVG value={joinUrl} size={180} level="M" />
+            <QRCodeSVG value={url} size={180} level="M" />
           </div>
           <Text className="text-ink-soft text-xs">Quét để vào phòng</Text>
           {/* Hiện thẳng đường dẫn: người dùng thấy ngay QR đang trỏ đi đâu */}
-          <Text className="max-w-56 truncate text-center text-ink-soft text-xs" title={joinUrl}>
-            {joinUrl}
+          <Text className="max-w-60 truncate text-center text-ink-soft text-xs" title={url}>
+            {url}
           </Text>
           <Button size="small" onClick={copy}>
             Sao chép link

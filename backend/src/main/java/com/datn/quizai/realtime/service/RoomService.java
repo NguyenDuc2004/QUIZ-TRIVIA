@@ -75,19 +75,22 @@ public class RoomService {
     private final RoomStateStore stateStore;
     private final GameEventPublisher publisher;
     private final GuestSessionStore guestSessionStore;
+    private final JoinUrlBuilder joinUrlBuilder;
 
     public RoomService(GameRoomRepository roomRepository,
                        QuizRepository quizRepository,
                        UserRepository userRepository,
                        RoomStateStore stateStore,
                        GameEventPublisher publisher,
-                       GuestSessionStore guestSessionStore) {
+                       GuestSessionStore guestSessionStore,
+                       JoinUrlBuilder joinUrlBuilder) {
         this.roomRepository = roomRepository;
         this.quizRepository = quizRepository;
         this.userRepository = userRepository;
         this.stateStore = stateStore;
         this.publisher = publisher;
         this.guestSessionStore = guestSessionStore;
+        this.joinUrlBuilder = joinUrlBuilder;
     }
 
     // ------------------------------------------------------------------ REST
@@ -116,7 +119,7 @@ public class RoomService {
                 .withPlayer(host.getId(), host.getDisplayName(), hostAvatar, false);
         stateStore.save(state);
 
-        return RoomView.of(room, state, null);
+        return RoomView.of(room, state, null, joinUrlBuilder.joinUrl(room.getRoomCode()));
     }
 
     /** Thành viên vào phòng bằng mã PIN (FR-20). Vào lại phòng cũ thì giữ nguyên điểm đang có. */
@@ -139,7 +142,7 @@ public class RoomService {
                 s -> s.withPlayer(current.id(), displayName, avatar, false));
 
         broadcastRoster(roomCode, GameEventType.PLAYER_JOINED, current.id(), state);
-        return RoomView.of(room, state, currentQuestionView(room, state));
+        return RoomView.of(room, state, currentQuestionView(room, state), joinUrlBuilder.joinUrl(room.getRoomCode()));
     }
 
     /**
@@ -171,7 +174,7 @@ public class RoomService {
 
         String guestKey = guestSessionStore.issue(playerId, room.getRoomCode(), displayName);
         return new GuestSessionResponse(guestKey, playerId,
-                RoomView.of(room, state, currentQuestionView(room, state)));
+                RoomView.of(room, state, currentQuestionView(room, state), joinUrlBuilder.joinUrl(room.getRoomCode())));
     }
 
     /**
@@ -182,7 +185,7 @@ public class RoomService {
     public RoomView get(String roomCode) {
         GameRoom room = requireRoom(roomCode);
         RoomState state = stateStore.require(roomCode);
-        return RoomView.of(room, state, currentQuestionView(room, state));
+        return RoomView.of(room, state, currentQuestionView(room, state), joinUrlBuilder.joinUrl(room.getRoomCode()));
     }
 
     /** Rời phòng — chỉ bỏ khỏi trạng thái live, dòng trong CSDL giữ lại để còn thống kê. */

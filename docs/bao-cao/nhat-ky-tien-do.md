@@ -400,14 +400,18 @@ thái cũ → ván nhảy cóc hoặc không bao giờ kết thúc. Sửa: tính
 ### Quét QR bằng điện thoại — ba thứ chặn, đã sửa cả ba
 Lần thử đầu điện thoại báo "không tìm thấy". Kiểm chứng ra ba nguyên nhân xếp lớp, sửa lần lượt:
 1. **Vite chỉ nghe `::1`** (mặc định bind localhost) → điện thoại gọi `192.168.0.101:5173` không ai trả lời. Sửa: `server.host: true`.
-2. **QR mã hoá `localhost`** vì host mở trang bằng `localhost`; trên điện thoại địa chỉ đó là chính nó. Sửa: giữ `window.location.origin` (đúng về nguyên tắc) nhưng **thẻ mời tự cảnh báo** và hiện thẳng đường dẫn QR đang trỏ tới, thay vì để người dùng tự đoán.
+2. **QR mã hoá `localhost`** vì host mở trang bằng `localhost`; trên điện thoại địa chỉ đó là chính nó. Lần sửa đầu chỉ *cảnh báo* và bắt người dùng tự mở lại trang bằng IP LAN — **cách sửa sai**, vì vẫn để cái bẫy nguyên đó. Sửa lại cho đúng: **backend dựng sẵn `joinUrl`** từ địa chỉ LAN nó tự dò được, frontend chỉ việc vẽ. Host mở bằng `localhost` cũng ra QR đúng.
+   - Cách dò (`NetworkAddressResolver`): mở UDP socket rồi `connect` tới `8.8.8.8:53` — không gửi gói nào, chỉ để hệ điều hành tra bảng định tuyến và chọn card mạng. Đọc địa chỉ cục bộ của socket là ra đúng card đang nối ra ngoài. Máy thử có 4 IPv4 (3 card ảo VMware/WSL) và cách này chọn đúng card Wi-Fi.
 3. **CORS chỉ cho `http://localhost:5173`** → sửa xong hai cái trên sẽ vấp cái này. Sửa: chuyển sang `allowedOriginPatterns`, mặc định mở cho dải IP nội bộ; triển khai thật phải đặt `CORS_ALLOWED_ORIGINS` cụ thể.
 
-Đã kiểm chứng **7/7 ca đi đúng con đường của điện thoại** — mọi request qua `http://192.168.0.101:5173`
-và qua proxy Vite, gồm cả nối WebSocket bằng khoá phiên khách.
+Đã kiểm chứng **7/7 ca đi đúng con đường của điện thoại** (mọi request qua `http://192.168.0.101:5173`
+và qua proxy Vite, gồm cả nối WebSocket bằng khoá phiên khách) và **6/6 ca cho `joinUrl`** — gọi API
+từ `localhost` mà QR vẫn ra địa chỉ LAN, tức là đúng cái ca đã hỏng.
 
-> Đáng ghi vào báo cáo: đây là loại lỗi mà chạy trên máy dev thì không bao giờ thấy, vì máy dev luôn
-> mở bằng `localhost`. Muốn thấy phải có thiết bị thứ hai.
+> Đáng ghi vào báo cáo hai điều. Một: đây là loại lỗi mà chạy trên máy dev không bao giờ thấy, vì máy
+> dev luôn mở bằng `localhost` — muốn thấy phải có thiết bị thứ hai. Hai: lần sửa đầu tôi chỉ thêm
+> cảnh báo và bắt người dùng tự đổi cách mở trang; đó là đẩy việc sang người dùng chứ không phải sửa
+> lỗi. Sửa đúng là bỏ hẳn chỗ có thể sai — để backend quyết định địa chỉ.
 
 ### Nợ / chuyển sang ngày sau
 - Chưa xem giao diện phòng chờ bằng mắt (đã kiểm được đường mạng, chưa kiểm được bố cục).

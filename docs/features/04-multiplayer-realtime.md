@@ -109,21 +109,35 @@ nhân vật vẽ tay — muốn có bộ chibi thật thì phải mua hoặc t�
 lệnh "câu tiếp theo" gửi sát nhau có thể xử lý song song, cùng đọc một trạng thái cũ và cùng phát
 câu kế tiếp. *Lỗi này chỉ lộ ra khi chạy thật với hai client.*
 
-## Chạy thử QR bằng điện thoại thật
+## Đường dẫn trong mã QR — do backend quyết định
 
-Ba thứ phải đúng, thiếu một là điện thoại báo "không tìm thấy":
+**Không** lấy `window.location.origin` ở frontend. Origin phụ thuộc cách *host* mở trang: mở bằng
+`localhost` — chuyện hoàn toàn tự nhiên khi dev — thì QR cũng mang `localhost`, và trên điện thoại
+địa chỉ đó là chính chiếc điện thoại. Đó là một cái bẫy đặt sẵn cho người dùng.
+
+Backend dựng sẵn `RoomView.joinUrl` theo thứ tự:
+
+1. `app.frontend.base-url` nếu được đặt (`FRONTEND_BASE_URL`) — dùng cho triển khai thật.
+2. Địa chỉ LAN **tự dò được** + `app.frontend.dev-port` (5173) — dùng khi dev.
+3. Rỗng → frontend đành ghép với origin của nó, và thẻ mời cảnh báo.
+
+**Cách dò địa chỉ LAN** (`NetworkAddressResolver`): mở một UDP socket rồi `connect` tới `8.8.8.8:53`.
+UDP connect *không gửi gói nào* — nó chỉ khiến hệ điều hành tra bảng định tuyến và chọn card mạng sẽ
+dùng; đọc địa chỉ cục bộ của socket đó là ra đúng card đang nối ra ngoài. Cách này ăn hơn việc liệt
+kê `NetworkInterface` rồi đoán, vì máy dev thường có thêm card ảo của VMware, VirtualBox, WSL,
+Docker — đều là IPv4 riêng "trông hợp lệ" nhưng điện thoại không gọi tới được. *(Máy thử nghiệm có
+4 IPv4, trong đó 3 là card ảo; cách này chọn đúng card Wi-Fi.)*
+
+## Hai điều kiện còn lại để điện thoại vào được
 
 1. **Vite phải nghe trên mọi card mạng** — `server.host: true` trong `vite.config.ts`. Mặc định của
    Vite chỉ bind `127.0.0.1`, máy khác gọi tới sẽ không có ai trả lời.
-2. **Mở frontend bằng IP LAN, không phải `localhost`** — ví dụ `http://192.168.0.101:5173`. QR lấy
-   đúng địa chỉ đang mở, nên mở bằng `localhost` thì QR cũng mã hoá `localhost`, mà trên điện thoại
-   địa chỉ đó là chính chiếc điện thoại. Thẻ mời trong phòng chờ **tự cảnh báo** khi gặp trường hợp này.
-3. **CORS phải nhận origin trong LAN** — `app.cors.allowed-origins` là *mẫu* origin
+2. **CORS phải nhận origin trong LAN** — `app.cors.allowed-origins` là *mẫu* origin
    (`allowedOriginPatterns`), mặc định đã mở cho `192.168.*.*`, `10.*.*.*`, `172.16.*.*`.
    *Triển khai thật phải đặt `CORS_ALLOWED_ORIGINS` thành đúng tên miền.*
 
-Điện thoại phải nối **cùng Wi-Fi** với máy chạy server. Chạy `npm run dev` là Vite in ra sẵn danh
-sách địa chỉ Network để chọn.
+Điện thoại phải nối **cùng Wi-Fi** với máy chạy server. Host mở trang bằng `localhost` cũng được —
+QR vẫn đúng.
 
 ## Ghi chú kỹ thuật
 - **Redis Pub/Sub** để khi backend chạy nhiều instance, message phòng vẫn đồng bộ tới đúng người chơi.

@@ -50,6 +50,13 @@ app:
     # Mặc định mở cho localhost và các dải IP nội bộ để điện thoại cùng Wi-Fi quét QR vào được.
     # TRIỂN KHAI THẬT: đặt CORS_ALLOWED_ORIGINS thành đúng tên miền, đừng để mặc định này.
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:[*],http://127.0.0.1:[*],http://192.168.*.*:[*],http://10.*.*.*:[*],http://172.16.*.*:[*]}
+  frontend:
+    # Địa chỉ gốc của frontend, dùng để dựng link trong mã QR phòng đấu.
+    # Để trống khi dev: backend tự dò địa chỉ LAN để điện thoại quét được.
+    # TRIỂN KHAI THẬT: đặt thành đúng tên miền, ví dụ https://quiz.example.com
+    base-url: ${FRONTEND_BASE_URL:}
+    # Cổng dev server của frontend, chỉ dùng khi base-url để trống
+    dev-port: ${FRONTEND_DEV_PORT:5173}
   storage:
     # Thư mục lưu file người dùng tải lên (đã gitignore). Triển khai thật nên trỏ ra volume riêng.
     upload-dir: ${UPLOAD_DIR:uploads}
