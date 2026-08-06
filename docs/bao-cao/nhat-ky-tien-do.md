@@ -16,6 +16,7 @@
 | 05/08 | Hạ tầng 3 CSDL + khung BE/FE + **lát cắt Auth hoàn chỉnh** | 7/7 | 🟢 xong |
 | 06/08 | Tái cấu trúc package + **lát cắt Quản lý Quiz & Câu hỏi** | 5/5 | 🟢 xong |
 | 06/08 (tối) | Chuẩn giao diện Udemy + **lát cắt Làm bài quiz** + ảnh bìa quiz | 7/7 | 🟢 xong |
+| 07/08 | **Lát cắt Phòng đấu real-time** (STOMP + Redis Pub/Sub) | 6/6 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -217,6 +218,53 @@ dán URL bên ngoài) — cũng là quyết định mở khoá cho ảnh câu h�
 - **Mục 2.7 (thiết kế lớp):** `AnswerGrader` là ví dụ tốt để nói về tách logic nghiệp vụ khỏi framework — không phụ thuộc Spring nên test được ở mức đơn vị, 15 ca chạy trong 0,06 giây.
 - **Mục 3.4:** 97 test tự động (100% pass) + 48 + 19 ca kiểm chứng HTTP. Ba lỗi ở trên đưa vào phần "khó khăn & cách giải quyết"; lỗi số 1 minh họa rõ giá trị của việc chạy thật chứ không chỉ chạy test.
 - **Mục bảo mật:** luật "không lộ đáp án khi chưa nộp" và "bài làm của ai người ấy xem (404 chứ không 403)" nên viết thành một mục riêng — đây là phần dễ làm sai và có bằng chứng test kèm theo.
+
+---
+
+## 📅 T6 — 07/08/2026 — Lát cắt 4: Phòng đấu trí thời gian thực ⭐
+
+**Mục tiêu hôm nay:** Trụ cột real-time của phiếu đề tài — nhiều người cùng chơi một quiz, đồng bộ độ trễ thấp qua Spring WebSocket (STOMP) + Redis Pub/Sub.
+
+### Nhiệm vụ
+- [x] Migration `V5__game_rooms.sql`
+- [x] Trạng thái phòng trên Redis + tính điểm theo tốc độ
+- [x] WebSocket STOMP + xác thực JWT ở frame CONNECT
+- [x] Redis Pub/Sub đồng bộ giữa nhiều instance backend
+- [x] Frontend: sảnh phòng, phòng chờ, màn chơi, bảng xếp hạng trực tiếp
+- [x] Test 113/113 pass (thêm 16 ca) + 30/30 ca kiểm chứng với 2 client thật
+
+### Đã làm được
+
+**Migration V5:** `game_rooms` (room_code 6 ký tự, status, seconds_per_question) và `game_room_players` (final_score, UNIQUE room+user). Hai bảng này chỉ giữ **metadata và điểm cuối**; trạng thái đang chơi nằm ở Redis `room:{code}`.
+
+**Backend:** `RoomService` (mở/vào/bắt đầu/trả lời/chuyển câu/kết thúc), `RoomStateStore` (đọc-ghi trạng thái Redis có khoá), `SpeedScorer` (thuần Java, test trực tiếp), `GameEventPublisher` + `GameEventRelay` (cầu Redis Pub/Sub), `StompAuthChannelInterceptor` (xác thực JWT ở frame CONNECT), `RoomController` (REST) và `RoomStompController` (STOMP).
+
+**Frontend:** `features/room/` — `useRoomSocket` bọc `@stomp/stompjs` + SockJS, sảnh phòng (mở phòng / vào bằng mã), một trang `RoomPage` phục vụ cả ba giai đoạn chờ–chơi–kết thúc, đồng hồ đếm ngược theo mốc server, bảng xếp hạng trực tiếp.
+
+**Tám quyết định thiết kế** ghi đầy đủ ở [features/04](../features/04-multiplayer-realtime.md#quyết-định-thiết-kế-đã-hiện-thực). Ba cái quan trọng nhất khi bảo vệ:
+1. **Mọi thông điệp đi vòng qua Redis Pub/Sub**, kể cả khi chỉ có một instance. Broker của Spring nằm trong bộ nhớ từng instance nên gửi thẳng là mất đồng bộ ngay khi scale ngang. `GameEventRelay` nghe theo **mẫu** `room:*:events` để khỏi quản lý vòng đời subscription từng phòng.
+2. **Thời gian do server đo.** Payload đáp án cố tình không có trường thời gian — tin client thì ai cũng khai "trả lời trong 1ms".
+3. **Đáp án chỉ rời server khi câu đã đóng.** Kết quả gửi riêng cho người trả lời; cả phòng chỉ biết *số người* đã xong. Phát kết quả cho cả phòng là gián tiếp lộ đáp án.
+
+**Kiểm thử — 113/113 pass** (97 → 113, thêm 16 ca): `SpeedScorerTest` 8 ca (gồm ca cốt lõi "đúng chậm phải hơn sai nhanh"), `RoomFlowIntegrationTest` 8 ca chạy **hai client STOMP thật** trên cổng thật, sự kiện đi qua Redis Pub/Sub thật.
+**Kiểm chứng trên stack dev — 30/30:** script Node dùng đúng `@stomp/stompjs` của frontend, hai người chơi vào cùng phòng, kiểm cả luồng chơi lẫn các ca chống gian lận.
+
+### Hai lỗi gặp phải và cách sửa
+1. **Tin nhắn riêng không tới nơi.** `convertAndSendToUser(userId, …)` khớp người nhận theo `Authentication.getName()`, mà Spring lấy `toString()` của record `AuthenticatedUser` làm tên → không khớp `userId`, message lặng lẽ biến mất. Sửa: cho record cài `AuthenticatedPrincipal` với `getName()` trả về id. *Lỗi kiểu này không có test hai client thì không thể phát hiện — API vẫn trả 200, chỉ là không ai nhận được gì.*
+2. **Script kiểm chứng báo sai "không sang được câu 2".** Hàng đợi sự kiện trong script giữ lại sự kiện đã giao nên lần chờ sau nhặt trúng câu cũ. Lỗi của script, không phải của server — đã sửa script rồi chạy lại 30/30. *Ghi lại để nhớ: test bảo hỏng chưa chắc code hỏng.*
+
+### Nợ / chuyển sang ngày sau
+- **Chưa mở hai trình duyệt để nhìn tận mắt** — mới kiểm bằng test và script.
+- Chưa có hạn giờ cưỡng chế phía server nếu host bỏ đi giữa chừng (phòng treo ở câu hiện tại tới khi Redis hết TTL 6 giờ).
+- Chưa đo tải thật (mục 3.5 của báo cáo) — đây chính là đối tượng chính của load test tuần 8.
+- Lát cắt kế tiếp: **05-ai-rag-generation** (AiOrchestrator + RAG sinh đề).
+
+### Ghi chú báo cáo
+- **Mục 2.8:** ERD nay có 10 bảng — thêm `game_rooms`, `game_room_players`. Nên nói rõ *vì sao* trạng thái đang chơi không nằm trong hai bảng này.
+- **Mục 2.7 (thiết kế lớp):** sơ đồ tuần tự một câu hỏi (host → server → Redis Pub/Sub → các instance → client) là hình đắt giá nhất của chương 2. `SpeedScorer` lại là ví dụ tốt cho việc tách logic khỏi framework.
+- **Mục 3.4:** 113 test tự động (100% pass) + 30 ca kiểm chứng 2 client. Lỗi `AuthenticatedPrincipal` rất đáng đưa vào "khó khăn & cách giải quyết": nó minh hoạ vì sao phải test nhiều client thật chứ không chỉ test API.
+- **Mục 3.5 (load test):** đã có đủ hạ tầng để đo — kịch bản nên là N người trong một phòng, đo P95 độ trễ từ lúc server phát `QUESTION` tới lúc client nhận. **Chưa đo, chưa được ghi số.**
+- **Mục bảo mật:** ba luật đáng viết — token ở frame CONNECT (không phải query string), thời gian do server đo, đáp án chỉ công bố khi câu đóng.
 
 ---
 

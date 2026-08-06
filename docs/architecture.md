@@ -50,8 +50,8 @@
 
 ```
 com.datn.quizai
-├── config          # SecurityConfig, OpenApiConfig, DotenvEnvironmentPostProcessor,
-│                   # (sau) WebSocketConfig, AsyncConfig, CacheConfig
+├── config          # SecurityConfig, WebMvcConfig, WebSocketConfig, RedisPubSubConfig,
+│                   # OpenApiConfig, DotenvEnvironmentPostProcessor
 ├── auth            # Xác thực, JWT, RBAC
 │   ├── controller  #   AuthController
 │   ├── service     #   AuthService, JwtService, RefreshTokenService
@@ -76,7 +76,14 @@ com.datn.quizai
 │   ├── controller  #   FileController
 │   ├── service     #   FileStorageService, ImageType (dò chữ ký byte)
 │   └── dto
-├── realtime        # Multiplayer: WebSocket (STOMP), Room, GameEngine, Redis Pub/Sub
+├── realtime        # Phòng đấu multiplayer: WebSocket (STOMP) + Redis Pub/Sub
+│   ├── controller  #   RoomController (REST), RoomStompController (STOMP)
+│   ├── service     #   RoomService, RoomStateStore, SpeedScorer,
+│   │               #   GameEventPublisher (Redis Pub/Sub), GameEventRelay
+│   ├── repository  #   GameRoomRepository
+│   ├── security    #   StompAuthChannelInterceptor (xác thực JWT ở frame CONNECT)
+│   ├── domain      #   GameRoom, GameRoomPlayer, RoomState (Redis), RoomStatus
+│   └── dto
 ├── ai              # Lớp AI
 │   ├── provider    #   AiProvider (interface), GeminiProvider, GrokProvider, AiOrchestrator
 │   ├── rag         #   Ingestion, chunking, embedding, vector retrieval (pgvector)

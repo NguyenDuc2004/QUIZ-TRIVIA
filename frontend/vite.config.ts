@@ -11,6 +11,19 @@ export default defineConfig({
       '@': path.resolve(import.meta.dirname, './src'),
     },
   },
+  // sockjs-client viết cho môi trường Node nên đọc thẳng biến `global`, thứ không tồn tại trong
+  // trình duyệt. Thiếu phần này, `import SockJS` ném ReferenceError ngay lúc nạp module và làm
+  // trắng TOÀN BỘ ứng dụng — không riêng trang phòng đấu.
+  define: {
+    global: 'globalThis',
+  },
+  optimizeDeps: {
+    // Phải khai lại cho esbuild: `define` ở trên chỉ áp cho mã nguồn của mình, không áp cho
+    // phần dependency được Vite tiền biên dịch (nơi sockjs-client thực sự nằm).
+    esbuildOptions: {
+      define: { global: 'globalThis' },
+    },
+  },
   server: {
     port: 5173,
     // Proxy khi dev để FE gọi API cùng origin → không vướng CORS

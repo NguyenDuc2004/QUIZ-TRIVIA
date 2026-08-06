@@ -80,6 +80,10 @@ public class SecurityConfig {
                         // Không chặn dispatch nội bộ tới /error, nếu không mọi 404/500 của
                         // người dùng chưa đăng nhập đều bị biến thành 401.
                         .requestMatchers("/error").permitAll()
+                        // Bắt tay WebSocket không mang được header Authorization (nhất là khi
+                        // SockJS lùi về long-polling). Xác thực làm ở frame STOMP CONNECT —
+                        // xem StompAuthChannelInterceptor.
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login",
                                 "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()

@@ -74,17 +74,20 @@ Còn nợ: chấm tự luận bằng AI (features/06) và xem lại giao diện 
 
 ---
 
-## Tuần 4 — Multiplayer real-time ⭐ (10–16/08) 🔴
+## Tuần 4 — Multiplayer real-time ⭐ (10–16/08) 🟢
 
-- **T2 10/08** — [ ] Cấu hình Spring WebSocket (STOMP) + Redis Pub/Sub · [ ] Model trạng thái phòng
-- **T3 11/08** — [ ] Tạo/join phòng, danh sách người chơi real-time · [ ] Xử lý host/ready/start
-- **T4 12/08** — [ ] Đồng bộ câu hỏi & đáp án theo lượt · [ ] Tính điểm theo tốc độ trả lời
-- **T5 13/08** — [ ] Live leaderboard trong phòng · [ ] Xử lý reconnect / rời phòng
-- **T6 14/08** — [ ] FE: sảnh phòng + phòng chờ · [ ] FE: màn chơi real-time + bảng xếp hạng trực tiếp
-- **T7 15/08** — [ ] Test đồng bộ nhiều client · [ ] Fix race condition / edge case
+- **T2 10/08** — [x] Cấu hình Spring WebSocket (STOMP) + Redis Pub/Sub · [x] Model trạng thái phòng
+- **T3 11/08** — [x] Tạo/join phòng, danh sách người chơi real-time · [x] Xử lý host/start
+- **T4 12/08** — [x] Đồng bộ câu hỏi & đáp án theo lượt · [x] Tính điểm theo tốc độ trả lời
+- **T5 13/08** — [x] Live leaderboard trong phòng · [x] Reconnect + rời phòng
+- **T6 14/08** — [x] FE: sảnh phòng + phòng chờ · [x] FE: màn chơi real-time + bảng xếp hạng trực tiếp
+- **T7 15/08** — [x] Test đồng bộ nhiều client (2 client STOMP thật) · [x] Fix race condition (khoá Redis khi cộng điểm)
 - **CN 16/08** — [ ] Đệm / review tuần
 
-**Tổng kết tuần 4:** _(...)_ — **Mốc: trụ cột Multiplayer hoạt động.**
+**Tổng kết tuần 4:** Làm gộp trong ngày 07/08, sớm hơn kế hoạch. Xong FR-20…FR-25.
+113/113 test pass, 30/30 ca kiểm chứng với 2 client thật.
+Còn nợ: chưa mở hai trình duyệt nhìn tận mắt; chưa đo tải (để tuần 8).
+— **Mốc: trụ cột Multiplayer hoạt động.** ✅
 
 ---
 

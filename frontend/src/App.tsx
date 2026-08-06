@@ -9,6 +9,8 @@ import AttemptPage from '@/features/attempt/pages/AttemptPage'
 import MyAttemptsPage from '@/features/attempt/pages/MyAttemptsPage'
 import QuizIntroPage from '@/features/attempt/pages/QuizIntroPage'
 import BrowseQuizzesPage from '@/features/quiz/pages/BrowseQuizzesPage'
+import RoomLobbyPage from '@/features/room/pages/RoomLobbyPage'
+import RoomPage from '@/features/room/pages/RoomPage'
 import MyQuizzesPage from '@/features/quiz/pages/MyQuizzesPage'
 import QuestionBankPage from '@/features/quiz/pages/QuestionBankPage'
 import QuizEditorPage from '@/features/quiz/pages/QuizEditorPage'
@@ -54,6 +56,9 @@ export default function App() {
         {/* Một đường dẫn cho cả lúc đang làm và lúc xem kết quả — phân biệt theo attempt.status */}
         <Route path="/attempts/:id" element={<AttemptPage />} />
         <Route path="/my-attempts" element={<MyAttemptsPage />} />
+        {/* Phòng đấu real-time: một trang cho cả chờ / đang chơi / kết thúc */}
+        <Route path="/rooms" element={<RoomLobbyPage />} />
+        <Route path="/rooms/:code" element={<RoomPage />} />
         {/* Bộ mặt "bảng điều khiển": bảng quản lý */}
         <Route path="/my-quizzes" element={<MyQuizzesPage />} />
         <Route path="/my-quizzes/:id" element={<QuizEditorPage />} />
