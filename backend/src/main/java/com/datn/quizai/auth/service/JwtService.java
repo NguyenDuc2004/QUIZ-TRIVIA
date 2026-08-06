@@ -7,6 +7,7 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.AuthenticatedPrincipal;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
@@ -74,7 +75,19 @@ public class JwtService {
                 Role.valueOf(claims.get(CLAIM_ROLE, String.class)));
     }
 
-    /** Thông tin người dùng lấy từ token — không cần truy vấn DB ở mỗi request. */
-    public record AuthenticatedUser(UUID id, String email, Role role) {
+    /**
+     * Thông tin người dùng lấy từ token — không cần truy vấn DB ở mỗi request.
+     * <p>
+     * Cài {@link AuthenticatedPrincipal} để {@code Authentication.getName()} trả về <b>id người
+     * dùng</b>. Không có nó, Spring lấy {@code toString()} của record làm tên, và
+     * {@code convertAndSendToUser(userId, …)} sẽ không tìm thấy phiên WebSocket nào khớp —
+     * tin nhắn riêng trong phòng đấu lặng lẽ biến mất.
+     */
+    public record AuthenticatedUser(UUID id, String email, Role role) implements AuthenticatedPrincipal {
+
+        @Override
+        public String getName() {
+            return id.toString();
+        }
     }
 }

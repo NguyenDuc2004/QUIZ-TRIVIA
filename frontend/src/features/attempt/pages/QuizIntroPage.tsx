@@ -189,6 +189,18 @@ export default function QuizIntroPage() {
               Quiz chưa có câu hỏi nên chưa làm được.
             </Text>
           )}
+
+          {quiz.questionCount > 0 && (
+            <>
+              <div className="my-4 border-t border-line" />
+              <Text className="text-ink-soft text-xs">Hoặc thi đấu cùng bạn bè</Text>
+              <Link to="/rooms">
+                <Button block className="mt-2">
+                  Mở phòng đấu trí
+                </Button>
+              </Link>
+            </>
+          )}
         </aside>
       </div>
     </Space>

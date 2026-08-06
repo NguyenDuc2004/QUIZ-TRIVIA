@@ -115,11 +115,19 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 **material_chunks** (đoạn học liệu + embedding — pgvector)
 | id | material_id (FK) | chunk_index | content (text) | embedding (vector) | metadata (jsonb) |
 
-**game_rooms** (metadata phòng đấu — trạng thái live nằm ở Redis)
-| id | room_code (unique) | host_id (FK) | quiz_id (FK) | status (waiting/playing/finished) | created_at |
+**game_rooms** *(V5)* — metadata phòng đấu; trạng thái đang chơi nằm ở Redis `room:{code}`
+| Cột | Kiểu | Ghi chú |
+|-----|------|---------|
+| id | UUID (PK) | |
+| room_code | varchar(8) unique | 6 ký tự, bỏ `0/O` và `1/I` cho dễ đọc |
+| host_id, quiz_id | FK | |
+| status | varchar | WAITING / PLAYING / FINISHED |
+| seconds_per_question | int | NULL = theo `questions.time_limit_sec`, không có nữa thì mặc định 20s |
+| started_at, finished_at | timestamptz | |
+| created_at, updated_at | timestamptz | |
 
-**game_room_players**
-| id | room_id (FK) | user_id (FK) | final_score | joined_at |
+**game_room_players** *(V5)* — `final_score` chỉ ghi khi ván kết thúc, trong lúc chơi điểm ở Redis
+| id | room_id (FK) | user_id (FK) | final_score | joined_at | *UNIQUE (room_id, user_id)* |
 
 **chat_sessions / chat_messages**
 | chat_sessions: id, user_id, title, created_at |

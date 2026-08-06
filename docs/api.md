@@ -125,19 +125,55 @@ chọn nhiều · `404` quiz hoặc bài làm không tồn tại (hoặc không 
 
 ### 5.1. REST (quản lý phòng)
 ```
-POST   /api/v1/rooms                 Tạo phòng (host) → room_code
-POST   /api/v1/rooms/{code}/join     Tham gia phòng
-GET    /api/v1/rooms/{code}          Thông tin phòng
+POST   /api/v1/rooms                      Mở phòng { quizId, secondsPerQuestion? }   ✅
+POST   /api/v1/rooms/{code}/join          Vào phòng bằng mã                          ✅
+GET    /api/v1/rooms/{code}               Ảnh chụp phòng (dùng để đồng bộ lại)       ✅
+DELETE /api/v1/rooms/{code}/players/me    Rời phòng                                  ✅
 ```
 
-### 5.2. WebSocket (STOMP) — endpoint `/ws`
+**Quyền:** đều yêu cầu đăng nhập — Guest không vào phòng đấu. Quiz PRIVATE của người khác trả **404**;
+quiz chưa có câu hỏi trả **400**; ván đã kết thúc thì vào lại trả **409**. Host tự động là người chơi
+đầu tiên nên không phải join thêm lần nữa.
+
+### 5.2. WebSocket (STOMP) — endpoint `/ws` ✅
 ```
-SUBSCRIBE /topic/room/{code}         Nhận sự kiện phòng (player join/leave, câu hỏi, leaderboard)
+SUBSCRIBE /topic/room/{code}         Sự kiện phát cho cả phòng
+SUBSCRIBE /user/queue/room/{code}    Sự kiện gửi riêng cho mình (kết quả câu vừa trả lời)
+SUBSCRIBE /user/queue/errors         Lỗi nghiệp vụ của riêng mình (hết giờ, không phải host…)
+
 SEND      /app/room/{code}/start     Host bắt đầu ván
-SEND      /app/room/{code}/answer    Người chơi gửi đáp án { questionId, answer, timeMs }
-SEND      /app/room/{code}/next      Host chuyển câu tiếp theo
+SEND      /app/room/{code}/answer    Gửi đáp án { questionId, optionIds?, text? }
+SEND      /app/room/{code}/next      Host chuyển câu / kết thúc ván
 ```
-**Sự kiện server phát về (message payload `type`):** `PLAYER_JOINED`, `GAME_STARTED`, `QUESTION`, `ANSWER_RESULT`, `LEADERBOARD`, `GAME_FINISHED`.
+
+**Xác thực:** token đi trong header `Authorization: Bearer <token>` của **frame CONNECT**, không
+phải query string. Bắt tay HTTP `/ws` để công khai vì trình duyệt không gắn được header vào yêu cầu
+nâng cấp WebSocket; chặn nằm ở frame CONNECT (`StompAuthChannelInterceptor`).
+
+**Sự kiện server phát về** (`{ type, at, data }`):
+
+| `type` | Phạm vi | Nội dung |
+|---|---|---|
+| `PLAYER_JOINED` / `PLAYER_LEFT` | cả phòng | danh sách người chơi mới nhất |
+| `GAME_STARTED` | cả phòng | — |
+| `QUESTION` | cả phòng | câu hỏi + `deadlineAtMillis`. **Không kèm đáp án đúng** |
+| `PLAYER_ANSWERED` | cả phòng | chỉ `{ answeredCount, totalPlayers }` |
+| `ANSWER_RESULT` | **riêng người trả lời** | `{ correct, points, totalScore, elapsedMillis }` |
+| `QUESTION_CLOSED` | cả phòng | đáp án đúng + giải thích + bảng xếp hạng |
+| `LEADERBOARD` | cả phòng | bảng xếp hạng |
+| `GAME_FINISHED` | cả phòng | bảng xếp hạng chung cuộc |
+
+> **Vì sao `ANSWER_RESULT` gửi riêng:** phát cho cả phòng thì người chưa trả lời chỉ cần nhìn ai vừa
+> được cộng điểm là đoán ra đáp án. Cả phòng chỉ biết *số người* đã xong (`PLAYER_ANSWERED`); đáp án
+> đúng đợi tới `QUESTION_CLOSED` mới công bố.
+
+**Tính điểm theo tốc độ (FR-22):** `điểm = points × (500 + 500 × tỉ lệ thời gian còn lại)`.
+Đúng tức thì được `points × 1000`, đúng sát giờ chót vẫn được `points × 500`, sai được 0 — nên
+**đúng chậm luôn hơn sai nhanh**. Thời gian do **server đo** từ mốc phát câu hỏi; client không gửi
+thời gian lên được.
+
+**Chuyển câu:** host bấm `/next`, hoặc tự động khi *mọi người đã trả lời*. Không có job nền đếm giờ —
+client đếm ngược tới `deadlineAtMillis`, còn server thì từ chối mọi đáp án gửi sau hạn (**409**).
 
 ## 6. Tính năng AI — `/ai`
 ```
