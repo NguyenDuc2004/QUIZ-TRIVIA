@@ -627,10 +627,18 @@ thắng — chắc chắn tái hiện được, và nói rõ bất biến cần 
 hỏng đúng như mô tả (`expected:<409> but was:<200>`), gắn lại thì đạt.
 
 ### Nợ / chuyển sang ngày sau
-- **Chưa bấm thử nút Google bằng mắt** — cần Client ID thật từ Google Cloud Console điền vào
-  `GOOGLE_CLIENT_ID` (backend) và `VITE_GOOGLE_CLIENT_ID` (frontend).
+- ✅ **Đã bấm thử bằng tài khoản Google thật và đăng nhập được** — tạo OAuth Client (Web application)
+  trên Google Cloud Console, điền vào `GOOGLE_CLIENT_ID` (backend) và `VITE_GOOGLE_CLIENT_ID`
+  (frontend). Sau khi cấu hình, endpoint đổi từ 503 *"chưa cấu hình"* sang 401 *"token không hợp lệ"*
+  với token giả — dấu hiệu bộ xác minh đã bật thật.
+- **Nút Google không dùng được khi mở qua IP LAN** (đường dùng để quét QR bằng điện thoại): Google
+  không nhận IP nội bộ làm *Authorized JavaScript origin*, chỉ nhận `localhost` hoặc tên miền thật.
+  Trên điện thoại phải đợi deploy.
 - Khi deploy phải thêm tên miền thật vào *Authorized JavaScript origins*, nếu không nút sẽ không hiện.
 - Chưa có màn hình "Liên kết/huỷ liên kết tài khoản Google" trong phần hồ sơ.
+- Vite 8 báo `optimizeDeps.esbuildOptions` sắp bị bỏ (đổi thành `rolldownOptions`). Shim `global` cho
+  `sockjs-client` hiện vẫn ăn — đã kiểm bản pre-bundle, `globalThis` thay đủ chỗ — nhưng phải đổi
+  trước khi Vite gỡ hẳn, nếu không phòng đấu sẽ trắng trang trở lại.
 
 ### Ghi chú báo cáo
 - **Mục 2.3 (bảo mật):** ba lỗ hổng ở trên là ví dụ tốt cho phần phân tích rủi ro — đều là *lỗi do
