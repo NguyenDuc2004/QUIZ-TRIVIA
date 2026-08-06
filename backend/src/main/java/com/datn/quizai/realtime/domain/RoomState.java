@@ -38,13 +38,31 @@ public record RoomState(
         List<PlayerState> players,
         Set<UUID> answeredCurrent
 ) {
-    /** Một người chơi trong phòng, kèm điểm tích luỹ. */
+    /**
+     * Một người chơi trong phòng.
+     *
+     * @param playerId id định danh trong phòng — với người đã đăng nhập là id tài khoản, với khách
+     *                 là một UUID ngẫu nhiên sinh lúc vào phòng. Nhờ dùng chung một kiểu, phần
+     *                 tính điểm và xếp hạng không cần biết ai là khách ai là thành viên.
+     * @param guest    true = khách vãng lai, dùng để hiển thị nhãn và để biết có ghi điểm cuối
+     *                 xuống {@code game_room_players} kèm user_id hay không
+     * @param ready    người chơi đã bấm "Sẵn sàng" ở phòng chờ chưa
+     */
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record PlayerState(UUID userId, String displayName, int score, int correctCount) {
+    public record PlayerState(UUID playerId, String displayName, PlayerAvatar avatar,
+                              boolean guest, boolean ready, int score, int correctCount) {
 
         public PlayerState plus(int points, boolean correct) {
-            return new PlayerState(userId, displayName, score + points,
-                    correctCount + (correct ? 1 : 0));
+            return new PlayerState(playerId, displayName, avatar, guest, ready,
+                    score + points, correctCount + (correct ? 1 : 0));
+        }
+
+        public PlayerState withReady(boolean value) {
+            return new PlayerState(playerId, displayName, avatar, guest, value, score, correctCount);
+        }
+
+        public PlayerState withAvatar(PlayerAvatar value) {
+            return new PlayerState(playerId, displayName, value, guest, ready, score, correctCount);
         }
     }
 
@@ -56,18 +74,30 @@ public record RoomState(
     // ---------------------------------------------------------------- biến đổi
 
     /** Thêm người chơi; đã có trong phòng thì giữ nguyên (vào lại không mất điểm). */
-    public RoomState withPlayer(UUID userId, String displayName) {
-        if (hasPlayer(userId)) {
+    public RoomState withPlayer(UUID playerId, String displayName, PlayerAvatar avatar, boolean guest) {
+        if (hasPlayer(playerId)) {
             return this;
         }
         List<PlayerState> next = new ArrayList<>(players);
-        next.add(new PlayerState(userId, displayName, 0, 0));
+        next.add(new PlayerState(playerId, displayName, avatar, guest, false, 0, 0));
         return withPlayers(next);
     }
 
-    public RoomState withoutPlayer(UUID userId) {
-        List<PlayerState> next = players.stream().filter(p -> !p.userId().equals(userId)).toList();
-        return withPlayers(next);
+    public RoomState withoutPlayer(UUID playerId) {
+        return withPlayers(players.stream().filter(p -> !p.playerId().equals(playerId)).toList());
+    }
+
+    public RoomState withReady(UUID playerId, boolean ready) {
+        return withPlayers(players.stream()
+                .map(p -> p.playerId().equals(playerId) ? p.withReady(ready) : p)
+                .toList());
+    }
+
+    /** Đổi avatar ngay trong phòng chờ — người đã đăng nhập cũng đổi sang nhân vật vui được. */
+    public RoomState withAvatar(UUID playerId, PlayerAvatar avatar) {
+        return withPlayers(players.stream()
+                .map(p -> p.playerId().equals(playerId) ? p.withAvatar(avatar) : p)
+                .toList());
     }
 
     /** Chuyển sang câu tiếp theo, đặt lại mốc thời gian và danh sách đã trả lời. */
@@ -77,13 +107,13 @@ public record RoomState(
     }
 
     /** Cộng điểm cho một người và đánh dấu họ đã trả lời câu hiện tại. */
-    public RoomState withAnswer(UUID userId, int points, boolean correct) {
+    public RoomState withAnswer(UUID playerId, int points, boolean correct) {
         List<PlayerState> next = players.stream()
-                .map(p -> p.userId().equals(userId) ? p.plus(points, correct) : p)
+                .map(p -> p.playerId().equals(playerId) ? p.plus(points, correct) : p)
                 .toList();
 
         Set<UUID> answered = new LinkedHashSet<>(answeredCurrent);
-        answered.add(userId);
+        answered.add(playerId);
 
         return new RoomState(roomCode, quizId, hostId, status, currentIndex, totalQuestions,
                 questionStartedAtMillis, questionDeadlineMillis, next, answered);
@@ -102,19 +132,24 @@ public record RoomState(
     // ---------------------------------------------------------------- truy vấn
 
     @JsonIgnore
-    public boolean hasPlayer(UUID userId) {
-        return players.stream().anyMatch(p -> p.userId().equals(userId));
+    public boolean hasPlayer(UUID playerId) {
+        return players.stream().anyMatch(p -> p.playerId().equals(playerId));
     }
 
     @JsonIgnore
-    public boolean hasAnswered(UUID userId) {
-        return answeredCurrent.contains(userId);
+    public boolean hasAnswered(UUID playerId) {
+        return answeredCurrent.contains(playerId);
     }
 
     /** Mọi người chơi đều đã trả lời câu hiện tại → có thể sang câu kế tiếp ngay. */
     @JsonIgnore
     public boolean everyoneAnswered() {
         return !players.isEmpty() && answeredCurrent.size() >= players.size();
+    }
+
+    @JsonIgnore
+    public int readyCount() {
+        return (int) players.stream().filter(PlayerState::ready).count();
     }
 
     @JsonIgnore

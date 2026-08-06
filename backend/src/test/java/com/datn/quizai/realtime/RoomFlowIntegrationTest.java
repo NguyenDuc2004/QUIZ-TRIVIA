@@ -33,6 +33,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -69,6 +70,9 @@ class RoomFlowIntegrationTest {
             .withExposedPorts(6379);
 
     private static final long TIMEOUT_SEC = 5;
+    private static final String GUEST_BODY = "{\"displayName\":\"Khach vang lai\"}";
+    private static final String GUEST_BODY_WITH_AVATAR =
+            "{\"displayName\":\"Khach vang lai\",\"avatar\":\"FOX\"}";
 
     @LocalServerPort
     private int port;
@@ -229,15 +233,130 @@ class RoomFlowIntegrationTest {
     }
 
     @Test
-    @DisplayName("Guest không mở được phòng, không xem được phòng")
-    void shouldBlockGuest() throws Exception {
+    @DisplayName("Chưa đăng nhập: không mở được phòng, nhưng xem được phòng nếu biết mã PIN")
+    void shouldBlockGuestFromHostingButAllowLookup() throws Exception {
         mockMvc.perform(post("/api/v1/rooms")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"quizId\":\"00000000-0000-0000-0000-000000000000\"}"))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(get("/api/v1/rooms/{code}", "ABCDEF"))
-                .andExpect(status().isUnauthorized());
+        // Mã PIN chính là thứ chặn cửa: mã sai thì 404 chứ không phải 401
+        mockMvc.perform(get("/api/v1/rooms/{code}", "000000"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Mã phòng là PIN 6 chữ số, gõ được trên bàn phím số của điện thoại")
+    void shouldGenerateNumericPin() throws Exception {
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken);
+
+        assertThat(roomCode).hasSize(6).containsOnlyDigits();
+    }
+
+    @Test
+    @DisplayName("Phòng không bật cho phép khách thì khách vào bị từ chối 403")
+    void shouldRejectGuestWhenNotAllowed() throws Exception {
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken);
+
+        mockMvc.perform(post("/api/v1/rooms/{code}/join-as-guest", roomCode)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(GUEST_BODY))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Bật cho phép khách: khách vào được, nhận khoá phiên và hiện trong phòng chờ")
+    void shouldLetGuestJoinWhenAllowed() throws Exception {
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken, true);
+
+        String body = mockMvc.perform(post("/api/v1/rooms/{code}/join-as-guest", roomCode)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(GUEST_BODY_WITH_AVATAR))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.guestKey").isNotEmpty())
+                .andExpect(jsonPath("$.room.players.length()").value(2))
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode guestPlayer = null;
+        for (JsonNode player : objectMapper.readTree(body).get("room").get("players")) {
+            if (player.get("guest").asBoolean()) {
+                guestPlayer = player;
+            }
+        }
+
+        assertThat(guestPlayer).isNotNull();
+        assertThat(guestPlayer.get("displayName").asText()).isEqualTo("Khach vang lai");
+        assertThat(guestPlayer.get("avatar").asText()).isEqualTo("FOX");
+        // Frontend vẽ được ngay, không phải tra bảng avatar
+        assertThat(guestPlayer.get("avatarEmoji").asText()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("Khách chơi được bằng khoá phiên: nối WebSocket, bấm sẵn sàng, trả lời và được tính điểm")
+    void shouldLetGuestPlayWithGuestKey() throws Exception {
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken, true);
+
+        String body = mockMvc.perform(post("/api/v1/rooms/{code}/join-as-guest", roomCode)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(GUEST_BODY))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String guestKey = objectMapper.readTree(body).get("guestKey").asText();
+
+        try (Client host = connect(hostToken, roomCode);
+             Client guest = connectAsGuest(guestKey, roomCode)) {
+
+            guest.session.send("/app/room/" + roomCode + "/ready", Map.of("ready", true));
+            JsonNode ready = host.nextOfType(GameEventType.PLAYER_READY);
+            assertThat(ready.get("readyCount").asInt()).isEqualTo(1);
+
+            host.session.send("/app/room/" + roomCode + "/start", null);
+            guest.nextOfType(GameEventType.GAME_STARTED);
+
+            JsonNode question = guest.nextOfType(GameEventType.QUESTION);
+            String questionId = question.get("questionId").asText();
+
+            guest.session.send("/app/room/" + roomCode + "/answer", Map.of(
+                    "questionId", questionId,
+                    "optionIds", List.of(correctOptionIdOf(questionId))));
+
+            JsonNode result = guest.nextPrivate(GameEventType.ANSWER_RESULT);
+            assertThat(result.get("correct").asBoolean()).isTrue();
+            assertThat(result.get("points").asInt()).isPositive();
+        }
+    }
+
+    @Test
+    @DisplayName("Khoá phiên khách sai thì không nối được WebSocket")
+    void shouldRejectInvalidGuestKey() {
+        WebSocketStompClient client = new WebSocketStompClient(new SockJsClient(
+                List.of(new WebSocketTransport(new StandardWebSocketClient()))));
+        client.setMessageConverter(new MappingJackson2MessageConverter(objectMapper));
+
+        StompHeaders headers = new StompHeaders();
+        headers.add("X-Guest-Key", "khoa-bia-dat");
+
+        assertThat(catchConnectFailure(client, headers)).isTrue();
+        client.stop();
+    }
+
+    @Test
+    @DisplayName("Đổi avatar trong phòng chờ được phát cho cả phòng")
+    void shouldBroadcastAvatarChange() throws Exception {
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken);
+
+        try (Client host = connect(hostToken, roomCode)) {
+            host.session.send("/app/room/" + roomCode + "/avatar", Map.of("avatar", "DRAGON"));
+
+            JsonNode event = host.nextOfType(GameEventType.PLAYER_AVATAR_CHANGED);
+            boolean hasDragon = false;
+            for (JsonNode player : event.get("players")) {
+                if ("DRAGON".equals(player.get("avatar").asText())) {
+                    hasDragon = true;
+                }
+            }
+            assertThat(hasDragon).isTrue();
+        }
     }
 
     @Test
@@ -347,7 +466,17 @@ class RoomFlowIntegrationTest {
     private Client connect(String token, String roomCode) throws Exception {
         StompHeaders connectHeaders = new StompHeaders();
         connectHeaders.add("Authorization", "Bearer " + token);
+        return connect(connectHeaders, roomCode);
+    }
 
+    /** Khách nối bằng khoá phiên thay vì JWT. */
+    private Client connectAsGuest(String guestKey, String roomCode) throws Exception {
+        StompHeaders connectHeaders = new StompHeaders();
+        connectHeaders.add("X-Guest-Key", guestKey);
+        return connect(connectHeaders, roomCode);
+    }
+
+    private Client connect(StompHeaders connectHeaders, String roomCode) throws Exception {
         StompSession session = stompClient
                 .connectAsync("ws://localhost:" + port + "/ws",
                         new org.springframework.web.socket.WebSocketHttpHeaders(),
@@ -446,10 +575,15 @@ class RoomFlowIntegrationTest {
     }
 
     private String createRoom(String quizId, String token) throws Exception {
+        return createRoom(quizId, token, false);
+    }
+
+    private String createRoom(String quizId, String token, boolean allowGuests) throws Exception {
         String body = mockMvc.perform(post("/api/v1/rooms")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"quizId\":\"%s\",\"secondsPerQuestion\":30}".formatted(quizId)))
+                        .content(("{\"quizId\":\"%s\",\"secondsPerQuestion\":30,\"allowGuests\":%s}")
+                                .formatted(quizId, allowGuests)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(body).get("roomCode").asText();

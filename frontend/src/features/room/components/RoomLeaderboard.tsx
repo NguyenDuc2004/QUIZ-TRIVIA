@@ -6,11 +6,11 @@ const { Text } = Typography
 /** Bảng xếp hạng trực tiếp trong phòng (FR-23). */
 export default function RoomLeaderboard({
   players,
-  currentUserId,
+  currentPlayerId,
   title = 'Bảng xếp hạng',
 }: {
   players: RoomPlayer[]
-  currentUserId?: string
+  currentPlayerId?: string
   title?: string
 }) {
   return (
@@ -26,10 +26,10 @@ export default function RoomLeaderboard({
       ) : (
         <ul className="m-0 list-none p-0">
           {players.map((player) => {
-            const isMe = player.userId === currentUserId
+            const isMe = player.playerId === currentPlayerId
             return (
               <li
-                key={player.userId}
+                key={player.playerId}
                 className={`flex items-center gap-3 border-b border-line px-4 py-2 last:border-b-0 ${
                   isMe ? 'bg-surface-subtle' : ''
                 }`}

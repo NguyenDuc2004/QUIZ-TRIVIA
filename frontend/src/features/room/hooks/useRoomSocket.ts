@@ -3,8 +3,11 @@ import { Client, type IMessage } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import { tokenStorage } from '@/shared/api/tokenStorage'
 import type { GameEvent } from '../api/roomApi'
+import { guestSession } from '../api/guestSession'
 
 export type SocketStatus = 'connecting' | 'connected' | 'disconnected'
+
+type RoomAction = 'start' | 'answer' | 'next' | 'ready' | 'avatar'
 
 interface Options {
   roomCode: string | undefined
@@ -19,8 +22,11 @@ interface Options {
 /**
  * Nối WebSocket/STOMP tới phòng đấu.
  * <p>
- * Token đi trong header của frame CONNECT chứ không phải query string — query string bị ghi vào
- * log truy cập của proxy, còn header thì không.
+ * Gửi <b>một trong hai</b> loại danh tính ở frame CONNECT: `Authorization` với thành viên đã đăng
+ * nhập, hoặc `X-Guest-Key` với khách vãng lai vừa quét QR. Ưu tiên khoá khách nếu tab này đang là
+ * một phiên khách — để người đã có tài khoản vẫn mở được một tab khác chơi với tư cách khách.
+ * <p>
+ * Token đi trong header chứ không phải query string — query string bị ghi vào log của proxy.
  * <p>
  * `@stomp/stompjs` tự kết nối lại sau khi rớt mạng. Nối lại xong client nên gọi
  * `GET /rooms/{code}` để dựng lại trạng thái, vì các sự kiện lỡ mất không được phát lại.
@@ -37,11 +43,16 @@ export function useRoomSocket({ roomCode, onEvent, onPrivateEvent, onError }: Op
   useEffect(() => {
     if (!roomCode) return
 
+    const guest = guestSession.get(roomCode)
+    const connectHeaders: Record<string, string> = guest
+      ? { 'X-Guest-Key': guest.guestKey }
+      : { Authorization: `Bearer ${tokenStorage.getAccess() ?? ''}` }
+
     const parse = (message: IMessage) => JSON.parse(message.body)
 
     const client = new Client({
       webSocketFactory: () => new SockJS('/ws'),
-      connectHeaders: { Authorization: `Bearer ${tokenStorage.getAccess() ?? ''}` },
+      connectHeaders,
       reconnectDelay: 3000,
       onConnect: () => {
         setStatus('connected')
@@ -65,7 +76,7 @@ export function useRoomSocket({ roomCode, onEvent, onPrivateEvent, onError }: Op
   }, [roomCode])
 
   const send = useCallback(
-    (action: 'start' | 'answer' | 'next', body?: unknown) => {
+    (action: RoomAction, body?: unknown) => {
       const client = clientRef.current
       if (!client?.connected || !roomCode) return
       client.publish({

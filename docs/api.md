@@ -8,6 +8,7 @@ POST   /api/v1/auth/register        Đăng ký → 201 + access & refresh token 
 POST   /api/v1/auth/login           Đăng nhập → access + refresh token              ✅
 POST   /api/v1/auth/refresh         Làm mới token (rotation: token cũ bị thu hồi)   ✅
 POST   /api/v1/auth/logout          Đăng xuất → 204, thu hồi refresh token          ✅
+POST   /api/v1/auth/logout-all       Đăng xuất mọi thiết bị (mất máy)                ✅
 POST   /api/v1/auth/change-password Đổi mật khẩu (cần đăng nhập) → 204              ✅
 POST   /api/v1/auth/forgot-password Quên mật khẩu                                   ⏳ cần cấu hình SMTP
 POST   /api/v1/auth/reset-password  Đặt lại mật khẩu bằng token gửi qua email       ⏳ cần cấu hình SMTP
@@ -125,15 +126,32 @@ chọn nhiều · `404` quiz hoặc bài làm không tồn tại (hoặc không 
 
 ### 5.1. REST (quản lý phòng)
 ```
-POST   /api/v1/rooms                      Mở phòng { quizId, secondsPerQuestion? }   ✅
-POST   /api/v1/rooms/{code}/join          Vào phòng bằng mã                          ✅
-GET    /api/v1/rooms/{code}               Ảnh chụp phòng (dùng để đồng bộ lại)       ✅
-DELETE /api/v1/rooms/{code}/players/me    Rời phòng                                  ✅
+POST   /api/v1/rooms                      Mở phòng { quizId, secondsPerQuestion?, allowGuests }  ✅
+POST   /api/v1/rooms/{pin}/join           Thành viên vào phòng bằng mã PIN                       ✅
+POST   /api/v1/rooms/{pin}/join-as-guest  Khách vào phòng { displayName, avatar? }               ✅
+GET    /api/v1/rooms/{pin}                Ảnh chụp phòng (dùng để đồng bộ lại)                   ✅
+GET    /api/v1/rooms/avatars              Bộ nhân vật để chọn                                    ✅
+DELETE /api/v1/rooms/{pin}/players/me     Rời phòng                                              ✅
 ```
 
-**Quyền:** đều yêu cầu đăng nhập — Guest không vào phòng đấu. Quiz PRIVATE của người khác trả **404**;
-quiz chưa có câu hỏi trả **400**; ván đã kết thúc thì vào lại trả **409**. Host tự động là người chơi
-đầu tiên nên không phải join thêm lần nữa.
+**Mã phòng là PIN 6 chữ số** (`482913`), gõ được trên bàn phím số của điện thoại. Frontend vẽ **mã QR**
+trỏ tới `/join/{pin}` bằng `qrcode.react`; quét xong là vào thẳng phòng chờ.
+
+**Quyền**
+
+| Endpoint | Chưa đăng nhập |
+|---|---|
+| `POST /rooms` | ❌ 401 — chỉ thành viên mở được phòng |
+| `GET /rooms/{pin}`, `GET /rooms/avatars` | ✅ mở — **mã PIN chính là thứ chặn cửa** |
+| `POST /rooms/{pin}/join-as-guest` | ✅ mở, nhưng **403** nếu host không bật `allowGuests` |
+| `POST /rooms/{pin}/join`, `DELETE …/players/me` | ❌ 401 |
+
+Quiz PRIVATE của người khác trả **404**; quiz chưa có câu hỏi trả **400**; ván đã kết thúc thì vào
+lại trả **409**. Host tự động là người chơi đầu tiên nên không phải join thêm lần nữa.
+
+**Khách vãng lai.** `join-as-guest` trả `{ guestKey, playerId, room }`. Client giữ `guestKey` trong
+`sessionStorage` và gửi kèm header `X-Guest-Key` khi nối WebSocket. Khoá này **chỉ dùng được cho đúng
+phòng đó**, tự hết hạn sau 6 giờ, và không mở được bất kỳ API nào khác.
 
 ### 5.2. WebSocket (STOMP) — endpoint `/ws` ✅
 ```
@@ -144,17 +162,22 @@ SUBSCRIBE /user/queue/errors         Lỗi nghiệp vụ của riêng mình (h�
 SEND      /app/room/{code}/start     Host bắt đầu ván
 SEND      /app/room/{code}/answer    Gửi đáp án { questionId, optionIds?, text? }
 SEND      /app/room/{code}/next      Host chuyển câu / kết thúc ván
+SEND      /app/room/{code}/ready     Bật/tắt Sẵn sàng { ready }
+SEND      /app/room/{code}/avatar    Đổi nhân vật { avatar }
 ```
 
-**Xác thực:** token đi trong header `Authorization: Bearer <token>` của **frame CONNECT**, không
-phải query string. Bắt tay HTTP `/ws` để công khai vì trình duyệt không gắn được header vào yêu cầu
-nâng cấp WebSocket; chặn nằm ở frame CONNECT (`StompAuthChannelInterceptor`).
+**Xác thực:** danh tính đi trong header của **frame CONNECT**, không phải query string. Chấp nhận
+hai loại — `Authorization: Bearer <JWT>` cho thành viên, `X-Guest-Key: <khoá>` cho khách. Bắt tay
+HTTP `/ws` để công khai vì trình duyệt không gắn được header vào yêu cầu nâng cấp WebSocket; chặn
+nằm ở frame CONNECT (`StompAuthChannelInterceptor`).
 
 **Sự kiện server phát về** (`{ type, at, data }`):
 
 | `type` | Phạm vi | Nội dung |
 |---|---|---|
-| `PLAYER_JOINED` / `PLAYER_LEFT` | cả phòng | danh sách người chơi mới nhất |
+| `PLAYER_JOINED` / `PLAYER_LEFT` | cả phòng | `{ playerId, players[], readyCount }` |
+| `PLAYER_READY` | cả phòng | như trên, sau khi ai đó bật/tắt Sẵn sàng |
+| `PLAYER_AVATAR_CHANGED` | cả phòng | như trên, sau khi ai đó đổi nhân vật |
 | `GAME_STARTED` | cả phòng | — |
 | `QUESTION` | cả phòng | câu hỏi + `deadlineAtMillis`. **Không kèm đáp án đúng** |
 | `PLAYER_ANSWERED` | cả phòng | chỉ `{ answeredCount, totalPlayers }` |
@@ -177,45 +200,72 @@ client đếm ngược tới `deadlineAtMillis`, còn server thì từ chối m�
 
 ## 6. Tính năng AI — `/ai`
 ```
-POST   /api/v1/ai/materials              Upload học liệu (RAG) → xử lý nền
-GET    /api/v1/ai/materials              Danh sách học liệu
-POST   /api/v1/ai/generate-questions     Sinh đề từ học liệu/chủ đề (async → jobId)
-GET    /api/v1/ai/jobs/{jobId}           Trạng thái/kết quả job
-POST   /api/v1/ai/grade                  Chấm câu tự luận
-POST   /api/v1/ai/chat                   Trợ lý RAG (SSE stream)
-GET    /api/v1/ai/chat/sessions          Danh sách phiên chat
+GET    /api/v1/ai/status                 Đã cấu hình provider nào chưa               ✅
+GET    /api/v1/ai/materials              Học liệu của tôi                            ✅
+GET    /api/v1/ai/materials/{id}         Chi tiết (hỏi lại trạng thái xử lý)         ✅
+POST   /api/v1/ai/materials              Nạp học liệu bằng văn bản dán tay → 202     ✅
+POST   /api/v1/ai/materials/upload       Nạp từ file PDF/DOCX/TXT (multipart) → 202  ✅
+DELETE /api/v1/ai/materials/{id}         Xoá học liệu và toàn bộ vector              ✅
+POST   /api/v1/ai/generate-questions     Sinh đề (async → jobId)                     ✅
+GET    /api/v1/ai/jobs/{jobId}           Trạng thái/kết quả job                      ✅
+POST   /api/v1/ai/jobs/{jobId}/approve   Duyệt câu hỏi đã chọn → ngân hàng câu hỏi   ✅
+
+POST   /api/v1/ai/grade                  Chấm câu tự luận                            ⏳ features/06
+POST   /api/v1/ai/chat                   Trợ lý RAG (SSE stream)                     ⏳ features/08
+GET    /api/v1/ai/chat/sessions          Danh sách phiên chat                        ⏳ features/08
 ```
+
+**Quyền:** toàn bộ mục này yêu cầu vai trò **CREATOR/ADMIN** (Learner → 403, Guest → 401). Đây là
+công cụ soạn nội dung và mỗi lời gọi đều tốn tiền API, nên không mở cho mọi tài khoản.
+Học liệu và job là **dữ liệu riêng**: của người khác trả **404**.
 
 **Ví dụ — sinh đề:**
 ```json
 POST /api/v1/ai/generate-questions
 {
-  "materialId": "uuid-hoặc-null",
-  "topic": "Lịch sử Việt Nam thời Lý",
+  "topic": "mã trạng thái HTTP",
   "count": 5,
-  "types": ["single_choice", "true_false"],
-  "difficulty": "medium",
-  "language": "vi"
+  "types": ["SINGLE_CHOICE", "TRUE_FALSE"],
+  "difficulty": "EASY",
+  "materialId": "uuid-hoặc-bỏ-trống",
+  "useMaterials": true
 }
-→ 202 Accepted { "jobId": "..." }
+→ 202 Accepted { "id": "<jobId>", "status": "PENDING", ... }
 ```
 
-**Schema câu hỏi AI trả về (đã validate):**
+Rồi hỏi lại `GET /ai/jobs/{jobId}` tới khi `status` là `SUCCEEDED` hoặc `FAILED`:
 ```json
 {
-  "questions": [
-    {
-      "type": "single_choice",
-      "question": "Thủ đô nước ta thời Lý là?",
-      "options": ["Thăng Long", "Hoa Lư", "Phú Xuân", "Cổ Loa"],
-      "correctAnswer": "Thăng Long",
-      "explanation": "Năm 1010 Lý Công Uẩn dời đô về Thăng Long.",
-      "difficulty": "medium",
-      "topic": "Lịch sử"
-    }
-  ]
+  "status": "SUCCEEDED",
+  "result": {
+    "questions": [ { "type": "SINGLE_CHOICE", "content": "…", "options": [{"content":"…","correct":true}],
+                     "explanation": "…", "difficulty": "EASY", "topic": "…" } ],
+    "rejected": ["Câu một đáp án cần ≥2 lựa chọn và đúng 1 đáp án đúng — …"],
+    "sourceExcerpts": ["đoạn học liệu đã dùng làm ngữ cảnh…"],
+    "provider": "gemini", "model": "gemini-3.6-flash", "latencyMs": 4210
+  }
 }
 ```
+
+**Human-in-the-loop.** Câu hỏi sinh ra **không** tự vào ngân hàng. Creator chọn câu nào dùng được
+rồi gọi `POST /ai/jobs/{id}/approve` với `{"indexes":[0,2,3]}`; các câu đó mới được lưu, và vẫn
+phải qua đúng bộ luật của `QuestionService` như câu soạn tay.
+
+**Vòng đời học liệu:** `POST` trả **202** ngay với `status: PROCESSING`; việc cắt đoạn và sinh
+embedding chạy nền. Client hỏi lại `GET /ai/materials/{id}` tới khi `READY` (hoặc `FAILED` kèm
+`errorMessage`). Chưa cấu hình API key thì tài liệu chuyển `FAILED` với thông điệp hướng dẫn,
+chứ không kẹt mãi ở `PROCESSING`.
+
+**Chống ảo giác (grounding).** Khi `useMaterials = true`, prompt chỉ cấp cho mô hình các đoạn học
+liệu tìm được và cấm suy diễn ngoài ngữ cảnh. `sourceExcerpts` trả về chính những đoạn đó để
+Creator đối chiếu xem AI có bịa không.
+
+**Chống prompt injection.** Nội dung học liệu do người dùng nạp nên được coi là **dữ liệu**, rào
+trong khối `===== NGỮ CẢNH =====` và chỉ dẫn hệ thống nói rõ: bỏ qua mọi câu lệnh nằm bên trong đó.
+
+**Mã lỗi riêng:** `400` số câu ngoài khoảng 1–20 / tài liệu dưới 100 ký tự / file không đọc được /
+AI không tạo được câu nào hợp lệ · `404` học liệu hoặc job không phải của mình · `409` duyệt job
+chưa xong · `503` chưa cấu hình API key hoặc mọi provider đều không phản hồi.
 
 ## 7. Gợi ý cá nhân hóa (Neo4j) — `/recommendations`
 ```

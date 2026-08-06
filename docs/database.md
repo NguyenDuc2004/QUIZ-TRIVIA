@@ -109,11 +109,30 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 | graded_by | varchar | NOT_GRADED / AUTO / PENDING_AI / AI / HUMAN |
 | answered_at | timestamptz | |
 
-**learning_materials** (học liệu cho RAG)
-| id | owner_id (FK) | title | source_type (pdf/docx/txt) | topic | status (processing/ready) | created_at |
+**learning_materials** *(V6)* — học liệu cho RAG
+| Cột | Kiểu | Ghi chú |
+|-----|------|---------|
+| id | UUID (PK) | |
+| owner_id | FK users | học liệu là dữ liệu riêng, mọi truy vấn đều lọc theo cột này |
+| title, topic | varchar | |
+| source_type | varchar | PDF / DOCX / TXT / TEXT (TEXT = dán tay) |
+| status | varchar | PROCESSING / READY / FAILED |
+| char_count, chunk_count | int | số ký tự trích được và số đoạn đã cắt |
+| error_message | text | lý do xử lý hỏng, hiện thẳng lên giao diện |
+| created_at, updated_at | timestamptz | |
 
-**material_chunks** (đoạn học liệu + embedding — pgvector)
-| id | material_id (FK) | chunk_index | content (text) | embedding (vector) | metadata (jsonb) |
+**material_chunks** *(V6)* — đoạn học liệu + embedding (pgvector)
+| id | material_id (FK) | chunk_index | content (text) | embedding **vector(768)** | metadata (jsonb) |
+
+> 768 chiều khớp model `text-embedding-004` của Gemini. Có chỉ mục `ivfflat (embedding vector_cosine_ops)`
+> cho similarity search bằng toán tử `<=>`. Truy vấn đi qua `MaterialChunkRepository` dùng JdbcTemplate
+> — Hibernate không có kiểu `vector`.
+
+**ai_jobs** *(V6)* — tác vụ AI chạy nền
+| id | user_id (FK) | type (INGEST_MATERIAL/GENERATE_QUESTIONS) | status (PENDING/RUNNING/SUCCEEDED/FAILED) |
+| request (jsonb) | result (jsonb) | error_message | started_at | finished_at | created_at |
+
+> `request`/`result` để JSON để thêm loại job mới không phải đổi schema.
 
 **game_rooms** *(V5)* — metadata phòng đấu; trạng thái đang chơi nằm ở Redis `room:{code}`
 | Cột | Kiểu | Ghi chú |
@@ -123,18 +142,38 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 | host_id, quiz_id | FK | |
 | status | varchar | WAITING / PLAYING / FINISHED |
 | seconds_per_question | int | NULL = theo `questions.time_limit_sec`, không có nữa thì mặc định 20s |
+| allow_guests *(V7)* | boolean | host cho khách quét QR vào hay không; **mặc định FALSE** |
 | started_at, finished_at | timestamptz | |
 | created_at, updated_at | timestamptz | |
 
-**game_room_players** *(V5)* — `final_score` chỉ ghi khi ván kết thúc, trong lúc chơi điểm ở Redis
-| id | room_id (FK) | user_id (FK) | final_score | joined_at | *UNIQUE (room_id, user_id)* |
+**game_room_players** *(V5, mở rộng ở V7)* — `final_score` chỉ ghi khi ván kết thúc, trong lúc chơi điểm ở Redis
+| Cột | Kiểu | Ghi chú |
+|-----|------|---------|
+| id | UUID (PK) | |
+| room_id | FK | |
+| user_id | FK **nullable** *(V7)* | NULL khi là khách vãng lai |
+| display_name *(V7)* | varchar(50) | chốt tại thời điểm chơi; với khách đây là nguồn duy nhất |
+| avatar *(V7)* | varchar(40) | mã trong `PlayerAvatar` (emoji + màu, không phải file ảnh) |
+| is_guest *(V7)* | boolean | |
+| final_score | int | |
+| joined_at | timestamptz | |
+
+> UNIQUE `(room_id, user_id)` được thay bằng **chỉ mục một phần** `WHERE user_id IS NOT NULL`:
+> nhiều khách trong cùng phòng đều có `user_id` NULL nên ràng buộc cũ không còn diễn đạt đúng ý.
+> Thêm CHECK: hoặc là tài khoản thật, hoặc là khách có tên hiển thị.
+
+> Khoá phiên khách nằm ở Redis `roomguest:{key}` (TTL 6 giờ), **không** lưu xuống PostgreSQL —
+> nó chỉ có nghĩa trong đúng một ván đấu.
 
 **chat_sessions / chat_messages**
 | chat_sessions: id, user_id, title, created_at |
 | chat_messages: id, session_id, role (user/assistant), content, created_at |
 
-**ai_request_logs** (audit & giám sát chi phí)
-| id | user_id | feature (generation/grading/chat/recommend) | provider (gemini/grok) | model | tokens_in | tokens_out | latency_ms | status | created_at |
+**ai_request_logs** *(V6)* — audit & giám sát chi phí
+| id | user_id | feature (embedding/generation/grading/chat) | provider (gemini/grok) | model | tokens_in | tokens_out | latency_ms | status | error_message | created_at |
+
+> Ghi trong transaction **riêng** (`REQUIRES_NEW`): job hỏng và rollback thì bản ghi audit vẫn phải còn.
+> Đây là nguồn số liệu cho mục 3.6 báo cáo (chi phí, độ trễ, tỉ lệ fallback).
 
 **flashcard_decks / flashcards / flashcard_reviews** (tính năng Flashcard + SRS — [features/11](features/11-flashcard-srs.md))
 | flashcard_decks: id, owner_id, title, topic, created_at |
@@ -223,6 +262,7 @@ RETURN DISTINCT next
 |------------|---------|---------|
 | `room:{code}` | Trạng thái phòng chơi (người chơi, câu hiện tại, điểm) | TTL, hash/json |
 | `room:{code}:events` (Pub/Sub) | Phát sự kiện game tới các instance backend | Đồng bộ độ trễ thấp |
+| `roomguest:{key}` | Phiên khách vãng lai trong một phòng | TTL 6 giờ, chỉ dùng cho đúng phòng đó |
 | `ai:cache:{hash}` | Cache kết quả AI theo hash(prompt) | Tiết kiệm chi phí |
 | `session:{token}` | Session / refresh token | |
 | `quota:ai:{userId}` | Đếm hạn mức gọi AI theo user | Rate limiting |

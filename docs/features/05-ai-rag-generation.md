@@ -10,9 +10,9 @@ Tự động sinh bộ câu hỏi/đề thi có cấu trúc chuẩn, **bám sát
 - Creator yêu cầu sinh N câu hỏi theo loại/độ khó → duyệt & lưu.
 
 ## Yêu cầu chức năng
-- **FR-29** [M] Sinh câu hỏi từ học liệu (RAG) hoặc từ chủ đề (text).
-- Cấu hình: số lượng, loại câu hỏi, độ khó, ngôn ngữ.
-- Human-in-the-loop: câu hỏi ở trạng thái nháp, Creator duyệt trước khi xuất bản.
+- **FR-29** [M] ✅ Sinh câu hỏi từ học liệu (RAG) hoặc từ chủ đề (text).
+- ✅ Cấu hình: số lượng, loại câu hỏi, độ khó. *(Ngôn ngữ cố định tiếng Việt — chưa cho chọn.)*
+- ✅ Human-in-the-loop: câu hỏi ở trạng thái nháp, Creator tích chọn rồi mới lưu vào ngân hàng.
 
 ## Kiến trúc RAG
 
@@ -59,6 +59,42 @@ Chủ đề/yêu cầu → embedding truy vấn → similarity search (pgvector)
 
 ## Dữ liệu liên quan
 `learning_materials`, `material_chunks` (pgvector), `questions` — [database.md](../database.md).
+
+## Quyết định thiết kế (đã hiện thực)
+
+**1. Tự viết lớp tích hợp, không dùng Spring AI / LangChain4j.** Đề tài yêu cầu như vậy, và tự viết
+thì kiểm soát được đúng những gì gửi đi. `AiProvider` là giao diện chung; `GeminiProvider` và
+`GrokProvider` có thân request khác hẳn nhau (Gemini dùng `contents/parts`, xAI tương thích OpenAI)
+— đó chính là lý do phải có lớp trừu tượng.
+
+**2. Fallback chỉ khi lỗi *tạm thời*.** 429 và 5xx thì chuyển provider; 4xx còn lại là do mình gửi
+sai, gửi sang provider khác cũng hỏng y vậy mà lại tốn thêm một lần gọi.
+
+**3. Grok không có API embedding.** xAI hiện chỉ có sinh văn bản. Nên khi Gemini chết, *sinh đề* vẫn
+chạy được nhưng *nạp học liệu mới* thì không — đã ghi rõ trong `GrokProvider`.
+
+**4. Chunk có chồng lấn, cắt theo ranh giới câu.** Cắt cứng theo độ dài rất dễ chặt ngang một ý;
+cho hai đoạn liền nhau chia sẻ một phần đuôi/đầu thì ý bị chặt vẫn còn nguyên ở ít nhất một đoạn.
+Mặc định 1500 ký tự / chồng lấn 200.
+
+**5. Vector store dùng JdbcTemplate, không dùng JPA.** Hibernate không có kiểu `vector`, mọi thao
+tác đều phải `cast(? as vector)` nên map entity chỉ thêm một lớp trung gian vô ích.
+
+**6. `QuestionJsonParser` bỏ câu hỏng, giữ câu tốt.** Mô hình có thể trả JSON bọc trong ```json,
+thiếu trường, đặt sai tên loại, sinh câu trắc nghiệm không có đáp án đúng, hoặc lặp lại cùng một ý.
+Một câu sai không được làm hỏng cả mẻ — người dùng đã chờ hàng chục giây, trả về 8 câu dùng được
+vẫn hơn báo lỗi toàn bộ. Lý do loại từng câu được trả về để họ biết vì sao xin 10 mà nhận 8.
+
+**7. Câu AI sinh vẫn phải qua `QuestionService`.** Không insert thẳng vào bảng: câu do AI sinh phải
+chịu đúng bộ luật của từng loại câu hỏi như câu soạn tay, nếu không sẽ có câu hỏng nằm trong ngân hàng.
+
+**8. Job nền chạy *sau khi transaction commit*.** Dùng `@TransactionalEventListener` thay vì gọi
+thẳng phương thức `@Async` — gọi thẳng thì luồng nền khởi động trong lúc transaction tạo học liệu
+còn chưa commit và nó đọc CSDL không thấy dòng nào.
+
+**9. Cập nhật trạng thái qua bean riêng** (`AiJobStatusWriter`, `MaterialStatusWriter`). Gọi
+`this.method()` trong cùng một lớp không đi qua proxy nên `@Transactional` mất tác dụng; `REQUIRES_NEW`
+để client hỏi giữa chừng thấy được `RUNNING` chứ không phải chờ tới lúc xong.
 
 ## Ghi chú kỹ thuật
 - **Structured output + validate + retry** khi LLM trả sai JSON.

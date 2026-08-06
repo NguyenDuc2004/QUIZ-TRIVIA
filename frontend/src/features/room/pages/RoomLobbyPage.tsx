@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Input, Select, Space, Typography, message } from 'antd'
+import { Button, Checkbox, Input, Select, Space, Typography, message } from 'antd'
 import { getApiErrorMessage } from '@/shared/api/client'
 import PageHeader from '@/shared/components/PageHeader'
 import { useQuizList } from '@/features/quiz/hooks/useQuizQueries'
@@ -20,6 +20,7 @@ export default function RoomLobbyPage() {
 
   const [quizId, setQuizId] = useState<string | undefined>()
   const [seconds, setSeconds] = useState(20)
+  const [allowGuests, setAllowGuests] = useState(true)
   const [code, setCode] = useState('')
   const [creating, setCreating] = useState(false)
   const [joining, setJoining] = useState(false)
@@ -28,7 +29,7 @@ export default function RoomLobbyPage() {
     if (!quizId) return
     setCreating(true)
     try {
-      const room = await roomApi.create(quizId, seconds)
+      const room = await roomApi.create({ quizId, secondsPerQuestion: seconds, allowGuests })
       navigate(`/rooms/${room.roomCode}`)
     } catch (error) {
       message.error(getApiErrorMessage(error))
@@ -87,6 +88,10 @@ export default function RoomLobbyPage() {
               onChange={setSeconds}
               options={SECONDS_OPTIONS}
             />
+            <Checkbox checked={allowGuests} onChange={(e) => setAllowGuests(e.target.checked)}>
+              Cho phép khách vào bằng QR (không cần tài khoản)
+            </Checkbox>
+
             <Button type="primary" block disabled={!quizId} loading={creating} onClick={createRoom}>
               Mở phòng
             </Button>
@@ -101,17 +106,19 @@ export default function RoomLobbyPage() {
         <div className="border border-line bg-white p-5">
           <Text className="font-bold!">Vào phòng bằng mã</Text>
           <Paragraph className="mt-1! mb-4! text-ink-soft text-xs">
-            Mã phòng gồm 6 ký tự, chủ phòng chia sẻ cho bạn.
+            Mã phòng gồm 6 chữ số, hoặc quét mã QR chủ phòng chiếu lên.
           </Paragraph>
 
           <Space direction="vertical" size={12} className="w-full">
             <Input
               size="large"
-              placeholder="VD: 7NN2CW"
-              maxLength={8}
+              placeholder="VD: 482913"
+              maxLength={6}
+              inputMode="numeric"
               value={code}
               // Mã phòng luôn viết hoa, tự chuyển để người dùng khỏi phải để ý
-              onChange={(event) => setCode(event.target.value.toUpperCase())}
+              // Mã PIN chỉ có chữ số — lọc luôn để dán nhầm cũng không sao
+              onChange={(event) => setCode(event.target.value.replace(/[^0-9]/g, ''))}
               onPressEnter={joinRoom}
               className="text-center font-mono text-lg tracking-widest"
             />

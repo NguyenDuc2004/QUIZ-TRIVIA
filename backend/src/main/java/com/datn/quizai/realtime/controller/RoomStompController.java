@@ -1,7 +1,7 @@
 package com.datn.quizai.realtime.controller;
 
-import com.datn.quizai.auth.service.JwtService;
 import com.datn.quizai.common.exception.BusinessException;
+import com.datn.quizai.realtime.domain.RoomParticipant;
 import com.datn.quizai.realtime.dto.SubmitRoomAnswerRequest;
 import com.datn.quizai.realtime.service.RoomService;
 import org.slf4j.Logger;
@@ -20,7 +20,8 @@ import java.util.Map;
  * Điều khiển ván đấu qua STOMP — docs/api.md §5.2.
  * <p>
  * Danh tính người gửi lấy từ {@code Authentication} mà {@code StompAuthChannelInterceptor} gắn
- * lúc CONNECT, <b>không</b> lấy từ payload — client không tự khai mình là ai được.
+ * lúc CONNECT, <b>không</b> lấy từ payload — client không tự khai mình là ai được. Danh tính đó
+ * là {@link RoomParticipant}, che đi việc người gửi là thành viên hay khách vãng lai.
  */
 @Controller
 public class RoomStompController {
@@ -35,19 +36,36 @@ public class RoomStompController {
 
     @MessageMapping("/room/{roomCode}/start")
     public void start(@DestinationVariable String roomCode, Authentication authentication) {
-        roomService.start(roomCode, currentUser(authentication));
+        roomService.start(roomCode, participant(authentication));
     }
 
     @MessageMapping("/room/{roomCode}/answer")
     public void answer(@DestinationVariable String roomCode,
                        @Payload SubmitRoomAnswerRequest request,
                        Authentication authentication) {
-        roomService.answer(roomCode, request, currentUser(authentication));
+        roomService.answer(roomCode, request, participant(authentication));
     }
 
     @MessageMapping("/room/{roomCode}/next")
     public void next(@DestinationVariable String roomCode, Authentication authentication) {
-        roomService.next(roomCode, currentUser(authentication));
+        roomService.next(roomCode, participant(authentication));
+    }
+
+    @MessageMapping("/room/{roomCode}/ready")
+    public void ready(@DestinationVariable String roomCode,
+                      @Payload Map<String, Object> payload,
+                      Authentication authentication) {
+        boolean ready = !Boolean.FALSE.equals(payload.get("ready"));
+        roomService.setReady(roomCode, participant(authentication), ready);
+    }
+
+    @MessageMapping("/room/{roomCode}/avatar")
+    public void avatar(@DestinationVariable String roomCode,
+                       @Payload Map<String, Object> payload,
+                       Authentication authentication) {
+        Object avatar = payload.get("avatar");
+        roomService.setAvatar(roomCode, participant(authentication),
+                avatar == null ? null : avatar.toString());
     }
 
     /**
@@ -65,10 +83,10 @@ public class RoomStompController {
         return Map.of("status", 500, "message", "Đã có lỗi xảy ra trong ván đấu");
     }
 
-    private JwtService.AuthenticatedUser currentUser(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof JwtService.AuthenticatedUser user)) {
+    private RoomParticipant participant(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof RoomParticipant participant)) {
             throw BusinessException.unauthorized("Phiên WebSocket chưa được xác thực");
         }
-        return user;
+        return participant;
     }
 }

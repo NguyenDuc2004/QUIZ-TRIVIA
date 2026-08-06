@@ -17,6 +17,9 @@
 | 06/08 | Tái cấu trúc package + **lát cắt Quản lý Quiz & Câu hỏi** | 5/5 | 🟢 xong |
 | 06/08 (tối) | Chuẩn giao diện Udemy + **lát cắt Làm bài quiz** + ảnh bìa quiz | 7/7 | 🟢 xong |
 | 07/08 | **Lát cắt Phòng đấu real-time** (STOMP + Redis Pub/Sub) | 6/6 | 🟢 xong |
+| 07/08 (chiều) | **Lát cắt AI + RAG sinh đề** — đã gọi Gemini thật | 7/7 | 🟢 xong |
+| 07/08 (tối) | Mã PIN + QR, khách vãng lai, avatar, phòng chờ live | 7/7 | 🟢 xong |
+| 07/08 (đêm) | Hồi quy toàn bộ + bít lỗ hổng phiên đăng nhập | 5/5 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -265,6 +268,213 @@ dán URL bên ngoài) — cũng là quyết định mở khoá cho ảnh câu h�
 - **Mục 3.4:** 113 test tự động (100% pass) + 30 ca kiểm chứng 2 client. Lỗi `AuthenticatedPrincipal` rất đáng đưa vào "khó khăn & cách giải quyết": nó minh hoạ vì sao phải test nhiều client thật chứ không chỉ test API.
 - **Mục 3.5 (load test):** đã có đủ hạ tầng để đo — kịch bản nên là N người trong một phòng, đo P95 độ trễ từ lúc server phát `QUESTION` tới lúc client nhận. **Chưa đo, chưa được ghi số.**
 - **Mục bảo mật:** ba luật đáng viết — token ở frame CONNECT (không phải query string), thời gian do server đo, đáp án chỉ công bố khi câu đóng.
+
+---
+
+## 📅 T6 — 07/08/2026 (buổi chiều) — Lát cắt 5: AI + RAG sinh đề ⭐
+
+**Mục tiêu hôm nay:** Trụ cột AI của phiếu đề tài — nạp học liệu vào kho vector rồi sinh câu hỏi bám theo nội dung, Creator duyệt trước khi vào ngân hàng.
+
+### Nhiệm vụ
+- [x] Thêm Apache Tika + Migration `V6__ai_rag.sql`
+- [x] `AiProvider` / `GeminiProvider` / `GrokProvider` / `AiOrchestrator` (fallback + audit)
+- [x] Pipeline RAG: Tika trích text → chunk có chồng lấn → embedding → pgvector
+- [x] Sinh đề: retrieval + prompt grounding + validate JSON + lọc trùng
+- [x] Job nền trả `jobId` + Creator duyệt câu hỏi
+- [x] Frontend: kho học liệu + màn sinh đề + duyệt câu hỏi
+- [x] **Gọi Gemini thật — đã chạy, 22/22 ca kiểm chứng đạt**
+
+### Đã làm được
+
+**Migration V6:** `learning_materials`, `material_chunks` (cột `embedding vector(768)` + chỉ mục `ivfflat`), `ai_jobs`, `ai_request_logs`.
+
+**Lớp provider:** `AiProvider` là giao diện chung; `GeminiProvider` (REST `generateContent` + `embedContent`) và `GrokProvider` (tương thích OpenAI) có thân request khác hẳn nhau — đúng chỗ cần trừu tượng hoá. `AiOrchestrator` lo fallback theo `app.ai.provider-order`, bỏ qua provider chưa có key, và ghi audit mọi lời gọi. **Tự viết bằng `WebClient`, không dùng Spring AI hay LangChain4j** theo đúng yêu cầu đề tài.
+
+**Pipeline RAG:** `TextExtractor` (Tika `AutoDetectParser`, nhận dạng theo nội dung chứ không theo đuôi file) → `TextChunker` (1500 ký tự, chồng lấn 200, chỉ cắt ở ranh giới câu) → embedding → `material_chunks`. Truy vấn tương đồng bằng toán tử `<=>` của pgvector, **luôn lọc `owner_id`**.
+
+**Sinh đề:** `QuestionPromptBuilder` (grounding + rào ngữ cảnh chống prompt injection) → `AiOrchestrator` → `QuestionJsonParser`. Parser là chốt chặn quan trọng nhất: gỡ khối ```json, chấp nhận nhiều cách gói dữ liệu khác nhau, áp đúng luật 5 loại câu hỏi, lọc câu trùng, và **bỏ câu hỏng nhưng giữ câu tốt** kèm lý do loại từng câu.
+
+**Chín quyết định thiết kế** ghi ở [features/05](../features/05-ai-rag-generation.md#quyết-định-thiết-kế-đã-hiện-thực).
+
+**Kiểm thử — 138/138 pass** (113 → 138, thêm 25 ca): `TextChunkerTest` 9 ca, `QuestionJsonParserTest` 16 ca (phủ toàn bộ kiểu đầu ra lệch chuẩn của mô hình).
+**Kiểm chứng HTTP — 14/14** cho phần không cần key: phân quyền, validate, truy cập chéo, và hành vi khi chưa cấu hình key.
+
+### Nghiệm thu với Gemini thật — 22/22 ca đạt
+
+Sau khi có API key, chạy thật trọn luồng: nạp học liệu (995 ký tự → 1 đoạn, có vector) → similarity
+search → sinh 3 câu hỏi bám tài liệu → Creator duyệt → câu vào ngân hàng câu hỏi. Không câu nào bị
+parser loại.
+
+Ví dụ câu AI sinh từ tài liệu về HTTP (chứng minh **grounding** hoạt động — tài liệu nói gì thì hỏi nấy):
+> *"Trong giao thức HTTP, nhóm mã trạng thái nào báo hiệu các lỗi xuất phát từ phía máy khách?"* → Nhóm 4xx
+> *"Mã trạng thái HTTP nào dưới đây được sử dụng khi việc tạo mới một tài nguyên diễn ra thành công?"* → 201 Created
+
+**Số liệu đo được** (từ `ai_request_logs`, lấy làm cơ sở cho mục 3.6):
+
+| Tác vụ | Model | Độ trễ TB | Token vào | Token ra |
+|---|---|---|---|---|
+| embedding (1 đoạn) | `gemini-embedding-001` | ~750 ms | — | — |
+| sinh 3 câu hỏi (có RAG) | `gemini-3.6-flash` | ~8,1 s | 871 | 354 |
+
+### Bốn lỗi gặp phải và cách sửa
+Hai lỗi đầu là bẫy kinh điển của Spring, **chỉ lộ ra khi chạy thật** — biên dịch sạch, test đơn vị không đụng tới. Hai lỗi sau chỉ lộ khi gọi API thật:
+1. **Job nền chạy trước khi transaction commit.** Gọi thẳng phương thức `@Async` từ trong phương thức `@Transactional` khiến luồng nền khởi động ngay, đọc CSDL chưa thấy dòng vừa tạo → `No value present`. Sửa: phát sự kiện và bắt bằng `@TransactionalEventListener` (chạy sau khi commit).
+2. **Đổi trạng thái không được ghi xuống.** `this.updateStatus(...)` là gọi nội bộ, không qua proxy nên `@Transactional` mất tác dụng; job chạy xong mà vẫn hiện `PENDING`. Sửa: tách `AiJobStatusWriter` / `MaterialStatusWriter` thành bean riêng với `REQUIRES_NEW`.
+3. **`text-embedding-004` đã bị Google gỡ** → 404 NOT_FOUND, toàn bộ pipeline RAG chết. Sửa: đổi sang `gemini-embedding-001`, xin `outputDimensionality: 768` cho khớp cột `vector(768)`, và **đưa model + số chiều ra file cấu hình** để lần sau Google đổi thì không phải sửa code.
+4. **`gemini-2.5-flash` không còn mở cho tài khoản mới** → cũng 404. Đã dò danh sách model thực tế bằng `GET /v1beta/models` rồi chọn `gemini-3.6-flash` (trả JSON sạch nhất trong các model thử).
+
+> Bài học ghi lại cho báo cáo: **tên model của nhà cung cấp là thứ sẽ thay đổi**, phải coi như cấu hình chứ không phải hằng số trong code.
+
+### Nợ / chuyển sang ngày sau
+- Chưa xem giao diện AI trên trình duyệt.
+- Chưa có key Grok nên **chưa demo được fallback Gemini→Grok** (cần cho mục 3.6).
+- Chưa giới hạn hạn mức gọi AI theo user (`quota:ai:{userId}` ở Redis).
+- Chưa cache theo hash(prompt) để tiết kiệm chi phí.
+- Mục 3.6 mới có số liệu độ trễ/token; **chưa đánh giá độ chính xác** trên bộ mẫu đủ lớn.
+- Lát cắt kế tiếp: **06-ai-grading** (chấm câu tự luận — nối tiếp `PENDING_AI` từ lát cắt 3).
+
+### Ghi chú báo cáo
+- **Mục 1.6 / 2.3:** kiến trúc RAG là phần đắt giá nhất chương 2 — vẽ sơ đồ hai pipeline (ingestion và retrieval+generation) như trong features/05.
+- **Mục 2.7:** `AiProvider` + `AiOrchestrator` là ví dụ giáo khoa cho Strategy pattern; nêu rõ vì sao fallback chỉ áp cho lỗi tạm thời.
+- **Mục 2.8:** ERD nay có 14 bảng — thêm `learning_materials`, `material_chunks`, `ai_jobs`, `ai_request_logs`. Nêu rõ vì sao `material_chunks` không map bằng JPA.
+- **Mục 3.4:** 138 test tự động (100% pass). `QuestionJsonParserTest` 16 ca là dẫn chứng tốt: mỗi ca tương ứng một kiểu đầu ra sai mà mô hình *thực sự* hay trả về.
+- **Mục 3.6 (đánh giá AI):** đã có số liệu đầu tiên (bảng ở trên). Còn thiếu: đánh giá độ chính xác trên bộ mẫu đủ lớn, và demo fallback Gemini→Grok (chưa có key Grok).
+- **Bảo mật:** ba luật đáng viết — tách chỉ dẫn khỏi dữ liệu (chống prompt injection), grounding + trả `sourceExcerpts` để đối chiếu, và cô lập học liệu theo `owner_id`.
+
+---
+
+## 📅 T6 — 07/08/2026 (buổi tối) — Nâng cấp phòng đấu: PIN + QR, khách vãng lai, avatar
+
+**Mục tiêu hôm nay:** Đưa trải nghiệm phòng đấu về đúng kiểu Kahoot — chiếu mã lên màn hình, cả lớp quét điện thoại vào chơi ngay.
+
+### Nhiệm vụ
+- [x] Migration `V7__room_pin_guest_avatar.sql`
+- [x] Mã phòng đổi sang **PIN 6 chữ số**; frontend vẽ **mã QR** trỏ tới `/join/{PIN}`
+- [x] **Khách vãng lai** vào chơi được — công tắc `allowGuests` do host bật cho từng phòng
+- [x] Bộ **avatar** 18 nhân vật, nút "Ngẫu nhiên", đổi được ngay trong phòng chờ
+- [x] **Phòng chờ live** dạng thẻ, trạng thái "Đã sẵn sàng" cập nhật real-time
+- [x] Test 144/144 pass (thêm 6 ca) + 22/22 ca kiểm chứng với 2 client thật
+- [x] Cập nhật tài liệu cho khớp luật mới
+
+### Một luật cũ đã được sửa có chủ đích
+
+Luật ban đầu (`docs/overview.md`) nói **Guest không vào phòng đấu**. Yêu cầu mới cần đúng điều đó, nên
+thay vì bỏ hẳn luật, đã chọn phương án **host bật/tắt cho từng phòng**:
+
+- `game_rooms.allow_guests` **mặc định FALSE** → luật cũ vẫn là hành vi mặc định.
+- Giáo viên chủ động bật khi muốn cả lớp quét QR vào chơi.
+- Khách chỉ sống trong một ván: không lịch sử làm bài, không thống kê cá nhân, không lên đồ thị gợi ý.
+
+### Đã làm được
+
+**Migration V7:** thêm `allow_guests`; `game_room_players.user_id` cho phép NULL, thêm `display_name`,
+`avatar`, `is_guest`. Ràng buộc UNIQUE cũ được thay bằng **chỉ mục một phần** `WHERE user_id IS NOT NULL`
+— nhiều khách cùng phòng đều có `user_id` NULL nên ràng buộc cũ không còn diễn đạt đúng ý.
+
+**Danh tính khách:** không cấp JWT. Cấp JWT sẽ phải thêm vai trò GUEST vào enum `Role`, kéo theo ràng
+buộc CHECK của bảng `users` và mọi chỗ phân quyền. Thay vào đó khách nhận **khoá phiên** ngẫu nhiên
+trong Redis `roomguest:{key}`, gắn chặt với đúng một phòng, TTL 6 giờ. `StompAuthChannelInterceptor`
+nay nhận hai loại danh tính: `Authorization` hoặc `X-Guest-Key`.
+
+**`RoomParticipant`** che đi việc người gửi là thành viên hay khách — phần tính điểm, xếp hạng, kiểm
+đã trả lời chưa không phải rẽ nhánh ở đâu cả.
+
+**QR vẽ ở client** bằng `qrcode.react`: nội dung chỉ là một đường dẫn nên sinh ở đâu cũng như nhau;
+vẽ tại chỗ thì khỏi thêm thư viện vào backend, khỏi truyền ảnh, và là SVG nên chiếu máy chiếu không vỡ.
+
+**Avatar là emoji trên nền màu**, không phải file ảnh — không phải tải ảnh, không phụ thuộc dịch vụ
+bên ngoài, chạy được cả khi mất mạng. *Nói rõ hạn chế:* đây là biểu tượng vui, không phải tranh nhân
+vật chibi vẽ tay; muốn bộ chibi thật thì phải mua hoặc tự vẽ rồi thay `PlayerAvatar`.
+
+**Kiểm thử — 144/144 pass** (138 → 144) và **22/22 ca kiểm chứng trên stack dev** với hai client thật:
+khách quét QR → chọn avatar → vào phòng chờ → bấm sẵn sàng → chơi → lên bảng xếp hạng chung cuộc.
+
+### Một race condition thật, chỉ lộ khi chạy hai client
+`next` đọc trạng thái phòng *ngoài* khoá rồi mới quyết định phát câu kế tiếp hay kết thúc ván. Kênh
+STOMP đến của Spring chạy **đa luồng**, nên hai lệnh "câu tiếp theo" gửi sát nhau cùng đọc một trạng
+thái cũ → ván nhảy cóc hoặc không bao giờ kết thúc. Sửa: tính toàn bộ bước chuyển **ngay trong khoá**
+`RoomStateStore.update`, phần phát sự kiện làm sau.
+
+> Đáng ghi vào báo cáo: đây là loại lỗi mà biên dịch sạch, test đơn vị sạch, thậm chí test một client
+> cũng sạch — chỉ hai client chạy song song mới lộ.
+
+### Quét QR bằng điện thoại — ba thứ chặn, đã sửa cả ba
+Lần thử đầu điện thoại báo "không tìm thấy". Kiểm chứng ra ba nguyên nhân xếp lớp, sửa lần lượt:
+1. **Vite chỉ nghe `::1`** (mặc định bind localhost) → điện thoại gọi `192.168.0.101:5173` không ai trả lời. Sửa: `server.host: true`.
+2. **QR mã hoá `localhost`** vì host mở trang bằng `localhost`; trên điện thoại địa chỉ đó là chính nó. Lần sửa đầu chỉ *cảnh báo* và bắt người dùng tự mở lại trang bằng IP LAN — **cách sửa sai**, vì vẫn để cái bẫy nguyên đó. Sửa lại cho đúng: **backend dựng sẵn `joinUrl`** từ địa chỉ LAN nó tự dò được, frontend chỉ việc vẽ. Host mở bằng `localhost` cũng ra QR đúng.
+   - Cách dò (`NetworkAddressResolver`): mở UDP socket rồi `connect` tới `8.8.8.8:53` — không gửi gói nào, chỉ để hệ điều hành tra bảng định tuyến và chọn card mạng. Đọc địa chỉ cục bộ của socket là ra đúng card đang nối ra ngoài. Máy thử có 4 IPv4 (3 card ảo VMware/WSL) và cách này chọn đúng card Wi-Fi.
+3. **CORS chỉ cho `http://localhost:5173`** → sửa xong hai cái trên sẽ vấp cái này. Sửa: chuyển sang `allowedOriginPatterns`, mặc định mở cho dải IP nội bộ; triển khai thật phải đặt `CORS_ALLOWED_ORIGINS` cụ thể.
+
+Đã kiểm chứng **7/7 ca đi đúng con đường của điện thoại** (mọi request qua `http://192.168.0.101:5173`
+và qua proxy Vite, gồm cả nối WebSocket bằng khoá phiên khách) và **6/6 ca cho `joinUrl`** — gọi API
+từ `localhost` mà QR vẫn ra địa chỉ LAN, tức là đúng cái ca đã hỏng.
+
+> Đáng ghi vào báo cáo hai điều. Một: đây là loại lỗi mà chạy trên máy dev không bao giờ thấy, vì máy
+> dev luôn mở bằng `localhost` — muốn thấy phải có thiết bị thứ hai. Hai: lần sửa đầu tôi chỉ thêm
+> cảnh báo và bắt người dùng tự đổi cách mở trang; đó là đẩy việc sang người dùng chứ không phải sửa
+> lỗi. Sửa đúng là bỏ hẳn chỗ có thể sai — để backend quyết định địa chỉ.
+
+### Nợ / chuyển sang ngày sau
+- Chưa xem giao diện phòng chờ bằng mắt (đã kiểm được đường mạng, chưa kiểm được bố cục).
+- `GET /rooms/{pin}` mở cho khách nên về lý thuyết dò được 10⁶ mã; nên thêm rate limit.
+- Chưa chặn trùng biệt danh giữa các khách trong cùng phòng.
+- Host bỏ đi giữa chừng thì phòng vẫn treo tới khi Redis hết TTL.
+
+### Ghi chú báo cáo
+- **Mục 2.6:** thêm UC_QuetQRVaoPhong, UC_ChonAvatar, UC_SanSang. Luồng thay thế lấy từ các ca 403/400/404 đã kiểm chứng.
+- **Mục 2.8:** `game_room_players` là bảng duy nhất có khoá ngoại nullable — giải thích lý do và ràng buộc CHECK đi kèm.
+- **Mục 2.3 (bảo mật):** đối chiếu hai cơ chế danh tính (JWT dài hạn toàn hệ thống vs khoá phiên ngắn hạn một phòng) là một mục hay.
+- **Mục 3.4:** 144 test tự động + 22 ca kiểm chứng 2 client. Race condition ở `next` nên đưa vào "khó khăn & cách giải quyết".
+
+---
+
+## 📅 T6 — 07/08/2026 (đêm) — Hồi quy toàn bộ trước khi merge
+
+**Mục tiêu:** Trước khi gộp hai lát cắt (AI+RAG và Phòng đấu) vào `main`, chạy lại **mọi** bộ kiểm chứng đã viết để chắc không có gì vỡ ngầm, và bít những lỗ hổng đã ghi nhận.
+
+### Nhiệm vụ
+- [x] Bít lỗ hổng: đổi mật khẩu phải thu hồi phiên trên mọi thiết bị
+- [x] Thêm `POST /auth/logout-all` (đăng xuất mọi thiết bị khi mất máy)
+- [x] Sai phương thức HTTP trả 405 thay vì 500
+- [x] Thử lại provider AI khi gặp lỗi tạm thời
+- [x] Hồi quy 9 bộ kiểm chứng: **183/183 đạt**
+
+### Kết quả hồi quy
+
+| Bộ kiểm chứng | Kết quả |
+|---|---|
+| Làm bài quiz (lát cắt 3) | 48/48 |
+| Ảnh bìa quiz (upload) | 19/19 |
+| AI + RAG sinh đề (lát cắt 5) | 22/22 |
+| Phòng đấu real-time (lát cắt 4) | 31/31 |
+| Khách vãng lai + avatar + sẵn sàng | 22/22 |
+| Đường LAN cho điện thoại | 7/7 |
+| `joinUrl` trong mã QR | 6/6 |
+| Đăng nhập nhiều thiết bị | 15/15 |
+| Thu hồi phiên | 13/13 |
+| **Tổng** | **183/183** |
+
+Cộng với **144/144** test JUnit và build frontend pass.
+
+### Bốn thứ hồi quy phát hiện và đã sửa
+
+1. **Đổi mật khẩu không cắt phiên thiết bị khác.** Mất điện thoại rồi đổi mật khẩu trên máy tính thì chiếc điện thoại đó *vẫn* vào được tới 14 ngày. Người dùng đổi mật khẩu luôn tin là mình vừa cắt hết truy cập — hệ thống phải làm đúng điều đó. Sửa: thêm chỉ mục ngược Redis `user-sessions:{userId}` để thu hồi được cả loạt, gọi khi đổi mật khẩu; kèm endpoint `logout-all`.
+2. **Sai phương thức HTTP trả 500.** `GlobalExceptionHandler` không bắt `HttpRequestMethodNotSupportedException` nên gọi `PUT` vào endpoint chỉ nhận `POST` cho ra "Đã có lỗi xảy ra" — người gọi API không biết mình chỉ dùng sai động từ. Sửa: trả 405 kèm danh sách phương thức được phép.
+3. **Gemini trả 503 *model overloaded* làm hỏng cả lần sinh đề.** Lỗi tạm thời, thử lại là được, nhưng orchestrator bỏ luôn vì không có provider dự phòng (chưa có key Grok). Sửa: thử lại chính provider đó 3 lần với backoff 1,2s → 2,4s trước khi chuyển provider.
+4. **Hai kỳ vọng cũ trong script kiểm chứng** đã lệch so với hành vi mới có chủ đích (`GET /rooms/{pin}` nay mở cho khách; đổi mật khẩu nay thu hồi phiên). Đã cập nhật script — *không* sửa code để chạy theo script cũ.
+
+> Còn một lỗi trong chính `run_all.sh`: bộ nào crash giữa đường thì không in được dòng kết quả, và script cộng dồn nên báo "0 hỏng" trong khi thực tế có bộ chưa chạy hết. Đã sửa để crash tính là hỏng. **Bài học: chỉ số "0 hỏng" của một script tự viết cũng phải được kiểm.**
+
+### Nợ / chuyển sang ngày sau
+- Vẫn chưa xem giao diện bằng mắt (phòng chờ, QR, màn sinh đề AI).
+- **Kế tiếp: FR-3 đăng nhập Google + FR-4 quên mật khẩu qua OTP email** — cần chốt nhà cung cấp SMTP.
+- Chưa rate limit `GET /rooms/{pin}` và chưa giới hạn hạn mức gọi AI theo user.
+- Chưa chặn trùng biệt danh giữa các khách trong cùng phòng.
+
+### Ghi chú báo cáo
+- **Mục 3.4:** 144 test tự động + **183 ca kiểm chứng HTTP/WebSocket trên hệ thống đang chạy**, chia 9 bộ theo tính năng. Bảng ở trên dùng được trực tiếp.
+- **Mục 2.3 (bảo mật):** ba lỗi sửa ở đây đều là ví dụ tốt — thu hồi phiên khi đổi mật khẩu (quan niệm người dùng vs hành vi hệ thống), mã lỗi đúng ngữ nghĩa (405 vs 500), và chịu lỗi tạm thời của bên thứ ba (retry + backoff).
+- **Mục "khó khăn & cách giải quyết":** lỗi trong chính script kiểm chứng là dẫn chứng đáng viết — công cụ đo cũng có thể sai, và một con số "toàn đạt" không tự nó là bằng chứng.
 
 ---
 

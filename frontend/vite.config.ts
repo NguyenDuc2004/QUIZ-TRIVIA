@@ -26,6 +26,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Nghe trên mọi card mạng chứ không chỉ localhost, để điện thoại cùng Wi-Fi quét QR vào được.
+    // Mặc định của Vite chỉ bind 127.0.0.1 nên máy khác gọi tới sẽ không có ai trả lời.
+    host: true,
     // Proxy khi dev để FE gọi API cùng origin → không vướng CORS
     proxy: {
       '/api': { target: 'http://localhost:8080', changeOrigin: true },

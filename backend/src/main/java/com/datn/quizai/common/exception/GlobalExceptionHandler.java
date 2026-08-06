@@ -10,6 +10,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
@@ -86,6 +87,29 @@ public class GlobalExceptionHandler {
         String traceId = newTraceId();
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(
                 404, "Not Found", "Không tìm thấy tài nguyên", request.getRequestURI(), traceId));
+    }
+
+    /**
+     * Gọi đúng đường dẫn nhưng sai phương thức HTTP (ví dụ {@code PUT} vào endpoint chỉ nhận
+     * {@code POST}) → <b>405</b> kèm danh sách phương thức được phép, chứ không phải 500.
+     * <p>
+     * Không có handler này thì lỗi rơi xuống chốt cuối và client nhận "Đã có lỗi xảy ra" — người
+     * gọi API không có cách nào biết mình chỉ dùng sai động từ.
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiError> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex,
+                                                           HttpServletRequest request) {
+        String traceId = newTraceId();
+        String allowed = ex.getSupportedHttpMethods() == null ? "" : ex.getSupportedHttpMethods().toString();
+
+        log.warn("[{}] {} {} → 405, chỉ nhận {}", traceId, request.getMethod(),
+                request.getRequestURI(), allowed);
+
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(ApiError.of(
+                405, "Method Not Allowed",
+                "Phương thức " + ex.getMethod() + " không dùng được ở đây"
+                        + (allowed.isBlank() ? "" : ", chỉ nhận " + allowed),
+                request.getRequestURI(), traceId));
     }
 
     /** Chốt cuối: không để lộ stack trace ra client, nhưng phải log đầy đủ kèm traceId. */

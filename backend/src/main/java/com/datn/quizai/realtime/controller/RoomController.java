@@ -1,7 +1,10 @@
 package com.datn.quizai.realtime.controller;
 
 import com.datn.quizai.auth.service.JwtService;
+import com.datn.quizai.realtime.dto.AvatarOption;
 import com.datn.quizai.realtime.dto.CreateRoomRequest;
+import com.datn.quizai.realtime.dto.GuestSessionResponse;
+import com.datn.quizai.realtime.dto.JoinAsGuestRequest;
 import com.datn.quizai.realtime.dto.RoomView;
 import com.datn.quizai.realtime.service.RoomService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,11 +22,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
  * Quản lý phòng đấu qua REST — docs/api.md §5.1.
  * <p>
  * Phần REST chỉ lo vòng đời phòng (mở / vào / xem / rời). Diễn biến ván đấu đi qua STOMP,
- * xem {@link RoomStompController}. Mọi endpoint đều yêu cầu đăng nhập: Guest không vào phòng đấu.
+ * xem {@link RoomStompController}.
+ * <p>
+ * <b>Ba endpoint mở cho người chưa đăng nhập</b> — xem thông tin phòng, danh sách avatar, và vào
+ * phòng với tư cách khách. Cả ba đều đòi biết <b>mã PIN 6 số</b>, và việc vào phòng còn phải được
+ * host bật {@code allowGuests}. Mọi endpoint khác vẫn yêu cầu đăng nhập.
  */
 @RestController
 @RequestMapping("/api/v1/rooms")
@@ -52,16 +61,30 @@ public class RoomController {
     }
 
     @GetMapping("/{roomCode}")
-    @Operation(summary = "Ảnh chụp phòng — dùng để dựng lại màn hình sau khi mất kết nối")
+    @Operation(summary = "Ảnh chụp phòng — dùng để dựng lại màn hình sau khi mất kết nối. "
+            + "Mở cho khách vì họ cần xem phòng trước khi có danh tính; mã PIN chính là thứ chặn cửa.")
     public RoomView get(@PathVariable String roomCode) {
         return roomService.get(roomCode);
+    }
+
+    @PostMapping("/{roomCode}/join-as-guest")
+    @Operation(summary = "Khách vãng lai vào phòng bằng mã PIN/QR — chỉ được khi host bật cho phép khách")
+    public ResponseEntity<GuestSessionResponse> joinAsGuest(@PathVariable String roomCode,
+                                                            @Valid @RequestBody JoinAsGuestRequest request) {
+        return ResponseEntity.ok(roomService.joinAsGuest(roomCode, request));
+    }
+
+    @GetMapping("/avatars")
+    @Operation(summary = "Bộ avatar vui nhộn để chọn khi vào phòng")
+    public List<AvatarOption> avatars() {
+        return AvatarOption.catalog();
     }
 
     @DeleteMapping("/{roomCode}/players/me")
     @Operation(summary = "Rời phòng")
     public ResponseEntity<Void> leave(@AuthenticationPrincipal JwtService.AuthenticatedUser current,
                                       @PathVariable String roomCode) {
-        roomService.leave(roomCode, current);
+        roomService.leave(roomCode, current.id());
         return ResponseEntity.noContent().build();
     }
 }
