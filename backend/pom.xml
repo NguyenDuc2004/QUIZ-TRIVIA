@@ -136,6 +136,12 @@
             <version>${tika.version}</version>
         </dependency>
 
+        <!-- Gửi email OTP đặt lại mật khẩu (features/01 FR-4) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Tiện ích -->
         <dependency>
             <groupId>org.projectlombok</groupId>

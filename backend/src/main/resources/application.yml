@@ -31,6 +31,25 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
+  mail:
+    # Gmail SMTP. MAIL_PASSWORD phải là "App Password" 16 ký tự của Google,
+    # KHÔNG phải mật khẩu đăng nhập Gmail — Google đã chặn đăng nhập bằng mật khẩu thường từ 2022.
+    # Lấy tại: https://myaccount.google.com/apppasswords (cần bật xác minh 2 bước trước)
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          # Không để treo vô hạn khi mạng chặn cổng 587
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+
   servlet:
     multipart:
       max-file-size: 25MB        # upload học liệu cho RAG
@@ -50,6 +69,19 @@ app:
     # Mặc định mở cho localhost và các dải IP nội bộ để điện thoại cùng Wi-Fi quét QR vào được.
     # TRIỂN KHAI THẬT: đặt CORS_ALLOWED_ORIGINS thành đúng tên miền, đừng để mặc định này.
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:[*],http://127.0.0.1:[*],http://192.168.*.*:[*],http://10.*.*.*:[*],http://172.16.*.*:[*]}
+  mail:
+    # Tên và địa chỉ hiện ở ô "Người gửi". Bỏ trống from thì dùng chính spring.mail.username.
+    from: ${MAIL_FROM:}
+    from-name: ${MAIL_FROM_NAME:Quiz AI}
+    # OTP đặt lại mật khẩu
+    otp:
+      length: 6
+      ttl-minutes: ${OTP_TTL_MINUTES:10}
+      # Số lần nhập sai tối đa trước khi huỷ mã — chặn dò 6 chữ số
+      max-attempts: ${OTP_MAX_ATTEMPTS:5}
+      # Khoảng cách tối thiểu giữa hai lần xin mã, chống spam hòm thư người khác
+      resend-cooldown-seconds: ${OTP_RESEND_COOLDOWN:60}
+
   frontend:
     # Địa chỉ gốc của frontend, dùng để dựng link trong mã QR phòng đấu.
     # Để trống khi dev: backend tự dò địa chỉ LAN để điện thoại quét được.
@@ -89,6 +121,16 @@ management:
   endpoint:
     health:
       show-details: when_authorized
+  health:
+    mail:
+      # TẮT có chủ đích. Spring tự thêm MailHealthIndicator khi có starter-mail, và nó thử kết nối
+      # SMTP mỗi lần gọi /actuator/health. Chưa cấu hình mail (hoặc Gmail chặn tạm) là cả ứng dụng
+      # bị báo DOWN — trong khi mọi thứ khác vẫn chạy tốt.
+      #
+      # Health check là thứ load balancer và Docker dùng để quyết định gỡ instance hay khởi động
+      # lại container. Gửi email là chức năng phụ, hỏng nó không đáng để cả hệ thống bị coi là chết.
+      # Trạng thái gửi mail theo dõi qua log của MailService.
+      enabled: false
 
 logging:
   level:

@@ -89,7 +89,9 @@ public class SecurityConfig {
                         // xem StompAuthChannelInterceptor.
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login",
-                                "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
+                                "/api/v1/auth/refresh", "/api/v1/auth/logout",
+                                // Quên mật khẩu: người dùng không đăng nhập được mới cần tới nó
+                                "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password").permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
                         // Vào phòng với tư cách khách — RoomService kiểm allowGuests của từng phòng
                         .requestMatchers(HttpMethod.POST, "/api/v1/rooms/*/join-as-guest").permitAll()

@@ -3,6 +3,7 @@
 ## 1. Xác thực & phân quyền
 
 - **Mật khẩu:** băm bằng **BCrypt**, không lưu plaintext.
+- **Mã OTP đặt lại mật khẩu:** cũng băm bằng BCrypt trước khi lưu Redis — ai đọc được Redis (log, dump, backup) cũng không dùng lại được mã của người khác. Sinh bằng `SecureRandom`, sống 10 phút, dùng một lần, sai quá 5 lần thì huỷ, và giãn cách 60 giây giữa hai lần xin mã.
 - **JWT:** access token ngắn hạn (15 phút) + refresh token dài hạn; xoay vòng (rotation) refresh token.
 - **Đăng nhập nhiều thiết bị:** mỗi lần đăng nhập cấp một refresh token riêng (`session:{token}` ở Redis), nên máy tính và điện thoại dùng song song được, không ai đá ai ra. Đăng xuất chỉ thu hồi phiên của thiết bị đó.
   - ✅ **Đổi mật khẩu thu hồi phiên trên MỌI thiết bị**, kể cả thiết bị đang gọi — người dùng đổi mật khẩu thường tin là mình vừa cắt hết truy cập, hệ thống phải làm đúng điều đó. Client buộc phải đăng nhập lại.
