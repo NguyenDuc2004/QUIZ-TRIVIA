@@ -54,6 +54,10 @@ public class Quiz extends BaseEntity {
     @Column(name = "is_ai_generated", nullable = false)
     private boolean aiGenerated = false;
 
+    /** Đường dẫn ảnh bìa do server sinh ({@code /uploads/images/…}); null = giao diện tự vẽ khối màu. */
+    @Column(name = "thumbnail_url", length = 500)
+    private String thumbnailUrl;
+
     /** Thời gian làm bài toàn quiz (giây); null = không giới hạn. */
     @Column(name = "time_limit_sec")
     private Integer timeLimitSec;

@@ -42,6 +42,25 @@ PUT    /api/v1/questions/{id}           Sửa (thay toàn bộ lựa chọn)    
 DELETE /api/v1/questions/{id}           Xóa — 409 nếu đang dùng trong quiz              ✅
 ```
 
+### 3.1. Tải ảnh lên — `/files`
+```
+POST   /api/v1/files/images       Tải một ảnh (multipart, field `file`)           ✅
+GET    /uploads/images/{ten-file} Xem ảnh — tài nguyên tĩnh, công khai            ✅
+```
+
+Trả về `{ url, fileName, size, contentType }`; lấy `url` gán vào `quizzes.thumbnailUrl`.
+
+| Luật | Chi tiết |
+|---|---|
+| Quyền tải lên | **CREATOR/ADMIN**. Learner → 403, Guest → 401 |
+| Định dạng | JPG, PNG, GIF, WebP — nhận dạng bằng **chữ ký byte**, không tin `Content-Type` client khai |
+| Dung lượng | tối đa **2MB** cho ảnh (giới hạn multipart chung 25MB dành cho học liệu RAG) |
+| Tên file | do server sinh từ UUID; **tên client gửi lên bị bỏ hoàn toàn** |
+| Xem ảnh | công khai, không cần token — ảnh bìa quiz phải hiện được với Guest |
+
+`thumbnailUrl` của quiz chỉ nhận đường dẫn nội bộ bắt đầu bằng `/uploads/` và không chứa `..`;
+URL bên ngoài trả **400** (tránh link chết và pixel theo dõi nhúng qua ảnh bên thứ ba).
+
 **Quyền:** `GET /categories`, `GET /quizzes`, `GET /quizzes/{id}` mở cho Guest (quiz PRIVATE của người khác trả **404**). Còn lại yêu cầu vai trò **CREATOR/ADMIN** và **quyền sở hữu** (sửa/xóa của người khác → **403**). `GET /quizzes?mine=true` yêu cầu đăng nhập.
 
 **Luật theo loại câu hỏi** (validate ở service, trả 400 nếu vi phạm):

@@ -55,6 +55,9 @@ ai_request_logs (audit các lần gọi AI)
 | time_limit_sec | int | nullable |
 | created_at, updated_at | | |
 
+> `quizzes` bổ sung cột `thumbnail_url VARCHAR(500)` ở *V4* — đường dẫn ảnh bìa do server sinh
+> (`/uploads/images/<uuid>.<ext>`), NULL thì giao diện tự vẽ khối màu theo tiêu đề.
+
 **questions**
 | Cột | Kiểu | Ghi chú |
 |-----|------|---------|

@@ -37,9 +37,22 @@ export default function MyQuizzesPage() {
       title: 'Tiêu đề',
       dataIndex: 'title',
       render: (title: string, row) => (
-        <Link to={`/my-quizzes/${row.id}`} className="font-bold">
-          {title}
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* Ảnh nhỏ để nhận ra quiz nhanh; quiz chưa có ảnh thì để ô trống cùng kích thước cho bảng khỏi so le */}
+          {row.thumbnailUrl ? (
+            <img
+              src={row.thumbnailUrl}
+              alt=""
+              loading="lazy"
+              className="h-10 w-16 shrink-0 border border-line object-cover"
+            />
+          ) : (
+            <div className="h-10 w-16 shrink-0 border border-dashed border-line bg-surface-subtle" />
+          )}
+          <Link to={`/my-quizzes/${row.id}`} className="font-bold">
+            {title}
+          </Link>
+        </div>
       ),
     },
     {

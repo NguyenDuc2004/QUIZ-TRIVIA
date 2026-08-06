@@ -88,6 +88,14 @@ export default function QuizIntroPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="flex flex-col gap-4">
+          {quiz.thumbnailUrl && (
+            <img
+              src={quiz.thumbnailUrl}
+              alt=""
+              className="aspect-video w-full border border-line object-cover"
+            />
+          )}
+
           <div className="border border-line bg-white p-5">
             <Text className="text-ink-soft text-xs font-bold">Giới thiệu</Text>
             <Paragraph className="mt-2! mb-0! whitespace-pre-wrap">

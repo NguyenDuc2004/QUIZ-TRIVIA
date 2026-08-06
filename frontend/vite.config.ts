@@ -18,6 +18,8 @@ export default defineConfig({
       '/api': { target: 'http://localhost:8080', changeOrigin: true },
       '/ws': { target: 'http://localhost:8080', changeOrigin: true, ws: true },
       '/actuator': { target: 'http://localhost:8080', changeOrigin: true },
+      // Ảnh người dùng tải lên do backend phục vụ tĩnh
+      '/uploads': { target: 'http://localhost:8080', changeOrigin: true },
       '/swagger-ui': { target: 'http://localhost:8080', changeOrigin: true },
       '/v3/api-docs': { target: 'http://localhost:8080', changeOrigin: true },
     },

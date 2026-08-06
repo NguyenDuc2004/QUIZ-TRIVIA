@@ -49,7 +49,7 @@
 - **T3 28/07** — [x] API CRUD Quiz (Creator) · [x] Phân trang, tìm kiếm, lọc theo danh mục & độ khó *(xong 06/08)*
 - **T4 29/07** — [x] API CRUD Câu hỏi (5 loại + luật riêng từng loại) · [x] Validate DTO *(xong 06/08)*
 - **T5 30/07** — [x] FE: trang danh sách quiz + tìm kiếm/lọc · [x] FE: form tạo/sửa quiz *(xong 06/08)*
-- **T6 31/07** — [x] FE: form câu hỏi theo từng loại + màn soạn quiz (chọn câu, đổi thứ tự) · [ ] `[tùy chọn]` Upload ảnh cho câu hỏi
+- **T6 31/07** — [x] FE: form câu hỏi theo từng loại + màn soạn quiz (chọn câu, đổi thứ tự) · [x] Upload ảnh — đã làm cho **ảnh bìa quiz** *(xong 06/08)*; ảnh từng câu hỏi dùng lại được endpoint này
 - **T7 01/08** — [x] Phân quyền chỉnh sửa (chủ sở hữu/Admin) · [x] Test: 55/55 pass (thêm 25 ca kiểm chứng HTTP) *(xong 06/08)*
 - **CN 02/08** — [ ] Đệm / review tuần
 
@@ -68,7 +68,7 @@
 - **CN 09/08** — [ ] Đệm / review tuần
 
 **Tổng kết tuần 3:** Làm gộp trong ngày 06/08, sớm hơn kế hoạch. Xong FR-13…FR-19 (trừ xếp hạng theo
-danh mục và giờ riêng từng câu). 86/86 test pass, 48/48 ca kiểm chứng HTTP thật.
+danh mục và giờ riêng từng câu). 97/97 test pass, 48/48 + 19/19 ca kiểm chứng HTTP thật.
 Còn nợ: chấm tự luận bằng AI (features/06) và xem lại giao diện bằng mắt trên trình duyệt.
 — **Mốc: xong nền web cơ bản (auth + quiz + chơi đơn).** ✅
 

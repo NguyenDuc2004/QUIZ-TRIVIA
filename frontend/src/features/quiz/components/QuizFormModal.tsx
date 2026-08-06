@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Form, Input, InputNumber, Modal, Radio, Select } from 'antd'
+import ImageUploader from '@/shared/components/ImageUploader'
 import type { QuizBody, QuizSummary } from '../api/quizApi'
 import { DIFFICULTY_OPTIONS } from '../constants'
 import { useCategories, useCreateQuiz, useUpdateQuiz } from '../hooks/useQuizQueries'
@@ -30,6 +31,7 @@ export default function QuizFormModal({ open, quiz, onClose }: Props) {
       title: '',
       description: '',
       categoryId: undefined,
+      thumbnailUrl: null,
       difficulty: 'MEDIUM',
       visibility: 'PRIVATE',
       timeLimitMinutes: null,
@@ -43,6 +45,7 @@ export default function QuizFormModal({ open, quiz, onClose }: Props) {
       title: quiz?.title ?? '',
       description: quiz?.description ?? '',
       categoryId: quiz?.categoryId ?? undefined,
+      thumbnailUrl: quiz?.thumbnailUrl ?? null,
       difficulty: quiz?.difficulty ?? 'MEDIUM',
       visibility: quiz?.visibility ?? 'PRIVATE',
       timeLimitMinutes: quiz?.timeLimitSec ? Math.round(quiz.timeLimitSec / 60) : null,
@@ -54,6 +57,7 @@ export default function QuizFormModal({ open, quiz, onClose }: Props) {
       title: values.title,
       description: values.description || null,
       categoryId: values.categoryId || null,
+      thumbnailUrl: values.thumbnailUrl || null,
       difficulty: values.difficulty,
       visibility: values.visibility,
       timeLimitSec: values.timeLimitMinutes ? values.timeLimitMinutes * 60 : null,
@@ -110,6 +114,16 @@ export default function QuizFormModal({ open, quiz, onClose }: Props) {
                 placeholder="Chọn danh mục"
                 options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
               />
+            )}
+          />
+        </Form.Item>
+
+        <Form.Item label="Ảnh bìa" help="Để trống thì hệ thống tự vẽ khối màu theo tiêu đề">
+          <Controller
+            name="thumbnailUrl"
+            control={control}
+            render={({ field }) => (
+              <ImageUploader value={field.value ?? null} onChange={field.onChange} />
             )}
           />
         </Form.Item>

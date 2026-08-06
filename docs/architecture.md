@@ -72,6 +72,10 @@ com.datn.quizai
 │   ├── domain      #   QuizAttempt, AttemptAnswer, AnswerPayload (jsonb)
 │   │               #   + enum AttemptMode, AttemptStatus, GradedBy
 │   └── dto
+├── file            # Tải ảnh lên & phục vụ tĩnh (dùng chung cho quiz và câu hỏi)
+│   ├── controller  #   FileController
+│   ├── service     #   FileStorageService, ImageType (dò chữ ký byte)
+│   └── dto
 ├── realtime        # Multiplayer: WebSocket (STOMP), Room, GameEngine, Redis Pub/Sub
 ├── ai              # Lớp AI
 │   ├── provider    #   AiProvider (interface), GeminiProvider, GrokProvider, AiOrchestrator

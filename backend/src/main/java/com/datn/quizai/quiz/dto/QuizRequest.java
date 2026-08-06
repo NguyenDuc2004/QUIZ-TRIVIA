@@ -27,6 +27,13 @@ public record QuizRequest(
         Visibility visibility,
 
         @Min(value = 1, message = "Thời gian làm bài phải lớn hơn 0 giây")
-        Integer timeLimitSec
+        Integer timeLimitSec,
+
+        /**
+         * Đường dẫn ảnh bìa lấy từ {@code POST /api/v1/files/images}; bỏ trống để dùng khối màu tự sinh.
+         * Chỉ nhận đường dẫn nội bộ {@code /uploads/…} — xem {@code QuizService.applyRequest}.
+         */
+        @Size(max = 500, message = "Đường dẫn ảnh tối đa 500 ký tự")
+        String thumbnailUrl
 ) {
 }

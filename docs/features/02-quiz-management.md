@@ -14,7 +14,7 @@ Cho phép Creator tạo, quản lý quiz và ngân hàng câu hỏi tái sử d�
 - **FR-8** [M] ✅ Ngân hàng câu hỏi độc lập; bảng nối `quiz_questions` cho phép dùng lại một câu hỏi ở nhiều quiz với thứ tự riêng.
 - **FR-9** [M] ✅ Đủ 5 loại: SINGLE_CHOICE, MULTIPLE_CHOICE, TRUE_FALSE, FILL_BLANK, SHORT_ANSWER — mỗi loại có luật riêng, xem [api.md §3](../api.md).
 - **FR-10** [M] ✅ Câu hỏi có nội dung, lựa chọn/đáp án, giải thích, điểm, độ khó, chủ đề, thời gian giới hạn.
-- **FR-11** [S] ⏳ Đính kèm hình ảnh — chưa làm (cần chốt nơi lưu file: local/S3).
+- **FR-11** [S] 🔶 Đính kèm hình ảnh — **đã làm ảnh bìa quiz** (tải lên server, lưu ở thư mục local `uploads/`). Ảnh cho từng câu hỏi chưa làm, nhưng dùng lại được nguyên `POST /api/v1/files/images`.
 - **FR-12** [C] ⏳ Import/Export quiz (JSON/CSV) — chưa làm.
 
 ## Quyết định thiết kế

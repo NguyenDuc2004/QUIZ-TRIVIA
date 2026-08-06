@@ -9,6 +9,8 @@ export const quizSchema = z.object({
     .max(200, 'Tiêu đề tối đa 200 ký tự'),
   description: z.string().max(2000, 'Mô tả tối đa 2000 ký tự').optional().or(z.literal('')),
   categoryId: z.string().optional(),
+  /** Đường dẫn server trả về sau khi tải ảnh lên; null = dùng khối màu tự sinh. */
+  thumbnailUrl: z.string().nullable().optional(),
   difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']),
   visibility: z.enum(['PUBLIC', 'PRIVATE']),
   /** Nhập theo phút cho dễ dùng, gửi lên backend quy đổi ra giây. */

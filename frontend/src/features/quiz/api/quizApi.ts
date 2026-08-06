@@ -28,6 +28,7 @@ export interface QuizSummary {
   difficulty: Difficulty
   visibility: Visibility
   aiGenerated: boolean
+  thumbnailUrl: string | null
   timeLimitSec: number | null
   questionCount: number
   ownerId: string
@@ -69,6 +70,7 @@ export interface QuizBody {
   difficulty?: Difficulty
   visibility?: Visibility
   timeLimitSec?: number | null
+  thumbnailUrl?: string | null
 }
 
 export interface QuestionBody {

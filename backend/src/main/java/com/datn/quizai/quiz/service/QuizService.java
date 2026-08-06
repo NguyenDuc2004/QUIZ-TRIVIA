@@ -173,6 +173,7 @@ public class QuizService {
         quiz.setDifficulty(request.difficulty() == null ? Difficulty.MEDIUM : request.difficulty());
         quiz.setVisibility(request.visibility() == null ? Visibility.PRIVATE : request.visibility());
         quiz.setTimeLimitSec(request.timeLimitSec());
+        quiz.setThumbnailUrl(validThumbnailUrl(request.thumbnailUrl()));
 
         if (request.categoryId() == null) {
             quiz.setCategory(null);
@@ -180,6 +181,24 @@ public class QuizService {
             quiz.setCategory(categoryRepository.findById(request.categoryId())
                     .orElseThrow(() -> BusinessException.badRequest("Danh mục không tồn tại")));
         }
+    }
+
+    /**
+     * Chỉ chấp nhận ảnh bìa là đường dẫn nội bộ do {@code POST /api/v1/files/images} sinh ra.
+     * <p>
+     * Không nhận URL ngoài: ảnh bên thứ ba có thể chết bất cứ lúc nào, và mỗi lần người học mở
+     * trang là gửi một request kèm IP sang máy chủ lạ — người tạo quiz nhúng được cả pixel theo dõi.
+     * Chặn cả {@code ..} để không ai ghép được đường dẫn thoát ra ngoài thư mục ảnh.
+     */
+    private String validThumbnailUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        String trimmed = url.trim();
+        if (!trimmed.startsWith("/uploads/") || trimmed.contains("..")) {
+            throw BusinessException.badRequest("Ảnh bìa phải là ảnh đã tải lên hệ thống");
+        }
+        return trimmed;
     }
 
     /**

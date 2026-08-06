@@ -47,6 +47,11 @@ app:
     refresh-ttl-seconds: ${JWT_REFRESH_TTL:1209600}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  storage:
+    # Thư mục lưu file người dùng tải lên (đã gitignore). Triển khai thật nên trỏ ra volume riêng.
+    upload-dir: ${UPLOAD_DIR:uploads}
+    # Giới hạn riêng cho ảnh, chặt hơn giới hạn multipart chung ở trên (chung phải rộng cho học liệu RAG)
+    max-image-size-bytes: ${MAX_IMAGE_SIZE_BYTES:2097152}   # 2MB
   ai:
     provider-order: ${AI_PROVIDER_ORDER:gemini,grok}
     gemini:

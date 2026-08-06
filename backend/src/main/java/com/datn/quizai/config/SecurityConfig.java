@@ -49,6 +49,9 @@ public class SecurityConfig {
             "/api/v1/quizzes",
             "/api/v1/quizzes/*",
             "/api/v1/categories",
+            // Ảnh bìa quiz công khai phải xem được khi chưa đăng nhập; tên file là UUID ngẫu nhiên
+            // nên không đoán được ảnh của quiz riêng tư. Chỉ mở GET — POST /api/v1/files vẫn cần quyền.
+            "/uploads/**",
             "/actuator/health",
             "/v3/api-docs/**",
             "/swagger-ui/**",
