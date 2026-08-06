@@ -9,6 +9,8 @@ import AttemptPage from '@/features/attempt/pages/AttemptPage'
 import MyAttemptsPage from '@/features/attempt/pages/MyAttemptsPage'
 import QuizIntroPage from '@/features/attempt/pages/QuizIntroPage'
 import BrowseQuizzesPage from '@/features/quiz/pages/BrowseQuizzesPage'
+import GenerateQuestionsPage from '@/features/ai/pages/GenerateQuestionsPage'
+import MaterialsPage from '@/features/ai/pages/MaterialsPage'
 import RoomLobbyPage from '@/features/room/pages/RoomLobbyPage'
 import RoomPage from '@/features/room/pages/RoomPage'
 import MyQuizzesPage from '@/features/quiz/pages/MyQuizzesPage'
@@ -59,6 +61,9 @@ export default function App() {
         {/* Phòng đấu real-time: một trang cho cả chờ / đang chơi / kết thúc */}
         <Route path="/rooms" element={<RoomLobbyPage />} />
         <Route path="/rooms/:code" element={<RoomPage />} />
+        {/* Khu vực AI — controller đã chặn ở BE, chỉ CREATOR/ADMIN gọi được */}
+        <Route path="/ai/materials" element={<MaterialsPage />} />
+        <Route path="/ai/generate" element={<GenerateQuestionsPage />} />
         {/* Bộ mặt "bảng điều khiển": bảng quản lý */}
         <Route path="/my-quizzes" element={<MyQuizzesPage />} />
         <Route path="/my-quizzes/:id" element={<QuizEditorPage />} />

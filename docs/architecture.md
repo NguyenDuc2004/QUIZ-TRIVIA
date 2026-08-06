@@ -86,10 +86,16 @@ com.datn.quizai
 │   └── dto
 ├── ai              # Lớp AI
 │   ├── provider    #   AiProvider (interface), GeminiProvider, GrokProvider, AiOrchestrator
-│   ├── rag         #   Ingestion, chunking, embedding, vector retrieval (pgvector)
-│   ├── generation  #   Sinh đề từ học liệu (RAG)
-│   ├── grading     #   Chấm & giải thích câu tự luận
-│   └── chat        #   Trợ lý học tập RAG chatbot (SSE)
+│   ├── rag         #   TextExtractor (Tika), TextChunker
+│   ├── generation  #   QuestionGenerationService, QuestionPromptBuilder, QuestionJsonParser
+│   ├── controller  #   AiController
+│   ├── service     #   MaterialService, MaterialIngestionService, AiJobService,
+│   │               #   AiRequestLogger, *StatusWriter (transaction ngắn)
+│   ├── repository  #   LearningMaterialRepository, MaterialChunkRepository (pgvector), AiJobRepository
+│   ├── domain      #   LearningMaterial, AiJob + enum
+│   ├── dto
+│   ├── grading     #   (sau) Chấm & giải thích câu tự luận — features/06
+│   └── chat        #   (sau) Trợ lý học tập RAG chatbot (SSE) — features/08
 ├── recommend       # Gợi ý cá nhân hóa dựa trên Neo4j (graph repository, Cypher)
 ├── analytics       # Thống kê, báo cáo
 ├── common          # BaseEntity, OwnershipGuard, dto/ (ApiError, PageResponse), exception/

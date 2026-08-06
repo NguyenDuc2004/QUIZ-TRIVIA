@@ -75,6 +75,9 @@ export default function AppLayout() {
               <NavLink to="/question-bank" className={navLinkClass}>
                 Ngân hàng câu hỏi
               </NavLink>
+              <NavLink to="/ai/generate" className={navLinkClass}>
+                Sinh đề AI
+              </NavLink>
             </>
           )}
         </nav>
