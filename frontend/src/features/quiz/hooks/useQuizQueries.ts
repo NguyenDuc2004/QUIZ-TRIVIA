@@ -29,6 +29,15 @@ export function useQuizList(params: QuizListParams) {
   })
 }
 
+/** Thông tin giới thiệu quiz, không kèm câu hỏi — dùng ở trang trước khi vào làm bài. */
+export function useQuizSummary(quizId: string | undefined) {
+  return useQuery({
+    queryKey: [QUIZ_KEY, quizId, 'summary'],
+    queryFn: () => quizApi.get(quizId!),
+    enabled: Boolean(quizId),
+  })
+}
+
 export function useQuizDetail(quizId: string | undefined) {
   return useQuery({
     queryKey: [QUIZ_KEY, quizId, 'detail'],

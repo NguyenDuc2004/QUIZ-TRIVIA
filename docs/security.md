@@ -18,6 +18,8 @@
 | Broken Access Control | RBAC + kiểm tra quyền sở hữu tài nguyên (owner check) |
 | Sensitive Data Exposure | HTTPS bắt buộc, không log dữ liệu nhạy cảm |
 | Rate limiting | Giới hạn request (đặc biệt endpoint AI) qua Redis |
+| Unrestricted File Upload | Nhận dạng ảnh bằng **chữ ký byte** (không tin `Content-Type` client khai); tên file do server sinh từ UUID nên không có path traversal; giới hạn 2MB; chỉ CREATOR/ADMIN được tải lên |
+| SSRF / theo dõi qua ảnh | `thumbnailUrl` chỉ nhận đường dẫn nội bộ `/uploads/…`, chặn URL bên ngoài |
 
 ## 3. Bảo mật AI
 

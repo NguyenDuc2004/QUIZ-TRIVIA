@@ -126,3 +126,9 @@ allure-results/
 allure-report/
 playwright-report/
 test-results/
+
+# ==========================================================
+#  File người dùng tải lên (ảnh bìa quiz, ảnh câu hỏi)
+# ==========================================================
+backend/uploads/
+uploads/

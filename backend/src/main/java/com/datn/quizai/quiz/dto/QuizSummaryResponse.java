@@ -20,8 +20,10 @@ public record QuizSummaryResponse(
         Difficulty difficulty,
         Visibility visibility,
         boolean aiGenerated,
+        String thumbnailUrl,
         Integer timeLimitSec,
         int questionCount,
+        UUID ownerId,
         String ownerDisplayName,
         OffsetDateTime createdAt
 ) {
@@ -44,8 +46,10 @@ public record QuizSummaryResponse(
                 quiz.getDifficulty(),
                 quiz.getVisibility(),
                 quiz.isAiGenerated(),
+                quiz.getThumbnailUrl(),
                 quiz.getTimeLimitSec(),
                 questionCount,
+                quiz.getOwner().getId(),
                 quiz.getOwner().getDisplayName(),
                 quiz.getCreatedAt());
     }

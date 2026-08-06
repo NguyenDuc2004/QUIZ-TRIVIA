@@ -15,6 +15,7 @@
 | 27/07 | Khởi tạo repo + hạ tầng Docker | 0/4 | 🟡 đang làm |
 | 05/08 | Hạ tầng 3 CSDL + khung BE/FE + **lát cắt Auth hoàn chỉnh** | 7/7 | 🟢 xong |
 | 06/08 | Tái cấu trúc package + **lát cắt Quản lý Quiz & Câu hỏi** | 5/5 | 🟢 xong |
+| 06/08 (tối) | Chuẩn giao diện Udemy + **lát cắt Làm bài quiz** + ảnh bìa quiz | 7/7 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -141,6 +142,81 @@ _(ghi lại khi kết thúc ngày)_
 - **Mục 2.6:** thêm UC_TaoQuiz, UC_QuanLyCauHoi, UC_GanCauHoiVaoQuiz — luồng thay thế lấy từ các ca 400/403/404/409 đã kiểm chứng.
 - **Mục 3.4:** 55 test tự động (100% pass) + bảng 25 ca kiểm chứng HTTP; nên đưa cả 4 lỗi ở trên vào phần "khó khăn & cách giải quyết" — đây là dẫn chứng kỹ thuật tốt khi bảo vệ.
 - **Mục 1.6 / 2.3:** dùng `@Formula` + `@BatchSize` để tránh N+1 khi liệt kê quiz là chi tiết tối ưu hiệu năng đáng viết.
+
+---
+
+## 📅 T5 — 06/08/2026 (buổi tối) — Chuẩn giao diện + Lát cắt 3: Làm bài quiz
+
+**Mục tiêu hôm nay:** Dựng chuẩn giao diện dùng chung cho cả dự án, rồi làm trọn lát cắt người học làm bài — chấm điểm, xem kết quả, lịch sử, bảng xếp hạng.
+
+### Nhiệm vụ
+- [x] Chuẩn giao diện `docs/ui-design-system.md` + token antd/Tailwind, áp cho toàn bộ 7 trang cũ
+- [x] Migration `V3__attempts.sql`
+- [x] Backend: bắt đầu bài → trả lời → nộp → chấm tự động → lịch sử → bảng xếp hạng
+- [x] Frontend: trang giới thiệu quiz, màn làm bài có đồng hồ, màn kết quả, trang lịch sử
+- [x] Test 97/97 pass (thêm 42 ca)
+- [x] Ảnh bìa quiz: tải ảnh lên server, kiểm bằng chữ ký byte
+- [x] Kiểm chứng HTTP thật 48/48 trên backend đang chạy
+
+### Đã làm được
+
+**Chuẩn giao diện** (`docs/ui-design-system.md`): hai bộ mặt — trang người học dùng **lưới card**, trang quản lý dùng **bảng**; token màu/bo góc/typography tập trung ở `shared/theme/antdTheme.ts` và `@theme` của Tailwind v4; nút hành động chính màu đen, tím chỉ cho link; component dùng chung `PageHeader`, `EmptyState`, `QuizCard`. Luật tuân thủ đã ghi vào `CLAUDE.md` và `conventions.md §2`, trong đó có điều **không bịa dữ liệu** (rating, số lượt học) để trang trông giống trang thương mại.
+
+**Migration V3:** `quiz_attempts` (mode, status, expires_at, total/max_score) và `attempt_answers` (user_answer JSONB, is_correct, score, max_score, graded_by). Đáng chú ý là **chỉ mục một phần** `uk_quiz_attempts_in_progress ... WHERE status = 'IN_PROGRESS'` — dùng chính CSDL để bảo đảm mỗi người tối đa một bài dở trên một quiz.
+
+**Backend:** `AttemptService` (6 nghiệp vụ) + `AnswerGrader` tách riêng thành lớp thuần Java không phụ thuộc Spring nên test được trực tiếp. Chấm tự động 4 loại câu hỏi, câu tự luận đánh dấu `PENDING_AI` chờ features/06.
+
+**Frontend:** `features/attempt/` — trang giới thiệu quiz (chọn chế độ, bảng xếp hạng, lần làm gần đây), màn làm bài một câu/lần có đồng hồ đếm ngược + lưới nhảy câu + thanh tiến độ, màn kết quả đối chiếu đáp án và giải thích, trang lịch sử làm bài. Route `/attempts/:id` phục vụ cả lúc đang làm lẫn lúc xem kết quả, phân biệt bằng `attempt.status`.
+
+**Chín quyết định thiết kế** đã ghi đầy đủ ở [features/03-gameplay.md](../features/03-gameplay.md#quyết-định-thiết-kế-đã-hiện-thực). Ba cái quan trọng nhất:
+1. **Chốt đề lúc bắt đầu** — sao câu hỏi thành dòng `attempt_answers` kèm điểm tối đa, nên chủ quiz sửa đề giữa chừng không làm hỏng bài đang làm (có test chứng minh).
+2. **Không lộ đáp án khi chưa nộp** — kể cả `options` của câu điền khuyết/tự luận cũng bị giấu, vì đáp án của chúng nằm ngay trong `question_options`.
+3. **Hết giờ chốt kiểu "lười"** — không cần job nền: lần gọi `GET`/`submit` kế tiếp tự chuyển bài sang `EXPIRED` và chấm phần đã làm.
+
+**Kiểm thử — 86/86 pass** (55 → 86, thêm 31 ca): `AnswerGraderTest` 15 ca (phủ từng loại câu hỏi, gồm ca "toan ≠ toán" và ca tự luận bỏ trống), `AttemptFlowIntegrationTest` 16 ca trên Testcontainers Postgres + Redis.
+**Kiểm chứng HTTP thật — 48/48** trên backend đang chạy: dựng 3 tài khoản, quiz 5 loại câu, kiểm cả luồng thi lẫn luyện tập, quyền truy cập, hết giờ, idempotent, lịch sử và bảng xếp hạng.
+
+### Ba lỗi gặp phải và cách sửa
+1. **`Could not deserialize string to java type: AnswerPayload`** — Jackson coi `isEmpty()` của record là thuộc tính `empty`, ghi thừa vào JSONB rồi lần đọc sau không nhận ra. Sửa: `@JsonIgnore` trên phương thức đó. *Lỗi chỉ lộ ra ở lần **đọc lại** dòng đã ghi, nên phải chạy thật mới thấy.*
+2. **`Cannot project java.time.Instant to java.time.OffsetDateTime`** — projection của native query trả `Instant` cho cột `timestamptz`. Sửa: khai `Instant` trong projection, đổi múi giờ ở service.
+3. **Không tự nộp bài trong `POST /answers` khi hết giờ** — ném lỗi 409 sẽ rollback luôn việc nộp. Sửa: chỉ trả 409, để `GET`/`submit` kế tiếp chốt bài; kết quả không đổi vì chấm dựa trên dữ liệu đã lưu.
+
+### Thiếu sót phát hiện khi rà lại
+- **Chủ quiz không có lối vào để làm bài trên quiz của mình.** Backend vốn cho phép (đã kiểm chứng: PRIVATE lẫn PUBLIC đều 201, đáp án vẫn bị giấu), nhưng giao diện chỉ có nút "Soạn câu hỏi" nên không ai bấm tới được — quiz PRIVATE lại không hiện ở trang Khám phá. Sửa: thêm nút **"Làm thử"** ở trang *Quiz của tôi* và ở màn soạn quiz, thêm `ownerId` vào `QuizSummaryResponse` để trang giới thiệu nhận ra chủ quiz.
+- **Bài của chủ quiz lẽ ra không được tính vào bảng xếp hạng.** Người soạn đề biết trước đáp án nên luôn đạt điểm tuyệt đối, để lên bảng thì bảng mất ý nghĩa. Sửa: thêm `a.user_id <> q.owner_id` vào truy vấn xếp hạng; điểm của chủ quiz vẫn nằm trong lịch sử cá nhân. Thêm 1 test integration (86/86 pass) kiểm đúng ca này: chủ quiz đạt 5/5 mà bảng vẫn rỗng, người học nộp 0 điểm vẫn đứng hạng 1.
+
+### Nợ / chuyển sang ngày sau
+- **Chưa xem lát cắt 2 và 3 trên trình duyệt bằng mắt** — mới kiểm được build, mã HTTP và test tự động.
+- Giờ riêng từng câu (`questions.time_limit_sec`) đã lưu nhưng chưa cưỡng chế — để dành cho phòng đấu real-time.
+- Chấm câu tự luận bằng AI (features/06); đồng bộ attempt sang Neo4j (features/07).
+- Xếp hạng theo danh mục (FR-19 phần còn lại).
+- FR-4 quên mật khẩu (chờ chốt SMTP), FR-3 OAuth2 Google, FR-11 ảnh câu hỏi, FR-12 import/export.
+- Lát cắt kế tiếp: **04-multiplayer-realtime** (phòng đấu STOMP + Redis).
+
+### Bổ sung: ảnh bìa quiz (FR-11, phần ảnh cho quiz)
+
+Lưới card trước đó dùng khối màu tự sinh thay ảnh. Đã chốt phương án **tải ảnh lên server** (thay vì
+dán URL bên ngoài) — cũng là quyết định mở khoá cho ảnh câu hỏi sau này, vì dùng chung một endpoint.
+
+- **V4:** `quizzes.thumbnail_url VARCHAR(500)`.
+- **Package `file/`:** `FileStorageService` + `ImageType`; `POST /api/v1/files/images` trả về đường dẫn công khai, `WebMvcConfig` phục vụ tĩnh `/uploads/**` kèm `Cache-Control` 30 ngày.
+- **Nơi lưu:** thư mục đĩa local (`app.storage.upload-dir`), đã gitignore. Chọn đĩa local vì đồ án chạy một máy chủ; muốn đổi sang S3/MinIO chỉ cần thay `FileStorageService`.
+- **Ba chốt chặn an ninh** (đáng viết vào mục bảo mật của báo cáo):
+  1. Nhận dạng ảnh bằng **chữ ký byte** (magic number), không tin `Content-Type` client khai — đã kiểm chứng: script PHP, file `.exe`, file WAV đội lốt ảnh đều bị chặn 400.
+  2. Tên file do server sinh từ UUID, **bỏ hẳn tên client gửi lên** → không có đường path traversal.
+  3. `thumbnailUrl` chỉ nhận đường dẫn nội bộ `/uploads/…`; URL ngoài bị chặn để tránh link chết và pixel theo dõi nhúng qua ảnh bên thứ ba.
+- **Phân quyền:** chỉ CREATOR/ADMIN tải được ảnh (Learner 403, Guest 401); nhưng **xem ảnh thì công khai** vì card quiz phải hiện với Guest.
+- **Frontend:** `ImageUploader` dùng chung, xem trước 16:9, đổi/bỏ ảnh; card và trang giới thiệu hiện ảnh thật, quiz chưa có ảnh vẫn rơi về khối màu cũ nên không trang nào bị trống.
+- **Kiểm thử: 97/97 pass** (thêm 11 ca: `ImageTypeTest` 5 + `FileUploadIntegrationTest` 6) và **19/19 ca kiểm chứng HTTP thật** bằng file PNG sinh trực tiếp trong script test.
+- **Hạn chế đã biết, ghi rõ trong mã:** đổi ảnh bìa thì file cũ vẫn nằm lại trên đĩa. Dọn file mồ côi cần biết chắc không quiz nào còn trỏ tới — để sau nếu còn thời gian.
+- **Một lỗi gặp phải:** `@WebMvcTest` nạp `WebMvcConfig` nhưng không tạo bean `@Service`, nên tiêm `FileStorageService` vào lớp cấu hình làm gãy toàn bộ 6 test controller. Sửa: `WebMvcConfig` đọc thẳng thuộc tính cấu hình, không phụ thuộc service. Ngoài ra `@TempDir` tĩnh còn null lúc `@DynamicPropertySource` chạy → tự tạo thư mục tạm trong static initializer.
+
+### Ghi chú báo cáo
+- **Mục 2.8:** ERD nay có 8 bảng — thêm `quiz_attempts` và `attempt_answers`. Nên nêu rõ *vì sao* `attempt_answers` sinh sẵn ngay lúc bắt đầu (chốt đề) thay vì chỉ ghi khi người dùng trả lời: đây là quyết định thiết kế có lý do rõ ràng, dễ hỏi khi bảo vệ.
+- **Mục 2.6:** thêm UC_LamBaiQuiz, UC_XemKetQua, UC_XemLichSu, UC_XemBangXepHang. Luồng thay thế lấy sẵn từ các ca 400/404/409 đã kiểm chứng (hết giờ, nộp hai lần, quiz rỗng, bài của người khác).
+- **Mục 2.7 (thiết kế lớp):** `AnswerGrader` là ví dụ tốt để nói về tách logic nghiệp vụ khỏi framework — không phụ thuộc Spring nên test được ở mức đơn vị, 15 ca chạy trong 0,06 giây.
+- **Mục 3.4:** 97 test tự động (100% pass) + 48 + 19 ca kiểm chứng HTTP. Ba lỗi ở trên đưa vào phần "khó khăn & cách giải quyết"; lỗi số 1 minh họa rõ giá trị của việc chạy thật chứ không chỉ chạy test.
+- **Mục bảo mật:** luật "không lộ đáp án khi chưa nộp" và "bài làm của ai người ấy xem (404 chứ không 403)" nên viết thành một mục riêng — đây là phần dễ làm sai và có bằng chứng test kèm theo.
 
 ---
 

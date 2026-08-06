@@ -32,15 +32,27 @@ export default function QuizCard({ quiz, onClick }: { quiz: QuizSummary; onClick
       className="browse-card flex h-full cursor-pointer flex-col overflow-hidden"
       onClick={onClick}
     >
-      {/* Khối bìa 16:9 — thay cho ảnh khoá học của Udemy khi quiz chưa có ảnh */}
-      <div
-        className="flex aspect-video items-end p-3"
-        style={{ background: coverOf(quiz.title) }}
-      >
-        <span className="text-xs font-bold text-white/90">
-          {quiz.categoryName ?? 'Chưa phân loại'}
-        </span>
-      </div>
+      {/* Ảnh bìa 16:9. Quiz chưa có ảnh thì vẽ khối màu theo tiêu đề thay vì để trống. */}
+      {quiz.thumbnailUrl ? (
+        <div className="relative aspect-video">
+          <img
+            src={quiz.thumbnailUrl}
+            alt=""
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+          {/* Lớp phủ tối dần để chữ danh mục đọc được trên ảnh sáng */}
+          <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/60 to-transparent p-3 text-xs font-bold text-white">
+            {quiz.categoryName ?? 'Chưa phân loại'}
+          </span>
+        </div>
+      ) : (
+        <div className="flex aspect-video items-end p-3" style={{ background: coverOf(quiz.title) }}>
+          <span className="text-xs font-bold text-white/90">
+            {quiz.categoryName ?? 'Chưa phân loại'}
+          </span>
+        </div>
+      )}
 
       <div className="flex flex-1 flex-col gap-1 p-3">
         <h3 className="line-clamp-2-title mb-0! text-base leading-snug font-bold text-ink">

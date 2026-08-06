@@ -134,6 +134,12 @@ export default function QuizEditorPage() {
         }
         actions={
           <>
+            {/* Tự làm thử đề của mình trước khi xuất bản; đáp án vẫn bị giấu như người học */}
+            {selected.length > 0 && (
+              <Link to={`/quizzes/${quizId}`}>
+                <Button>Làm thử</Button>
+              </Link>
+            )}
             <Button onClick={() => setPickerOpen(true)}>Chọn từ ngân hàng</Button>
             <Button onClick={() => setCreatingQuestion(true)}>Soạn câu hỏi mới</Button>
             <Button

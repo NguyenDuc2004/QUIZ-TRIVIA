@@ -41,7 +41,7 @@ frontend/src/shared/                                       # dùng chung
 docs/ · infra/ · docker-compose.yml
 ```
 
-Tính năng đã có: `auth`, `user`, `quiz`. Sắp tới: `attempt`, `realtime`, `ai`, `recommend`, `analytics` — xem cây đầy đủ ở [architecture.md §3](docs/architecture.md).
+Tính năng đã có: `auth`, `user`, `quiz`, `attempt`. Sắp tới: `realtime`, `ai`, `recommend`, `analytics` — xem cây đầy đủ ở [architecture.md §3](docs/architecture.md).
 
 Một tính năng = **thêm package vào `backend/` (kèm 5 thư mục tầng) + thêm folder vào `frontend/src/features/`**, tên trùng nhau. Không tạo repo/thư mục riêng cho từng tính năng.
 

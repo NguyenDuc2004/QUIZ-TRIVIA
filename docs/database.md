@@ -55,6 +55,9 @@ ai_request_logs (audit các lần gọi AI)
 | time_limit_sec | int | nullable |
 | created_at, updated_at | | |
 
+> `quizzes` bổ sung cột `thumbnail_url VARCHAR(500)` ở *V4* — đường dẫn ảnh bìa do server sinh
+> (`/uploads/images/<uuid>.<ext>`), NULL thì giao diện tự vẽ khối màu theo tiêu đề.
+
 **questions**
 | Cột | Kiểu | Ghi chú |
 |-----|------|---------|
@@ -75,11 +78,36 @@ ai_request_logs (audit các lần gọi AI)
 **quiz_questions** (bảng nối, kèm thứ tự)
 | quiz_id (FK) | question_id (FK) | order_index |
 
-**quiz_attempts**
-| id | user_id (FK) | quiz_id (FK) | started_at | submitted_at | total_score | max_score | status |
+**quiz_attempts** *(V3)*
+| Cột | Kiểu | Ghi chú |
+|-----|------|---------|
+| id | UUID (PK) | |
+| user_id, quiz_id | FK | |
+| mode | varchar | PRACTICE / EXAM (FR-14) |
+| status | varchar | IN_PROGRESS / SUBMITTED / EXPIRED |
+| started_at | timestamptz | |
+| expires_at | timestamptz | `started_at + quizzes.time_limit_sec`; NULL = không giới hạn (FR-16) |
+| submitted_at | timestamptz | NULL khi chưa nộp |
+| total_score, max_score | integer | `max_score` **chốt lúc bắt đầu** |
+| created_at, updated_at | timestamptz | |
 
-**attempt_answers**
-| id | attempt_id (FK) | question_id (FK) | user_answer (jsonb) | is_correct | score | ai_feedback (text) | graded_by (enum: auto/ai/human) |
+> Chỉ mục một phần `uk_quiz_attempts_in_progress (user_id, quiz_id) WHERE status = 'IN_PROGRESS'`:
+> mỗi người tối đa một bài dở trên một quiz, gọi lại API bắt đầu là làm tiếp.
+
+**attempt_answers** *(V3)* — mỗi dòng là **một câu trong đề của riêng bài làm đó**, sinh sẵn ngay khi
+bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ảnh hưởng bài đang làm hay bài đã nộp.
+
+| Cột | Kiểu | Ghi chú |
+|-----|------|---------|
+| id | UUID (PK) | |
+| attempt_id, question_id | FK | UNIQUE (attempt_id, question_id) |
+| order_index | integer | sao từ `quiz_questions.order_index` lúc bắt đầu |
+| user_answer | jsonb | `{"optionIds":[…]}` hoặc `{"text":"…"}`; NULL = chưa trả lời |
+| is_correct | boolean | NULL khi chưa chấm hoặc đang chờ AI |
+| score, max_score | integer | `max_score` chốt từ `questions.points` lúc bắt đầu |
+| ai_feedback | text | nhận xét của AI (features/06) |
+| graded_by | varchar | NOT_GRADED / AUTO / PENDING_AI / AI / HUMAN |
+| answered_at | timestamptz | |
 
 **learning_materials** (học liệu cho RAG)
 | id | owner_id (FK) | title | source_type (pdf/docx/txt) | topic | status (processing/ready) | created_at |

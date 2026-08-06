@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Pagination, Select, Skeleton, Space } from 'antd'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
@@ -16,6 +16,7 @@ const PAGE_SIZE = 12
  */
 export default function BrowseQuizzesPage() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const keyword = searchParams.get('q') ?? undefined
 
   const [page, setPage] = useState(0)
@@ -114,7 +115,11 @@ export default function BrowseQuizzesPage() {
         <>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {data?.content.map((quiz) => (
-              <QuizCard key={quiz.id} quiz={quiz} />
+              <QuizCard
+                key={quiz.id}
+                quiz={quiz}
+                onClick={() => navigate(`/quizzes/${quiz.id}`)}
+              />
             ))}
           </div>
 

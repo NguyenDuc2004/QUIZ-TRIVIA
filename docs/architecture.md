@@ -65,7 +65,17 @@ com.datn.quizai
 │   ├── repository  #   QuizRepository, QuestionRepository, CategoryRepository
 │   ├── domain      #   entity + enum (Difficulty, Visibility, QuestionType, QuestionSource)
 │   └── dto
-├── attempt         # Làm bài, chấm điểm, lịch sử (attempt, attempt_answer)
+├── attempt         # Làm bài, chấm điểm, lịch sử, bảng xếp hạng
+│   ├── controller  #   AttemptController
+│   ├── service     #   AttemptService, AnswerGrader (logic chấm, thuần Java)
+│   ├── repository  #   QuizAttemptRepository
+│   ├── domain      #   QuizAttempt, AttemptAnswer, AnswerPayload (jsonb)
+│   │               #   + enum AttemptMode, AttemptStatus, GradedBy
+│   └── dto
+├── file            # Tải ảnh lên & phục vụ tĩnh (dùng chung cho quiz và câu hỏi)
+│   ├── controller  #   FileController
+│   ├── service     #   FileStorageService, ImageType (dò chữ ký byte)
+│   └── dto
 ├── realtime        # Multiplayer: WebSocket (STOMP), Room, GameEngine, Redis Pub/Sub
 ├── ai              # Lớp AI
 │   ├── provider    #   AiProvider (interface), GeminiProvider, GrokProvider, AiOrchestrator
