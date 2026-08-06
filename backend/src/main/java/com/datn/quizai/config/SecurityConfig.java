@@ -49,6 +49,10 @@ public class SecurityConfig {
             "/api/v1/quizzes",
             "/api/v1/quizzes/*",
             "/api/v1/categories",
+            // Khách quét QR cần xem được phòng và danh sách avatar trước khi có danh tính.
+            // Mã PIN 6 số chính là thứ chặn cửa; việc vào phòng còn phải được host bật cho phép.
+            "/api/v1/rooms/*",
+            "/api/v1/rooms/avatars",
             // Ảnh bìa quiz công khai phải xem được khi chưa đăng nhập; tên file là UUID ngẫu nhiên
             // nên không đoán được ảnh của quiz riêng tư. Chỉ mở GET — POST /api/v1/files vẫn cần quyền.
             "/uploads/**",
@@ -87,6 +91,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login",
                                 "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
+                        // Vào phòng với tư cách khách — RoomService kiểm allowGuests của từng phòng
+                        .requestMatchers(HttpMethod.POST, "/api/v1/rooms/*/join-as-guest").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex

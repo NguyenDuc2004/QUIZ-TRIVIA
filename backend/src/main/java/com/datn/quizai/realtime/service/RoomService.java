@@ -12,12 +12,16 @@ import com.datn.quizai.quiz.domain.Visibility;
 import com.datn.quizai.quiz.repository.QuizRepository;
 import com.datn.quizai.realtime.domain.GameRoom;
 import com.datn.quizai.realtime.domain.GameRoomPlayer;
+import com.datn.quizai.realtime.domain.PlayerAvatar;
+import com.datn.quizai.realtime.domain.RoomParticipant;
 import com.datn.quizai.realtime.domain.RoomState;
 import com.datn.quizai.realtime.domain.RoomStatus;
 import com.datn.quizai.realtime.dto.AnswerResultView;
 import com.datn.quizai.realtime.dto.CreateRoomRequest;
 import com.datn.quizai.realtime.dto.GameEvent;
 import com.datn.quizai.realtime.dto.GameEventType;
+import com.datn.quizai.realtime.dto.GuestSessionResponse;
+import com.datn.quizai.realtime.dto.JoinAsGuestRequest;
 import com.datn.quizai.realtime.dto.LiveQuestionView;
 import com.datn.quizai.realtime.dto.QuestionClosedView;
 import com.datn.quizai.realtime.dto.RoomView;
@@ -34,6 +38,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Nghiệp vụ phòng đấu thời gian thực (docs/features/04-multiplayer-realtime.md, FR-20…FR-25).
@@ -51,8 +56,11 @@ import java.util.UUID;
 @Service
 public class RoomService {
 
-    /** Bỏ các ký tự dễ đọc nhầm (0/O, 1/I) để người chơi gõ mã phòng không sai. */
-    private static final String CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    /**
+     * Mã PIN toàn chữ số: người chơi gõ trên bàn phím số của điện thoại, không phải chuyển qua
+     * lại giữa chữ và số, và không có chuyện nhầm O với 0 hay I với 1.
+     */
+    private static final String CODE_ALPHABET = "0123456789";
     private static final int CODE_LENGTH = 6;
     private static final int CODE_MAX_ATTEMPTS = 20;
 
@@ -66,17 +74,20 @@ public class RoomService {
     private final UserRepository userRepository;
     private final RoomStateStore stateStore;
     private final GameEventPublisher publisher;
+    private final GuestSessionStore guestSessionStore;
 
     public RoomService(GameRoomRepository roomRepository,
                        QuizRepository quizRepository,
                        UserRepository userRepository,
                        RoomStateStore stateStore,
-                       GameEventPublisher publisher) {
+                       GameEventPublisher publisher,
+                       GuestSessionStore guestSessionStore) {
         this.roomRepository = roomRepository;
         this.quizRepository = quizRepository;
         this.userRepository = userRepository;
         this.stateStore = stateStore;
         this.publisher = publisher;
+        this.guestSessionStore = guestSessionStore;
     }
 
     // ------------------------------------------------------------------ REST
@@ -91,43 +102,76 @@ public class RoomService {
         }
 
         User host = userRepository.getReferenceById(current.id());
+        PlayerAvatar hostAvatar = PlayerAvatar.random();
+
         GameRoom room = new GameRoom(generateRoomCode(), host, quiz);
         room.setSecondsPerQuestion(request.secondsPerQuestion());
+        room.setAllowGuests(request.allowGuests());
         // Host cũng là một người chơi, cho vào luôn để họ không phải join thêm một bước
-        room.addPlayer(new GameRoomPlayer(host));
+        room.addPlayer(new GameRoomPlayer(host, host.getDisplayName(), hostAvatar));
         roomRepository.save(room);
 
         RoomState state = RoomState
                 .waiting(room.getRoomCode(), quiz.getId(), host.getId(), questions.size())
-                .withPlayer(host.getId(), host.getDisplayName());
+                .withPlayer(host.getId(), host.getDisplayName(), hostAvatar, false);
         stateStore.save(state);
 
         return RoomView.of(room, state, null);
     }
 
-    /** Người chơi vào phòng bằng mã (FR-20). Vào lại phòng cũ thì giữ nguyên điểm đang có. */
+    /** Thành viên vào phòng bằng mã PIN (FR-20). Vào lại phòng cũ thì giữ nguyên điểm đang có. */
     @Transactional
     public RoomView join(String roomCode, JwtService.AuthenticatedUser current) {
-        GameRoom room = requireRoom(roomCode);
-        if (room.getStatus() == RoomStatus.FINISHED) {
-            throw BusinessException.conflict("Ván đấu này đã kết thúc");
-        }
+        GameRoom room = requireJoinableRoom(roomCode);
 
         User user = userRepository.getReferenceById(current.id());
+        String displayName = displayNameOf(current.id());
+        PlayerAvatar avatar = PlayerAvatar.random();
+
         boolean isNew = room.getPlayers().stream()
-                .noneMatch(p -> p.getUser().getId().equals(current.id()));
+                .noneMatch(p -> p.getUser() != null && p.getUser().getId().equals(current.id()));
         if (isNew) {
-            room.addPlayer(new GameRoomPlayer(user));
+            room.addPlayer(new GameRoomPlayer(user, displayName, avatar));
             roomRepository.save(room);
         }
 
         RoomState state = stateStore.update(roomCode,
-                current2 -> current2.withPlayer(current.id(), displayNameOf(current.id())));
+                s -> s.withPlayer(current.id(), displayName, avatar, false));
 
-        publisher.broadcast(roomCode, GameEvent.of(GameEventType.PLAYER_JOINED,
-                Map.of("userId", current.id(), "players", RoomView.ranking(state))));
-
+        broadcastRoster(roomCode, GameEventType.PLAYER_JOINED, current.id(), state);
         return RoomView.of(room, state, currentQuestionView(room, state));
+    }
+
+    /**
+     * Khách vãng lai vào phòng bằng mã PIN hoặc quét QR — không cần tài khoản (FR-20).
+     * <p>
+     * Chỉ mở khi host bật {@code allowGuests} cho phòng đó; mặc định tắt để giữ luật chung
+     * "chưa đăng nhập thì không vào phòng đấu" (docs/overview.md).
+     */
+    @Transactional
+    public GuestSessionResponse joinAsGuest(String roomCode, JoinAsGuestRequest request) {
+        GameRoom room = requireJoinableRoom(roomCode);
+
+        if (!room.isAllowGuests()) {
+            throw BusinessException.forbidden(
+                    "Phòng này yêu cầu đăng nhập. Đăng nhập rồi vào lại bằng mã phòng.");
+        }
+
+        String displayName = request.displayName().trim();
+        PlayerAvatar avatar = PlayerAvatar.parseOrRandom(request.avatar());
+        UUID playerId = UUID.randomUUID();
+
+        room.addPlayer(GameRoomPlayer.guest(displayName, avatar));
+        roomRepository.save(room);
+
+        RoomState state = stateStore.update(roomCode,
+                s -> s.withPlayer(playerId, displayName, avatar, true));
+
+        broadcastRoster(roomCode, GameEventType.PLAYER_JOINED, playerId, state);
+
+        String guestKey = guestSessionStore.issue(playerId, room.getRoomCode(), displayName);
+        return new GuestSessionResponse(guestKey, playerId,
+                RoomView.of(room, state, currentQuestionView(room, state)));
     }
 
     /**
@@ -143,19 +187,33 @@ public class RoomService {
 
     /** Rời phòng — chỉ bỏ khỏi trạng thái live, dòng trong CSDL giữ lại để còn thống kê. */
     @Transactional(readOnly = true)
-    public void leave(String roomCode, JwtService.AuthenticatedUser current) {
+    public void leave(String roomCode, UUID playerId) {
         stateStore.find(roomCode).ifPresent(ignored -> {
-            RoomState state = stateStore.update(roomCode, s -> s.withoutPlayer(current.id()));
-            publisher.broadcast(roomCode, GameEvent.of(GameEventType.PLAYER_LEFT,
-                    Map.of("userId", current.id(), "players", RoomView.ranking(state))));
+            RoomState state = stateStore.update(roomCode, s -> s.withoutPlayer(playerId));
+            broadcastRoster(roomCode, GameEventType.PLAYER_LEFT, playerId, state);
         });
+    }
+
+    /** Bật/tắt trạng thái "Sẵn sàng" ở phòng chờ. */
+    @Transactional(readOnly = true)
+    public void setReady(String roomCode, RoomParticipant participant, boolean ready) {
+        RoomState state = stateStore.update(roomCode, s -> s.withReady(participant.playerId(), ready));
+        broadcastRoster(roomCode, GameEventType.PLAYER_READY, participant.playerId(), state);
+    }
+
+    /** Đổi avatar ngay trong phòng chờ — cả thành viên lẫn khách đều đổi được. */
+    @Transactional(readOnly = true)
+    public void setAvatar(String roomCode, RoomParticipant participant, String avatarCode) {
+        RoomState state = stateStore.update(roomCode,
+                s -> s.withAvatar(participant.playerId(), PlayerAvatar.parseOrRandom(avatarCode)));
+        broadcastRoster(roomCode, GameEventType.PLAYER_AVATAR_CHANGED, participant.playerId(), state);
     }
 
     // ------------------------------------------------------------------ STOMP
 
     /** Host bấm bắt đầu → phát câu đầu tiên cho cả phòng cùng lúc (FR-21, FR-22). */
     @Transactional
-    public void start(String roomCode, JwtService.AuthenticatedUser current) {
+    public void start(String roomCode, RoomParticipant current) {
         GameRoom room = requireRoom(roomCode);
         requireHost(room, current);
 
@@ -178,18 +236,17 @@ public class RoomService {
      * cho kết quả khác nhau trên cùng một câu hỏi.
      */
     @Transactional
-    public void answer(String roomCode, SubmitRoomAnswerRequest request,
-                       JwtService.AuthenticatedUser current) {
+    public void answer(String roomCode, SubmitRoomAnswerRequest request, RoomParticipant current) {
         GameRoom room = requireRoom(roomCode);
         RoomState before = stateStore.require(roomCode);
 
         if (before.status() != RoomStatus.PLAYING) {
             throw BusinessException.conflict("Ván đấu chưa bắt đầu hoặc đã kết thúc");
         }
-        if (!before.hasPlayer(current.id())) {
+        if (!before.hasPlayer(current.playerId())) {
             throw BusinessException.forbidden("Bạn không ở trong phòng này");
         }
-        if (before.hasAnswered(current.id())) {
+        if (before.hasAnswered(current.playerId())) {
             throw BusinessException.conflict("Bạn đã trả lời câu này rồi");
         }
 
@@ -217,13 +274,13 @@ public class RoomService {
         int points = SpeedScorer.score(
                 question.getPoints() == null ? 1 : question.getPoints(), correct, elapsed, limit);
 
-        RoomState after = stateStore.update(roomCode, s -> s.withAnswer(current.id(), points, correct));
+        RoomState after = stateStore.update(roomCode, s -> s.withAnswer(current.playerId(), points, correct));
 
         int totalScore = after.players().stream()
-                .filter(p -> p.userId().equals(current.id()))
+                .filter(p -> p.playerId().equals(current.playerId()))
                 .mapToInt(RoomState.PlayerState::score).findFirst().orElse(0);
 
-        publisher.toUser(roomCode, current.id(), GameEvent.of(GameEventType.ANSWER_RESULT,
+        publisher.toUser(roomCode, current.playerId(), GameEvent.of(GameEventType.ANSWER_RESULT,
                 new AnswerResultView(question.getId(), correct, points, totalScore, elapsed)));
 
         // Cả phòng chỉ biết "thêm một người xong", không biết ai đúng ai sai
@@ -239,26 +296,48 @@ public class RoomService {
 
     /** Host chuyển câu: đóng câu hiện tại rồi sang câu kế, hết câu thì kết thúc ván. */
     @Transactional
-    public void next(String roomCode, JwtService.AuthenticatedUser current) {
+    public void next(String roomCode, RoomParticipant current) {
         GameRoom room = requireRoom(roomCode);
         requireHost(room, current);
 
-        RoomState state = stateStore.require(roomCode);
-        if (state.status() != RoomStatus.PLAYING) {
-            throw BusinessException.conflict("Ván đấu chưa bắt đầu hoặc đã kết thúc");
-        }
+        long now = System.currentTimeMillis();
+        AtomicReference<RoomState> beforeRef = new AtomicReference<>();
 
-        closeQuestion(room, state);
+        // Quyết định bước chuyển NGAY TRONG khoá.
+        //
+        // Kênh STOMP đến của Spring chạy đa luồng, nên hai lệnh "câu tiếp theo" gửi sát nhau
+        // (host bấm nhanh hai lần, hoặc mạng dồn hai frame) có thể được xử lý song song. Nếu đọc
+        // trạng thái ngoài khoá rồi mới quyết định, cả hai cùng thấy câu hiện tại là câu N và
+        // cùng phát câu N+1 — ván đấu nhảy cóc hoặc không bao giờ kết thúc.
+        RoomState after = stateStore.update(roomCode, before -> {
+            if (before.status() != RoomStatus.PLAYING) {
+                throw BusinessException.conflict("Ván đấu chưa bắt đầu hoặc đã kết thúc");
+            }
+            beforeRef.set(before);
 
-        if (state.isLastQuestion()) {
-            finish(room, state);
+            if (before.isLastQuestion()) {
+                return before.finished();
+            }
+            int nextIndex = before.currentIndex() + 1;
+            int seconds = secondsFor(room, questionAt(room, nextIndex));
+            return before.withQuestion(nextIndex, now, now + seconds * 1000L);
+        });
+
+        // Công bố đáp án câu vừa đóng, rồi mới sang bước kế tiếp
+        closeQuestion(room, beforeRef.get());
+
+        if (after.status() == RoomStatus.FINISHED) {
+            persistFinalScores(room, after);
+            publisher.broadcast(roomCode,
+                    GameEvent.of(GameEventType.GAME_FINISHED, RoomView.ranking(after)));
         } else {
-            sendQuestion(room, state.currentIndex() + 1);
+            broadcastQuestion(room, after);
         }
     }
 
     // ------------------------------------------------------------------ nội bộ
 
+    /** Đặt câu hỏi đầu tiên và phát đi — chỉ dùng lúc bắt đầu ván. */
     private void sendQuestion(GameRoom room, int index) {
         Question question = questionAt(room, index);
         int seconds = secondsFor(room, question);
@@ -269,8 +348,17 @@ public class RoomService {
         RoomState state = stateStore.update(room.getRoomCode(),
                 s -> s.withQuestion(index, startedAt, deadline));
 
+        broadcastQuestion(room, state);
+    }
+
+    /** Phát câu hỏi hiện tại của trạng thái cho cả phòng. */
+    private void broadcastQuestion(GameRoom room, RoomState state) {
+        Question question = questionAt(room, state.currentIndex());
+        int seconds = secondsFor(room, question);
+
         publisher.broadcast(room.getRoomCode(), GameEvent.of(GameEventType.QUESTION,
-                LiveQuestionView.of(question, index, state.totalQuestions(), seconds, deadline)));
+                LiveQuestionView.of(question, state.currentIndex(), state.totalQuestions(),
+                        seconds, state.questionDeadlineMillis())));
     }
 
     /** Công bố đáp án + bảng xếp hạng cho cả phòng. Đây là lúc đáp án đúng mới rời khỏi server. */
@@ -292,24 +380,52 @@ public class RoomService {
     }
 
     /** Kết thúc ván: chốt điểm cuối xuống PostgreSQL rồi phát bảng xếp hạng chung cuộc. */
-    private void finish(GameRoom room, RoomState state) {
+    /**
+     * Chốt điểm cuối xuống PostgreSQL. Việc chuyển trạng thái sang FINISHED đã làm trong khoá ở
+     * {@link #next}, nên hàm này chỉ còn phần ghi CSDL.
+     */
+    private void persistFinalScores(GameRoom room, RoomState state) {
         GameRoom withPlayers = roomRepository.findByRoomCodeWithPlayers(room.getRoomCode())
                 .orElseThrow(() -> BusinessException.notFound("Không tìm thấy phòng"));
 
-        Map<UUID, Integer> scores = state.players().stream()
+        Map<UUID, Integer> memberScores = state.players().stream()
+                .filter(player -> !player.guest())
                 .collect(java.util.stream.Collectors.toMap(
-                        RoomState.PlayerState::userId, RoomState.PlayerState::score));
+                        RoomState.PlayerState::playerId, RoomState.PlayerState::score));
 
-        withPlayers.getPlayers().forEach(player ->
-                player.setFinalScore(scores.getOrDefault(player.getUser().getId(), 0)));
+        // Khách không có user_id nên không khớp được theo id; khớp theo tên hiển thị,
+        // vốn là duy nhất trong phạm vi một phòng đủ để ghi điểm cuối.
+        Map<String, Integer> guestScores = state.players().stream()
+                .filter(RoomState.PlayerState::guest)
+                .collect(java.util.stream.Collectors.toMap(
+                        RoomState.PlayerState::displayName, RoomState.PlayerState::score, (a, b) -> a));
+
+        withPlayers.getPlayers().forEach(player -> {
+            int score = player.isGuest()
+                    ? guestScores.getOrDefault(player.getDisplayName(), 0)
+                    : memberScores.getOrDefault(player.getUser().getId(), 0);
+            player.setFinalScore(score);
+        });
         withPlayers.setStatus(RoomStatus.FINISHED);
         withPlayers.setFinishedAt(OffsetDateTime.now());
         roomRepository.save(withPlayers);
+    }
 
-        RoomState finished = stateStore.update(room.getRoomCode(), RoomState::finished);
+    /** Gửi danh sách người chơi mới nhất cho cả phòng — dùng chung cho join/leave/ready/avatar. */
+    private void broadcastRoster(String roomCode, GameEventType type, UUID playerId, RoomState state) {
+        publisher.broadcast(roomCode, GameEvent.of(type, Map.of(
+                "playerId", playerId,
+                "players", RoomView.ranking(state),
+                "readyCount", state.readyCount())));
+    }
 
-        publisher.broadcast(room.getRoomCode(),
-                GameEvent.of(GameEventType.GAME_FINISHED, RoomView.ranking(finished)));
+    /** Phòng còn nhận người vào hay không — dùng chung cho cả thành viên lẫn khách. */
+    private GameRoom requireJoinableRoom(String roomCode) {
+        GameRoom room = requireRoom(roomCode);
+        if (room.getStatus() == RoomStatus.FINISHED) {
+            throw BusinessException.conflict("Ván đấu này đã kết thúc");
+        }
+        return room;
     }
 
     private GameRoom requireRoom(String roomCode) {
@@ -317,8 +433,8 @@ public class RoomService {
                 .orElseThrow(() -> BusinessException.notFound("Không tìm thấy phòng " + roomCode));
     }
 
-    private void requireHost(GameRoom room, JwtService.AuthenticatedUser current) {
-        if (!room.getHost().getId().equals(current.id())) {
+    private void requireHost(GameRoom room, RoomParticipant current) {
+        if (!room.getHost().getId().equals(current.playerId())) {
             throw BusinessException.forbidden("Chỉ chủ phòng mới điều khiển được ván đấu");
         }
     }

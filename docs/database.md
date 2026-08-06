@@ -142,11 +142,28 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 | host_id, quiz_id | FK | |
 | status | varchar | WAITING / PLAYING / FINISHED |
 | seconds_per_question | int | NULL = theo `questions.time_limit_sec`, không có nữa thì mặc định 20s |
+| allow_guests *(V7)* | boolean | host cho khách quét QR vào hay không; **mặc định FALSE** |
 | started_at, finished_at | timestamptz | |
 | created_at, updated_at | timestamptz | |
 
-**game_room_players** *(V5)* — `final_score` chỉ ghi khi ván kết thúc, trong lúc chơi điểm ở Redis
-| id | room_id (FK) | user_id (FK) | final_score | joined_at | *UNIQUE (room_id, user_id)* |
+**game_room_players** *(V5, mở rộng ở V7)* — `final_score` chỉ ghi khi ván kết thúc, trong lúc chơi điểm ở Redis
+| Cột | Kiểu | Ghi chú |
+|-----|------|---------|
+| id | UUID (PK) | |
+| room_id | FK | |
+| user_id | FK **nullable** *(V7)* | NULL khi là khách vãng lai |
+| display_name *(V7)* | varchar(50) | chốt tại thời điểm chơi; với khách đây là nguồn duy nhất |
+| avatar *(V7)* | varchar(40) | mã trong `PlayerAvatar` (emoji + màu, không phải file ảnh) |
+| is_guest *(V7)* | boolean | |
+| final_score | int | |
+| joined_at | timestamptz | |
+
+> UNIQUE `(room_id, user_id)` được thay bằng **chỉ mục một phần** `WHERE user_id IS NOT NULL`:
+> nhiều khách trong cùng phòng đều có `user_id` NULL nên ràng buộc cũ không còn diễn đạt đúng ý.
+> Thêm CHECK: hoặc là tài khoản thật, hoặc là khách có tên hiển thị.
+
+> Khoá phiên khách nằm ở Redis `roomguest:{key}` (TTL 6 giờ), **không** lưu xuống PostgreSQL —
+> nó chỉ có nghĩa trong đúng một ván đấu.
 
 **chat_sessions / chat_messages**
 | chat_sessions: id, user_id, title, created_at |
@@ -245,6 +262,7 @@ RETURN DISTINCT next
 |------------|---------|---------|
 | `room:{code}` | Trạng thái phòng chơi (người chơi, câu hiện tại, điểm) | TTL, hash/json |
 | `room:{code}:events` (Pub/Sub) | Phát sự kiện game tới các instance backend | Đồng bộ độ trễ thấp |
+| `roomguest:{key}` | Phiên khách vãng lai trong một phòng | TTL 6 giờ, chỉ dùng cho đúng phòng đó |
 | `ai:cache:{hash}` | Cache kết quả AI theo hash(prompt) | Tiết kiệm chi phí |
 | `session:{token}` | Session / refresh token | |
 | `quota:ai:{userId}` | Đếm hạn mức gọi AI theo user | Rate limiting |

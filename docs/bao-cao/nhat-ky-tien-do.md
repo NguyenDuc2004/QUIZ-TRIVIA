@@ -18,6 +18,7 @@
 | 06/08 (tối) | Chuẩn giao diện Udemy + **lát cắt Làm bài quiz** + ảnh bìa quiz | 7/7 | 🟢 xong |
 | 07/08 | **Lát cắt Phòng đấu real-time** (STOMP + Redis Pub/Sub) | 6/6 | 🟢 xong |
 | 07/08 (chiều) | **Lát cắt AI + RAG sinh đề** — đã gọi Gemini thật | 7/7 | 🟢 xong |
+| 07/08 (tối) | Mã PIN + QR, khách vãng lai, avatar, phòng chờ live | 7/7 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -338,6 +339,75 @@ Hai lỗi đầu là bẫy kinh điển của Spring, **chỉ lộ ra khi chạy
 - **Mục 3.4:** 138 test tự động (100% pass). `QuestionJsonParserTest` 16 ca là dẫn chứng tốt: mỗi ca tương ứng một kiểu đầu ra sai mà mô hình *thực sự* hay trả về.
 - **Mục 3.6 (đánh giá AI):** đã có số liệu đầu tiên (bảng ở trên). Còn thiếu: đánh giá độ chính xác trên bộ mẫu đủ lớn, và demo fallback Gemini→Grok (chưa có key Grok).
 - **Bảo mật:** ba luật đáng viết — tách chỉ dẫn khỏi dữ liệu (chống prompt injection), grounding + trả `sourceExcerpts` để đối chiếu, và cô lập học liệu theo `owner_id`.
+
+---
+
+## 📅 T6 — 07/08/2026 (buổi tối) — Nâng cấp phòng đấu: PIN + QR, khách vãng lai, avatar
+
+**Mục tiêu hôm nay:** Đưa trải nghiệm phòng đấu về đúng kiểu Kahoot — chiếu mã lên màn hình, cả lớp quét điện thoại vào chơi ngay.
+
+### Nhiệm vụ
+- [x] Migration `V7__room_pin_guest_avatar.sql`
+- [x] Mã phòng đổi sang **PIN 6 chữ số**; frontend vẽ **mã QR** trỏ tới `/join/{PIN}`
+- [x] **Khách vãng lai** vào chơi được — công tắc `allowGuests` do host bật cho từng phòng
+- [x] Bộ **avatar** 18 nhân vật, nút "Ngẫu nhiên", đổi được ngay trong phòng chờ
+- [x] **Phòng chờ live** dạng thẻ, trạng thái "Đã sẵn sàng" cập nhật real-time
+- [x] Test 144/144 pass (thêm 6 ca) + 22/22 ca kiểm chứng với 2 client thật
+- [x] Cập nhật tài liệu cho khớp luật mới
+
+### Một luật cũ đã được sửa có chủ đích
+
+Luật ban đầu (`docs/overview.md`) nói **Guest không vào phòng đấu**. Yêu cầu mới cần đúng điều đó, nên
+thay vì bỏ hẳn luật, đã chọn phương án **host bật/tắt cho từng phòng**:
+
+- `game_rooms.allow_guests` **mặc định FALSE** → luật cũ vẫn là hành vi mặc định.
+- Giáo viên chủ động bật khi muốn cả lớp quét QR vào chơi.
+- Khách chỉ sống trong một ván: không lịch sử làm bài, không thống kê cá nhân, không lên đồ thị gợi ý.
+
+### Đã làm được
+
+**Migration V7:** thêm `allow_guests`; `game_room_players.user_id` cho phép NULL, thêm `display_name`,
+`avatar`, `is_guest`. Ràng buộc UNIQUE cũ được thay bằng **chỉ mục một phần** `WHERE user_id IS NOT NULL`
+— nhiều khách cùng phòng đều có `user_id` NULL nên ràng buộc cũ không còn diễn đạt đúng ý.
+
+**Danh tính khách:** không cấp JWT. Cấp JWT sẽ phải thêm vai trò GUEST vào enum `Role`, kéo theo ràng
+buộc CHECK của bảng `users` và mọi chỗ phân quyền. Thay vào đó khách nhận **khoá phiên** ngẫu nhiên
+trong Redis `roomguest:{key}`, gắn chặt với đúng một phòng, TTL 6 giờ. `StompAuthChannelInterceptor`
+nay nhận hai loại danh tính: `Authorization` hoặc `X-Guest-Key`.
+
+**`RoomParticipant`** che đi việc người gửi là thành viên hay khách — phần tính điểm, xếp hạng, kiểm
+đã trả lời chưa không phải rẽ nhánh ở đâu cả.
+
+**QR vẽ ở client** bằng `qrcode.react`: nội dung chỉ là một đường dẫn nên sinh ở đâu cũng như nhau;
+vẽ tại chỗ thì khỏi thêm thư viện vào backend, khỏi truyền ảnh, và là SVG nên chiếu máy chiếu không vỡ.
+
+**Avatar là emoji trên nền màu**, không phải file ảnh — không phải tải ảnh, không phụ thuộc dịch vụ
+bên ngoài, chạy được cả khi mất mạng. *Nói rõ hạn chế:* đây là biểu tượng vui, không phải tranh nhân
+vật chibi vẽ tay; muốn bộ chibi thật thì phải mua hoặc tự vẽ rồi thay `PlayerAvatar`.
+
+**Kiểm thử — 144/144 pass** (138 → 144) và **22/22 ca kiểm chứng trên stack dev** với hai client thật:
+khách quét QR → chọn avatar → vào phòng chờ → bấm sẵn sàng → chơi → lên bảng xếp hạng chung cuộc.
+
+### Một race condition thật, chỉ lộ khi chạy hai client
+`next` đọc trạng thái phòng *ngoài* khoá rồi mới quyết định phát câu kế tiếp hay kết thúc ván. Kênh
+STOMP đến của Spring chạy **đa luồng**, nên hai lệnh "câu tiếp theo" gửi sát nhau cùng đọc một trạng
+thái cũ → ván nhảy cóc hoặc không bao giờ kết thúc. Sửa: tính toàn bộ bước chuyển **ngay trong khoá**
+`RoomStateStore.update`, phần phát sự kiện làm sau.
+
+> Đáng ghi vào báo cáo: đây là loại lỗi mà biên dịch sạch, test đơn vị sạch, thậm chí test một client
+> cũng sạch — chỉ hai client chạy song song mới lộ.
+
+### Nợ / chuyển sang ngày sau
+- Chưa xem giao diện phòng chờ và QR trên trình duyệt, càng chưa quét bằng điện thoại thật.
+- `GET /rooms/{pin}` mở cho khách nên về lý thuyết dò được 10⁶ mã; nên thêm rate limit.
+- Chưa chặn trùng biệt danh giữa các khách trong cùng phòng.
+- Host bỏ đi giữa chừng thì phòng vẫn treo tới khi Redis hết TTL.
+
+### Ghi chú báo cáo
+- **Mục 2.6:** thêm UC_QuetQRVaoPhong, UC_ChonAvatar, UC_SanSang. Luồng thay thế lấy từ các ca 403/400/404 đã kiểm chứng.
+- **Mục 2.8:** `game_room_players` là bảng duy nhất có khoá ngoại nullable — giải thích lý do và ràng buộc CHECK đi kèm.
+- **Mục 2.3 (bảo mật):** đối chiếu hai cơ chế danh tính (JWT dài hạn toàn hệ thống vs khoá phiên ngắn hạn một phòng) là một mục hay.
+- **Mục 3.4:** 144 test tự động + 22 ca kiểm chứng 2 client. Race condition ở `next` nên đưa vào "khó khăn & cách giải quyết".
 
 ---
 

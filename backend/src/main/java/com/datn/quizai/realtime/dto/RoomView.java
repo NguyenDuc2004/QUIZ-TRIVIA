@@ -23,7 +23,9 @@ public record RoomView(
         UUID hostId,
         String hostDisplayName,
         RoomStatus status,
+        boolean allowGuests,
         int totalQuestions,
+        int readyCount,
         List<RoomPlayerView> players,
         LiveQuestionView currentQuestion,
         int answeredCount
@@ -36,7 +38,9 @@ public record RoomView(
                 room.getHost().getId(),
                 room.getHost().getDisplayName(),
                 state.status(),
+                room.isAllowGuests(),
                 state.totalQuestions(),
+                state.readyCount(),
                 ranking(state),
                 currentQuestion,
                 state.answeredCurrent().size());

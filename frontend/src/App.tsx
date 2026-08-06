@@ -11,6 +11,7 @@ import QuizIntroPage from '@/features/attempt/pages/QuizIntroPage'
 import BrowseQuizzesPage from '@/features/quiz/pages/BrowseQuizzesPage'
 import GenerateQuestionsPage from '@/features/ai/pages/GenerateQuestionsPage'
 import MaterialsPage from '@/features/ai/pages/MaterialsPage'
+import JoinRoomPage from '@/features/room/pages/JoinRoomPage'
 import RoomLobbyPage from '@/features/room/pages/RoomLobbyPage'
 import RoomPage from '@/features/room/pages/RoomPage'
 import MyQuizzesPage from '@/features/quiz/pages/MyQuizzesPage'
@@ -58,9 +59,8 @@ export default function App() {
         {/* Một đường dẫn cho cả lúc đang làm và lúc xem kết quả — phân biệt theo attempt.status */}
         <Route path="/attempts/:id" element={<AttemptPage />} />
         <Route path="/my-attempts" element={<MyAttemptsPage />} />
-        {/* Phòng đấu real-time: một trang cho cả chờ / đang chơi / kết thúc */}
+        {/* Sảnh phòng đấu cần đăng nhập vì chỉ thành viên mới mở được phòng */}
         <Route path="/rooms" element={<RoomLobbyPage />} />
-        <Route path="/rooms/:code" element={<RoomPage />} />
         {/* Khu vực AI — controller đã chặn ở BE, chỉ CREATOR/ADMIN gọi được */}
         <Route path="/ai/materials" element={<MaterialsPage />} />
         <Route path="/ai/generate" element={<GenerateQuestionsPage />} />
@@ -70,6 +70,14 @@ export default function App() {
         <Route path="/question-bank" element={<QuestionBankPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
+
+      {/*
+        Hai route phòng đấu để CÔNG KHAI: khách quét QR chưa chắc có tài khoản.
+        Cửa vào là mã PIN 6 số, và việc khách chơi được hay không do host bật/tắt cho từng phòng.
+        Cả hai đều tự dựng bố cục riêng, không dùng AppLayout — màn chơi cần toàn màn hình.
+      */}
+      <Route path="/join/:code" element={<JoinRoomPage />} />
+      <Route path="/rooms/:code" element={<RoomPage />} />
 
       <Route path="*" element={<Result status="404" title="404" subTitle="Không tìm thấy trang." />} />
     </Routes>

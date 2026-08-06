@@ -50,6 +50,13 @@ public class GameRoom extends BaseEntity {
     @Column(nullable = false, length = 10)
     private RoomStatus status = RoomStatus.WAITING;
 
+    /**
+     * Host có cho khách vãng lai (chưa đăng nhập) quét QR vào phòng này không.
+     * Mặc định false để giữ luật chung: chưa đăng nhập thì không vào phòng đấu.
+     */
+    @Column(name = "allow_guests", nullable = false)
+    private boolean allowGuests = false;
+
     /** Thời gian mỗi câu (giây) do host chọn; null = theo cấu hình từng câu hỏi. */
     @Column(name = "seconds_per_question")
     private Integer secondsPerQuestion;

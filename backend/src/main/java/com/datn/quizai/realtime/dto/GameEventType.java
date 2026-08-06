@@ -10,6 +10,10 @@ public enum GameEventType {
     PLAYER_JOINED,
     /** Có người rời phòng. */
     PLAYER_LEFT,
+    /** Ai đó bật/tắt "Sẵn sàng" ở phòng chờ. */
+    PLAYER_READY,
+    /** Ai đó đổi avatar trong phòng chờ. */
+    PLAYER_AVATAR_CHANGED,
     /** Host bấm bắt đầu. */
     GAME_STARTED,
     /** Câu hỏi mới, phát đồng thời cho mọi người. <b>Không kèm đáp án đúng.</b> */

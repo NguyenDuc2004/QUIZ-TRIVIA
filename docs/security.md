@@ -6,7 +6,9 @@
 - **JWT:** access token ngắn hạn (15 phút) + refresh token dài hạn; xoay vòng (rotation) refresh token.
 - **RBAC:** phân quyền theo vai trò ở tầng controller bằng `@PreAuthorize("hasRole('CREATOR')")`.
 - **OAuth2 (tùy chọn):** đăng nhập Google.
-- **WebSocket:** xác thực JWT khi handshake; kiểm tra quyền vào phòng trước khi subscribe.
+- **WebSocket:** xác thực ở **frame STOMP CONNECT** (không phải lúc handshake HTTP — trình duyệt không gắn được header vào yêu cầu nâng cấp WebSocket). Chấp nhận `Authorization: Bearer <JWT>` cho thành viên, hoặc `X-Guest-Key` cho khách vãng lai.
+- **Khoá phiên khách:** ngẫu nhiên 32 byte, lưu Redis `roomguest:{key}` với TTL 6 giờ, **gắn chặt với đúng một phòng**. Không phải JWT nên không mở được bất kỳ API nào khác; hết ván là hết giá trị.
+- **Cho khách vào phòng là tuỳ chọn từng phòng** (`allow_guests`, mặc định *tắt*) — host chủ động bật, không phải luật toàn hệ thống.
 
 ## 2. Chống OWASP Top 10
 
@@ -18,6 +20,7 @@
 | Broken Access Control | RBAC + kiểm tra quyền sở hữu tài nguyên (owner check) |
 | Sensitive Data Exposure | HTTPS bắt buộc, không log dữ liệu nhạy cảm |
 | Rate limiting | Giới hạn request (đặc biệt endpoint AI) qua Redis |
+| Dò mã phòng | Mã PIN 6 số → 10⁶ khả năng. `GET /rooms/{pin}` mở cho khách nên về lý thuyết dò được phòng đang mở. Chấp nhận: phòng chỉ sống vài giờ, nội dung lộ ra chỉ là tiêu đề quiz và danh sách biệt danh, và vào chơi vẫn cần host bật `allowGuests`. ⏳ Nên thêm rate limit cho endpoint này |
 | Unrestricted File Upload | Nhận dạng ảnh bằng **chữ ký byte** (không tin `Content-Type` client khai); tên file do server sinh từ UUID nên không có path traversal; giới hạn 2MB; chỉ CREATOR/ADMIN được tải lên |
 | SSRF / theo dõi qua ảnh | `thumbnailUrl` chỉ nhận đường dẫn nội bộ `/uploads/…`, chặn URL bên ngoài |
 

@@ -35,7 +35,7 @@
 
 | Tác nhân | Mô tả | Quyền chính |
 |----------|-------|-------------|
-| **Guest** | Khách chưa đăng nhập | **Chỉ xem** danh sách & thông tin giới thiệu quiz công khai (tiêu đề, mô tả, danh mục, độ khó, số câu). **Không được làm bài, không xem nội dung câu hỏi, không vào phòng đấu** |
+| **Guest** | Khách chưa đăng nhập | **Chỉ xem** danh sách & thông tin giới thiệu quiz công khai (tiêu đề, mô tả, danh mục, độ khó, số câu). **Không được làm bài, không xem nội dung câu hỏi.** *Ngoại lệ duy nhất:* vào **phòng đấu** khi biết mã PIN **và** host đã bật `allowGuests` cho phòng đó |
 | **Learner** | Người học đã đăng ký | Chơi quiz, vào phòng đấu, xem tiến độ, chatbot, nhận gợi ý |
 | **Creator** | Người tạo nội dung | Quyền Learner + tạo/sửa quiz, sinh đề bằng AI, tạo phòng, xem thống kê |
 | **Admin** | Quản trị | Quản lý user & nội dung, cấu hình AI provider, giám sát log & chi phí |
@@ -48,10 +48,18 @@
 |---|---|
 | `GET /api/v1/quizzes`, `GET /api/v1/quizzes/{id}` (visibility = public) | ✅ cho phép — nhưng **không trả về danh sách câu hỏi** |
 | `POST /api/v1/quizzes/{id}/attempts` và toàn bộ `/api/v1/attempts/**` | ❌ 401 |
+| `GET /api/v1/rooms/{pin}`, `GET /api/v1/rooms/avatars` | ✅ mở — mã PIN là thứ chặn cửa |
+| `POST /api/v1/rooms/{pin}/join-as-guest` | ✅ mở, **403** nếu host không bật cho khách |
+| `POST /api/v1/rooms` (mở phòng) | ❌ 401 |
 | `/api/v1/rooms/**`, WebSocket `/ws` | ❌ 401 (JWT xác thực ngay lúc handshake) |
 | `/api/v1/ai/**`, `/api/v1/recommendations/**`, `/api/v1/users/me` | ❌ 401 |
 
 > Hệ quả kỹ thuật: `quiz_attempts.user_id` **NOT NULL** — không có attempt ẩn danh, không cần gộp dữ liệu khách vào tài khoản sau khi đăng ký. Mọi thống kê, leaderboard và đồ thị Neo4j đều gắn với một user thật.
+>
+> **Phòng đấu là ngoại lệ có chủ đích** (V7): `game_room_players.user_id` được phép NULL để khách
+> vãng lai quét QR vào chơi. Đổi lại, dữ liệu của khách **chỉ sống trong một ván**: không có lịch
+> sử làm bài, không vào thống kê cá nhân, không lên đồ thị gợi ý. Host phải chủ động bật
+> `allowGuests`; mặc định vẫn là tắt.
 
 ## 6. Định nghĩa & từ viết tắt
 

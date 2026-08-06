@@ -59,7 +59,8 @@ Làm **trọn một tính năng** rồi mới sang tính năng khác. Thứ tự
 - Mọi thay đổi schema qua Flyway `V{n}__mô_tả.sql`; **không sửa migration đã commit**.
 - Mọi lời gọi LLM đi qua `AiProvider`/`AiOrchestrator`, không gọi thẳng API trong service nghiệp vụ.
 - Tác vụ AI nặng chạy nền, trả `jobId`.
-- **Guest (chưa đăng nhập) chỉ được `GET` danh sách/giới thiệu quiz công khai** — không làm bài, không xem nội dung câu hỏi, không vào phòng đấu. Mọi thứ khác `authenticated()`.
+- **Guest (chưa đăng nhập) chỉ được `GET` danh sách/giới thiệu quiz công khai** — không làm bài, không xem nội dung câu hỏi. Mọi thứ khác `authenticated()`.
+  - **Ngoại lệ duy nhất — phòng đấu:** khách vào được khi biết mã PIN 6 số **và** host bật `allowGuests` cho phòng đó. Khách dùng *khoá phiên* riêng (Redis `roomguest:{key}`), không phải JWT, và khoá chỉ mở đúng một phòng.
 - **Giao diện theo [ui-design-system.md](docs/ui-design-system.md)**: không hardcode màu/bo góc/shadow trong component; nút hành động chính màu đen, tím chỉ cho link; trang người học dùng lưới card, trang quản lý dùng bảng; dùng lại `PageHeader`/`EmptyState`; **không bịa dữ liệu** (rating, số lượt học) cho đẹp giao diện.
 - Không commit secret. `.env` đã gitignore; `.env.example` là bản mẫu.
 - Commit theo Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`…), tiếng Việt.

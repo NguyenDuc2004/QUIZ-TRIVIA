@@ -125,15 +125,32 @@ chọn nhiều · `404` quiz hoặc bài làm không tồn tại (hoặc không 
 
 ### 5.1. REST (quản lý phòng)
 ```
-POST   /api/v1/rooms                      Mở phòng { quizId, secondsPerQuestion? }   ✅
-POST   /api/v1/rooms/{code}/join          Vào phòng bằng mã                          ✅
-GET    /api/v1/rooms/{code}               Ảnh chụp phòng (dùng để đồng bộ lại)       ✅
-DELETE /api/v1/rooms/{code}/players/me    Rời phòng                                  ✅
+POST   /api/v1/rooms                      Mở phòng { quizId, secondsPerQuestion?, allowGuests }  ✅
+POST   /api/v1/rooms/{pin}/join           Thành viên vào phòng bằng mã PIN                       ✅
+POST   /api/v1/rooms/{pin}/join-as-guest  Khách vào phòng { displayName, avatar? }               ✅
+GET    /api/v1/rooms/{pin}                Ảnh chụp phòng (dùng để đồng bộ lại)                   ✅
+GET    /api/v1/rooms/avatars              Bộ nhân vật để chọn                                    ✅
+DELETE /api/v1/rooms/{pin}/players/me     Rời phòng                                              ✅
 ```
 
-**Quyền:** đều yêu cầu đăng nhập — Guest không vào phòng đấu. Quiz PRIVATE của người khác trả **404**;
-quiz chưa có câu hỏi trả **400**; ván đã kết thúc thì vào lại trả **409**. Host tự động là người chơi
-đầu tiên nên không phải join thêm lần nữa.
+**Mã phòng là PIN 6 chữ số** (`482913`), gõ được trên bàn phím số của điện thoại. Frontend vẽ **mã QR**
+trỏ tới `/join/{pin}` bằng `qrcode.react`; quét xong là vào thẳng phòng chờ.
+
+**Quyền**
+
+| Endpoint | Chưa đăng nhập |
+|---|---|
+| `POST /rooms` | ❌ 401 — chỉ thành viên mở được phòng |
+| `GET /rooms/{pin}`, `GET /rooms/avatars` | ✅ mở — **mã PIN chính là thứ chặn cửa** |
+| `POST /rooms/{pin}/join-as-guest` | ✅ mở, nhưng **403** nếu host không bật `allowGuests` |
+| `POST /rooms/{pin}/join`, `DELETE …/players/me` | ❌ 401 |
+
+Quiz PRIVATE của người khác trả **404**; quiz chưa có câu hỏi trả **400**; ván đã kết thúc thì vào
+lại trả **409**. Host tự động là người chơi đầu tiên nên không phải join thêm lần nữa.
+
+**Khách vãng lai.** `join-as-guest` trả `{ guestKey, playerId, room }`. Client giữ `guestKey` trong
+`sessionStorage` và gửi kèm header `X-Guest-Key` khi nối WebSocket. Khoá này **chỉ dùng được cho đúng
+phòng đó**, tự hết hạn sau 6 giờ, và không mở được bất kỳ API nào khác.
 
 ### 5.2. WebSocket (STOMP) — endpoint `/ws` ✅
 ```
@@ -144,17 +161,22 @@ SUBSCRIBE /user/queue/errors         Lỗi nghiệp vụ của riêng mình (h�
 SEND      /app/room/{code}/start     Host bắt đầu ván
 SEND      /app/room/{code}/answer    Gửi đáp án { questionId, optionIds?, text? }
 SEND      /app/room/{code}/next      Host chuyển câu / kết thúc ván
+SEND      /app/room/{code}/ready     Bật/tắt Sẵn sàng { ready }
+SEND      /app/room/{code}/avatar    Đổi nhân vật { avatar }
 ```
 
-**Xác thực:** token đi trong header `Authorization: Bearer <token>` của **frame CONNECT**, không
-phải query string. Bắt tay HTTP `/ws` để công khai vì trình duyệt không gắn được header vào yêu cầu
-nâng cấp WebSocket; chặn nằm ở frame CONNECT (`StompAuthChannelInterceptor`).
+**Xác thực:** danh tính đi trong header của **frame CONNECT**, không phải query string. Chấp nhận
+hai loại — `Authorization: Bearer <JWT>` cho thành viên, `X-Guest-Key: <khoá>` cho khách. Bắt tay
+HTTP `/ws` để công khai vì trình duyệt không gắn được header vào yêu cầu nâng cấp WebSocket; chặn
+nằm ở frame CONNECT (`StompAuthChannelInterceptor`).
 
 **Sự kiện server phát về** (`{ type, at, data }`):
 
 | `type` | Phạm vi | Nội dung |
 |---|---|---|
-| `PLAYER_JOINED` / `PLAYER_LEFT` | cả phòng | danh sách người chơi mới nhất |
+| `PLAYER_JOINED` / `PLAYER_LEFT` | cả phòng | `{ playerId, players[], readyCount }` |
+| `PLAYER_READY` | cả phòng | như trên, sau khi ai đó bật/tắt Sẵn sàng |
+| `PLAYER_AVATAR_CHANGED` | cả phòng | như trên, sau khi ai đó đổi nhân vật |
 | `GAME_STARTED` | cả phòng | — |
 | `QUESTION` | cả phòng | câu hỏi + `deadlineAtMillis`. **Không kèm đáp án đúng** |
 | `PLAYER_ANSWERED` | cả phòng | chỉ `{ answeredCount, totalPlayers }` |
