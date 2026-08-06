@@ -29,19 +29,28 @@ public class GeminiProvider implements AiProvider {
     private static final Logger log = LoggerFactory.getLogger(GeminiProvider.class);
 
     private static final String BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-    /** 768 chiều, khớp cột `material_chunks.embedding vector(768)`. */
-    private static final String EMBEDDING_MODEL = "text-embedding-004";
     private static final Duration TIMEOUT = Duration.ofSeconds(90);
 
     private final WebClient webClient;
     private final String apiKey;
     private final String model;
+    private final String embeddingModel;
+    private final int embeddingDimensions;
 
+    /**
+     * Model embedding và số chiều đều đọc từ cấu hình: Google đã một lần gỡ
+     * {@code text-embedding-004} khiến toàn bộ pipeline RAG chết, nên không hardcode nữa.
+     * Đổi số chiều thì phải có migration đổi kiểu cột {@code material_chunks.embedding} cho khớp.
+     */
     public GeminiProvider(WebClient.Builder builder,
                           @Value("${app.ai.gemini.api-key:}") String apiKey,
-                          @Value("${app.ai.gemini.model}") String model) {
+                          @Value("${app.ai.gemini.model}") String model,
+                          @Value("${app.ai.gemini.embedding-model}") String embeddingModel,
+                          @Value("${app.ai.gemini.embedding-dimensions}") int embeddingDimensions) {
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model;
+        this.embeddingModel = embeddingModel;
+        this.embeddingDimensions = embeddingDimensions;
         this.webClient = builder.baseUrl(BASE_URL).build();
     }
 
@@ -91,21 +100,52 @@ public class GeminiProvider implements AiProvider {
     }
 
     @Override
+    public String embeddingModel() {
+        return embeddingModel;
+    }
+
+    @Override
     public List<Float> embed(String text) {
         Map<String, Object> body = Map.of(
-                "model", "models/" + EMBEDDING_MODEL,
-                "content", Map.of("parts", List.of(Map.of("text", text))));
+                "model", "models/" + embeddingModel,
+                "content", Map.of("parts", List.of(Map.of("text", text))),
+                // Model mặc định trả 3072 chiều; xin đúng số chiều của cột trong CSDL
+                "outputDimensionality", embeddingDimensions);
 
-        JsonNode response = post("/models/" + EMBEDDING_MODEL + ":embedContent", body);
+        JsonNode response = post("/models/" + embeddingModel + ":embedContent", body);
         JsonNode values = response.path("embedding").path("values");
 
         if (!values.isArray() || values.isEmpty()) {
             throw new AiProviderException(name(), "Phản hồi embedding không có mảng values", false, null);
         }
+        if (values.size() != embeddingDimensions) {
+            // Chặn sớm, nếu không PostgreSQL sẽ báo lỗi khó hiểu khi ghi vào cột vector(n)
+            throw new AiProviderException(name(),
+                    "Embedding trả về " + values.size() + " chiều, cần " + embeddingDimensions, false, null);
+        }
 
         List<Float> vector = new ArrayList<>(values.size());
         values.forEach(value -> vector.add((float) value.asDouble()));
-        return vector;
+        return normalize(vector);
+    }
+
+    /**
+     * Chuẩn hoá về vector đơn vị.
+     * <p>
+     * Google chỉ bảo đảm vector đã chuẩn hoá khi lấy đủ 3072 chiều; cắt bớt chiều thì mất tính
+     * chất đó. Cosine distance vốn không quan tâm độ dài nên hiện tại không ảnh hưởng kết quả,
+     * nhưng chuẩn hoá sẵn thì sau này đổi sang inner product cũng không phải sửa gì.
+     */
+    private List<Float> normalize(List<Float> vector) {
+        double sumOfSquares = 0;
+        for (Float value : vector) {
+            sumOfSquares += (double) value * value;
+        }
+        double norm = Math.sqrt(sumOfSquares);
+        if (norm == 0) {
+            return vector;
+        }
+        return vector.stream().map(value -> (float) (value / norm)).toList();
     }
 
     private JsonNode post(String path, Map<String, Object> body) {

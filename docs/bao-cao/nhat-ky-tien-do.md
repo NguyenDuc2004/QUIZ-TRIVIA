@@ -17,7 +17,7 @@
 | 06/08 | Tái cấu trúc package + **lát cắt Quản lý Quiz & Câu hỏi** | 5/5 | 🟢 xong |
 | 06/08 (tối) | Chuẩn giao diện Udemy + **lát cắt Làm bài quiz** + ảnh bìa quiz | 7/7 | 🟢 xong |
 | 07/08 | **Lát cắt Phòng đấu real-time** (STOMP + Redis Pub/Sub) | 6/6 | 🟢 xong |
-| 07/08 (chiều) | **Lát cắt AI + RAG sinh đề** — chờ API key để chạy thật | 6/7 | 🟡 chờ key |
+| 07/08 (chiều) | **Lát cắt AI + RAG sinh đề** — đã gọi Gemini thật | 7/7 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -280,7 +280,7 @@ dán URL bên ngoài) — cũng là quyết định mở khoá cho ảnh câu h�
 - [x] Sinh đề: retrieval + prompt grounding + validate JSON + lọc trùng
 - [x] Job nền trả `jobId` + Creator duyệt câu hỏi
 - [x] Frontend: kho học liệu + màn sinh đề + duyệt câu hỏi
-- [!] **Gọi Gemini thật — chưa chạy được, `GEMINI_API_KEY` còn trống**
+- [x] **Gọi Gemini thật — đã chạy, 22/22 ca kiểm chứng đạt**
 
 ### Đã làm được
 
@@ -297,16 +297,38 @@ dán URL bên ngoài) — cũng là quyết định mở khoá cho ảnh câu h�
 **Kiểm thử — 138/138 pass** (113 → 138, thêm 25 ca): `TextChunkerTest` 9 ca, `QuestionJsonParserTest` 16 ca (phủ toàn bộ kiểu đầu ra lệch chuẩn của mô hình).
 **Kiểm chứng HTTP — 14/14** cho phần không cần key: phân quyền, validate, truy cập chéo, và hành vi khi chưa cấu hình key.
 
-### Hai lỗi gặp phải và cách sửa
-Cả hai đều là bẫy kinh điển của Spring, và **chỉ lộ ra khi chạy thật** — biên dịch sạch, test đơn vị không đụng tới:
+### Nghiệm thu với Gemini thật — 22/22 ca đạt
+
+Sau khi có API key, chạy thật trọn luồng: nạp học liệu (995 ký tự → 1 đoạn, có vector) → similarity
+search → sinh 3 câu hỏi bám tài liệu → Creator duyệt → câu vào ngân hàng câu hỏi. Không câu nào bị
+parser loại.
+
+Ví dụ câu AI sinh từ tài liệu về HTTP (chứng minh **grounding** hoạt động — tài liệu nói gì thì hỏi nấy):
+> *"Trong giao thức HTTP, nhóm mã trạng thái nào báo hiệu các lỗi xuất phát từ phía máy khách?"* → Nhóm 4xx
+> *"Mã trạng thái HTTP nào dưới đây được sử dụng khi việc tạo mới một tài nguyên diễn ra thành công?"* → 201 Created
+
+**Số liệu đo được** (từ `ai_request_logs`, lấy làm cơ sở cho mục 3.6):
+
+| Tác vụ | Model | Độ trễ TB | Token vào | Token ra |
+|---|---|---|---|---|
+| embedding (1 đoạn) | `gemini-embedding-001` | ~750 ms | — | — |
+| sinh 3 câu hỏi (có RAG) | `gemini-3.6-flash` | ~8,1 s | 871 | 354 |
+
+### Bốn lỗi gặp phải và cách sửa
+Hai lỗi đầu là bẫy kinh điển của Spring, **chỉ lộ ra khi chạy thật** — biên dịch sạch, test đơn vị không đụng tới. Hai lỗi sau chỉ lộ khi gọi API thật:
 1. **Job nền chạy trước khi transaction commit.** Gọi thẳng phương thức `@Async` từ trong phương thức `@Transactional` khiến luồng nền khởi động ngay, đọc CSDL chưa thấy dòng vừa tạo → `No value present`. Sửa: phát sự kiện và bắt bằng `@TransactionalEventListener` (chạy sau khi commit).
 2. **Đổi trạng thái không được ghi xuống.** `this.updateStatus(...)` là gọi nội bộ, không qua proxy nên `@Transactional` mất tác dụng; job chạy xong mà vẫn hiện `PENDING`. Sửa: tách `AiJobStatusWriter` / `MaterialStatusWriter` thành bean riêng với `REQUIRES_NEW`.
+3. **`text-embedding-004` đã bị Google gỡ** → 404 NOT_FOUND, toàn bộ pipeline RAG chết. Sửa: đổi sang `gemini-embedding-001`, xin `outputDimensionality: 768` cho khớp cột `vector(768)`, và **đưa model + số chiều ra file cấu hình** để lần sau Google đổi thì không phải sửa code.
+4. **`gemini-2.5-flash` không còn mở cho tài khoản mới** → cũng 404. Đã dò danh sách model thực tế bằng `GET /v1beta/models` rồi chọn `gemini-3.6-flash` (trả JSON sạch nhất trong các model thử).
+
+> Bài học ghi lại cho báo cáo: **tên model của nhà cung cấp là thứ sẽ thay đổi**, phải coi như cấu hình chứ không phải hằng số trong code.
 
 ### Nợ / chuyển sang ngày sau
-- **[!] Chưa có `GEMINI_API_KEY`** → chưa gọi được API thật lần nào. Chưa kiểm chứng được: embedding thật, chất lượng câu hỏi sinh ra, fallback Gemini→Grok, và **số liệu mục 3.6 báo cáo**.
 - Chưa xem giao diện AI trên trình duyệt.
+- Chưa có key Grok nên **chưa demo được fallback Gemini→Grok** (cần cho mục 3.6).
 - Chưa giới hạn hạn mức gọi AI theo user (`quota:ai:{userId}` ở Redis).
 - Chưa cache theo hash(prompt) để tiết kiệm chi phí.
+- Mục 3.6 mới có số liệu độ trễ/token; **chưa đánh giá độ chính xác** trên bộ mẫu đủ lớn.
 - Lát cắt kế tiếp: **06-ai-grading** (chấm câu tự luận — nối tiếp `PENDING_AI` từ lát cắt 3).
 
 ### Ghi chú báo cáo
@@ -314,7 +336,7 @@ Cả hai đều là bẫy kinh điển của Spring, và **chỉ lộ ra khi ch�
 - **Mục 2.7:** `AiProvider` + `AiOrchestrator` là ví dụ giáo khoa cho Strategy pattern; nêu rõ vì sao fallback chỉ áp cho lỗi tạm thời.
 - **Mục 2.8:** ERD nay có 14 bảng — thêm `learning_materials`, `material_chunks`, `ai_jobs`, `ai_request_logs`. Nêu rõ vì sao `material_chunks` không map bằng JPA.
 - **Mục 3.4:** 138 test tự động (100% pass). `QuestionJsonParserTest` 16 ca là dẫn chứng tốt: mỗi ca tương ứng một kiểu đầu ra sai mà mô hình *thực sự* hay trả về.
-- **Mục 3.6 (đánh giá AI):** hạ tầng đo đã sẵn sàng — `ai_request_logs` ghi provider/token/độ trễ, `rejected[]` cho tỉ lệ câu hợp lệ. **Chưa có số vì chưa có API key.**
+- **Mục 3.6 (đánh giá AI):** đã có số liệu đầu tiên (bảng ở trên). Còn thiếu: đánh giá độ chính xác trên bộ mẫu đủ lớn, và demo fallback Gemini→Grok (chưa có key Grok).
 - **Bảo mật:** ba luật đáng viết — tách chỉ dẫn khỏi dữ liệu (chống prompt injection), grounding + trả `sourceExcerpts` để đối chiếu, và cô lập học liệu theo `owner_id`.
 
 ---

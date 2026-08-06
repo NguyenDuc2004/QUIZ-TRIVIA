@@ -85,7 +85,9 @@ public class AiOrchestrator {
                 provider -> {
                     long startedAt = System.currentTimeMillis();
                     List<Float> vector = provider.embed(text);
-                    return new AiCompletion(provider.name(), provider.model(),
+                    // Ghi embeddingModel() chứ không phải model(): audit phải nói đúng
+                    // model nào tạo ra vector, nếu không số liệu mục 3.6 báo cáo sẽ sai
+                    return new AiCompletion(provider.name(), provider.embeddingModel(),
                             serialize(vector), null, null, System.currentTimeMillis() - startedAt);
                 },
                 AiProvider::supportsEmbedding);

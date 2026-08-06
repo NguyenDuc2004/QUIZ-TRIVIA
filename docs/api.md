@@ -219,7 +219,7 @@ Rồi hỏi lại `GET /ai/jobs/{jobId}` tới khi `status` là `SUCCEEDED` ho�
                      "explanation": "…", "difficulty": "EASY", "topic": "…" } ],
     "rejected": ["Câu một đáp án cần ≥2 lựa chọn và đúng 1 đáp án đúng — …"],
     "sourceExcerpts": ["đoạn học liệu đã dùng làm ngữ cảnh…"],
-    "provider": "gemini", "model": "gemini-2.5-flash", "latencyMs": 4210
+    "provider": "gemini", "model": "gemini-3.6-flash", "latencyMs": 4210
   }
 }
 ```

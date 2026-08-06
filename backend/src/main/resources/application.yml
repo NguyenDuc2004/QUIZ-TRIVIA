@@ -56,7 +56,13 @@ app:
     provider-order: ${AI_PROVIDER_ORDER:gemini,grok}
     gemini:
       api-key: ${GEMINI_API_KEY:}
-      model: ${GEMINI_MODEL:gemini-2.5-flash}
+      # gemini-2.5-flash đã bị Google khoá với tài khoản mới (404 NOT_FOUND)
+      model: ${GEMINI_MODEL:gemini-3.6-flash}
+      # Google đã gỡ text-embedding-004 nên để cấu hình được, đừng hardcode.
+      # Kiểm model còn sống: GET https://generativelanguage.googleapis.com/v1beta/models
+      embedding-model: ${GEMINI_EMBEDDING_MODEL:gemini-embedding-001}
+      # Phải khớp kiểu cột material_chunks.embedding vector(n) — đổi số này thì cần migration mới
+      embedding-dimensions: ${GEMINI_EMBEDDING_DIMENSIONS:768}
     grok:
       api-key: ${GROK_API_KEY:}
       model: ${GROK_MODEL:grok-2}

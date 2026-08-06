@@ -93,7 +93,7 @@ Còn nợ: chưa mở hai trình duyệt nhìn tận mắt; chưa đo tải (đ�
 
 ## Tuần 5 — Lõi AI + RAG ⭐ (17–23/08) 🟡
 
-- **T2 17/08** — [x] `AiOrchestrator` + `GeminiProvider` + `GrokProvider` · [x] Fallback · [ ] Quota/cache · [ ] `[tùy chọn]` circuit breaker
+- **T2 17/08** — [x] `AiOrchestrator` + `GeminiProvider` + `GrokProvider` · [x] Fallback *(chưa demo được vì thiếu key Grok)* · [ ] Quota/cache · [ ] `[tùy chọn]` circuit breaker
 - **T3 18/08** — [x] Structured output + validate JSON · [x] Logging chi phí/token (`ai_request_logs`)
 - **T4 19/08** — [x] Pipeline RAG: ingest học liệu (Tika → chunk) · [x] Embedding → lưu `pgvector`
 - **T5 20/08** — [x] Similarity search (retrieval) · [x] FE: upload học liệu
@@ -101,10 +101,11 @@ Còn nợ: chưa mở hai trình duyệt nhìn tận mắt; chưa đo tải (đ�
 - **T7 22/08** — [x] FE: màn sinh đề bằng AI + duyệt câu hỏi · [x] Test pipeline (25 ca)
 - **CN 23/08** — [ ] Đệm / review tuần
 
-**Tổng kết tuần 5:** Code xong toàn bộ trong ngày 07/08. 138/138 test pass, 14/14 ca kiểm chứng HTTP
-phần không cần key. **[!] Còn chặn: chưa có `GEMINI_API_KEY` nên chưa gọi API thật lần nào** — chưa
-kiểm chứng được embedding thật, chất lượng câu hỏi, fallback Gemini→Grok và số liệu mục 3.6.
-— **Mốc: trụ cột AI sinh đề (RAG) — code xong, chờ key để nghiệm thu.**
+**Tổng kết tuần 5:** Làm gộp trong ngày 07/08, sớm hơn kế hoạch. 138/138 test pass và **22/22 ca
+nghiệm thu với Gemini thật** — nạp học liệu → embedding → similarity search → sinh đề bám tài liệu
+→ Creator duyệt. Còn nợ: chưa có key Grok nên chưa demo được fallback; chưa giới hạn hạn mức và
+chưa cache theo hash(prompt).
+— **Mốc: trụ cột AI sinh đề (RAG) hoạt động.** ✅
 
 ---
 

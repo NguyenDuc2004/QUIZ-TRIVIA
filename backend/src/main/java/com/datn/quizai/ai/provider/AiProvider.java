@@ -22,6 +22,14 @@ public interface AiProvider {
 
     AiCompletion complete(AiPrompt prompt);
 
+    /**
+     * Model dùng cho embedding — thường khác model sinh văn bản.
+     * Tách riêng để bản ghi audit nói đúng model nào đã tạo ra vector.
+     */
+    default String embeddingModel() {
+        return model();
+    }
+
     /** Không phải provider nào cũng có API embedding (xAI hiện không có). */
     default boolean supportsEmbedding() {
         return false;

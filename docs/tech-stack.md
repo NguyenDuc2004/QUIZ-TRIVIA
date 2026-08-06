@@ -26,7 +26,7 @@
 
 | Thành phần | Công nghệ | Ghi chú |
 |-----------|-----------|---------|
-| Provider chính | **Google Gemini API** | `gemini-2.5-flash` (nhanh), `gemini-2.5-pro` (chất lượng) |
+| Provider chính | **Google Gemini API** | `gemini-3.6-flash` (nhanh), `gemini-2.5-pro` (chất lượng) |
 | Provider dự phòng | **xAI Grok API** | Gói miễn phí, fallback khi Gemini lỗi |
 | Embedding | Gemini embedding | Tạo vector cho RAG |
 | HTTP client | Spring `WebClient` | Gọi REST của LLM |
