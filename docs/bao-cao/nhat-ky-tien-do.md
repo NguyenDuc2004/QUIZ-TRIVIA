@@ -397,8 +397,20 @@ thái cũ → ván nhảy cóc hoặc không bao giờ kết thúc. Sửa: tính
 > Đáng ghi vào báo cáo: đây là loại lỗi mà biên dịch sạch, test đơn vị sạch, thậm chí test một client
 > cũng sạch — chỉ hai client chạy song song mới lộ.
 
+### Quét QR bằng điện thoại — ba thứ chặn, đã sửa cả ba
+Lần thử đầu điện thoại báo "không tìm thấy". Kiểm chứng ra ba nguyên nhân xếp lớp, sửa lần lượt:
+1. **Vite chỉ nghe `::1`** (mặc định bind localhost) → điện thoại gọi `192.168.0.101:5173` không ai trả lời. Sửa: `server.host: true`.
+2. **QR mã hoá `localhost`** vì host mở trang bằng `localhost`; trên điện thoại địa chỉ đó là chính nó. Sửa: giữ `window.location.origin` (đúng về nguyên tắc) nhưng **thẻ mời tự cảnh báo** và hiện thẳng đường dẫn QR đang trỏ tới, thay vì để người dùng tự đoán.
+3. **CORS chỉ cho `http://localhost:5173`** → sửa xong hai cái trên sẽ vấp cái này. Sửa: chuyển sang `allowedOriginPatterns`, mặc định mở cho dải IP nội bộ; triển khai thật phải đặt `CORS_ALLOWED_ORIGINS` cụ thể.
+
+Đã kiểm chứng **7/7 ca đi đúng con đường của điện thoại** — mọi request qua `http://192.168.0.101:5173`
+và qua proxy Vite, gồm cả nối WebSocket bằng khoá phiên khách.
+
+> Đáng ghi vào báo cáo: đây là loại lỗi mà chạy trên máy dev thì không bao giờ thấy, vì máy dev luôn
+> mở bằng `localhost`. Muốn thấy phải có thiết bị thứ hai.
+
 ### Nợ / chuyển sang ngày sau
-- Chưa xem giao diện phòng chờ và QR trên trình duyệt, càng chưa quét bằng điện thoại thật.
+- Chưa xem giao diện phòng chờ bằng mắt (đã kiểm được đường mạng, chưa kiểm được bố cục).
 - `GET /rooms/{pin}` mở cho khách nên về lý thuyết dò được 10⁶ mã; nên thêm rate limit.
 - Chưa chặn trùng biệt danh giữa các khách trong cùng phòng.
 - Host bỏ đi giữa chừng thì phòng vẫn treo tới khi Redis hết TTL.

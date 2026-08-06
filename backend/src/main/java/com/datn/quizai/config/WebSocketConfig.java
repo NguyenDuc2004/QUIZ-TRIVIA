@@ -32,7 +32,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(allowedOrigins.split(","))
+                // Cùng lý do với CORS ở SecurityConfig: khi dev, điện thoại mở frontend qua IP LAN
+                // nên không liệt kê trước được origin — phải dùng mẫu.
+                .setAllowedOriginPatterns(allowedOrigins.split(","))
                 // SockJS để trình duyệt/mạng chặn WebSocket vẫn chơi được (fallback long-polling)
                 .withSockJS();
     }

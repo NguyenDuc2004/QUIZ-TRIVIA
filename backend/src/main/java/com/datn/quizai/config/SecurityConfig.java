@@ -134,7 +134,10 @@ public class SecurityConfig {
     CorsConfigurationSource appCorsConfigurationSource(
             @Value("${app.cors.allowed-origins}") String allowedOrigins) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+        // Dùng *pattern* chứ không phải danh sách origin cứng: khi dev, điện thoại quét QR sẽ mở
+        // frontend qua IP LAN (http://192.168.x.x:5173) — không thể liệt kê trước địa chỉ đó.
+        // allowCredentials(true) cấm dùng "*", nhưng allowedOriginPatterns thì vẫn được.
+        config.setAllowedOriginPatterns(List.of(allowedOrigins.split(",")));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
