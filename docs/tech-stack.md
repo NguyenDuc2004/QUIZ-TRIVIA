@@ -71,6 +71,13 @@ POSTGRES_USER, POSTGRES_PASSWORD
 NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
 REDIS_HOST, REDIS_PORT
 
+# Địa chỉ công khai — QUAN TRỌNG khi deploy
+FRONTEND_BASE_URL      # https://quiz.example.com — địa chỉ đưa vào mã QR phòng đấu.
+                       # Để trống khi dev: backend tự dò IP LAN (chỉ máy cùng Wi-Fi vào được).
+FRONTEND_DEV_PORT      # mặc định 5173, chỉ dùng khi FRONTEND_BASE_URL để trống
+CORS_ALLOWED_ORIGINS   # mẫu origin, ví dụ https://quiz.example.com
+                       # Để trống khi dev: mở cho localhost + dải IP nội bộ
+
 # Security
 JWT_SECRET, JWT_ACCESS_TTL, JWT_REFRESH_TTL
 
@@ -85,3 +92,7 @@ AI_PROVIDER_ORDER=gemini,grok
 ```
 
 > **Không commit API key** vào repo. Dùng `.env` (đã gitignore) hoặc secret manager.
+
+> **Khi deploy, bắt buộc đặt `FRONTEND_BASE_URL` và `CORS_ALLOWED_ORIGINS`.** Mặc định của hai biến
+> này chỉ đúng cho môi trường dev: mã QR sẽ mang IP LAN (chỉ máy cùng Wi-Fi quét được) và CORS mở cho
+> mọi dải IP nội bộ. Đặt đúng tên miền là mã QR chạy được với bất kỳ ai, ở bất kỳ đâu.
