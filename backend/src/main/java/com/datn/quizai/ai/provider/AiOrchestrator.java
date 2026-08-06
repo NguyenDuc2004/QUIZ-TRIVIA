@@ -34,6 +34,14 @@ public class AiOrchestrator {
 
     private static final Logger log = LoggerFactory.getLogger(AiOrchestrator.class);
 
+    /**
+     * Số lần thử tối đa với <b>cùng một</b> provider khi gặp lỗi tạm thời.
+     * Để 3 vì 503/429 của nhà cung cấp thường hết sau vài giây; cao hơn thì người dùng chờ quá lâu.
+     */
+    private static final int MAX_ATTEMPTS_PER_PROVIDER = 3;
+    /** Giãn cách giữa các lần thử, tăng dần để không dồn thêm tải lên provider đang quá tải. */
+    private static final long BASE_BACKOFF_MILLIS = 1200;
+
     /** Thứ tự ưu tiên, đã lọc theo cấu hình. */
     private final List<AiProvider> orderedProviders;
     private final AiRequestLogger requestLogger;
@@ -115,30 +123,61 @@ public class AiOrchestrator {
 
         for (int i = 0; i < candidates.size(); i++) {
             AiProvider provider = candidates.get(i);
-            try {
-                AiCompletion completion = call.apply(provider);
-                requestLogger.logSuccess(userId, feature, completion);
-                if (i > 0) {
-                    log.info("Đã dùng provider dự phòng {} cho {}", provider.name(), feature);
-                }
-                return completion;
 
-            } catch (AiProviderException e) {
-                requestLogger.logFailure(userId, feature, provider, e.getMessage());
-                failures.add(e.getMessage());
+            // Thử lại CHÍNH provider này trước khi chuyển sang provider khác: 503 "model
+            // overloaded" và 429 của nhà cung cấp thường hết sau vài giây, mà chuyển provider
+            // thì kết quả sinh ra khác chất lượng. Chỉ khi provider này hết cơ hội mới đi tiếp.
+            for (int attempt = 1; attempt <= MAX_ATTEMPTS_PER_PROVIDER; attempt++) {
+                try {
+                    AiCompletion completion = call.apply(provider);
+                    requestLogger.logSuccess(userId, feature, completion);
+                    if (i > 0 || attempt > 1) {
+                        log.info("{} thành công ở lần thử {} (provider thứ {}) cho {}",
+                                provider.name(), attempt, i + 1, feature);
+                    }
+                    return completion;
 
-                boolean isLast = i == candidates.size() - 1;
-                if (!e.isRetryable() || isLast) {
-                    // Lỗi do mình gửi sai, hoặc đã hết provider để thử → dừng luôn
-                    throw new BusinessException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
-                            "Dịch vụ AI đang không phản hồi, vui lòng thử lại sau");
+                } catch (AiProviderException e) {
+                    requestLogger.logFailure(userId, feature, provider, e.getMessage());
+                    failures.add(e.getMessage());
+
+                    boolean canRetrySameProvider = e.isRetryable() && attempt < MAX_ATTEMPTS_PER_PROVIDER;
+                    if (canRetrySameProvider) {
+                        log.warn("{} lỗi tạm thời ({}), thử lại sau {}ms",
+                                provider.name(), e.getMessage(), backoffMillis(attempt));
+                        sleep(backoffMillis(attempt));
+                        continue;
+                    }
+
+                    boolean isLastProvider = i == candidates.size() - 1;
+                    if (!e.isRetryable() || isLastProvider) {
+                        // Lỗi do mình gửi sai, hoặc đã hết cả provider lẫn lần thử → dừng luôn
+                        throw new BusinessException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+                                "Dịch vụ AI đang không phản hồi, vui lòng thử lại sau");
+                    }
+                    log.warn("{} vẫn lỗi sau {} lần thử, chuyển sang provider tiếp theo",
+                            provider.name(), attempt);
+                    break;
                 }
-                log.warn("Provider {} lỗi tạm thời ({}), chuyển sang provider tiếp theo", provider.name(), e.getMessage());
             }
         }
 
         throw new BusinessException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
                 "Dịch vụ AI đang không phản hồi: " + String.join(" | ", failures));
+    }
+
+    /** Backoff tăng dần: 1,2s rồi 2,4s. */
+    private long backoffMillis(int attempt) {
+        return BASE_BACKOFF_MILLIS * attempt;
+    }
+
+    private void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Bị ngắt khi chờ thử lại lời gọi AI", e);
+        }
     }
 
     /** Nhét vector vào {@code AiCompletion.text} để dùng chung một đường fallback + audit. */

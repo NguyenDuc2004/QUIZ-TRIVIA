@@ -105,6 +105,11 @@ khách nhận một khoá ngẫu nhiên trong Redis, **gắn chặt với đúng
 vụ ảnh bên ngoài, chạy được cả khi mất mạng. Đổi lại đây là biểu tượng vui chứ không phải tranh
 nhân vật vẽ tay — muốn có bộ chibi thật thì phải mua hoặc tự vẽ rồi thay `PlayerAvatar`.
 
+**14. Lỗi tạm thời của nhà cung cấp AI được thử lại chính provider đó** trước khi chuyển provider
+khác (3 lần, backoff 1,2s → 2,4s). Gemini trả 503 *model overloaded* khá thường xuyên và thường hết
+sau vài giây; chuyển provider ngay thì chất lượng câu sinh ra lại khác. *(Phát hiện khi chạy hồi quy:
+một lần sinh đề hỏng vì 503, trong khi thử lại là được.)*
+
 **13. `next` tính bước chuyển ngay trong khoá.** Kênh STOMP đến của Spring chạy đa luồng, nên hai
 lệnh "câu tiếp theo" gửi sát nhau có thể xử lý song song, cùng đọc một trạng thái cũ và cùng phát
 câu kế tiếp. *Lỗi này chỉ lộ ra khi chạy thật với hai client.*

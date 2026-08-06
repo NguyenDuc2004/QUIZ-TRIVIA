@@ -19,6 +19,7 @@
 | 07/08 | **Lát cắt Phòng đấu real-time** (STOMP + Redis Pub/Sub) | 6/6 | 🟢 xong |
 | 07/08 (chiều) | **Lát cắt AI + RAG sinh đề** — đã gọi Gemini thật | 7/7 | 🟢 xong |
 | 07/08 (tối) | Mã PIN + QR, khách vãng lai, avatar, phòng chờ live | 7/7 | 🟢 xong |
+| 07/08 (đêm) | Hồi quy toàn bộ + bít lỗ hổng phiên đăng nhập | 5/5 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -424,6 +425,56 @@ từ `localhost` mà QR vẫn ra địa chỉ LAN, tức là đúng cái ca đã
 - **Mục 2.8:** `game_room_players` là bảng duy nhất có khoá ngoại nullable — giải thích lý do và ràng buộc CHECK đi kèm.
 - **Mục 2.3 (bảo mật):** đối chiếu hai cơ chế danh tính (JWT dài hạn toàn hệ thống vs khoá phiên ngắn hạn một phòng) là một mục hay.
 - **Mục 3.4:** 144 test tự động + 22 ca kiểm chứng 2 client. Race condition ở `next` nên đưa vào "khó khăn & cách giải quyết".
+
+---
+
+## 📅 T6 — 07/08/2026 (đêm) — Hồi quy toàn bộ trước khi merge
+
+**Mục tiêu:** Trước khi gộp hai lát cắt (AI+RAG và Phòng đấu) vào `main`, chạy lại **mọi** bộ kiểm chứng đã viết để chắc không có gì vỡ ngầm, và bít những lỗ hổng đã ghi nhận.
+
+### Nhiệm vụ
+- [x] Bít lỗ hổng: đổi mật khẩu phải thu hồi phiên trên mọi thiết bị
+- [x] Thêm `POST /auth/logout-all` (đăng xuất mọi thiết bị khi mất máy)
+- [x] Sai phương thức HTTP trả 405 thay vì 500
+- [x] Thử lại provider AI khi gặp lỗi tạm thời
+- [x] Hồi quy 9 bộ kiểm chứng: **183/183 đạt**
+
+### Kết quả hồi quy
+
+| Bộ kiểm chứng | Kết quả |
+|---|---|
+| Làm bài quiz (lát cắt 3) | 48/48 |
+| Ảnh bìa quiz (upload) | 19/19 |
+| AI + RAG sinh đề (lát cắt 5) | 22/22 |
+| Phòng đấu real-time (lát cắt 4) | 31/31 |
+| Khách vãng lai + avatar + sẵn sàng | 22/22 |
+| Đường LAN cho điện thoại | 7/7 |
+| `joinUrl` trong mã QR | 6/6 |
+| Đăng nhập nhiều thiết bị | 15/15 |
+| Thu hồi phiên | 13/13 |
+| **Tổng** | **183/183** |
+
+Cộng với **144/144** test JUnit và build frontend pass.
+
+### Bốn thứ hồi quy phát hiện và đã sửa
+
+1. **Đổi mật khẩu không cắt phiên thiết bị khác.** Mất điện thoại rồi đổi mật khẩu trên máy tính thì chiếc điện thoại đó *vẫn* vào được tới 14 ngày. Người dùng đổi mật khẩu luôn tin là mình vừa cắt hết truy cập — hệ thống phải làm đúng điều đó. Sửa: thêm chỉ mục ngược Redis `user-sessions:{userId}` để thu hồi được cả loạt, gọi khi đổi mật khẩu; kèm endpoint `logout-all`.
+2. **Sai phương thức HTTP trả 500.** `GlobalExceptionHandler` không bắt `HttpRequestMethodNotSupportedException` nên gọi `PUT` vào endpoint chỉ nhận `POST` cho ra "Đã có lỗi xảy ra" — người gọi API không biết mình chỉ dùng sai động từ. Sửa: trả 405 kèm danh sách phương thức được phép.
+3. **Gemini trả 503 *model overloaded* làm hỏng cả lần sinh đề.** Lỗi tạm thời, thử lại là được, nhưng orchestrator bỏ luôn vì không có provider dự phòng (chưa có key Grok). Sửa: thử lại chính provider đó 3 lần với backoff 1,2s → 2,4s trước khi chuyển provider.
+4. **Hai kỳ vọng cũ trong script kiểm chứng** đã lệch so với hành vi mới có chủ đích (`GET /rooms/{pin}` nay mở cho khách; đổi mật khẩu nay thu hồi phiên). Đã cập nhật script — *không* sửa code để chạy theo script cũ.
+
+> Còn một lỗi trong chính `run_all.sh`: bộ nào crash giữa đường thì không in được dòng kết quả, và script cộng dồn nên báo "0 hỏng" trong khi thực tế có bộ chưa chạy hết. Đã sửa để crash tính là hỏng. **Bài học: chỉ số "0 hỏng" của một script tự viết cũng phải được kiểm.**
+
+### Nợ / chuyển sang ngày sau
+- Vẫn chưa xem giao diện bằng mắt (phòng chờ, QR, màn sinh đề AI).
+- **Kế tiếp: FR-3 đăng nhập Google + FR-4 quên mật khẩu qua OTP email** — cần chốt nhà cung cấp SMTP.
+- Chưa rate limit `GET /rooms/{pin}` và chưa giới hạn hạn mức gọi AI theo user.
+- Chưa chặn trùng biệt danh giữa các khách trong cùng phòng.
+
+### Ghi chú báo cáo
+- **Mục 3.4:** 144 test tự động + **183 ca kiểm chứng HTTP/WebSocket trên hệ thống đang chạy**, chia 9 bộ theo tính năng. Bảng ở trên dùng được trực tiếp.
+- **Mục 2.3 (bảo mật):** ba lỗi sửa ở đây đều là ví dụ tốt — thu hồi phiên khi đổi mật khẩu (quan niệm người dùng vs hành vi hệ thống), mã lỗi đúng ngữ nghĩa (405 vs 500), và chịu lỗi tạm thời của bên thứ ba (retry + backoff).
+- **Mục "khó khăn & cách giải quyết":** lỗi trong chính script kiểm chứng là dẫn chứng đáng viết — công cụ đo cũng có thể sai, và một con số "toàn đạt" không tự nó là bằng chứng.
 
 ---
 

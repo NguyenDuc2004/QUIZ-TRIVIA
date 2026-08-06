@@ -55,8 +55,16 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/logout-all")
+    @Operation(summary = "Đăng xuất khỏi mọi thiết bị — dùng khi mất máy")
+    public java.util.Map<String, Integer> logoutAll(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser currentUser) {
+        return java.util.Map.of("revokedSessions", authService.logoutAllDevices(currentUser.id()));
+    }
+
     @PostMapping("/change-password")
-    @Operation(summary = "Đổi mật khẩu của chính mình (cần đăng nhập)")
+    @Operation(summary = "Đổi mật khẩu của chính mình. Thu hồi MỌI phiên, kể cả phiên đang gọi — "
+            + "client phải đăng nhập lại.")
     public ResponseEntity<Void> changePassword(
             @AuthenticationPrincipal JwtService.AuthenticatedUser currentUser,
             @Valid @RequestBody ChangePasswordRequest request) {

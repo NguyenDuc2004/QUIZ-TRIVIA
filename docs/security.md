@@ -5,7 +5,9 @@
 - **Mật khẩu:** băm bằng **BCrypt**, không lưu plaintext.
 - **JWT:** access token ngắn hạn (15 phút) + refresh token dài hạn; xoay vòng (rotation) refresh token.
 - **Đăng nhập nhiều thiết bị:** mỗi lần đăng nhập cấp một refresh token riêng (`session:{token}` ở Redis), nên máy tính và điện thoại dùng song song được, không ai đá ai ra. Đăng xuất chỉ thu hồi phiên của thiết bị đó.
-  - ⚠️ **Đổi mật khẩu KHÔNG thu hồi phiên của các thiết bị khác.** Nghĩa là mất điện thoại rồi đổi mật khẩu trên máy tính thì chiếc điện thoại đó *vẫn* đăng nhập được tới khi refresh token hết hạn (14 ngày). Cần bổ sung: đổi mật khẩu → xoá mọi `session:*` của user đó, và thêm chức năng "đăng xuất mọi thiết bị".
+  - ✅ **Đổi mật khẩu thu hồi phiên trên MỌI thiết bị**, kể cả thiết bị đang gọi — người dùng đổi mật khẩu thường tin là mình vừa cắt hết truy cập, hệ thống phải làm đúng điều đó. Client buộc phải đăng nhập lại.
+  - ✅ **`POST /auth/logout-all`** — đăng xuất khỏi mọi thiết bị, dùng khi mất máy (đăng xuất trên máy đang cầm không giúp gì, vì phiên nằm ở chiếc máy đã mất). Trả về số phiên đã thu hồi.
+  - Cả hai dựa trên chỉ mục ngược Redis `user-sessions:{userId}`; không có nó thì phải `SCAN` toàn bộ key `session:*` để tìm phiên của một người.
 - **RBAC:** phân quyền theo vai trò ở tầng controller bằng `@PreAuthorize("hasRole('CREATOR')")`.
 - **OAuth2 (tùy chọn):** đăng nhập Google.
 - **WebSocket:** xác thực ở **frame STOMP CONNECT** (không phải lúc handshake HTTP — trình duyệt không gắn được header vào yêu cầu nâng cấp WebSocket). Chấp nhận `Authorization: Bearer <JWT>` cho thành viên, hoặc `X-Guest-Key` cho khách vãng lai.

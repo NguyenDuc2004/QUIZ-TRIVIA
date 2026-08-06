@@ -105,7 +105,24 @@ public class AuthService {
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
-        log.info("Người dùng {} đã đổi mật khẩu", userId);
+
+        // Thu hồi MỌI phiên, kể cả phiên đang gọi. Người dùng đổi mật khẩu thường tin là mình vừa
+        // cắt hết truy cập — nếu không làm bước này thì chiếc điện thoại bị mất vẫn vào được tới
+        // hết hạn refresh token (14 ngày). Client phải đăng nhập lại sau khi đổi mật khẩu.
+        int revoked = refreshTokenService.revokeAll(userId);
+        log.info("Người dùng {} đã đổi mật khẩu, thu hồi {} phiên", userId, revoked);
+    }
+
+    /**
+     * Đăng xuất khỏi mọi thiết bị.
+     * <p>
+     * Cần cho tình huống mất máy: đăng xuất trên thiết bị đang cầm không giúp gì, vì phiên nằm ở
+     * chiếc máy đã mất.
+     *
+     * @return số phiên đã thu hồi, để giao diện báo lại cho người dùng
+     */
+    public int logoutAllDevices(UUID userId) {
+        return refreshTokenService.revokeAll(userId);
     }
 
     private AuthResponse issueTokens(User user) {

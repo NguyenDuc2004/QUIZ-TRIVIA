@@ -8,6 +8,7 @@ POST   /api/v1/auth/register        Đăng ký → 201 + access & refresh token 
 POST   /api/v1/auth/login           Đăng nhập → access + refresh token              ✅
 POST   /api/v1/auth/refresh         Làm mới token (rotation: token cũ bị thu hồi)   ✅
 POST   /api/v1/auth/logout          Đăng xuất → 204, thu hồi refresh token          ✅
+POST   /api/v1/auth/logout-all       Đăng xuất mọi thiết bị (mất máy)                ✅
 POST   /api/v1/auth/change-password Đổi mật khẩu (cần đăng nhập) → 204              ✅
 POST   /api/v1/auth/forgot-password Quên mật khẩu                                   ⏳ cần cấu hình SMTP
 POST   /api/v1/auth/reset-password  Đặt lại mật khẩu bằng token gửi qua email       ⏳ cần cấu hình SMTP
