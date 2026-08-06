@@ -22,8 +22,16 @@ public class User extends BaseEntity {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 100)
+    /** NULL = tài khoản chỉ đăng nhập bằng Google, chưa từng đặt mật khẩu. */
+    @Column(name = "password_hash", length = 100)
     private String passwordHash;
+
+    /**
+     * Google subject id ({@code sub}) — định danh ổn định, không đổi kể cả khi người dùng đổi địa
+     * chỉ Gmail. Vì vậy đây mới là khoá liên kết tài khoản Google, không phải email.
+     */
+    @Column(name = "google_id", length = 64)
+    private String googleId;
 
     @Column(name = "display_name", nullable = false, length = 100)
     private String displayName;
@@ -40,5 +48,10 @@ public class User extends BaseEntity {
         this.passwordHash = passwordHash;
         this.displayName = displayName;
         this.role = role;
+    }
+
+    /** Đăng nhập được bằng email + mật khẩu hay chỉ bằng Google. */
+    public boolean hasPassword() {
+        return passwordHash != null && !passwordHash.isBlank();
     }
 }

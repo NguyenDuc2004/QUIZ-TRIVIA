@@ -33,11 +33,15 @@ ai_request_logs (audit các lần gọi AI)
 |-----|------|---------|
 | id | UUID (PK) | |
 | email | varchar unique | |
-| password_hash | varchar | BCrypt |
+| password_hash | varchar | BCrypt · **nullable** — NULL = tài khoản chỉ đăng nhập bằng Google |
+| google_id | varchar(64) | nullable, unique (partial index bỏ qua NULL) · `sub` của Google |
 | display_name | varchar | |
 | avatar_url | varchar | nullable |
 | role | enum | LEARNER / CREATOR / ADMIN |
 | created_at, updated_at | timestamptz | |
+
+> `CHECK (password_hash IS NOT NULL OR google_id IS NOT NULL)` — mỗi tài khoản phải có ít nhất một
+> cách đăng nhập; không để lọt bản ghi vào được bằng không đường nào.
 
 **categories**
 | id (PK) | name | slug | description |

@@ -10,7 +10,7 @@
   - ✅ **`POST /auth/logout-all`** — đăng xuất khỏi mọi thiết bị, dùng khi mất máy (đăng xuất trên máy đang cầm không giúp gì, vì phiên nằm ở chiếc máy đã mất). Trả về số phiên đã thu hồi.
   - Cả hai dựa trên chỉ mục ngược Redis `user-sessions:{userId}`; không có nó thì phải `SCAN` toàn bộ key `session:*` để tìm phiên của một người.
 - **RBAC:** phân quyền theo vai trò ở tầng controller bằng `@PreAuthorize("hasRole('CREATOR')")`.
-- **OAuth2 (tùy chọn):** đăng nhập Google.
+- **Đăng nhập Google:** xác minh ID token bằng `GoogleIdTokenVerifier` chính chủ — kiểm chữ ký, `iss`, hạn dùng, và **`aud` phải khớp Client ID của ứng dụng** (không kiểm `aud` thì token cấp cho ứng dụng khác vẫn vào được). Từ chối token có email chưa xác minh, vì tài khoản Google mang email người khác sẽ chiếm được tài khoản của họ. Liên kết theo `sub` chứ không theo email. Tài khoản tạo qua Google luôn là **LEARNER**. Client ID là giá trị công khai, không phải secret; luồng ID token nên **không cần Client Secret**.
 - **WebSocket:** xác thực ở **frame STOMP CONNECT** (không phải lúc handshake HTTP — trình duyệt không gắn được header vào yêu cầu nâng cấp WebSocket). Chấp nhận `Authorization: Bearer <JWT>` cho thành viên, hoặc `X-Guest-Key` cho khách vãng lai.
 - **Khoá phiên khách:** ngẫu nhiên 32 byte, lưu Redis `roomguest:{key}` với TTL 6 giờ, **gắn chặt với đúng một phòng**. Không phải JWT nên không mở được bất kỳ API nào khác; hết ván là hết giá trị.
 - **Cho khách vào phòng là tuỳ chọn từng phòng** (`allow_guests`, mặc định *tắt*) — host chủ động bật, không phải luật toàn hệ thống.

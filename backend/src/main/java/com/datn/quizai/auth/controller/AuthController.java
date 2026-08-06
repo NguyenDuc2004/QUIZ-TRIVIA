@@ -6,6 +6,7 @@ import com.datn.quizai.auth.dto.AuthResponse;
 import com.datn.quizai.auth.dto.ChangePasswordRequest;
 import com.datn.quizai.auth.dto.ForgotPasswordRequest;
 import com.datn.quizai.auth.dto.ResetPasswordRequest;
+import com.datn.quizai.auth.dto.GoogleLoginRequest;
 import com.datn.quizai.auth.dto.LoginRequest;
 import com.datn.quizai.auth.dto.RefreshRequest;
 import com.datn.quizai.auth.dto.RegisterRequest;
@@ -55,6 +56,13 @@ public class AuthController {
     public ResponseEntity<Void> logout(@Valid @RequestBody RefreshRequest request) {
         authService.logout(request.refreshToken());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/google")
+    @Operation(summary = "Đăng nhập bằng Google. Gửi ID token lấy từ Google Identity Services; "
+            + "backend tự xác minh chữ ký với Google.")
+    public AuthResponse loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+        return authService.loginWithGoogle(request);
     }
 
     @PostMapping("/forgot-password")

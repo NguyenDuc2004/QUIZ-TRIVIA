@@ -8,6 +8,9 @@ import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
 
+    /** Tra theo `sub` của Google — ổn định hơn email vì người dùng đổi được địa chỉ Gmail. */
+    Optional<User> findByGoogleId(String googleId);
+
     Optional<User> findByEmail(String email);
 
     boolean existsByEmail(String email);

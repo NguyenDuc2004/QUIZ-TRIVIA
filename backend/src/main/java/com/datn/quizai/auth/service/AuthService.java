@@ -4,6 +4,7 @@ import com.datn.quizai.auth.dto.AuthResponse;
 import com.datn.quizai.auth.dto.ChangePasswordRequest;
 import com.datn.quizai.auth.dto.ForgotPasswordRequest;
 import com.datn.quizai.auth.dto.ResetPasswordRequest;
+import com.datn.quizai.auth.dto.GoogleLoginRequest;
 import com.datn.quizai.auth.dto.LoginRequest;
 import com.datn.quizai.auth.dto.RegisterRequest;
 import com.datn.quizai.common.exception.BusinessException;
@@ -31,19 +32,22 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final PasswordResetOtpService otpService;
     private final MailService mailService;
+    private final GoogleTokenVerifier googleTokenVerifier;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
                        RefreshTokenService refreshTokenService,
                        PasswordResetOtpService otpService,
-                       MailService mailService) {
+                       MailService mailService,
+                       GoogleTokenVerifier googleTokenVerifier) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.otpService = otpService;
         this.mailService = mailService;
+        this.googleTokenVerifier = googleTokenVerifier;
     }
 
     @Transactional
@@ -105,6 +109,12 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> BusinessException.notFound("Không tìm thấy người dùng"));
 
+        if (!user.hasPassword()) {
+            // Tài khoản tạo qua Google chưa từng có mật khẩu — không có "mật khẩu hiện tại" để đối chiếu
+            throw BusinessException.badRequest(
+                    "Tài khoản này đăng nhập bằng Google nên chưa có mật khẩu. "
+                            + "Dùng chức năng Quên mật khẩu để đặt mật khẩu đầu tiên.");
+        }
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
             throw BusinessException.unauthorized("Mật khẩu hiện tại không đúng");
         }
@@ -119,6 +129,61 @@ public class AuthService {
         // hết hạn refresh token (14 ngày). Client phải đăng nhập lại sau khi đổi mật khẩu.
         int revoked = refreshTokenService.revokeAll(userId);
         log.info("Người dùng {} đã đổi mật khẩu, thu hồi {} phiên", userId, revoked);
+    }
+
+    /**
+     * Đăng nhập bằng Google (FR-3).
+     * <p>
+     * Ba tình huống, xử lý khác nhau:
+     * <ol>
+     *   <li><b>Đã liên kết</b> (khớp {@code google_id}) — đăng nhập luôn.</li>
+     *   <li><b>Có tài khoản email/mật khẩu cùng địa chỉ</b> — <i>liên kết</i> tài khoản Google vào
+     *       đó thay vì tạo tài khoản thứ hai. Chỉ làm được vì Google đã xác minh email; nếu không
+     *       thì bất kỳ ai tạo tài khoản Google với email của người khác sẽ chiếm được tài khoản.</li>
+     *   <li><b>Hoàn toàn mới</b> — tạo tài khoản không có mật khẩu, vai trò LEARNER.</li>
+     * </ol>
+     * Tài khoản mới luôn là LEARNER: cho tự chọn vai trò qua tham số là mở đường tự phong CREATOR,
+     * cùng lý do với việc đăng ký thường bị hạ vai trò ADMIN.
+     */
+    @Transactional
+    public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
+        GoogleTokenVerifier.GoogleAccount account = googleTokenVerifier.verify(request.idToken());
+
+        User user = userRepository.findByGoogleId(account.subject())
+                .orElseGet(() -> linkOrCreate(account));
+
+        // Ảnh đại diện có thể đổi bên Google, đồng bộ lại mỗi lần đăng nhập
+        if (account.pictureUrl() != null && !account.pictureUrl().equals(user.getAvatarUrl())) {
+            user.setAvatarUrl(account.pictureUrl());
+        }
+
+        return issueTokens(user);
+    }
+
+    private User linkOrCreate(GoogleTokenVerifier.GoogleAccount account) {
+        return userRepository.findByEmail(account.email())
+                .map(existing -> {
+                    existing.setGoogleId(account.subject());
+                    log.info("Đã liên kết tài khoản Google vào người dùng sẵn có {}", existing.getId());
+                    return existing;
+                })
+                .orElseGet(() -> {
+                    User created = new User(account.email(), null,
+                            displayNameOrFallback(account), Role.LEARNER);
+                    created.setGoogleId(account.subject());
+                    created.setAvatarUrl(account.pictureUrl());
+                    log.info("Tạo tài khoản mới từ Google cho {}", account.email());
+                    return userRepository.save(created);
+                });
+    }
+
+    /** Google không phải lúc nào cũng trả tên; lấy phần trước @ làm tên hiển thị tạm. */
+    private String displayNameOrFallback(GoogleTokenVerifier.GoogleAccount account) {
+        if (account.displayName() != null && !account.displayName().isBlank()) {
+            return account.displayName();
+        }
+        String email = account.email();
+        return email.substring(0, email.indexOf('@'));
     }
 
     /**

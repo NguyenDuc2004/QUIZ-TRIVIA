@@ -40,6 +40,10 @@ export const authApi = {
   login: (body: LoginBody) =>
     apiClient.post<AuthResult>('/auth/login', body).then((res) => res.data),
 
+  /** Gửi ID token của Google; backend tự xác minh chữ ký rồi cấp token của hệ thống. */
+  loginWithGoogle: (idToken: string) =>
+    apiClient.post<AuthResult>('/auth/google', { idToken }).then((res) => res.data),
+
   logout: (refreshToken: string) =>
     apiClient.post<void>('/auth/logout', { refreshToken }).then((res) => res.data),
 

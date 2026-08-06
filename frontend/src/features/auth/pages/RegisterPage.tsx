@@ -2,6 +2,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { Button, Form, Input, Radio, Typography } from 'antd'
+import GoogleLoginButton from '../components/GoogleLoginButton'
 import { useRegister } from '../hooks/useAuthMutations'
 import { registerSchema, type RegisterForm } from '../schema'
 
@@ -120,6 +121,14 @@ export default function RegisterPage() {
             Đăng ký
           </Button>
         </Form>
+
+        <div className="my-5 flex items-center gap-3">
+          <div className="h-px flex-1 bg-line" />
+          <span className="text-ink-soft text-xs">hoặc</span>
+          <div className="h-px flex-1 bg-line" />
+        </div>
+
+        <GoogleLoginButton text="signup_with" />
 
         <div className="mt-6 border-t border-line pt-4 text-center text-sm">
           Đã có tài khoản?{' '}

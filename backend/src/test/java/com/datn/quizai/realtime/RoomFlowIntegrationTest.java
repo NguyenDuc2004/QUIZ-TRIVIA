@@ -2,6 +2,7 @@ package com.datn.quizai.realtime;
 
 import com.datn.quizai.realtime.dto.GameEvent;
 import com.datn.quizai.realtime.dto.GameEventType;
+import com.datn.quizai.realtime.service.RoomStateStore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterAll;
@@ -81,6 +82,8 @@ class RoomFlowIntegrationTest {
     private MockMvc mockMvc;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private RoomStateStore stateStore;
 
     private WebSocketStompClient stompClient;
     private String hostToken;
@@ -572,6 +575,23 @@ class RoomFlowIntegrationTest {
             }
         }
         throw new AssertionError("Câu hỏi không có đáp án đúng");
+    }
+
+    @Test
+    @DisplayName("Ván kết thúc ở Redis nhưng CSDL chưa kịp commit: join vẫn phải bị chặn 409")
+    void shouldRejectJoinWhenLiveStateAlreadyFinished() throws Exception {
+        // Tái hiện đúng khe hẹp gây lỗi: `next()` đổi trạng thái ở Redis trong khoá rồi phát
+        // GAME_FINISHED NGAY, trong khi cột game_rooms.status chỉ đổi lúc giao dịch commit.
+        // Người chơi nhận sự kiện xong gọi join ngay thì CSDL còn đọc ra PLAYING.
+        // Ở đây dựng thẳng trạng thái lệch đó thay vì cố chạy đua cho thắng — vừa chắc chắn,
+        // vừa nói rõ bất biến cần giữ: Redis là trạng thái sống, CSDL chỉ là bản lưu.
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken);
+
+        stateStore.update(roomCode, state -> state.finished());
+
+        mockMvc.perform(post("/api/v1/rooms/" + roomCode + "/join")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + playerToken))
+                .andExpect(status().isConflict());
     }
 
     private String createRoom(String quizId, String token) throws Exception {

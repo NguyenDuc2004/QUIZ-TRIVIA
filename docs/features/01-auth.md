@@ -13,8 +13,36 @@ Cho phép người dùng đăng ký, đăng nhập an toàn và phân quyền tr
 ## Yêu cầu chức năng
 - **FR-1** [M] ✅ Đăng ký bằng email + mật khẩu (email chuẩn hóa chữ thường, băm BCrypt). Xác thực email: chưa làm (tùy chọn).
 - **FR-2** [M] ✅ Đăng nhập/đăng xuất; Access Token (JWT HS256, 15 phút) + Refresh Token (Redis, 14 ngày, có rotation).
-- **FR-3** [S] ⏳ Đăng nhập qua OAuth2 (Google) — chưa làm, mức Should.
+- **FR-3** [S] ✅ Đăng nhập bằng **Google** (Google Identity Services, luồng ID token).
 - **FR-4** [M] ✅ Quên/đặt lại mật khẩu bằng **mã OTP 6 chữ số gửi qua email** (Gmail SMTP + App Password).
+
+### Đăng nhập Google — vì sao chọn luồng ID token
+
+Có hai cách nối Google: **luồng chuyển hướng phía máy chủ** (Authorization Code, cần Client Secret,
+cần redirect URI khớp tuyệt đối) và **luồng ID token** (frontend nhận token từ Google, gửi cho
+backend xác minh chữ ký). Dự án dùng cách thứ hai: không phải giữ Client Secret, không phải khai báo
+lại redirect URI mỗi lần đổi tên miền, và backend vẫn là bên duy nhất quyết định "người này là ai" —
+frontend chỉ chuyển tiếp một mẩu token nó không tự đọc.
+
+`GoogleIdTokenVerifier` của thư viện chính chủ lo tải khoá công khai, kiểm chữ ký RS256, `iss`, hạn
+dùng, và quan trọng nhất là **`aud` phải bằng Client ID của ứng dụng này** — bỏ bước đó thì một
+token Google hợp lệ cấp cho ứng dụng khác cũng đăng nhập vào đây được.
+
+| Tình huống | Xử lý |
+|---|---|
+| Đã liên kết (khớp `google_id`) | Đăng nhập luôn, đồng bộ lại ảnh đại diện |
+| Email đã có tài khoản mật khẩu | **Liên kết** Google vào tài khoản đó, giữ nguyên mật khẩu và tên hiển thị cũ — người dùng dùng được cả hai cách |
+| Hoàn toàn mới | Tạo tài khoản **không mật khẩu**, vai trò **LEARNER** (không cho chọn vai trò, cùng lý do đăng ký thường bị hạ vai trò ADMIN) |
+
+Chỉ liên kết theo email khi Google báo **`email_verified`**; nếu không, ai tạo tài khoản Google mang
+email của người khác cũng chiếm được tài khoản của họ.
+
+Khoá liên kết là `sub` của Google chứ **không phải email** — `sub` không đổi kể cả khi người dùng
+đổi địa chỉ Gmail.
+
+Tài khoản chỉ-Google không có "mật khẩu hiện tại" để đối chiếu, nên `change-password` trả **400** kèm
+hướng dẫn dùng **Quên mật khẩu** để đặt mật khẩu đầu tiên — đường đó chạy được vì OTP gửi về chính
+hòm thư Google đã xác minh.
 
 ### Quên mật khẩu qua OTP — bốn lớp bảo vệ
 

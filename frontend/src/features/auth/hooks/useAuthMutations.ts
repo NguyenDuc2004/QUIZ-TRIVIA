@@ -21,6 +21,21 @@ export function useLogin() {
   })
 }
 
+export function useGoogleLogin() {
+  const setSession = useAuthStore((state) => state.setSession)
+  const navigate = useNavigate()
+
+  return useMutation({
+    mutationFn: (idToken: string) => authApi.loginWithGoogle(idToken),
+    onSuccess: (result) => {
+      setSession(result)
+      message.success(`Xin chào ${result.user.displayName}`)
+      navigate('/', { replace: true })
+    },
+    onError: (error) => message.error(getApiErrorMessage(error, 'Đăng nhập Google thất bại')),
+  })
+}
+
 export function useRegister() {
   const setSession = useAuthStore((state) => state.setSession)
   const navigate = useNavigate()
