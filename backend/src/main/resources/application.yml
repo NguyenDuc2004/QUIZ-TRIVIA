@@ -69,6 +69,14 @@ app:
     # Mặc định mở cho localhost và các dải IP nội bộ để điện thoại cùng Wi-Fi quét QR vào được.
     # TRIỂN KHAI THẬT: đặt CORS_ALLOWED_ORIGINS thành đúng tên miền, đừng để mặc định này.
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:[*],http://127.0.0.1:[*],http://192.168.*.*:[*],http://10.*.*.*:[*],http://172.16.*.*:[*]}
+  oauth:
+    google:
+      # OAuth 2.0 Client ID (loại Web application) từ Google Cloud Console.
+      # Backend dùng nó làm `audience` khi xác minh ID token — không kiểm bước này thì một token
+      # Google hợp lệ cấp cho ứng dụng KHÁC vẫn đăng nhập vào đây được.
+      # Không cần Client Secret: frontend lấy ID token trực tiếp từ Google, backend chỉ xác minh.
+      client-id: ${GOOGLE_CLIENT_ID:}
+
   mail:
     # Tên và địa chỉ hiện ở ô "Người gửi". Bỏ trống from thì dùng chính spring.mail.username.
     from: ${MAIL_FROM:}

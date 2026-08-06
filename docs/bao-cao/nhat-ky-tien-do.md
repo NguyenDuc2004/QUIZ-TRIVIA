@@ -21,6 +21,7 @@
 | 07/08 (tối) | Mã PIN + QR, khách vãng lai, avatar, phòng chờ live | 7/7 | 🟢 xong |
 | 07/08 (đêm) | Hồi quy toàn bộ + bít lỗ hổng phiên đăng nhập | 5/5 | 🟢 xong |
 | 08/08 | **FR-4 quên mật khẩu qua OTP email** (Gmail App Password) | 6/6 | 🟢 xong |
+| 08/08 (chiều) | **FR-3 đăng nhập bằng Google** (luồng ID token) + vá lỗi đua Redis/CSDL | 7/7 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -524,7 +525,7 @@ Chạy lại toàn bộ 10 bộ kiểm chứng, không bộ nào vỡ. Cộng **
 - **Chưa gửi thư thật** — cần điền `MAIL_USERNAME` và `MAIL_PASSWORD` (App Password) vào `.env`.
   Hiện chưa cấu hình thì `MailService` chỉ ghi mã ra log, đủ để kiểm luồng nhưng chưa phải bằng chứng
   email tới được hòm thư.
-- **FR-3 đăng nhập Google** — việc kế tiếp, cần Client ID/Secret từ Google Cloud Console.
+- **FR-3 đăng nhập Google** — việc kế tiếp, cần Client ID từ Google Cloud Console.
 - Chưa xem giao diện trang quên mật khẩu bằng mắt.
 
 ### Ghi chú báo cáo
@@ -535,6 +536,119 @@ Chạy lại toàn bộ 10 bộ kiểm chứng, không bộ nào vỡ. Cộng **
 - **Mục 3.4:** 153 test tự động + 198 ca kiểm chứng trên hệ thống chạy thật (10 bộ).
 - **"Khó khăn & cách giải quyết":** lỗi health check 503 là ví dụ rất tốt — thêm một dependency có thể
   đổi hành vi của thứ tưởng như không liên quan.
+
+---
+
+## 📅 T7 — 08/08/2026 (chiều) — FR-3: Đăng nhập bằng Google
+
+**Mục tiêu:** Nốt yêu cầu chức năng cuối còn treo của lát cắt Auth. Trước đó hệ thống chỉ có **một
+cách** đăng nhập là email + mật khẩu.
+
+### Nhiệm vụ
+- [x] Migration `V8__google_login.sql` — thêm `google_id`, bỏ `NOT NULL` của `password_hash`
+- [x] `GoogleTokenVerifier` — xác minh ID token bằng thư viện chính chủ
+- [x] `AuthService.loginWithGoogle` — liên kết / tạo tài khoản
+- [x] `POST /api/v1/auth/google`
+- [x] Frontend: nút Google chính chủ ở trang Đăng nhập và Đăng ký
+- [x] Test **160/160** JUnit (thêm 7 ca) + hồi quy **198/198** ca kiểm chứng HTTP/WebSocket thật
+
+### Chọn luồng nào: chuyển hướng phía máy chủ hay ID token
+
+| | Authorization Code (server-side) | **ID token (đã chọn)** |
+|---|---|---|
+| Client Secret | Bắt buộc — thêm một secret phải giữ | Không cần |
+| Redirect URI | Phải khai báo và khớp tuyệt đối; đổi tên miền là phải sửa ở Google | Chỉ cần khai *JavaScript origin* |
+| Số vòng mạng | Trình duyệt → Google → backend → Google (đổi code lấy token) | Trình duyệt lấy token, backend xác minh |
+| Ai quyết định danh tính | Backend | Backend (frontend chỉ chuyển tiếp token nó không tự đọc) |
+
+Điểm chung quan trọng: **cả hai luồng backend đều là bên duy nhất xác định người dùng là ai.** Cái sai
+kinh điển là để frontend tự giải mã token rồi gửi lên `{"email": "..."}` — như vậy ai cũng tự khai
+mình là người khác được.
+
+### Ba chỗ dễ làm sai, mỗi chỗ là một lỗ hổng
+
+1. **Không kiểm `aud`.** `verify()` sẽ chấp nhận mọi token Google ký hợp lệ — kể cả token cấp cho một
+   ứng dụng hoàn toàn khác. Bất kỳ ai có ứng dụng Google nào đó đều đăng nhập vào đây được. Sửa:
+   `setAudience(List.of(clientId))`.
+2. **Liên kết theo email mà không kiểm `email_verified`.** Tạo một tài khoản Google khai email của
+   người khác rồi đăng nhập là chiếm được tài khoản của họ. Sửa: từ chối token có email chưa xác minh.
+3. **Dùng email làm khoá liên kết.** Người dùng đổi được địa chỉ Gmail; khoá phải là `sub` — định
+   danh không đổi mà Google cấp riêng cho từng ứng dụng.
+
+### Hệ quả kéo theo: tài khoản không có mật khẩu
+
+Cho phép đăng nhập Google nghĩa là chấp nhận `password_hash` NULL — thứ mà cột này trước giờ cấm.
+Ràng buộc thay thế: `CHECK (password_hash IS NOT NULL OR google_id IS NOT NULL)` — mỗi tài khoản phải
+có ít nhất một cách vào, không để lọt bản ghi không đăng nhập được bằng đường nào.
+
+Và một luồng cũ vỡ theo: `change-password` đối chiếu "mật khẩu hiện tại" với một giá trị NULL. Thay
+vì để nó ném lỗi khó hiểu, trả **400** kèm hướng dẫn dùng **Quên mật khẩu** để đặt mật khẩu đầu tiên
+— đường đó chạy được vì OTP gửi về đúng hòm thư Google đã xác minh.
+
+### Cách kiểm thử phần không kiểm thử được
+
+Không có cách tạo ID token do Google ký thật trong test, mà test cũng không được phụ thuộc mạng ngoài.
+Nên `GoogleTokenVerifier` được thay bằng mock: phần *xác minh chữ ký* tin vào thư viện chính chủ, còn
+6 ca test lo **nghiệp vụ sau khi đã xác minh** — tạo mới, liên kết vào tài khoản sẵn có (giữ nguyên
+mật khẩu và tên hiển thị cũ), đăng nhập lần hai không tạo trùng, token hỏng trả 401, thiếu `idToken`
+trả 400, và tài khoản chỉ-Google đổi mật khẩu nhận đúng thông báo hướng dẫn.
+
+Ranh giới này cần nói rõ trong báo cáo: test **không** chứng minh chữ ký được kiểm đúng.
+
+### Chạy hồi quy đầy đủ moi ra một lỗi đua không liên quan gì tới Google
+
+Bộ kiểm chứng phòng đấu báo hỏng đúng một ca: *"ván đã kết thúc thì không vào được nữa"* trả **200**
+thay vì 409. Chạy riêng bộ đó thì lại đạt — chỉ hỏng khi chạy sau ba bộ khác, tức là **lỗi phụ thuộc
+thời điểm**, không phải logic sai hẳn.
+
+Nguyên nhân: hai nơi lưu trạng thái không đổi cùng lúc.
+
+```
+next()  ─┬─ đổi Redis sang FINISHED   (ngay, trong khoá)
+         ├─ phát GAME_FINISHED        (ngay ← client nhận được ở đây)
+         └─ ghi game_rooms.status     (chỉ có hiệu lực khi giao dịch COMMIT)
+                                             ↑
+                    join() đọc cột này — nếu chen vào trước commit thì thấy PLAYING
+```
+
+Client nhận `GAME_FINISHED` rồi gọi `join` ngay, mà `requireJoinableRoom` lại đọc trạng thái từ
+PostgreSQL. Khe hở chỉ vài mili-giây; máy rảnh thì không bao giờ trúng, máy bận thì trúng.
+
+Sửa: `requireJoinableRoom` hỏi **Redis trước, PostgreSQL sau** — Redis là trạng thái sống, đổi ngay
+trong khoá; CSDL chỉ là bản lưu. Không còn state ở Redis (hết TTL) mới tin vào CSDL.
+
+Đáng nói hai điều. Thứ nhất, đây là **lỗi thứ tư cùng một họ** trong đồ án: `@Async` chạy trước
+commit, `@TransactionalEventListener`, self-invocation mất `@Transactional`, và giờ là đọc trước
+commit — đều là *"việc A tưởng đã xong nhưng thật ra chưa"*. Thứ hai, nó chỉ lộ ra khi chạy **toàn
+bộ** bộ kiểm chứng liên tiếp; chạy lẻ từng bộ sẽ không bao giờ thấy.
+
+Ca test mới dựng thẳng trạng thái lệch (Redis FINISHED, CSDL còn PLAYING) thay vì cố chạy đua cho
+thắng — chắc chắn tái hiện được, và nói rõ bất biến cần giữ. Đã kiểm ngược: gỡ bản sửa ra thì ca này
+hỏng đúng như mô tả (`expected:<409> but was:<200>`), gắn lại thì đạt.
+
+### Nợ / chuyển sang ngày sau
+- ✅ **Đã bấm thử bằng tài khoản Google thật và đăng nhập được** — tạo OAuth Client (Web application)
+  trên Google Cloud Console, điền vào `GOOGLE_CLIENT_ID` (backend) và `VITE_GOOGLE_CLIENT_ID`
+  (frontend). Sau khi cấu hình, endpoint đổi từ 503 *"chưa cấu hình"* sang 401 *"token không hợp lệ"*
+  với token giả — dấu hiệu bộ xác minh đã bật thật.
+- **Nút Google không dùng được khi mở qua IP LAN** (đường dùng để quét QR bằng điện thoại): Google
+  không nhận IP nội bộ làm *Authorized JavaScript origin*, chỉ nhận `localhost` hoặc tên miền thật.
+  Trên điện thoại phải đợi deploy.
+- Khi deploy phải thêm tên miền thật vào *Authorized JavaScript origins*, nếu không nút sẽ không hiện.
+- Chưa có màn hình "Liên kết/huỷ liên kết tài khoản Google" trong phần hồ sơ.
+- Vite 8 báo `optimizeDeps.esbuildOptions` sắp bị bỏ (đổi thành `rolldownOptions`). Shim `global` cho
+  `sockjs-client` hiện vẫn ăn — đã kiểm bản pre-bundle, `globalThis` thay đủ chỗ — nhưng phải đổi
+  trước khi Vite gỡ hẳn, nếu không phòng đấu sẽ trắng trang trở lại.
+
+### Ghi chú báo cáo
+- **Mục 2.3 (bảo mật):** ba lỗ hổng ở trên là ví dụ tốt cho phần phân tích rủi ro — đều là *lỗi do
+  thiếu một bước kiểm tra*, không phải lỗi lập trình, nên không có compiler hay test nào tự bắt được.
+- **Mục 2.4 (CSDL):** đổi `password_hash` từ NOT NULL sang CHECK ràng buộc kép là ví dụ về việc thêm
+  tính năng làm thay đổi bất biến của lược đồ.
+- **Mục 3.4 (kiểm thử):** nêu rõ ranh giới mock — cái gì được kiểm, cái gì tin vào thư viện.
+- **"Khó khăn & cách giải quyết":** hai điểm — tính năng mới phá luồng cũ (`change-password`), và lỗi
+  đua Redis/PostgreSQL chỉ hiện khi chạy hồi quy đầy đủ. Cái sau là lập luận tốt cho việc **vì sao
+  phải chạy lại toàn bộ bộ kiểm chứng sau mỗi tính năng**, chứ không chỉ chạy bộ của tính năng vừa làm.
 
 ---
 

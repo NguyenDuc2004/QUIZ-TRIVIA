@@ -422,10 +422,26 @@ public class RoomService {
                 "readyCount", state.readyCount())));
     }
 
-    /** Phòng còn nhận người vào hay không — dùng chung cho cả thành viên lẫn khách. */
+    /**
+     * Phòng còn nhận người vào hay không — dùng chung cho cả thành viên lẫn khách.
+     * <p>
+     * Hỏi <b>Redis trước, PostgreSQL sau</b>. Trạng thái sống của ván nằm ở Redis và được đổi ngay
+     * trong khoá của {@link #next}; cột {@code game_rooms.status} chỉ được ghi khi giao dịch của
+     * {@code next} commit. Sự kiện {@code GAME_FINISHED} lại phát đi <i>trước</i> lúc commit, nên
+     * có một khe hẹp: người chơi nhận tin "ván kết thúc" rồi gọi join ngay thì bản ghi trong CSDL
+     * vẫn còn là PLAYING và họ vào được một ván đã xong. Khe này chỉ vài mili-giây nên chạy lẻ
+     * không thấy, nhưng khi máy bận thì hiện ra — bộ kiểm chứng bắt được đúng lúc chạy hồi quy đầy đủ.
+     * <p>
+     * Không còn trạng thái ở Redis (hết TTL, phòng cũ) thì mới tin vào CSDL.
+     */
     private GameRoom requireJoinableRoom(String roomCode) {
         GameRoom room = requireRoom(roomCode);
-        if (room.getStatus() == RoomStatus.FINISHED) {
+
+        boolean finished = stateStore.find(room.getRoomCode())
+                .map(state -> state.status() == RoomStatus.FINISHED)
+                .orElseGet(() -> room.getStatus() == RoomStatus.FINISHED);
+
+        if (finished) {
             throw BusinessException.conflict("Ván đấu này đã kết thúc");
         }
         return room;

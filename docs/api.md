@@ -12,13 +12,23 @@ POST   /api/v1/auth/logout-all       Đăng xuất mọi thiết bị (mất má
 POST   /api/v1/auth/change-password Đổi mật khẩu (cần đăng nhập) → 204              ✅
 POST   /api/v1/auth/forgot-password Gửi mã OTP đặt lại mật khẩu → 204               ✅
 POST   /api/v1/auth/reset-password  Đặt lại mật khẩu bằng mã OTP → 204              ✅
+POST   /api/v1/auth/google          Đăng nhập bằng Google (ID token) → token        ✅
 ```
 
 **Quên mật khẩu (FR-4).** `forgot-password` **luôn trả 204** dù email có tài khoản hay không — báo
 "email không tồn tại" là mở đường cho việc dò danh sách người dùng. Mã 6 chữ số, sống 10 phút, dùng
 một lần; sai quá 5 lần thì mã bị huỷ; xin mã lại trong vòng 60 giây trả **429**. Đặt lại thành công
 sẽ **thu hồi phiên trên mọi thiết bị**.
-> `register`, `login`, `refresh`, `logout` mở cho Guest; `change-password` yêu cầu Bearer token.
+**Đăng nhập Google (FR-3).** Frontend lấy **ID token** từ Google Identity Services rồi POST
+`{"idToken": "..."}`; backend xác minh chữ ký, `iss` và **`aud` (Client ID của ứng dụng)** với Google
+— thiếu bước kiểm `aud` thì một token Google hợp lệ cấp cho ứng dụng *khác* vẫn đăng nhập được vào
+đây. Ba tình huống: đã liên kết (khớp `google_id`) → vào luôn; email đã có tài khoản mật khẩu →
+**liên kết** vào đó, không tạo tài khoản thứ hai (chỉ làm được vì Google báo email đã xác minh);
+hoàn toàn mới → tạo tài khoản không mật khẩu, vai trò **LEARNER** (không cho chọn vai trò qua đường
+này). Tài khoản chỉ-Google gọi `change-password` sẽ nhận **400** kèm hướng dẫn dùng Quên mật khẩu để
+đặt mật khẩu đầu tiên.
+
+> `register`, `login`, `refresh`, `logout`, `google` mở cho Guest; `change-password` yêu cầu Bearer token.
 > Access token sống 15 phút, refresh token 14 ngày (lưu Redis key `session:{token}`).
 
 ## 2. Người dùng — `/users`
