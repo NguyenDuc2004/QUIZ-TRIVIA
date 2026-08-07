@@ -102,3 +102,17 @@ còn chưa commit và nó đọc CSDL không thấy dòng nào.
 - **Cache** theo hash(prompt) để tiết kiệm chi phí.
 - Fallback Gemini → Grok (xem [architecture.md](../architecture.md) mục 5).
 - Là đối tượng **đánh giá độ chính xác AI** — [roadmap.md](../roadmap.md) mục 2.3.
+
+## Fallback Gemini → Grok: đã hiện thực, chưa chạy thật
+
+`AiOrchestrator` thử Gemini rồi chuyển sang Grok khi gặp lỗi **tạm thời** (429, 5xx, timeout). Cơ chế
+xong và có test tự động che phủ, nhưng **chưa từng chạy thật**: xAI không có gói miễn phí, team mới
+chưa nạp tín dụng thì mọi lời gọi trả 403 `permission-denied` (đo thật 08/08/2026).
+
+`GROK_API_KEY` vì vậy để **trống** — và đó là lựa chọn có chủ ý, không phải quên. Điền key của team
+không tín dụng còn tệ hơn: Gemini hết hạn mức sẽ chuyển sang Grok, Grok trả 403 (lỗi *không* tạm
+thời) nên luồng dừng luôn, và thông báo hữu ích "hết hạn mức, chờ N giây" bị thay bằng "permission
+denied". Để trống thì orchestrator lọc Grok ra ngay từ đầu.
+
+Cũng lưu ý: `grok-2` trong cấu hình cũ **đã bị xAI gỡ** (`Model not found`). Đã đổi sang `grok-4.5`.
+Đây là lỗi độc lập với chuyện tín dụng — dù có tiền, cấu hình cũ vẫn hỏng.

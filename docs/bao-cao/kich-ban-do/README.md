@@ -26,3 +26,28 @@ Hai script đăng ký tài khoản `@example.com` trên CSDL đang chạy. Dọn
 ```bash
 docker exec -i quiz_postgres psql -U quiz -d quizdb -c "DELETE FROM users WHERE email LIKE '%example.com';"
 ```
+
+---
+
+## Đánh giá độ chính xác AI (mục 3.6) — `danhgia_ai.mjs`
+
+**Phải khởi động backend với số lần thử lại bằng 1**, nếu không chính phép đo sẽ đốt hết hạn mức nó
+cần để chạy (một bài chấm hỏng với 4 lần thử tiêu 4 lượt trong hạn mức 20 lượt/ngày):
+
+```bash
+cd backend
+./mvnw spring-boot:run -Dspring-boot.run.arguments=--app.ai.max-attempts-background=1
+```
+
+Rồi:
+
+```bash
+cd frontend
+node ../docs/bao-cao/kich-ban-do/danhgia_ai.mjs
+```
+
+Mất khoảng 12 phút — kịch bản cố ý **chờ 70 giây giữa các lượt** vì Gemini miễn phí giới hạn 5
+lượt/phút. Tiêu khoảng 10 lượt trong hạn mức ngày.
+
+Bài nào chấm hỏng (`AI_FAILED`) bị **loại khỏi thống kê**, không tính là 0 điểm — gộp "AI chấm 0"
+với "AI không chạy" thì con số độ chính xác mất hết ý nghĩa.

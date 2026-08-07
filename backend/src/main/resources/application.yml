@@ -122,8 +122,15 @@ app:
       # Phải khớp kiểu cột material_chunks.embedding vector(n) — đổi số này thì cần migration mới
       embedding-dimensions: ${GEMINI_EMBEDDING_DIMENSIONS:768}
     grok:
+      # Provider dự phòng. Để trống api-key thì AiOrchestrator lọc Grok ra khỏi danh sách —
+      # KHÔNG được điền key của team chưa có tín dụng: khi đó Gemini hết hạn mức sẽ chuyển sang
+      # Grok, Grok trả 403 (lỗi KHÔNG tạm thời) và người dùng nhận "permission denied" thay cho
+      # thông báo "hết hạn mức, chờ N giây" vốn hữu ích hơn nhiều.
       api-key: ${GROK_API_KEY:}
-      model: ${GROK_MODEL:grok-2}
+      # grok-2 đã bị xAI gỡ (API trả "Model not found: grok-2") — cùng loại vấn đề với
+      # text-embedding-004 của Google. Kiểm model còn sống: GET https://api.x.ai/v1/models
+      # (cần tín dụng mới gọi được endpoint này).
+      model: ${GROK_MODEL:grok-4.5}
 
 springdoc:
   swagger-ui:
