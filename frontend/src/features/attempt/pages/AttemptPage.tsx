@@ -220,6 +220,8 @@ function AttemptResult({ detail }: { detail: AttemptDetail }) {
   // Lấy thẳng từ backend thay vì tự đếm: cùng một con số quyết định có hỏi lại hay không
   // (xem `useAttempt`), hai chỗ đếm hai kiểu là mầm mống lệch nhau.
   const pendingAi = detail.gradingPending
+  // Biết là "đang xếp hàng" hay "sắp xong" thì nói khác nhau — cùng một vòng quay câm là tệ nhất
+  const throttled = detail.aiThrottledSeconds
   const failedAi = useMemo(
     () => questions.filter((q) => q.gradedBy === 'AI_FAILED').length,
     [questions],
@@ -263,8 +265,16 @@ function AttemptResult({ detail }: { detail: AttemptDetail }) {
         <Alert
           type="info"
           showIcon
-          message={`AI đang chấm ${pendingAi} câu tự luận`}
-          description="Điểm đang hiển thị là điểm tạm, phần tự luận chưa được cộng. Trang tự cập nhật khi chấm xong — không cần tải lại."
+          message={
+            throttled > 0
+              ? `Đang xếp hàng chờ dịch vụ AI — khoảng ${throttled} giây nữa`
+              : `AI đang chấm ${pendingAi} câu tự luận`
+          }
+          description={
+            throttled > 0
+              ? `Dịch vụ AI đang bận, ${pendingAi} câu tự luận phải chờ tới lượt. Bạn cứ đóng trang, điểm vẫn được chấm và lưu lại.`
+              : 'Điểm đang hiển thị là điểm tạm, phần tự luận chưa được cộng. Trang tự cập nhật khi chấm xong — không cần tải lại.'
+          }
         />
       )}
 
@@ -279,7 +289,12 @@ function AttemptResult({ detail }: { detail: AttemptDetail }) {
 
       <div className="flex flex-col gap-4">
         {questions.map((question) => (
-          <QuestionReview key={question.questionId} question={question} attemptId={attempt.id} />
+          <QuestionReview
+            key={question.questionId}
+            question={question}
+            attemptId={attempt.id}
+            throttledSeconds={throttled}
+          />
         ))}
       </div>
     </Space>

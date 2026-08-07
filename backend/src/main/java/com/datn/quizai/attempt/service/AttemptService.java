@@ -71,19 +71,22 @@ public class AttemptService {
     private final ApplicationEventPublisher events;
     private final AttemptGradeWriter gradeWriter;
     private final AiGradingService aiGradingService;
+    private final com.datn.quizai.ai.provider.AiThrottleState aiThrottleState;
 
     public AttemptService(QuizAttemptRepository attemptRepository,
                           QuizRepository quizRepository,
                           UserRepository userRepository,
                           ApplicationEventPublisher events,
                           AttemptGradeWriter gradeWriter,
-                          AiGradingService aiGradingService) {
+                          AiGradingService aiGradingService,
+                          com.datn.quizai.ai.provider.AiThrottleState aiThrottleState) {
         this.attemptRepository = attemptRepository;
         this.quizRepository = quizRepository;
         this.userRepository = userRepository;
         this.events = events;
         this.gradeWriter = gradeWriter;
         this.aiGradingService = aiGradingService;
+        this.aiThrottleState = aiThrottleState;
     }
 
     /**
@@ -104,7 +107,7 @@ public class AttemptService {
         if (existing.isPresent()) {
             QuizAttempt attempt = attemptRepository.findByIdWithAnswers(existing.get().getId()).orElseThrow();
             if (!attempt.isExpiredAt(now)) {
-                return AttemptDetailResponse.from(attempt);
+                return detailOf(attempt);
             }
             finish(attempt, AttemptStatus.EXPIRED, attempt.getExpiresAt());
         }
@@ -132,7 +135,7 @@ public class AttemptService {
         }
         attempt.setMaxScore(maxScore);
 
-        return AttemptDetailResponse.from(attemptRepository.save(attempt));
+        return detailOf(attemptRepository.save(attempt));
     }
 
     /**
@@ -143,7 +146,7 @@ public class AttemptService {
     public AttemptDetailResponse getDetail(UUID attemptId, JwtService.AuthenticatedUser current) {
         QuizAttempt attempt = loadOwnAttempt(attemptId, current);
         finishIfExpired(attempt, OffsetDateTime.now());
-        return AttemptDetailResponse.from(attempt);
+        return detailOf(attempt);
     }
 
     /**
@@ -215,7 +218,7 @@ public class AttemptService {
             }
         }
 
-        return AttemptDetailResponse.from(attempt);
+        return detailOf(attempt);
     }
 
     /** Lịch sử làm bài của chính người dùng (FR-18). */
@@ -298,7 +301,7 @@ public class AttemptService {
                 .orElseThrow(() -> BusinessException.notFound("Không tìm thấy câu trả lời trong bài này"));
 
         gradeWriter.applyHumanGrade(attempt, answer, request.score(), request.feedback());
-        return AttemptDetailResponse.from(attempt);
+        return detailOf(attempt);
     }
 
     /**
@@ -327,6 +330,17 @@ public class AttemptService {
         String userText = answer.getUserAnswer() == null ? null : answer.getUserAnswer().text();
         return new ExplanationResponse(
                 aiGradingService.explain(answer.getQuestion(), userText, current.id()));
+    }
+
+    /**
+     * Dựng response kèm thông tin "AI đang bị chặn hạn mức bao lâu nữa".
+     * <p>
+     * Chỉ hỏi Redis khi bài <b>còn câu chờ chấm</b> — bài đã xong thì hạn mức chẳng liên quan gì,
+     * mà endpoint này bị gọi lại liên tục lúc đang chờ nên không nên chạm Redis vô ích.
+     */
+    private AttemptDetailResponse detailOf(QuizAttempt attempt) {
+        boolean waiting = attempt.getAnswers().stream().anyMatch(AttemptAnswer::isAwaitingAi);
+        return AttemptDetailResponse.from(attempt, waiting ? aiThrottleState.secondsRemaining() : 0);
     }
 
     // ------------------------------------------------------------------ nội bộ

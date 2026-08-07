@@ -62,6 +62,11 @@ export interface AttemptDetail {
    * là điểm **tạm** — màn kết quả phải nói rõ và hỏi lại, đừng để người học tưởng mình mất điểm.
    */
   gradingPending: number
+  /**
+   * Số giây còn phải chờ vì nhà cung cấp AI đang chặn hạn mức; 0 = đang chạy bình thường.
+   * Dùng để nói thật với người học thay vì để họ nhìn vòng quay đứng yên mà đoán.
+   */
+  aiThrottledSeconds: number
 }
 
 export interface AnswerFeedback {

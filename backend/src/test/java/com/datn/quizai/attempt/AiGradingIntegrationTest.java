@@ -80,6 +80,8 @@ class AiGradingIntegrationTest {
     private ObjectMapper objectMapper;
     @Autowired
     private AttemptGradeWriter gradeWriter;
+    @Autowired
+    private com.datn.quizai.ai.provider.AiThrottleState throttleState;
 
     @MockitoBean
     private AiOrchestrator aiOrchestrator;
@@ -218,6 +220,54 @@ class AiGradingIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken))
                 .andExpect(jsonPath("$.questions[1].score").value(4))
                 .andExpect(jsonPath("$.attempt.totalScore").value(6));
+    }
+
+    @Test
+    @DisplayName("Bị chặn hạn mức: response nói rõ còn phải chờ bao lâu, không để người học đoán")
+    void shouldReportThrottleWaitToClient() throws Exception {
+        Fixture f = fixtureWithShortAnswer("Quiz chờ hạn mức", 10);
+        answerText(f.attemptId, f.shortAnswerQuestionId, "Bài làm");
+
+        // Mô hình treo lâu để câu vẫn ở PENDING_AI trong lúc test đọc response
+        given(aiOrchestrator.complete(any(), anyString(), any(), anyBoolean()))
+                .willAnswer(invocation -> {
+                    Thread.sleep(3000);
+                    throw new IllegalStateException("quá tải");
+                });
+        submit(f.attemptId);
+
+        // Giả lập nhà cung cấp vừa bảo "chờ 45 giây nữa"
+        throttleState.markThrottled(45_000);
+
+        mockMvc.perform(get("/api/v1/attempts/{id}", f.attemptId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gradingPending").value(1))
+                // Không có con số này thì giao diện chỉ có một vòng quay câm cho cả
+                // "chờ 3 giây" lẫn "chờ 6 phút"
+                .andExpect(jsonPath("$.aiThrottledSeconds",
+                        org.hamcrest.Matchers.both(org.hamcrest.Matchers.greaterThan(40))
+                                .and(org.hamcrest.Matchers.lessThanOrEqualTo(45))));
+
+        throttleState.clear();
+        awaitGraded(f.attemptId);
+    }
+
+    @Test
+    @DisplayName("Bài đã chấm xong thì không nhắc chuyện chờ hạn mức nữa")
+    void shouldNotReportThrottleWhenNothingPending() throws Exception {
+        Fixture f = fixtureWithShortAnswer("Quiz đã xong", 10);
+        submit(f.attemptId);   // câu tự luận bỏ trống → AUTO, không có gì chờ
+
+        throttleState.markThrottled(45_000);
+
+        mockMvc.perform(get("/api/v1/attempts/{id}", f.attemptId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken))
+                .andExpect(jsonPath("$.gradingPending").value(0))
+                // Hạn mức có thể đang căng, nhưng bài này xong rồi — nhắc là gây hiểu nhầm
+                .andExpect(jsonPath("$.aiThrottledSeconds").value(0));
+
+        throttleState.clear();
     }
 
     // ================================================================ ghi đè điểm

@@ -71,11 +71,14 @@ public class AiOrchestrator {
     /** Thứ tự ưu tiên, đã lọc theo cấu hình. */
     private final List<AiProvider> orderedProviders;
     private final AiRequestLogger requestLogger;
+    private final AiThrottleState throttleState;
 
     public AiOrchestrator(List<AiProvider> providers,
                           AiRequestLogger requestLogger,
+                          AiThrottleState throttleState,
                           @Value("${app.ai.provider-order}") String providerOrder) {
         this.requestLogger = requestLogger;
+        this.throttleState = throttleState;
 
         Map<String, AiProvider> byName = new LinkedHashMap<>();
         providers.forEach(provider -> byName.put(provider.name(), provider));
@@ -187,6 +190,8 @@ public class AiOrchestrator {
                 try {
                     AiCompletion completion = call.apply(provider);
                     requestLogger.logSuccess(userId, feature, completion);
+                    // Gọi được rồi thì gỡ cờ ngay, đừng để giao diện còn hiện "đang chờ hạn mức"
+                    throttleState.clear();
                     if (i > 0 || attempt > 1) {
                         log.info("{} thành công ở lần thử {} (provider thứ {}) cho {}",
                                 provider.name(), attempt, i + 1, feature);
@@ -205,6 +210,9 @@ public class AiOrchestrator {
                     if (canRetrySameProvider) {
                         log.warn("{} lỗi tạm thời ({}), thử lại sau {}ms",
                                 provider.name(), e.getMessage(), wait);
+                        // Chỉ đánh dấu khi CHÍNH provider nói phải chờ bao lâu: đó mới là hết hạn
+                        // mức. Backoff tự nghĩ cho lỗi mạng vài giây thì không đáng báo ra ngoài.
+                        throttleState.markThrottled(e.getRetryAfterMillis());
                         sleep(wait);
                         continue;
                     }
@@ -235,6 +243,7 @@ public class AiOrchestrator {
      */
     private BusinessException giveUp(AiProviderException e) {
         long retryAfter = e.getRetryAfterMillis();
+        throttleState.markThrottled(retryAfter);
         if (retryAfter > 0) {
             long seconds = Math.max(1, Math.round(retryAfter / 1000.0));
             return new BusinessException(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,

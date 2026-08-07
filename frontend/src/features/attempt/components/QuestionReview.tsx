@@ -41,10 +41,13 @@ function isBlank(question: AttemptQuestion) {
 export default function QuestionReview({
   question,
   attemptId,
+  throttledSeconds = 0,
 }: {
   question: AttemptQuestion
   /** Có id bài làm thì hiện nút nhờ AI giải thích; bỏ trống thì ẩn (dùng ở màn không có bài). */
   attemptId?: string
+  /** Lớn hơn 0 nghĩa là đang chờ hạn mức AI, không phải sắp chấm xong. */
+  throttledSeconds?: number
 }) {
   const [explanation, setExplanation] = useState<string | null>(null)
   const explain = useExplainAnswer(attemptId)
@@ -118,7 +121,9 @@ export default function QuestionReview({
         <div className="mt-3 flex items-center gap-2 border border-line bg-surface-subtle p-3">
           <Spin size="small" />
           <Text className="text-ink-soft text-xs">
-            AI đang chấm câu này. Điểm sẽ tự cập nhật, không cần tải lại trang.
+            {throttledSeconds > 0
+              ? `Đang chờ tới lượt gọi dịch vụ AI — khoảng ${throttledSeconds} giây nữa.`
+              : 'AI đang chấm câu này. Điểm sẽ tự cập nhật, không cần tải lại trang.'}
           </Text>
         </div>
       )}

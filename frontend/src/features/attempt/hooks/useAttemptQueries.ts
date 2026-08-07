@@ -9,6 +9,14 @@ const ATTEMPT_KEY = 'attempts'
 /** Nhịp hỏi lại khi AI còn đang chấm — đủ nhanh để thấy điểm nhảy, đủ chậm để không dội API. */
 const GRADING_POLL_MS = 3000
 
+/**
+ * Nhịp hỏi lại khi biết chắc AI đang bị chặn hạn mức.
+ * <p>
+ * Hỏi mỗi 3 giây trong lúc chờ cả phút là gọi hai chục lần vô ích. Giãn ra, nhưng vẫn đủ dày để
+ * đồng hồ đếm ngược trên màn hình không nhảy giật.
+ */
+const THROTTLED_POLL_MS = 10000
+
 export function useAttempt(attemptId: string | undefined) {
   return useQuery({
     queryKey: [ATTEMPT_KEY, attemptId],
@@ -18,7 +26,11 @@ export function useAttempt(attemptId: string | undefined) {
     refetchOnWindowFocus: false,
     // Chấm tự luận chạy nền (features/06): hỏi lại cho tới khi hết câu chờ, rồi dừng hẳn.
     // Không có nhánh này thì người học phải tự bấm F5 mới thấy điểm phần tự luận.
-    refetchInterval: (query) => (query.state.data?.gradingPending ? GRADING_POLL_MS : false),
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data?.gradingPending) return false
+      return data.aiThrottledSeconds > 0 ? THROTTLED_POLL_MS : GRADING_POLL_MS
+    },
   })
 }
 

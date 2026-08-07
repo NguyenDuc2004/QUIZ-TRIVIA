@@ -24,9 +24,20 @@ public record AttemptDetailResponse(
          * không. Không có nó thì màn kết quả hiển thị một tổng điểm thiếu như thể đã xong, và
          * người học tưởng mình bị mất điểm phần tự luận.
          */
-        int gradingPending
+        int gradingPending,
+        /**
+         * Số giây còn phải chờ vì nhà cung cấp AI đang chặn hạn mức; 0 nghĩa là đang chạy bình thường.
+         * <p>
+         * Không có con số này thì giao diện chỉ có một trạng thái "đang chấm" chung cho cả trường
+         * hợp chờ ba giây lẫn chờ sáu phút — người học nhìn vòng quay đứng yên và tưởng hỏng.
+         */
+        int aiThrottledSeconds
 ) {
     public static AttemptDetailResponse from(QuizAttempt attempt) {
+        return from(attempt, 0);
+    }
+
+    public static AttemptDetailResponse from(QuizAttempt attempt, int aiThrottledSeconds) {
         boolean reveal = attempt.getStatus().isFinished();
 
         List<AttemptQuestionResponse> questions = attempt.getAnswers().stream()
@@ -37,6 +48,8 @@ public record AttemptDetailResponse(
                 .toList();
 
         int pending = (int) attempt.getAnswers().stream().filter(AttemptAnswer::isAwaitingAi).count();
-        return new AttemptDetailResponse(AttemptSummaryResponse.from(attempt), questions, pending);
+        // Chỉ nói tới chuyện chờ khi thật sự còn câu đang chấm; bài đã xong thì hạn mức không liên quan
+        return new AttemptDetailResponse(AttemptSummaryResponse.from(attempt), questions, pending,
+                pending > 0 ? aiThrottledSeconds : 0);
     }
 }

@@ -41,6 +41,27 @@
 ### Đã làm được
 _(ghi lại khi kết thúc ngày)_
 
+### Bấm thử trên trình duyệt lộ ra một khoảng trống, đã vá luôn
+
+Màn kết quả hiện đúng như thiết kế: điểm trắc nghiệm ra ngay, banner "AI đang chấm", thẻ tím trên
+câu tự luận. Nhưng lúc đó quota Gemini đã cạn nên vòng quay **đứng yên khoảng 6 phút** (6 lần thử ×
+60 giây) rồi mới chuyển sang cảnh báo cam.
+
+Vấn đề không phải ở chỗ chậm — chờ là đúng, vì chờ mới chấm được. Vấn đề là **hệ thống biết mà không
+nói**: backend nắm rõ nó đang vướng 429 và còn bao nhiêu giây, nhưng response chỉ có một cờ
+`gradingPending` chung cho cả "chờ 3 giây" lẫn "chờ 6 phút". Người học nhìn vòng quay câm thì đoán
+là hỏng và đóng trang.
+
+Vá: `AiThrottleState` lưu ở Redis mốc "gọi lại được lúc nào", `AiOrchestrator` ghi vào đó mỗi khi
+**chính provider** nói phải chờ bao lâu (không ghi với backoff tự nghĩ cho lỗi mạng — cái đó vài
+giây, không đáng báo). Response thêm `aiThrottledSeconds`; giao diện đổi hẳn câu chữ sang *"Đang xếp
+hàng chờ dịch vụ AI — khoảng N giây nữa. Bạn cứ đóng trang, điểm vẫn được chấm và lưu lại."*, và
+giãn nhịp hỏi lại từ 3 giây lên 10 giây vì hỏi dày trong lúc chờ cả phút là gọi hai chục lần vô ích.
+
+Hai chi tiết nhỏ nhưng cố ý: chỉ hỏi Redis khi bài **còn câu chờ chấm** (endpoint này bị gọi lại
+liên tục nên không nên chạm Redis vô ích), và bài đã xong thì **không nhắc chuyện hạn mức** dù hệ
+thống đang căng — nhắc là gây hiểu nhầm. Cả hai đều có ca test riêng.
+
 ### Nợ / chuyển sang ngày sau
 - _(...)_
 
@@ -664,7 +685,7 @@ không làm được, và cũng là lý do đề tài này cần AI chứ không
 - [x] Chấm nền sau khi nộp: `@TransactionalEventListener(AFTER_COMMIT)` + `@Async`
 - [x] API giải thích đáp án + Creator chấm tay ghi đè
 - [x] Frontend: ô rubric, màn kết quả hiện nhận xét, tự cập nhật khi chấm xong
-- [x] Test **203/203** JUnit (thêm 43 ca) + **kiểm chứng chấm thật bằng Gemini** 31/31 + hồi quy 176/176 (bộ không dùng AI)
+- [x] Test **205/205** JUnit (thêm 45 ca) + **kiểm chứng chấm thật bằng Gemini** 31/31 + hồi quy 176/176 (bộ không dùng AI)
 - [x] Vá hạn mức 429 phát hiện lúc chạy thật
 
 ### Vì sao chấm nền chứ không chấm ngay lúc nộp
@@ -768,7 +789,7 @@ tinh thần "backend là nơi quyết định URL trong mã QR" đã chốt ở 
 
 | Loại | Kết quả |
 |---|---|
-| JUnit | **203/203** (thêm 43 ca: 14 parser, 7 dựng prompt, 15 tích hợp, 7 đọc gợi ý chờ 429) |
+| JUnit | **205/205** (thêm 45 ca: 14 parser, 7 dựng prompt, 17 tích hợp, 7 đọc gợi ý chờ 429) |
 | Bộ chấm tự luận với **Gemini thật** | **31/31** |
 | Hồi quy các bộ không dùng AI (9 bộ) | **176/176** |
 | Bộ AI + RAG sinh đề (22 ca) | ⏸ **chưa chạy lại được** — cạn hạn mức Gemini trong ngày |
@@ -784,11 +805,6 @@ chỉ khiến job kiên nhẫn hơn, không đổi kết quả. Chạy lại khi
 Ghi rõ ở đây thay vì báo một tổng đẹp là vì đúng tinh thần *"số liệu chỉ ghi khi đã đo thật"*.
 
 ### Nợ / chuyển sang ngày sau
-- **Giao diện không phân biệt "chờ vài giây" với "đang bị chặn hạn mức".** Bấm thử trên trình duyệt
-  lúc đã cạn quota thì thấy spinner "AI đang chấm" đứng yên ~6 phút (6 lần thử × 60 giây) rồi mới
-  chuyển sang cảnh báo cam. Backend *biết* nó đang vướng 429 nhưng không nói cho frontend — cần thêm
-  một trường trạng thái chờ vào response để giao diện nói thật ("đang xếp hàng, còn khoảng N giây")
-  thay vì để người học đoán. Trạng thái dừng thì đã đúng, chỉ là chậm và im lặng.
 - Giải thích **không được lưu** — mỗi lần bấm là một lời gọi mô hình mới.
 - Chưa có màn hình cho Creator duyệt danh sách bài cần chấm tay; API đã có, giao diện chờ features/09.
 - Chưa giới hạn hạn mức chấm theo người dùng — một người nộp liên tục sẽ ăn hết quota của cả hệ thống.
