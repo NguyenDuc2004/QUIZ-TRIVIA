@@ -26,6 +26,13 @@ public record QuestionRequest(
 
         String explanation,
 
+        /**
+         * Tiêu chí chấm câu tự luận (features/06). Bỏ trống thì AI chấm bằng cách đối chiếu với
+         * đáp án mẫu; có tiêu chí thì điểm ổn định hơn hẳn giữa các lần chấm.
+         */
+        @Size(max = 2000, message = "Tiêu chí chấm tối đa 2000 ký tự")
+        String rubric,
+
         Difficulty difficulty,
 
         @Size(max = 100, message = "Chủ đề tối đa 100 ký tự")

@@ -111,8 +111,8 @@ chưa cache theo hash(prompt).
 
 ## Tuần 6 — AI chấm & trợ lý (24–30/08) 🔴
 
-- **T2 24/08** — [ ] Chấm câu tự luận (short-answer) bằng AI + rubric · [ ] Trả điểm + nhận xét
-- **T3 25/08** — [ ] Giải thích đáp án bằng AI · [ ] Gộp vào luồng kết quả làm bài
+- **T2 24/08** — [x] Chấm câu tự luận (short-answer) bằng AI + rubric · [x] Trả điểm + nhận xét *(xong 09/08)*
+- **T3 25/08** — [x] Giải thích đáp án bằng AI · [x] Gộp vào luồng kết quả làm bài *(xong 09/08)*
 - **T4 26/08** — [ ] Chatbot trợ lý học tập RAG (backend) · [ ] SSE streaming phản hồi
 - **T5 27/08** — [ ] FE: giao diện chatbot streaming · [ ] Chống ảo giác (grounding, trích nguồn)
 - **T6 28/08** — [ ] Test độ chính xác chấm & grounding · [ ] Fix chất lượng prompt

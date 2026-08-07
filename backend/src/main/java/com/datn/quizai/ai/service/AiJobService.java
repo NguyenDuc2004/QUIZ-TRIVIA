@@ -174,8 +174,9 @@ public class AiJobService {
                 .map(option -> new QuestionOptionRequest(option.content(), option.correct()))
                 .toList();
 
+        // rubric để null: mô hình sinh đề không tự đặt tiêu chí chấm, Creator soạn khi cần (features/06)
         return new QuestionRequest(
-                question.type(), question.content(), question.explanation(),
+                question.type(), question.content(), question.explanation(), null,
                 question.difficulty(), question.topic(), 1, null, options);
     }
 

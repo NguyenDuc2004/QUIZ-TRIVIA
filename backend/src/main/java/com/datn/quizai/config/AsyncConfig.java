@@ -19,11 +19,22 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @EnableAsync
 public class AsyncConfig {
 
+    /**
+     * Mặc định <b>một luồng</b> — tức là các tác vụ AI xếp hàng chứ không chạy song song.
+     * <p>
+     * Nghe như tự bó tay, nhưng với nhà cung cấp giới hạn theo phút (Gemini bản miễn phí: 5
+     * lượt/phút) thì song song chẳng được gì: hai job cùng thức dậy sau một lần chờ 429 sẽ lại
+     * cùng bắn và một trong hai lại 429. Đo thật thấy đúng vậy — chấm bài và sinh đề chạy chồng
+     * nhau thì cả hai cùng hỏng, chạy nối đuôi thì cả hai cùng xong.
+     * <p>
+     * Nâng lên khi chuyển sang gói trả phí có hạn mức cao: {@code app.ai.async.pool-size}.
+     */
     @Bean("aiTaskExecutor")
-    TaskExecutor aiTaskExecutor() {
+    TaskExecutor aiTaskExecutor(
+            @org.springframework.beans.factory.annotation.Value("${app.ai.async.pool-size:1}") int poolSize) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(4);
+        executor.setCorePoolSize(poolSize);
+        executor.setMaxPoolSize(poolSize);
         executor.setQueueCapacity(50);
         executor.setThreadNamePrefix("ai-job-");
         // Hàng đợi đầy thì chạy ngay trên luồng gọi, chậm nhưng không mất việc

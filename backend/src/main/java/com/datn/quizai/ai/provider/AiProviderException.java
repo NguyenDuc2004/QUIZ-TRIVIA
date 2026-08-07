@@ -9,11 +9,18 @@ public class AiProviderException extends RuntimeException {
 
     private final String provider;
     private final boolean retryable;
+    private final long retryAfterMillis;
 
     public AiProviderException(String provider, String message, boolean retryable, Throwable cause) {
+        this(provider, message, retryable, 0, cause);
+    }
+
+    public AiProviderException(String provider, String message, boolean retryable,
+                               long retryAfterMillis, Throwable cause) {
         super("[" + provider + "] " + message, cause);
         this.provider = provider;
         this.retryable = retryable;
+        this.retryAfterMillis = retryAfterMillis;
     }
 
     public String getProvider() {
@@ -26,5 +33,16 @@ public class AiProviderException extends RuntimeException {
      */
     public boolean isRetryable() {
         return retryable;
+    }
+
+    /**
+     * Provider bảo chờ bao lâu rồi hãy gọi lại; 0 nghĩa là không nói gì.
+     * <p>
+     * Quan trọng với hạn mức theo phút: Gemini bản miễn phí cho 5 lượt/phút và khi vượt thì trả kèm
+     * "retry in 52s". Backoff mặc định vài giây không cứu được — chờ theo đúng con số nó đưa mới
+     * qua được, còn không thì mọi câu sau câu thứ năm đều hỏng.
+     */
+    public long getRetryAfterMillis() {
+        return retryAfterMillis;
     }
 }

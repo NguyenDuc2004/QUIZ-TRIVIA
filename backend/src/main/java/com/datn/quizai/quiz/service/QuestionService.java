@@ -98,6 +98,7 @@ public class QuestionService {
 
     private void applyRequest(Question question, QuestionRequest request) {
         question.setExplanation(request.explanation());
+        question.setRubric(request.rubric());
         question.setDifficulty(request.difficulty() == null ? Difficulty.MEDIUM : request.difficulty());
         question.setTopic(blankToNull(request.topic()));
         question.setPoints(request.points() == null ? 1 : request.points());

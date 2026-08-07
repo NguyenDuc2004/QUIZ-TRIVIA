@@ -97,6 +97,9 @@ POST   /api/v1/attempts/{id}/answers    Trả lời một câu                  
 POST   /api/v1/attempts/{id}/submit     Nộp bài & chấm                             ✅
 GET    /api/v1/attempts                 Lịch sử làm bài của tôi (quizId + trang)   ✅
 GET    /api/v1/quizzes/{id}/leaderboard Xếp hạng người học, tối đa 50 dòng         ✅
+
+POST   /api/v1/attempts/{a}/answers/{b}/explain  Nhờ AI giải thích một câu          ✅
+PATCH  /api/v1/attempts/{a}/answers/{b}/grade    Chủ quiz chấm tay, ghi đè điểm AI  ✅
 ```
 
 **Quyền:** toàn bộ mục này yêu cầu **đăng nhập** — Guest không làm bài, không xem bảng xếp hạng.
@@ -124,7 +127,33 @@ trả `options: []` vì đáp án của chúng nằm trong `options`. Sau khi n�
 | `SINGLE_CHOICE`, `TRUE_FALSE` | Chọn đúng 1 lựa chọn và phải là lựa chọn đúng |
 | `MULTIPLE_CHOICE` | Trọn gói: tập lựa chọn phải trùng khít tập đáp án đúng |
 | `FILL_BLANK` | Khớp một đáp án được chấp nhận, bỏ qua hoa/thường và khoảng trắng thừa (**giữ dấu tiếng Việt**) |
-| `SHORT_ANSWER` | Máy không chấm → `gradedBy = PENDING_AI`, tạm 0 điểm, chờ features/06 |
+| `SHORT_ANSWER` | Máy không chấm → `gradedBy = PENDING_AI`, **AI chấm nền** sau khi nộp (features/06) |
+
+**Chấm tự luận bằng AI (FR-30).** `submit` trả kết quả **ngay** với điểm phần trắc nghiệm; câu tự
+luận để `PENDING_AI` và được chấm ở luồng nền — chấm đồng bộ thì người học phải chờ hàng chục giây
+và request dễ timeout. Response mang thêm `gradingPending` = số câu còn đang chấm; frontend hỏi lại
+mỗi 3 giây tới khi về 0, rồi dừng. Chấm xong, **tổng điểm được cộng lại**: điểm ngay sau khi nộp chỉ
+là điểm tạm.
+
+| `gradedBy` | Ý nghĩa |
+|---|---|
+| `AUTO` | Máy chấm theo đáp án cố định (kể cả câu tự luận **bỏ trống** → 0 điểm, không tốn lượt gọi AI) |
+| `PENDING_AI` | Đã nộp, AI đang chấm |
+| `AI` | AI đã chấm, có `aiFeedback` và `aiSuggestions` |
+| `AI_FAILED` | Gọi mô hình hỏng (hết hạn mức, JSON sai). **Trạng thái dừng** — không có nó thì người học thấy "đang chấm" vĩnh viễn |
+| `HUMAN` | Chủ quiz chấm tay, đè lên điểm AI |
+
+Điểm do mô hình trả luôn bị **ép về [0, maxScore]** — hàng rào cuối nếu prompt injection lọt qua và
+mô hình bị dụ cho điểm tối đa. Chấm tay cũng chịu cùng trần đó. Kết quả AI về **sau** khi Creator đã
+chấm tay thì bị bỏ qua: người luôn thắng máy.
+
+**`PATCH .../grade`** là ngoại lệ có chủ đích của luật "bài của ai người ấy xem" — chấm tay thì buộc
+phải xem được bài. Phạm vi hẹp hết mức: chỉ chủ đúng quiz đó (hoặc Admin), chỉ sửa điểm và nhận xét
+của một câu, không liệt kê được bài làm của ai. Người khác nhận **404**, không phải 403.
+
+**`POST .../explain`** chỉ chạy trên bài **đã nộp** của chính mình — giải thích trước khi nộp là
+đường vòng để lấy đáp án. Với câu có đáp án cố định, AI **chỉ giải thích chứ không chấm**: chấm đã
+xong bằng logic, gọi mô hình thêm chỉ tốn tiền mà không chính xác hơn.
 
 **Mã lỗi riêng:** `400` quiz chưa có câu hỏi / id lựa chọn không thuộc câu hỏi / câu một đáp án mà
 chọn nhiều · `404` quiz hoặc bài làm không tồn tại (hoặc không phải của mình), câu hỏi ngoài đề ·
@@ -225,7 +254,8 @@ POST   /api/v1/ai/generate-questions     Sinh đề (async → jobId)           
 GET    /api/v1/ai/jobs/{jobId}           Trạng thái/kết quả job                      ✅
 POST   /api/v1/ai/jobs/{jobId}/approve   Duyệt câu hỏi đã chọn → ngân hàng câu hỏi   ✅
 
-POST   /api/v1/ai/grade                  Chấm câu tự luận                            ⏳ features/06
+(Chấm tự luận & giải thích nằm ở mục 4 vì gắn với một bài làm cụ thể, không phải công cụ soạn nội dung)
+
 POST   /api/v1/ai/chat                   Trợ lý RAG (SSE stream)                     ⏳ features/08
 GET    /api/v1/ai/chat/sessions          Danh sách phiên chat                        ⏳ features/08
 ```

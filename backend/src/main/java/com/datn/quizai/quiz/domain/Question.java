@@ -49,6 +49,13 @@ public class Question extends BaseEntity {
     @Column(columnDefinition = "text")
     private String explanation;
 
+    /**
+     * Tiêu chí chấm câu tự luận (features/06). Không có rubric thì mô hình tự nghĩ ra thang điểm
+     * của riêng nó và hai lần chấm cùng một bài có thể lệch nhau — rubric là thứ neo điểm lại.
+     */
+    @Column(columnDefinition = "text")
+    private String rubric;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private Difficulty difficulty = Difficulty.MEDIUM;

@@ -68,6 +68,7 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
       type: 'SINGLE_CHOICE',
       content: '',
       explanation: '',
+      rubric: '',
       difficulty: 'MEDIUM',
       topic: '',
       points: 1,
@@ -85,6 +86,7 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
       type: question?.type ?? 'SINGLE_CHOICE',
       content: question?.content ?? '',
       explanation: question?.explanation ?? '',
+      rubric: question?.rubric ?? '',
       difficulty: question?.difficulty ?? 'MEDIUM',
       topic: question?.topic ?? '',
       points: question?.points ?? 1,
@@ -105,6 +107,7 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
       type: values.type,
       content: values.content,
       explanation: values.explanation || null,
+      rubric: values.rubric || null,
       difficulty: values.difficulty,
       topic: values.topic || null,
       points: values.points,
@@ -263,6 +266,26 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
             render={({ field }) => <Input.TextArea {...field} rows={2} />}
           />
         </Form.Item>
+
+        {/* Chỉ câu tự luận mới cần: những loại khác chấm bằng logic, không gọi AI (features/06) */}
+        {type === 'SHORT_ANSWER' && (
+          <Form.Item
+            label="Tiêu chí chấm"
+            help="Không bắt buộc, nhưng có tiêu chí thì AI chấm ổn định hơn hẳn giữa các lần. Ví dụ: “Nêu đủ 3 nguyên nhân: mỗi ý 3 điểm; diễn đạt rõ ràng: 1 điểm”."
+          >
+            <Controller
+              name="rubric"
+              control={control}
+              render={({ field }) => (
+                <Input.TextArea
+                  {...field}
+                  rows={3}
+                  placeholder="Mỗi ý đúng được bao nhiêu điểm, thiếu gì thì trừ bao nhiêu…"
+                />
+              )}
+            />
+          </Form.Item>
+        )}
       </Form>
     </Modal>
   )

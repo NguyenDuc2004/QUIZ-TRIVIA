@@ -9,7 +9,9 @@ import com.datn.quizai.attempt.domain.QuizAttempt;
 import com.datn.quizai.attempt.dto.AnswerFeedbackResponse;
 import com.datn.quizai.attempt.dto.AttemptDetailResponse;
 import com.datn.quizai.attempt.dto.AttemptSummaryResponse;
+import com.datn.quizai.attempt.dto.ExplanationResponse;
 import com.datn.quizai.attempt.dto.LeaderboardEntryResponse;
+import com.datn.quizai.attempt.dto.OverrideGradeRequest;
 import com.datn.quizai.attempt.dto.StartAttemptRequest;
 import com.datn.quizai.attempt.dto.SubmitAnswerRequest;
 import com.datn.quizai.attempt.repository.QuizAttemptRepository;
@@ -26,6 +28,7 @@ import com.datn.quizai.quiz.domain.Visibility;
 import com.datn.quizai.quiz.repository.QuizRepository;
 import com.datn.quizai.user.domain.User;
 import com.datn.quizai.user.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -65,13 +68,22 @@ public class AttemptService {
     private final QuizAttemptRepository attemptRepository;
     private final QuizRepository quizRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher events;
+    private final AttemptGradeWriter gradeWriter;
+    private final AiGradingService aiGradingService;
 
     public AttemptService(QuizAttemptRepository attemptRepository,
                           QuizRepository quizRepository,
-                          UserRepository userRepository) {
+                          UserRepository userRepository,
+                          ApplicationEventPublisher events,
+                          AttemptGradeWriter gradeWriter,
+                          AiGradingService aiGradingService) {
         this.attemptRepository = attemptRepository;
         this.quizRepository = quizRepository;
         this.userRepository = userRepository;
+        this.events = events;
+        this.gradeWriter = gradeWriter;
+        this.aiGradingService = aiGradingService;
     }
 
     /**
@@ -256,6 +268,67 @@ public class AttemptService {
                 .toList();
     }
 
+    /**
+     * Chủ quiz chấm tay một câu, ghi đè điểm AI (docs/features/06 §Use case).
+     * <p>
+     * Đây là <b>ngoại lệ có chủ đích</b> của luật "bài của ai người ấy xem": mọi API làm bài khác
+     * đều chặn chủ quiz đọc bài người khác, nhưng chấm tay thì buộc phải xem được bài. Bù lại,
+     * phạm vi hẹp hết mức — chỉ chủ đúng quiz đó (hoặc Admin), chỉ sửa được điểm và nhận xét của
+     * một câu, không đọc được danh sách bài làm của ai.
+     * <p>
+     * Điểm bị ép về [0, maxScore]: chấm tay vẫn không được vượt trần của câu, nếu không bảng xếp
+     * hạng sẽ có người điểm cao hơn điểm tối đa của quiz.
+     */
+    @Transactional
+    public AttemptDetailResponse overrideGrade(UUID attemptId, UUID answerId,
+                                               OverrideGradeRequest request,
+                                               JwtService.AuthenticatedUser current) {
+        QuizAttempt attempt = attemptRepository.findByIdWithAnswers(attemptId)
+                .orElseThrow(() -> BusinessException.notFound("Không tìm thấy bài làm"));
+
+        requireQuizOwner(attempt, current);
+
+        if (!attempt.getStatus().isFinished()) {
+            throw BusinessException.conflict("Bài này chưa nộp, chưa chấm được");
+        }
+
+        AttemptAnswer answer = attempt.getAnswers().stream()
+                .filter(a -> a.getId().equals(answerId))
+                .findFirst()
+                .orElseThrow(() -> BusinessException.notFound("Không tìm thấy câu trả lời trong bài này"));
+
+        gradeWriter.applyHumanGrade(attempt, answer, request.score(), request.feedback());
+        return AttemptDetailResponse.from(attempt);
+    }
+
+    /**
+     * Nhờ AI giải thích một câu trong bài đã nộp (docs/features/06 §Ghi chú kỹ thuật).
+     * <p>
+     * Tách khỏi luồng chấm: với câu có đáp án cố định thì chấm đã xong bằng logic, gọi mô hình
+     * thêm chỉ tốn tiền mà không chính xác hơn — nên AI ở đây <b>chỉ giải thích</b>.
+     * <p>
+     * Gọi đồng bộ vì người dùng chủ động bấm và đứng chờ. Chỉ cho phép trên bài đã nộp: giải thích
+     * trước khi nộp chính là đường vòng để lấy đáp án.
+     */
+    @Transactional(readOnly = true)
+    public ExplanationResponse explain(UUID attemptId, UUID answerId,
+                                       JwtService.AuthenticatedUser current) {
+        QuizAttempt attempt = loadOwnAttempt(attemptId, current);
+
+        if (!attempt.getStatus().isFinished()) {
+            throw BusinessException.conflict("Nộp bài xong mới xem được giải thích");
+        }
+
+        AttemptAnswer answer = attempt.getAnswers().stream()
+                .filter(a -> a.getId().equals(answerId))
+                .findFirst()
+                .orElseThrow(() -> BusinessException.notFound("Không tìm thấy câu trả lời trong bài này"));
+
+        String userText = answer.getUserAnswer() == null ? null : answer.getUserAnswer().text();
+        return new ExplanationResponse(
+                aiGradingService.explain(answer.getQuestion(), userText, current.id()));
+    }
+
     // ------------------------------------------------------------------ nội bộ
 
     /**
@@ -288,24 +361,51 @@ public class AttemptService {
         return attempt;
     }
 
+    /**
+     * Chỉ chủ quiz (hoặc Admin) mới đi tiếp. Trả <b>404</b> chứ không phải 403 — cùng quy ước với
+     * chỗ khác: người không có quyền thì không được biết bài làm đó có tồn tại hay không.
+     */
+    private void requireQuizOwner(QuizAttempt attempt, JwtService.AuthenticatedUser current) {
+        UUID ownerId = attempt.getQuiz().getOwner().getId();
+        if (!OwnershipGuard.canManage(ownerId, current)) {
+            throw BusinessException.notFound("Không tìm thấy bài làm");
+        }
+    }
+
     private void finishIfExpired(QuizAttempt attempt, OffsetDateTime now) {
         if (!attempt.getStatus().isFinished() && attempt.isExpiredAt(now)) {
             finish(attempt, AttemptStatus.EXPIRED, attempt.getExpiresAt());
         }
     }
 
-    /** Chấm mọi câu chưa chấm, cộng điểm và đóng bài. */
+    /**
+     * Chấm mọi câu chưa chấm, cộng điểm và đóng bài.
+     * <p>
+     * Câu tự luận không chấm được ở đây — {@code AnswerGrader} trả {@link GradedBy#PENDING_AI} và
+     * để lại 0 điểm. Tổng điểm lúc này là <b>điểm tạm</b>: đủ để trả kết quả ngay cho phần trắc
+     * nghiệm, còn phần tự luận do {@link AiGradingService} chấm nền rồi cộng lại (features/06).
+     * Chấm đồng bộ tại đây thì người học bấm "Nộp bài" xong phải ngồi chờ hàng chục giây và
+     * request có thể timeout giữa chừng.
+     */
     private void finish(QuizAttempt attempt, AttemptStatus status, OffsetDateTime submittedAt) {
         int total = 0;
+        boolean needsAi = false;
         for (AttemptAnswer answer : attempt.getAnswers()) {
             if (answer.getGradedBy() == GradedBy.NOT_GRADED) {
                 applyGrade(answer);
             }
+            needsAi |= answer.isAwaitingAi();
             total += answer.getScore();
         }
         attempt.setTotalScore(total);
         attempt.setStatus(status);
         attempt.setSubmittedAt(submittedAt);
+
+        if (needsAi) {
+            // Người nhận chạy ở pha AFTER_COMMIT: khởi động luồng nền ngay bây giờ thì nó đọc CSDL
+            // trước khi những thay đổi trên kịp commit và không thấy câu nào cần chấm.
+            events.publishEvent(new AttemptSubmittedEvent(attempt.getId(), attempt.getUser().getId()));
+        }
     }
 
     private void applyGrade(AttemptAnswer answer) {

@@ -1,5 +1,6 @@
 package com.datn.quizai.attempt.dto;
 
+import com.datn.quizai.attempt.domain.AttemptAnswer;
 import com.datn.quizai.attempt.domain.QuizAttempt;
 
 import java.util.List;
@@ -15,7 +16,15 @@ import java.util.List;
  */
 public record AttemptDetailResponse(
         AttemptSummaryResponse attempt,
-        List<AttemptQuestionResponse> questions
+        List<AttemptQuestionResponse> questions,
+        /**
+         * Số câu tự luận AI còn đang chấm (features/06).
+         * <p>
+         * Frontend dùng con số này để biết điểm hiện tại là <b>tạm</b> và có nên hỏi lại hay
+         * không. Không có nó thì màn kết quả hiển thị một tổng điểm thiếu như thể đã xong, và
+         * người học tưởng mình bị mất điểm phần tự luận.
+         */
+        int gradingPending
 ) {
     public static AttemptDetailResponse from(QuizAttempt attempt) {
         boolean reveal = attempt.getStatus().isFinished();
@@ -27,6 +36,7 @@ public record AttemptDetailResponse(
                         : AttemptQuestionResponse.hidden(answer))
                 .toList();
 
-        return new AttemptDetailResponse(AttemptSummaryResponse.from(attempt), questions);
+        int pending = (int) attempt.getAnswers().stream().filter(AttemptAnswer::isAwaitingAi).count();
+        return new AttemptDetailResponse(AttemptSummaryResponse.from(attempt), questions, pending);
     }
 }

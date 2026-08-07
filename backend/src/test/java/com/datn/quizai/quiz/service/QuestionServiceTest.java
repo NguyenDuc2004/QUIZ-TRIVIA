@@ -143,7 +143,7 @@ class QuestionServiceTest {
     void shouldApplyDefaults() {
         stubSave();
 
-        QuestionRequest request = new QuestionRequest(QuestionType.TRUE_FALSE, "  1 + 1 = 2  ", null,
+        QuestionRequest request = new QuestionRequest(QuestionType.TRUE_FALSE, "  1 + 1 = 2  ", null, null,
                 null, "  ", null, null, List.of(option("Đúng", true), option("Sai", false)));
 
         QuestionResponse response = questionService.create(request, OWNER_ID);
@@ -239,7 +239,7 @@ class QuestionServiceTest {
     }
 
     private QuestionRequest request(QuestionType type, QuestionOptionRequest... options) {
-        return new QuestionRequest(type, "Thủ đô Việt Nam là gì?", "Giải thích", Difficulty.EASY,
+        return new QuestionRequest(type, "Thủ đô Việt Nam là gì?", "Giải thích", null, Difficulty.EASY,
                 "Địa lý", 2, null, List.of(options));
     }
 

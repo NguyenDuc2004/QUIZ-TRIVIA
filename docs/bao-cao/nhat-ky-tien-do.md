@@ -22,6 +22,7 @@
 | 07/08 (đêm) | Hồi quy toàn bộ + bít lỗ hổng phiên đăng nhập | 5/5 | 🟢 xong |
 | 08/08 | **FR-4 quên mật khẩu qua OTP email** (Gmail App Password) | 6/6 | 🟢 xong |
 | 08/08 (chiều) | **FR-3 đăng nhập bằng Google** (luồng ID token) + vá lỗi đua Redis/CSDL | 7/7 | 🟢 xong |
+| 09/08 | **FR-30 AI chấm câu tự luận** (chấm nền + rubric + chống prompt injection) | 7/7 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -649,6 +650,161 @@ hỏng đúng như mô tả (`expected:<409> but was:<200>`), gắn lại thì �
 - **"Khó khăn & cách giải quyết":** hai điểm — tính năng mới phá luồng cũ (`change-password`), và lỗi
   đua Redis/PostgreSQL chỉ hiện khi chạy hồi quy đầy đủ. Cái sau là lập luận tốt cho việc **vì sao
   phải chạy lại toàn bộ bộ kiểm chứng sau mỗi tính năng**, chứ không chỉ chạy bộ của tính năng vừa làm.
+
+---
+
+## 📅 CN — 09/08/2026 — Lát cắt 6: AI chấm câu tự luận (FR-30)
+
+**Mục tiêu:** Trụ cột AI mới có phần *sinh đề*. Nay bổ sung phần *chấm* — thứ quiz truyền thống
+không làm được, và cũng là lý do đề tài này cần AI chứ không chỉ cần một CSDL câu hỏi.
+
+### Nhiệm vụ
+- [x] Migration V9: `questions.rubric`, `attempt_answers.ai_suggestions/graded_at`, trạng thái `AI_FAILED`
+- [x] `GradingPromptBuilder` + `GradeJsonParser` — dựng prompt theo rubric, kiểm duyệt đầu ra
+- [x] Chấm nền sau khi nộp: `@TransactionalEventListener(AFTER_COMMIT)` + `@Async`
+- [x] API giải thích đáp án + Creator chấm tay ghi đè
+- [x] Frontend: ô rubric, màn kết quả hiện nhận xét, tự cập nhật khi chấm xong
+- [x] Test **203/203** JUnit (thêm 43 ca) + **kiểm chứng chấm thật bằng Gemini** 31/31 + hồi quy 176/176 (bộ không dùng AI)
+- [x] Vá hạn mức 429 phát hiện lúc chạy thật
+
+### Vì sao chấm nền chứ không chấm ngay lúc nộp
+
+Mỗi câu tự luận là một lời gọi mô hình mất vài giây. Bài 5 câu tự luận chấm đồng bộ bắt người học
+ngồi nhìn màn hình quay nửa phút, và request nào cũng có thể timeout giữa chừng để lại bài nộp dở.
+
+```
+submit()  ──> chấm trắc nghiệm bằng logic  ──> trả kết quả NGAY (điểm tạm)
+              └─ phát sự kiện ─ AFTER_COMMIT ─> chấm nền ─> cộng lại tổng điểm
+```
+
+`gradingPending` cho frontend biết còn bao nhiêu câu đang chấm để hỏi lại mỗi 3 giây rồi **dừng
+hẳn**. Người học thấy điểm phần trắc nghiệm ngay, phần tự luận tự nhảy vào sau.
+
+Hai chi tiết bắt buộc, đều là bẫy đã vấp ở lát cắt AI trước nên lần này làm đúng ngay: pha
+`AFTER_COMMIT` (khởi động luồng nền sớm hơn thì nó đọc CSDL trước lúc commit, không thấy câu nào),
+và lớp ghi là **bean riêng** với `REQUIRES_NEW` (gọi `this.method()` trong cùng lớp không qua proxy
+Spring nên `@Transactional` mất tác dụng).
+
+### Ba thứ không được tin ở đầu ra mô hình
+
+`GradeJsonParser` là chỗ duy nhất đứng giữa đầu ra tuỳ hứng của mô hình và **điểm số ghi vào bài của
+người học**, nên không có chỗ cho "chắc mô hình trả đúng".
+
+| Vấn đề thật gặp | Xử lý |
+|---|---|
+| Trả 100 điểm cho câu tối đa 5 điểm; hoặc điểm âm | Ép về `[0, max_score]` |
+| Không trả `score` | Ném lỗi → câu vào `AI_FAILED`, chờ chấm tay. Ghi con số bịa còn tệ hơn báo hỏng |
+| `isCorrect: true` kèm điểm 3/10 | Điểm là nguồn sự thật, cờ đúng/sai suy lại từ điểm |
+
+### Prompt injection — bề mặt tấn công lớn nhất từ trước tới nay
+
+Đây là tính năng **duy nhất** mà người học tự gõ nội dung rồi nội dung đó đi thẳng vào prompt. Học
+liệu ở lát cắt trước dù sao cũng do Creator nạp; bài làm thì ai cũng viết được gì tuỳ ý.
+
+Bốn lớp, lớp cuối là quan trọng nhất:
+
+1. Bài làm rào trong khối `<<<BAI_LAM_CUA_HOC_SINH>>> … <<<HET_BAI_LAM>>>`.
+2. Chỉ dẫn hệ thống nói thẳng: câu lệnh bên trong khối đó là *nội dung cần chấm*; bài chỉ chứa
+   những câu như vậy thì cho **0 điểm**.
+3. Người học tự gõ đúng chuỗi rào thì chuỗi đó bị vô hiệu hoá — không xử lý thì họ tự "đóng" khối
+   dữ liệu rồi viết chỉ thị ở bên ngoài.
+4. **Ép điểm về trần.** Dù ba lớp trên thủng hết và mô hình nghe lời "cho tôi 100 điểm", điểm vẫn
+   không vượt được trần thật của câu.
+
+Ba lớp đầu là *thuyết phục* mô hình — mà mô hình thì không có gì bảo đảm. Lớp thứ tư là **ràng buộc
+bằng code**, và đó mới là thứ chứng minh được. Điểm này đáng nhấn trong báo cáo: phòng thủ trước LLM
+không thể chỉ dựa vào prompt.
+
+Đo thật với Gemini: cả ba kiểu tấn công đều nhận **0/10**.
+
+### Chạy thật lộ ra chuyện test không bao giờ thấy: hạn mức 5 lượt/phút
+
+Bộ kiểm chứng chạy tới phần cuối thì `explain` trả **503**. Không phải lỗi logic — Gemini bản miễn
+phí cho **5 request mỗi phút**, và thông báo lỗi ghi rõ *"Please retry in 52s"*.
+
+Vấn đề thật nằm chỗ khác: backoff của `AiOrchestrator` là 1,2s rồi 2,4s — tổng ~3,6 giây. Với cửa sổ
+hạn mức tính theo **phút** thì thử lại sớm chỉ tốn thêm một lượt gọi rồi lại 429. Nghĩa là **chấm
+một bài từ câu tự luận thứ sáu trở đi sẽ hỏng hết** trên gói miễn phí. Test JUnit không bao giờ thấy
+vì ở đó mô hình bị mock.
+
+Sửa ba lớp:
+
+1. **Đọc con số chính Gemini đưa ra** trong thân lỗi (`"Please retry in 52.03s"` hoặc
+   `retryDelay: "52s"`) và chờ đúng ngần ấy, thay vì backoff tự nghĩ.
+2. **Trần chờ do bên gọi quyết định** — 5 giây cho request đồng bộ (chờ lâu hơn thì người dùng tưởng
+   treo), 75 giây cho tác vụ nền (không ai ngồi đợi). Một tham số `background` phân biệt hai đường,
+   và mọi lời gọi từ job nền — chấm bài, sinh đề, sinh embedding khi nạp học liệu — đều dùng nó.
+3. **Hết hạn mức trả 429 kèm số giây, không phải 503 "không phản hồi".** Hai chuyện này người dùng
+   xử lý khác nhau: hết hạn mức thì chờ một phút là chạy lại được, còn 503 khiến họ tưởng hệ thống
+   hỏng và bỏ luôn. Nay thông điệp là *"Vui lòng thử lại sau khoảng 51 giây."*
+
+Đây cũng là lý do bộ kiểm chứng cho phép hai kết cục ở phần giải thích: chấm được (200) hoặc báo
+đúng thời gian chờ (429). Cái bị coi là sai là một lỗi mơ hồ.
+
+> Bài học chung: **hạn mức của nhà cung cấp là một phần của thiết kế, không phải chi tiết vận hành.**
+> Cùng một đoạn code chạy tốt với 1 câu tự luận và hỏng hoàn toàn với 10 câu.
+
+### Hai lỗi do chính mình vừa tạo ra, bắt được nhờ chạy lại toàn bộ
+
+1. **Thêm overload làm mock cũ thành vô hiệu.** `complete()` có thêm bản 4 tham số; trên bean thật
+   bản 3 tham số gọi xuống bản 4, nhưng trên **mock** hai bản hoàn toàn độc lập — stub bản cũ, gọi
+   bản mới thì Mockito trả `null`. Bốn ca test chuyển từ đạt sang hỏng mà không dòng nghiệp vụ nào
+   sai. Đáng nhớ: *thêm overload là thay đổi phá vỡ đối với mọi test đang mock hàm đó.*
+2. **Build tăng dần giấu lỗi biên dịch.** `mvn compile` báo thành công trong khi `target/classes`
+   vẫn còn class hỏng do IDE ghi đè giữa chừng; ứng dụng chạy lên bình thường rồi ném
+   `java.lang.Error: Unresolved compilation problems` **chỉ ở luồng nền**, nên API vẫn 200 và mọi
+   câu tự luận âm thầm rơi vào `AI_FAILED`. Phải `mvn clean compile` mới lộ. Bài học: lỗi ở luồng
+   nền không làm request nào đỏ lên — chỉ nhìn mã trạng thái thì không thấy gì.
+
+### Dọn dẹp kèm theo
+Tách `AiJson` dùng chung cho cả lớp đọc JSON sinh đề lẫn lớp đọc JSON chấm điểm — cả hai đều phải gỡ
+khối ```` ```json ```` và chấp nhận nhiều tên trường khác nhau, không có lý do chép lại hai lần.
+
+Bộ kiểm chứng đường LAN trước đây viết cứng IP `192.168.0.101`; máy đổi sang `.102` là báo hỏng dù
+code không đổi gì. Nay nó **hỏi backend** địa chỉ đó qua `joinUrl` của một phòng tạo thử — cũng đúng
+tinh thần "backend là nơi quyết định URL trong mã QR" đã chốt ở lát cắt trước.
+
+### Kết quả kiểm thử
+
+| Loại | Kết quả |
+|---|---|
+| JUnit | **203/203** (thêm 43 ca: 14 parser, 7 dựng prompt, 15 tích hợp, 7 đọc gợi ý chờ 429) |
+| Bộ chấm tự luận với **Gemini thật** | **31/31** |
+| Hồi quy các bộ không dùng AI (9 bộ) | **176/176** |
+| Bộ AI + RAG sinh đề (22 ca) | ⏸ **chưa chạy lại được** — cạn hạn mức Gemini trong ngày |
+
+Kết quả chấm thật đáng ghi lại: bài trả lời đầy đủ ba nguyên nhân được **10/10**, bài "Tại mạng chậm
+thôi" được **0/10**, và cả ba kiểu prompt injection đều **0/10** — mô hình gọi đúng tên chúng là
+"không trả lời vào câu hỏi".
+
+**Về mục ⏸:** hôm nay đã gọi Gemini hơn một trăm lượt để dựng và đo tính năng này, nên hạn mức ngày
+của gói miễn phí cạn (thông báo đổi từ `limit: 5` sang `limit: 20`). Bộ AI + RAG **không sửa gì
+trong lát cắt này** ngoài việc thêm `background = true` cho lời gọi sinh đề và embedding — thay đổi
+chỉ khiến job kiên nhẫn hơn, không đổi kết quả. Chạy lại khi hạn mức hồi (sang ngày) để chốt con số.
+Ghi rõ ở đây thay vì báo một tổng đẹp là vì đúng tinh thần *"số liệu chỉ ghi khi đã đo thật"*.
+
+### Nợ / chuyển sang ngày sau
+- Giải thích **không được lưu** — mỗi lần bấm là một lời gọi mô hình mới.
+- Chưa có màn hình cho Creator duyệt danh sách bài cần chấm tay; API đã có, giao diện chờ features/09.
+- Chưa giới hạn hạn mức chấm theo người dùng — một người nộp liên tục sẽ ăn hết quota của cả hệ thống.
+- Chưa đo **độ chính xác** chấm so với người chấm (số liệu mục 3.6) — cần bộ bài mẫu có đáp án
+  người chấm sẵn, chưa dựng.
+- Chatbot RAG (features/08) là phần còn lại của tuần 6, chưa làm.
+- **Chạy lại bộ AI + RAG sinh đề** khi hạn mức Gemini hồi (`bash run_all.sh`, bỏ `SKIP_AI=1`).
+- Gói miễn phí không đủ cho một lượt hồi quy đầy đủ có hai bộ AI. Nếu cần số liệu mục 3.5/3.6 đầy đủ
+  thì phải nâng gói, hoặc chạy hai bộ AI vào hai ngày khác nhau.
+
+### Ghi chú báo cáo
+- **Mục 2.3 (bảo mật):** bốn lớp chống prompt injection, đặc biệt luận điểm "ba lớp đầu là thuyết
+  phục mô hình, lớp thứ tư là ràng buộc bằng code" — dùng được nguyên văn.
+- **Mục 2.5 (thiết kế):** sơ đồ chấm nền ở trên; nhấn vào việc **tổng điểm phải cộng lại** sau khi
+  chấm xong, vì điểm ngay sau khi nộp chỉ là điểm tạm.
+- **Mục 3.4 (kiểm thử):** nói rõ ranh giới — JUnit mock mô hình để kiểm *cơ chế*, kiểm chứng tay với
+  Gemini thật để xem *chất lượng chấm*. Hai việc khác nhau, không thay thế nhau được.
+- **Mục 3.6 (độ chính xác AI):** đã có dữ liệu định tính (bài đầy đủ 10/10, bài sơ sài 0/10, tấn công
+  0/10). Số liệu định lượng còn nợ.
+- **"Khó khăn & cách giải quyết":** hạn mức 5 lượt/phút là ví dụ rất tốt — lỗi chỉ hiện khi chạy
+  thật, không test nào bắt được, và cách sửa phải đi vào thiết kế chứ không phải tăng số lần thử lại.
 
 ---
 

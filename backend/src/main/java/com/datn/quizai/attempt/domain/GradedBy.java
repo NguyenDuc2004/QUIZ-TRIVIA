@@ -10,6 +10,14 @@ public enum GradedBy {
     PENDING_AI,
     /** AI đã chấm và có nhận xét. */
     AI,
+    /**
+     * Đã thử gọi AI nhưng không chấm được (hết hạn mức, mạng lỗi, JSON sai định dạng).
+     * <p>
+     * Cần một trạng thái <b>dừng</b> riêng: nếu để nguyên {@link #PENDING_AI} thì người học nhìn
+     * thấy "đang chấm" vĩnh viễn và không ai biết là đã hỏng. Câu ở trạng thái này chờ Creator
+     * chấm tay ({@link #HUMAN}).
+     */
+    AI_FAILED,
     /** Giáo viên chấm tay, ghi đè điểm AI. */
     HUMAN
 }

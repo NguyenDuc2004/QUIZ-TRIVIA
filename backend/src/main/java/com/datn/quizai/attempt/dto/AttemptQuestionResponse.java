@@ -20,6 +20,8 @@ import java.util.UUID;
  * câu vừa trả lời) các trường đó mới có giá trị.
  */
 public record AttemptQuestionResponse(
+        /** Id dòng câu trả lời — Creator cần nó để ghi đè điểm (features/06). */
+        UUID answerId,
         UUID questionId,
         int orderIndex,
         QuestionType type,
@@ -35,7 +37,8 @@ public record AttemptQuestionResponse(
         Boolean correct,
         Integer score,
         GradedBy gradedBy,
-        String aiFeedback
+        String aiFeedback,
+        String aiSuggestions
 ) {
     /** Lựa chọn hiển thị cho người làm bài — <b>không</b> mang cờ đúng/sai. */
     public record OptionView(UUID id, String content) {
@@ -66,6 +69,7 @@ public record AttemptQuestionResponse(
                 : List.of();
 
         return new AttemptQuestionResponse(
+                answer.getId(),
                 question.getId(),
                 answer.getOrderIndex(),
                 question.getType(),
@@ -80,7 +84,8 @@ public record AttemptQuestionResponse(
                 reveal ? answer.getCorrect() : null,
                 reveal ? answer.getScore() : null,
                 reveal ? answer.getGradedBy() : null,
-                reveal ? answer.getAiFeedback() : null);
+                reveal ? answer.getAiFeedback() : null,
+                reveal ? answer.getAiSuggestions() : null);
     }
 
     /**

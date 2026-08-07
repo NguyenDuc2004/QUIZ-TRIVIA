@@ -39,8 +39,34 @@ public class AiOrchestrator {
      * Để 3 vì 503/429 của nhà cung cấp thường hết sau vài giây; cao hơn thì người dùng chờ quá lâu.
      */
     private static final int MAX_ATTEMPTS_PER_PROVIDER = 3;
+
+    /**
+     * Tác vụ nền được thử nhiều lần hơn.
+     * <p>
+     * Ba lần là hợp lý khi có người ngồi đợi. Với job nền vấp hạn mức tính theo phút thì mỗi lần
+     * thử tiêu một cửa sổ chờ ~60 giây, mà chỉ cần một job khác chen vào đúng lúc là mất lượt —
+     * ba lần không đủ để một tài liệu nhiều đoạn đi hết. Chờ thêm vài phút không phiền ai, còn
+     * đánh job là FAILED thì người dùng phải bấm lại từ đầu.
+     */
+    private static final int MAX_ATTEMPTS_BACKGROUND = 6;
     /** Giãn cách giữa các lần thử, tăng dần để không dồn thêm tải lên provider đang quá tải. */
     private static final long BASE_BACKOFF_MILLIS = 1200;
+
+    /**
+     * Chờ tối đa bao lâu cho MỘT lần thử lại, khi có người đang ngồi đợi phản hồi.
+     * <p>
+     * Provider có thể bảo "chờ 52 giây" (hạn mức tính theo phút của Gemini bản miễn phí). Với
+     * request đồng bộ thì chờ ngần ấy chẳng khác gì treo — thà báo lỗi để người dùng bấm lại.
+     */
+    private static final long INTERACTIVE_WAIT_CAP_MILLIS = 5_000;
+
+    /**
+     * Chờ tối đa cho tác vụ nền, nơi không ai ngồi đợi.
+     * <p>
+     * Đủ dài để vượt qua cửa sổ hạn mức theo phút. Không có mức này thì chấm một bài nhiều câu tự
+     * luận sẽ hỏng từ câu thứ sáu trở đi trên gói miễn phí — backoff vài giây không cứu được.
+     */
+    private static final long BACKGROUND_WAIT_CAP_MILLIS = 75_000;
 
     /** Thứ tự ưu tiên, đã lọc theo cấu hình. */
     private final List<AiProvider> orderedProviders;
@@ -81,7 +107,17 @@ public class AiOrchestrator {
      * @param userId  người yêu cầu, null nếu là tác vụ hệ thống
      */
     public AiCompletion complete(AiPrompt prompt, String feature, UUID userId) {
-        return callWithFallback(feature, userId, provider -> provider.complete(prompt), provider -> true);
+        return complete(prompt, feature, userId, false);
+    }
+
+    /**
+     * @param background true khi gọi từ tác vụ nền — chấp nhận chờ lâu theo đúng thời gian provider
+     *                   đề nghị thay vì bỏ cuộc sau vài giây. Với request đồng bộ luôn để false:
+     *                   chờ gần một phút thì người dùng tưởng hệ thống treo.
+     */
+    public AiCompletion complete(AiPrompt prompt, String feature, UUID userId, boolean background) {
+        return callWithFallback(feature, userId, provider -> provider.complete(prompt), provider -> true,
+                background ? BACKGROUND_WAIT_CAP_MILLIS : INTERACTIVE_WAIT_CAP_MILLIS);
     }
 
     /**
@@ -89,6 +125,14 @@ public class AiOrchestrator {
      * nên thực tế đây là lời gọi không có đường lui.
      */
     public List<Float> embed(String text, UUID userId) {
+        return embed(text, userId, false);
+    }
+
+    /**
+     * @param background true khi gọi từ tác vụ nền — nạp học liệu sinh hàng chục embedding liên
+     *                   tiếp, chắc chắn đụng hạn mức theo phút, mà không ai ngồi đợi nên chờ được.
+     */
+    public List<Float> embed(String text, UUID userId, boolean background) {
         AiCompletion completion = callWithFallback("embedding", userId,
                 provider -> {
                     long startedAt = System.currentTimeMillis();
@@ -98,7 +142,8 @@ public class AiOrchestrator {
                     return new AiCompletion(provider.name(), provider.embeddingModel(),
                             serialize(vector), null, null, System.currentTimeMillis() - startedAt);
                 },
-                AiProvider::supportsEmbedding);
+                AiProvider::supportsEmbedding,
+                background ? BACKGROUND_WAIT_CAP_MILLIS : INTERACTIVE_WAIT_CAP_MILLIS);
 
         return deserialize(completion.text());
     }
@@ -108,6 +153,13 @@ public class AiOrchestrator {
     private AiCompletion callWithFallback(String feature, UUID userId,
                                           java.util.function.Function<AiProvider, AiCompletion> call,
                                           java.util.function.Predicate<AiProvider> filter) {
+        return callWithFallback(feature, userId, call, filter, INTERACTIVE_WAIT_CAP_MILLIS);
+    }
+
+    private AiCompletion callWithFallback(String feature, UUID userId,
+                                          java.util.function.Function<AiProvider, AiCompletion> call,
+                                          java.util.function.Predicate<AiProvider> filter,
+                                          long waitCapMillis) {
 
         List<AiProvider> candidates = orderedProviders.stream()
                 .filter(AiProvider::isConfigured)
@@ -120,6 +172,7 @@ public class AiOrchestrator {
         }
 
         List<String> failures = new ArrayList<>();
+        AiProviderException lastFailure = null;
 
         for (int i = 0; i < candidates.size(); i++) {
             AiProvider provider = candidates.get(i);
@@ -127,7 +180,10 @@ public class AiOrchestrator {
             // Thử lại CHÍNH provider này trước khi chuyển sang provider khác: 503 "model
             // overloaded" và 429 của nhà cung cấp thường hết sau vài giây, mà chuyển provider
             // thì kết quả sinh ra khác chất lượng. Chỉ khi provider này hết cơ hội mới đi tiếp.
-            for (int attempt = 1; attempt <= MAX_ATTEMPTS_PER_PROVIDER; attempt++) {
+            int maxAttempts = waitCapMillis >= BACKGROUND_WAIT_CAP_MILLIS
+                    ? MAX_ATTEMPTS_BACKGROUND : MAX_ATTEMPTS_PER_PROVIDER;
+
+            for (int attempt = 1; attempt <= maxAttempts; attempt++) {
                 try {
                     AiCompletion completion = call.apply(provider);
                     requestLogger.logSuccess(userId, feature, completion);
@@ -140,20 +196,23 @@ public class AiOrchestrator {
                 } catch (AiProviderException e) {
                     requestLogger.logFailure(userId, feature, provider, e.getMessage());
                     failures.add(e.getMessage());
+                    lastFailure = e;
 
-                    boolean canRetrySameProvider = e.isRetryable() && attempt < MAX_ATTEMPTS_PER_PROVIDER;
+                    long wait = waitBeforeRetry(e, attempt, waitCapMillis);
+                    boolean canRetrySameProvider = e.isRetryable()
+                            && attempt < maxAttempts
+                            && wait > 0;
                     if (canRetrySameProvider) {
                         log.warn("{} lỗi tạm thời ({}), thử lại sau {}ms",
-                                provider.name(), e.getMessage(), backoffMillis(attempt));
-                        sleep(backoffMillis(attempt));
+                                provider.name(), e.getMessage(), wait);
+                        sleep(wait);
                         continue;
                     }
 
                     boolean isLastProvider = i == candidates.size() - 1;
                     if (!e.isRetryable() || isLastProvider) {
                         // Lỗi do mình gửi sai, hoặc đã hết cả provider lẫn lần thử → dừng luôn
-                        throw new BusinessException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
-                                "Dịch vụ AI đang không phản hồi, vui lòng thử lại sau");
+                        throw giveUp(e);
                     }
                     log.warn("{} vẫn lỗi sau {} lần thử, chuyển sang provider tiếp theo",
                             provider.name(), attempt);
@@ -162,8 +221,45 @@ public class AiOrchestrator {
             }
         }
 
-        throw new BusinessException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
-                "Dịch vụ AI đang không phản hồi: " + String.join(" | ", failures));
+        throw lastFailure != null ? giveUp(lastFailure)
+                : new BusinessException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+                        "Dịch vụ AI đang không phản hồi: " + String.join(" | ", failures));
+    }
+
+    /**
+     * Đổi lỗi provider thành lỗi trả về cho client.
+     * <p>
+     * Tách riêng <b>hết hạn mức</b> khỏi "dịch vụ hỏng": hai chuyện này người dùng phải xử lý khác
+     * nhau. Hết hạn mức thì chờ một phút là chạy lại được, mà báo 503 "không phản hồi" thì họ tưởng
+     * hệ thống lỗi và bỏ luôn. Có con số provider đưa ra thì nói thẳng phải chờ bao lâu.
+     */
+    private BusinessException giveUp(AiProviderException e) {
+        long retryAfter = e.getRetryAfterMillis();
+        if (retryAfter > 0) {
+            long seconds = Math.max(1, Math.round(retryAfter / 1000.0));
+            return new BusinessException(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,
+                    "Dịch vụ AI đang quá tải hạn mức. Vui lòng thử lại sau khoảng " + seconds + " giây.");
+        }
+        return new BusinessException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+                "Dịch vụ AI đang không phản hồi, vui lòng thử lại sau");
+    }
+
+    /**
+     * Chờ bao lâu trước khi thử lại.
+     * <p>
+     * Ưu tiên con số <b>chính provider đưa ra</b> — với hạn mức tính theo phút, backoff tự nghĩ
+     * (1,2s rồi 2,4s) không bao giờ đủ, thử lại sớm chỉ tốn thêm một lượt gọi và lại 429.
+     *
+     * @return 0 nghĩa là chờ lâu hơn mức cho phép, đừng thử lại nữa mà chuyển provider hoặc bỏ cuộc
+     */
+    private long waitBeforeRetry(AiProviderException e, int attempt, long waitCapMillis) {
+        long suggested = e.getRetryAfterMillis();
+        if (suggested <= 0) {
+            return Math.min(backoffMillis(attempt), waitCapMillis);
+        }
+        // Cộng thêm một chút: chờ đúng sát nút thường vẫn dính 429 vì đồng hồ hai bên lệch nhau
+        long wait = suggested + 500;
+        return wait <= waitCapMillis ? wait : 0;
     }
 
     /** Backoff tăng dần: 1,2s rồi 2,4s. */

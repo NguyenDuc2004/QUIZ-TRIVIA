@@ -69,7 +69,7 @@ public class MaterialIngestionService {
         chunkRepository.deleteByMaterialId(materialId);
 
         for (int i = 0; i < chunks.size(); i++) {
-            List<Float> embedding = aiOrchestrator.embed(chunks.get(i), ownerId);
+            List<Float> embedding = aiOrchestrator.embed(chunks.get(i), ownerId, true);
             chunkRepository.insert(materialId, i, chunks.get(i), embedding);
         }
 

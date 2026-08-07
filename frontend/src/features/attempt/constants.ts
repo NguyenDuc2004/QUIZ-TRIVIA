@@ -27,6 +27,7 @@ export const GRADED_BY_LABEL: Record<GradedBy, string> = {
   AUTO: 'Máy chấm',
   PENDING_AI: 'Chờ AI chấm',
   AI: 'AI chấm',
+  AI_FAILED: 'AI chấm hỏng',
   HUMAN: 'Giáo viên chấm',
 }
 

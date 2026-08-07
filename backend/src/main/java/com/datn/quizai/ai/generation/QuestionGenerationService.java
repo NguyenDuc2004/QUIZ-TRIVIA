@@ -62,7 +62,9 @@ public class QuestionGenerationService {
                 QuestionPromptBuilder.userPrompt(command.topic(), command.count(),
                         command.types(), command.difficulty(), chunks));
 
-        AiCompletion completion = aiOrchestrator.complete(prompt, "generation", ownerId);
+        // background = true: sinh đề chạy trong job nền và trả jobId, không ai ngồi đợi HTTP response.
+        // Nhờ vậy chờ được hết cửa sổ hạn mức theo phút thay vì bỏ cuộc rồi đánh job là FAILED.
+        AiCompletion completion = aiOrchestrator.complete(prompt, "generation", ownerId, true);
         QuestionJsonParser.ParseResult parsed = QuestionJsonParser.parse(completion.text());
 
         if (parsed.questions().isEmpty()) {
@@ -97,7 +99,7 @@ public class QuestionGenerationService {
                 ? "nội dung chính của tài liệu"
                 : command.topic();
 
-        List<Float> queryEmbedding = aiOrchestrator.embed(query, ownerId);
+        List<Float> queryEmbedding = aiOrchestrator.embed(query, ownerId, true);
         List<MaterialChunkRepository.Chunk> chunks =
                 chunkRepository.searchSimilar(ownerId, command.materialId(), queryEmbedding, RETRIEVAL_TOP_K);
 
