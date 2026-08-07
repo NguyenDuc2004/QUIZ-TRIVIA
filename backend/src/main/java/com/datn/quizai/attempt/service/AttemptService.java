@@ -403,23 +403,23 @@ public class AttemptService {
      */
     private void finish(QuizAttempt attempt, AttemptStatus status, OffsetDateTime submittedAt) {
         int total = 0;
-        boolean needsAi = false;
         for (AttemptAnswer answer : attempt.getAnswers()) {
             if (answer.getGradedBy() == GradedBy.NOT_GRADED) {
                 applyGrade(answer);
             }
-            needsAi |= answer.isAwaitingAi();
             total += answer.getScore();
         }
         attempt.setTotalScore(total);
         attempt.setStatus(status);
         attempt.setSubmittedAt(submittedAt);
 
-        if (needsAi) {
-            // Người nhận chạy ở pha AFTER_COMMIT: khởi động luồng nền ngay bây giờ thì nó đọc CSDL
-            // trước khi những thay đổi trên kịp commit và không thấy câu nào cần chấm.
-            events.publishEvent(new AttemptSubmittedEvent(attempt.getId(), attempt.getUser().getId()));
-        }
+        // Phát cho MỌI bài nộp, không chỉ bài có câu tự luận: chấm AI và đồng bộ đồ thị gợi ý
+        // (features/07) cùng nghe sự kiện này. Bên nào không có việc thì tự thoát sớm — rẻ hơn
+        // nhiều so với việc mỗi bên cần một sự kiện riêng rồi quên phát một cái.
+        //
+        // Người nhận chạy ở pha AFTER_COMMIT: khởi động luồng nền ngay bây giờ thì nó đọc CSDL
+        // trước khi những thay đổi trên kịp commit và không thấy gì.
+        events.publishEvent(new AttemptSubmittedEvent(attempt.getId(), attempt.getUser().getId()));
     }
 
     private void applyGrade(AttemptAnswer answer) {

@@ -125,11 +125,11 @@ chưa cache theo hash(prompt).
 
 ## Tuần 7 — Gợi ý Neo4j ⭐ (31/08–06/09) 🔴
 
-- **T2 31/08** — [ ] Mô hình đồ thị (User–Topic–Quiz) · [ ] Job đồng bộ PostgreSQL → Neo4j (idempotent)
+- **T2 31/08** — [x] Mô hình đồ thị (User–Topic–Quiz) · [x] Job đồng bộ PostgreSQL → Neo4j (idempotent) *(xong 09/08)*
 - **T3 01/09** — [ ] Cập nhật đồ thị theo hành vi làm bài · [ ] Kiểm tra lệch dữ liệu định kỳ
-- **T4 02/09** — [ ] Cypher: gợi ý quiz theo sở thích/năng lực · [ ] API gợi ý
+- **T4 02/09** — [x] Cypher: gợi ý quiz theo sở thích/năng lực · [x] API gợi ý *(xong 09/08)*
 - **T5 03/09** — [ ] Cypher: lộ trình học cá nhân hóa · [ ] API lộ trình
-- **T6 04/09** — [ ] FE: khu vực "Gợi ý cho bạn" + lộ trình học · [ ] Kiểm tra tính hợp lý gợi ý
+- **T6 04/09** — [x] FE: khu vực "Gợi ý cho bạn" + lộ trình học *(xong 09/08)* · [ ] Kiểm tra tính hợp lý gợi ý (cần người thật dùng)
 - **T7 05/09** — [ ] Test đồng bộ + truy vấn · [ ] Fix bug
 - **CN 06/09** — [ ] Đệm / review tuần
 
@@ -185,6 +185,6 @@ chưa cache theo hash(prompt).
 | Auth + Quiz + Chơi đơn | 1–3 | ⬜ |
 | Multiplayer real-time | 4 | ⬜ |
 | AI sinh đề + RAG + chấm + chatbot | 5–6 | ⬜ |
-| Gợi ý Neo4j | 7 | ⬜ |
+| Gợi ý Neo4j | 7 | ✅ |
 
 _(Đổi ⬜ → ✅ khi trụ cột hoàn thành và test xong.)_

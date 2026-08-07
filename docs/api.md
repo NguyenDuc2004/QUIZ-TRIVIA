@@ -324,9 +324,35 @@ chưa xong · `503` chưa cấu hình API key hoặc mọi provider đều khôn
 
 ## 7. Gợi ý cá nhân hóa (Neo4j) — `/recommendations`
 ```
-GET    /api/v1/recommendations           Gợi ý quiz cá nhân hóa
-GET    /api/v1/recommendations/path      Lộ trình học tập đề xuất
+GET    /api/v1/recommendations         Quiz gợi ý cho tôi (limit, mặc định 8)          ✅
+GET    /api/v1/recommendations/path    Lộ trình học: chủ đề xếp theo mức độ yếu        ✅
+POST   /api/v1/recommendations/rebuild Dựng lại đồ thị của tôi từ lịch sử làm bài      ✅
 ```
+
+**Quyền:** cả ba yêu cầu **đăng nhập**. Không có khái niệm "gợi ý cho khách" — gợi ý dựa trên lịch
+sử của chính người gọi, mà khách thì không có lịch sử.
+
+**Hai nguồn gợi ý, trộn lại.** Ưu tiên quiz chạm chủ đề đang yếu; còn chỗ thì lấp bằng quiz mà những
+người học có hành vi giống mình đã làm. Chỉ dùng một nguồn thì hỏng theo hai kiểu: chỉ theo chủ đề
+yếu thì người mới (chưa sai gì) không có gợi ý nào, còn chỉ theo cộng tác thì gợi ý trôi theo đám
+đông mà chẳng liên quan tới chỗ người này đang hổng.
+
+Mỗi mục kèm `source` (`WEAK_TOPIC` / `SIMILAR_LEARNERS`) và **`reason` viết sẵn bằng tiếng Việt** —
+gợi ý không nói vì sao thì người dùng không có căn cứ để tin hay bỏ qua.
+
+**Thế nào là "yếu":** tỷ lệ đúng dưới **60%** *và* đã trả lời ít nhất **3 câu** thuộc chủ đề đó. Điều
+kiện thứ hai quan trọng không kém: sai 1 trên 1 câu là 0% nhưng không nói lên điều gì, gắn nhãn
+"yếu" từ đó là võ đoán và người học đọc xong sẽ mất tin vào cả những nhãn đúng.
+
+**Không có `rating`.** Hệ thống chưa có tính năng đánh giá quiz, nên gợi ý sắp theo *số câu khớp chủ
+đề đang yếu* rồi tới *số lượt làm thật* — không sắp theo một con số không tồn tại.
+
+`/path` trả kèm `note` giải thích khi chưa đủ dữ liệu (chưa làm bài nào, chưa đủ 3 câu một chủ đề,
+hoặc không yếu chủ đề nào). Danh sách rỗng mà không nói vì sao thì người dùng tưởng hệ thống hỏng.
+
+**Neo4j hỏng thì trả rỗng, không trả 500** — gợi ý là tính năng phụ trợ trên trang chủ, không đáng
+kéo cả trang sập.
+
 
 ## 7b. Flashcard & SRS — `/decks`, `/flashcards`
 ```

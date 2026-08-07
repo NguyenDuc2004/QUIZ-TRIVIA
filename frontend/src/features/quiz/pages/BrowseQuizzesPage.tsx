@@ -7,6 +7,7 @@ import type { Difficulty } from '../api/quizApi'
 import { DIFFICULTY_OPTIONS } from '../constants'
 import { useCategories, useQuizList } from '../hooks/useQuizQueries'
 import QuizCard from '../components/QuizCard'
+import RecommendedQuizzes from '@/features/recommend/components/RecommendedQuizzes'
 
 const PAGE_SIZE = 12
 
@@ -49,6 +50,10 @@ export default function BrowseQuizzesPage() {
             : 'Các quiz đã được xuất bản công khai'
         }
       />
+
+      {/* Gợi ý cá nhân hoá (features/07) — tự ẩn khi chưa có dữ liệu, không hiện ô trống.
+          Không hiện khi đang tìm kiếm: lúc đó người dùng đã biết mình muốn gì rồi. */}
+      {!keyword && <RecommendedQuizzes />}
 
       {/* Chip danh mục kiểu thanh chủ đề của Udemy */}
       <div className="flex gap-2 overflow-x-auto pb-1">
