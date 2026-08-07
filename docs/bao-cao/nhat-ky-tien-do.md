@@ -784,6 +784,11 @@ chỉ khiến job kiên nhẫn hơn, không đổi kết quả. Chạy lại khi
 Ghi rõ ở đây thay vì báo một tổng đẹp là vì đúng tinh thần *"số liệu chỉ ghi khi đã đo thật"*.
 
 ### Nợ / chuyển sang ngày sau
+- **Giao diện không phân biệt "chờ vài giây" với "đang bị chặn hạn mức".** Bấm thử trên trình duyệt
+  lúc đã cạn quota thì thấy spinner "AI đang chấm" đứng yên ~6 phút (6 lần thử × 60 giây) rồi mới
+  chuyển sang cảnh báo cam. Backend *biết* nó đang vướng 429 nhưng không nói cho frontend — cần thêm
+  một trường trạng thái chờ vào response để giao diện nói thật ("đang xếp hàng, còn khoảng N giây")
+  thay vì để người học đoán. Trạng thái dừng thì đã đúng, chỉ là chậm và im lặng.
 - Giải thích **không được lưu** — mỗi lần bấm là một lời gọi mô hình mới.
 - Chưa có màn hình cho Creator duyệt danh sách bài cần chấm tay; API đã có, giao diện chờ features/09.
 - Chưa giới hạn hạn mức chấm theo người dùng — một người nộp liên tục sẽ ăn hết quota của cả hệ thống.
