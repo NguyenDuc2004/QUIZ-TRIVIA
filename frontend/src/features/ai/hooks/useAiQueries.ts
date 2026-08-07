@@ -36,8 +36,12 @@ export function useAiJob(jobId: string | undefined) {
     queryFn: () => aiApi.getJob(jobId!),
     enabled: Boolean(jobId),
     refetchInterval: (query) => {
-      const status = query.state.data?.status
-      return status === 'PENDING' || status === 'RUNNING' ? 2000 : false
+      const data = query.state.data
+      const running = data?.status === 'PENDING' || data?.status === 'RUNNING'
+      if (!running) return false
+      // Đang chờ hạn mức thì giãn nhịp: hỏi mỗi 2 giây suốt một phút chờ là ba chục lần vô ích,
+      // mà đồng hồ đếm ngược mỗi 5 giây vẫn đủ mượt để người dùng thấy nó đang nhích.
+      return (data?.aiThrottledSeconds ?? 0) > 0 ? 5000 : 2000
     },
   })
 }

@@ -1,8 +1,22 @@
 import { Link } from 'react-router-dom'
 import { Button, Skeleton, Tag, Typography } from 'antd'
+import type { RecommendationSource } from '../api/recommendApi'
 import { useRecommendedQuizzes } from '../hooks/useRecommendQueries'
 
 const { Title, Text } = Typography
+
+/** Ba nguồn gợi ý, mỗi nguồn một nhãn — người học biết vì sao quiz này xuất hiện. */
+const SOURCE_LABEL: Record<RecommendationSource, string> = {
+  WEAK_TOPIC: 'Ôn chỗ đang yếu',
+  SIMILAR_LEARNERS: 'Người giống bạn đã làm',
+  NEW_TOPIC: 'Chủ đề mới',
+}
+
+const SOURCE_COLOR: Record<RecommendationSource, string> = {
+  WEAK_TOPIC: 'orange',
+  SIMILAR_LEARNERS: 'blue',
+  NEW_TOPIC: 'green',
+}
 
 /**
  * Khu "Gợi ý cho bạn" trên trang Khám phá (FR-34).
@@ -36,11 +50,8 @@ export default function RecommendedQuizzes() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {data.map((item) => (
           <div key={item.quizId} className="flex flex-col border border-line p-4">
-            <Tag
-              color={item.source === 'WEAK_TOPIC' ? 'orange' : 'blue'}
-              className="mr-0! mb-2 self-start"
-            >
-              {item.source === 'WEAK_TOPIC' ? 'Ôn chỗ đang yếu' : 'Người giống bạn đã làm'}
+            <Tag color={SOURCE_COLOR[item.source]} className="mr-0! mb-2 self-start">
+              {SOURCE_LABEL[item.source]}
             </Tag>
 
             <Text className="mb-1 font-bold">{item.title}</Text>

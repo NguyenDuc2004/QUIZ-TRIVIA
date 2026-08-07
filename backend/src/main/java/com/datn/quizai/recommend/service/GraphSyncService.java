@@ -8,13 +8,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -35,10 +31,13 @@ public class GraphSyncService {
 
     private final AttemptGraphRepository graphSource;
     private final GraphWriter graphWriter;
+    private final GraphSyncReader reader;
 
-    public GraphSyncService(AttemptGraphRepository graphSource, GraphWriter graphWriter) {
+    public GraphSyncService(AttemptGraphRepository graphSource, GraphWriter graphWriter,
+                            GraphSyncReader reader) {
         this.graphSource = graphSource;
         this.graphWriter = graphWriter;
+        this.reader = reader;
     }
 
     /**
@@ -99,29 +98,21 @@ public class GraphSyncService {
      *
      * @return số quiz đã đưa vào
      */
-    @Transactional(readOnly = true)
     public int syncPublicCatalog() {
-        Map<UUID, List<GraphWriter.TopicCount>> byQuiz = new LinkedHashMap<>();
-        Map<UUID, String> titles = new LinkedHashMap<>();
+        GraphSyncReader.Catalog catalog = reader.loadCatalog();
 
-        for (AttemptGraphRepository.CatalogRow row : graphSource.findPublicQuizCatalog()) {
-            titles.put(row.getQuizId(), row.getQuizTitle());
-            byQuiz.computeIfAbsent(row.getQuizId(), key -> new ArrayList<>())
-                    .add(new GraphWriter.TopicCount(row.getTopic(), row.getQuestionCount()));
-        }
-
-        byQuiz.forEach((quizId, topics) -> {
-            graphWriter.upsertQuizNode(quizId, titles.get(quizId), "PUBLIC");
+        catalog.topicsByQuiz().forEach((quizId, topics) -> {
+            graphWriter.upsertQuizNode(quizId, catalog.titles().get(quizId), "PUBLIC");
             graphWriter.replaceQuizTopics(quizId, topics);
         });
 
         // Gỡ nút của quiz/tài khoản đã bị xoá ở PostgreSQL. Không có bước này thì đồ thị chỉ lớn
         // lên mãi, và tệ hơn: hệ thống gợi ý một quiz đã biến mất, người dùng bấm vào nhận 404.
-        long pruned = graphWriter.pruneDeleted(graphSource.findAllUserIds(), graphSource.findAllQuizIds());
+        long pruned = graphWriter.pruneDeleted(catalog.validUserIds(), catalog.validQuizIds());
 
         log.info("Đồ thị gợi ý: {} quiz công khai, gỡ {} nút không còn trong PostgreSQL",
-                byQuiz.size(), pruned);
-        return byQuiz.size();
+                catalog.topicsByQuiz().size(), pruned);
+        return catalog.topicsByQuiz().size();
     }
 
     /** Nuốt lỗi và chỉ ghi log — xem javadoc lớp về việc vì sao Neo4j hỏng không được lan ra. */
@@ -133,38 +124,66 @@ public class GraphSyncService {
         }
     }
 
+    /** Số lần thử lại khi hai luồng đồng bộ đụng nhau — xem {@link #sync}. */
+    private static final int DEADLOCK_RETRIES = 3;
+
     /**
-     * Đọc dữ liệu trong một transaction ngắn rồi ghi sang Neo4j.
+     * Đồng bộ một bài: đọc PostgreSQL một lần, rồi ghi sang Neo4j với thử lại khi vấp khoá.
      * <p>
-     * Tách riêng để test gọi thẳng được và để lỗi Neo4j hiện ra rõ ràng thay vì bị nuốt.
+     * Hai luồng cùng đồng bộ hai bài <i>khác nhau</i> nhưng <i>cùng một quiz</i> sẽ giành khoá trên
+     * cùng nút Quiz, Neo4j phát hiện deadlock rồi huỷ một bên. Chuyện bình thường với CSDL đồ thị —
+     * cách xử lý đúng là thử lại, không phải né bằng cách khoá to hơn.
+     * <p>
+     * <b>Phương thức này cố tình KHÔNG {@code @Transactional}.</b> Neo4j huỷ cả transaction khi
+     * deadlock; vòng lặp thử lại nằm trong một transaction đã chết sẽ nhận "Cannot run more queries
+     * in this transaction". Phần đọc nằm ở {@link GraphSyncReader} — bean riêng, vì gọi
+     * {@code this.method()} trong cùng lớp không qua proxy nên {@code @Transactional} sẽ mất tác dụng.
+     * <p>
+     * Thử lại an toàn <b>chính vì đồng bộ idempotent</b>. Đây là lần thứ hai tính chất đó trả công:
+     * lần đầu là để chạy hai lượt cho mỗi bài (lúc nộp và sau khi AI chấm).
      */
-    @Transactional(readOnly = true)
     public void sync(UUID attemptId) {
-        AttemptGraphRepository.AttemptRow attempt = graphSource.findAttemptRow(attemptId);
-        if (attempt == null) {
+        GraphSyncReader.Snapshot snapshot = reader.load(attemptId);
+        if (snapshot == null) {
             return;
         }
 
+        for (int attempt = 1; ; attempt++) {
+            try {
+                write(snapshot);
+                return;
+            } catch (org.springframework.dao.TransientDataAccessException
+                     | org.springframework.dao.DataIntegrityViolationException e) {
+                // Hai kiểu đụng độ, cùng cách chữa:
+                //  - TransientDataAccess: Neo4j phát hiện deadlock rồi huỷ một bên.
+                //  - DataIntegrityViolation: hai luồng cùng MERGE một nút chưa tồn tại, cả hai cùng
+                //    quyết định tạo, và ràng buộc duy nhất chặn kẻ tới sau. MERGE nghe như "tạo nếu
+                //    chưa có" nhưng KHÔNG nguyên tử với luồng khác — chỗ này rất dễ tin nhầm.
+                if (attempt >= DEADLOCK_RETRIES) {
+                    throw e;
+                }
+                log.debug("Đụng độ ghi Neo4j khi đồng bộ bài {} ({}), thử lại lần {}",
+                        attemptId, e.getClass().getSimpleName(), attempt + 1);
+                sleepBriefly(attempt);
+            }
+        }
+    }
+
+    private void write(GraphSyncReader.Snapshot snapshot) {
         graphWriter.upsertAttempt(
-                attempt.getUserId(), attempt.getQuizId(), attempt.getQuizTitle(),
-                attempt.getVisibility().name(), attempt.getTotalScore(), attempt.getMaxScore(),
-                attempt.getSubmittedAt());
+                snapshot.userId(), snapshot.quizId(), snapshot.quizTitle(), snapshot.visibility(),
+                snapshot.score(), snapshot.maxScore(), snapshot.submittedAt());
+        graphWriter.replaceQuizTopics(snapshot.quizId(), snapshot.quizTopics());
+        graphWriter.replaceUserMastery(snapshot.userId(), snapshot.userMastery());
+    }
 
-        List<GraphWriter.TopicCount> topics = graphSource.findQuizTopics(attempt.getQuizId()).stream()
-                .map(row -> new GraphWriter.TopicCount(row.getTopic(), row.getQuestionCount()))
-                .toList();
-        graphWriter.replaceQuizTopics(attempt.getQuizId(), topics);
-
-        // Tính lại năng lực trên TOÀN BỘ lịch sử, không cộng thêm phần của bài này: cộng dồn thì
-        // chạy đồng bộ hai lần cho cùng một bài là số liệu nhân đôi — mà nó cố tình chạy hai lần.
-        List<GraphWriter.TopicMastery> mastery = graphSource.findUserTopicMastery(attempt.getUserId())
-                .stream()
-                .map(row -> new GraphWriter.TopicMastery(
-                        row.getTopic(), row.getCorrectCount(), row.getTotalCount()))
-                .toList();
-        graphWriter.replaceUserMastery(attempt.getUserId(), mastery);
-
-        log.debug("Đã đồng bộ bài {}: {} chủ đề của quiz, {} chủ đề năng lực",
-                attemptId, topics.size(), mastery.size());
+    /** Nghỉ rất ngắn và tăng dần, đủ để luồng kia buông khoá. */
+    private void sleepBriefly(int attempt) {
+        try {
+            Thread.sleep(50L * attempt);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Bị ngắt khi chờ thử lại đồng bộ đồ thị", e);
+        }
     }
 }

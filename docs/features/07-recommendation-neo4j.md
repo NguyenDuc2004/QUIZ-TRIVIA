@@ -134,11 +134,43 @@ quiz chưa ai đụng tới thì không có trong đồ thị và không bao gi�
 thiệu quiz người ta *chưa* làm — hệ thống tự loại mất đúng thứ nó cần đề xuất. Việc một quiz phủ chủ
 đề nào là thuộc tính của chính quiz đó, không phải hành vi của ai, nên phải vào đồ thị độc lập.
 
+## Ba nguồn gợi ý, không phải hai
+
+Bản đầu chỉ có hai nguồn. Chạy thật mới thấy **cả hai cạn cùng lúc**: người học yếu Spring Boot
+nhưng đã làm hết quiz Spring Boot thì nguồn "chủ đề yếu" rỗng; hệ thống mới có vài người dùng thì
+nguồn "người giống bạn" cũng rỗng. Kết quả là khu Gợi ý trống trơn trong khi kho quiz vẫn còn
+nguyên chủ đề người ta chưa đụng tới.
+
+| Nguồn | Khi nào có tác dụng | Nhãn |
+|---|---|---|
+| `WEAK_TOPIC` | Đang yếu một chủ đề và còn quiz chưa làm thuộc chủ đề đó | Ôn chỗ đang yếu |
+| `SIMILAR_LEARNERS` | Có người khác cùng làm những quiz mình đã làm | Người giống bạn đã làm |
+| `NEW_TOPIC` | Còn chủ đề chưa từng luyện — **luôn có tác dụng khi kho còn quiz** | Chủ đề mới |
+
+Nguồn thứ ba cũng giải luôn *cold start*: người vừa đăng ký chưa có hành vi nào, nhưng mọi chủ đề
+đều là mới với họ, nên có gợi ý ngay từ lần đăng nhập đầu tiên.
+
+## Ghi đồng thời: ba lớp phải sửa, không phải một
+
+Chạy test đầy đủ moi ra một chuỗi lỗi đồng thời — hai luồng cùng đồng bộ hai bài *khác nhau* nhưng
+*cùng một quiz* thì giành nhau nút Quiz.
+
+| Triệu chứng | Nguyên nhân | Sửa |
+|---|---|---|
+| Quiz mất bớt chủ đề | `replaceQuizTopics` xoá rồi ghi bằng **hai lần gọi**; lệnh xoá của luồng sau chen vào giữa loạt ghi của luồng trước | Gộp xoá + ghi vào **một câu Cypher** với `UNWIND` |
+| `Cannot run more queries in this transaction` | Vòng lặp thử lại nằm *trong* phương thức `@Transactional`, mà Neo4j đã huỷ cả transaction khi deadlock | Tách phần đọc sang bean riêng (`GraphSyncReader`); phần ghi + thử lại nằm **ngoài** transaction |
+| `Node already exists with label Quiz` | Hai luồng cùng `MERGE` một nút chưa tồn tại, cả hai cùng quyết định tạo, ràng buộc duy nhất chặn kẻ tới sau | Bắt luôn `DataIntegrityViolationException` và thử lại |
+
+Điểm dễ tin nhầm nhất: **`MERGE` nghe như "tạo nếu chưa có" nhưng không nguyên tử với luồng khác.**
+Có ràng buộc duy nhất thì thay vì tạo hai nút, nó ném lỗi — và lỗi đó là lỗi *đụng độ*, tức là thử
+lại được.
+
+Thử lại an toàn **chính vì đồng bộ idempotent**. Đây là lần thứ hai tính chất đó trả công: lần đầu
+là để chạy hai lượt cho mỗi bài (lúc nộp và sau khi AI chấm).
+
 ## Chưa làm
 - **FR-36** LLM giải thích lý do gợi ý — sẽ tốn thêm hạn mức AI cho mỗi lần mở trang; cần cân nhắc
   cache trước khi bật.
 - **FR-32** Adaptive difficulty trong phiên làm bài.
-- Người dùng chưa làm bài nào thì chưa có gợi ý (bài toán *cold start*). Khu "Gợi ý cho bạn" tự ẩn
-  thay vì hiện ô trống, nhưng đó là né chứ chưa phải giải.
 - Gỡ nút dùng `WHERE NOT id IN $ids` — với vài trăm bản ghi thì không sao, nhưng đây là phép so
   danh sách nên sẽ chậm dần; ngân hàng quiz lớn thì phải đổi sang đánh dấu theo lô.

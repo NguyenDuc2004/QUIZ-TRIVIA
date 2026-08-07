@@ -932,7 +932,7 @@ chỉ có kết nối — một CSDL đồ thị chạy trong docker-compose mà
 - [x] Cypher: lộ trình học theo năng lực
 - [x] API `/recommendations`, `/path`, `/rebuild`
 - [x] Frontend: khu "Gợi ý cho bạn" + trang Lộ trình học
-- [x] 14 ca test với **Neo4j thật** (Testcontainer), tổng **236/236**
+- [x] 16 ca test với **Neo4j thật** (Testcontainer), tổng **238/238**
 
 ### Việc đầu tiên phải làm là bỏ bớt bản thiết kế
 
@@ -1012,7 +1012,7 @@ ca dùng tài khoản riêng và assert đúng cạnh của mình. *Test đếm 
 chạy* — mà thứ tự chạy thì không ai kiểm soát.
 
 ### Kiểm thử
-**236/236** JUnit, thêm 14 ca chạy trên **Neo4j thật bằng Testcontainer** — không mock, vì cả tính
+**238/238** JUnit, thêm 16 ca chạy trên **Neo4j thật bằng Testcontainer** — không mock, vì cả tính
 năng này *là* mấy câu Cypher; mock đi thì chỉ còn kiểm được việc gọi hàm, còn Cypher sai cú pháp hay
 sai logic đồ thị vẫn lọt.
 
@@ -1061,9 +1061,54 @@ Một chi tiết nhỏ nhưng đúng như dự đoán: dữ liệu thật đã c
 `mã trạng thái HTTP` (4 câu) — hai chủ đề tách đôi vì khác chữ hoa. Ô gõ-hoặc-chọn làm buổi chiều
 ngăn được từ nay, nhưng hai mục đã lỡ tách thì phải sửa tay.
 
+### Bấm thử lần hai: gợi ý vẫn rỗng, và đó là lỗi thiết kế chứ không phải thiếu dữ liệu
+
+Sau khi dọn CSDL và tạo thêm quiz có chủ đề, khu Gợi ý **vẫn trống**. Đọc đồ thị mới hiểu:
+
+| Chủ đề | Người học | Số quiz phủ | Đã làm hết chưa |
+|---|---|---|---|
+| Spring Boot | 0/15 → yếu | 2 | ✅ cả hai |
+| Java | 1/5 → yếu | 1 | ✅ |
+| Lập trình web | *chưa làm bao giờ* | 1 | ❌ |
+
+Gợi ý chỉ có hai nguồn — chủ đề yếu, và người giống mình — mà **cả hai cạn cùng lúc**: yếu chỗ nào
+thì đã làm hết quiz chỗ đó, còn hệ thống mới có một người dùng hoạt động nên lọc cộng tác cũng rỗng.
+Trong khi kho vẫn còn nguyên một quiz "Lập trình web" chưa ai đụng.
+
+Thêm **nguồn thứ ba: chủ đề chưa từng luyện**. Nó cũng giải luôn bài toán *cold start* đã ghi vào nợ
+hôm trước — người vừa đăng ký chưa có hành vi nào, nhưng mọi chủ đề đều là mới với họ.
+
+> Bài học: một hệ gợi ý phải có **nguồn không phụ thuộc hành vi** làm đáy. Hai nguồn "thông minh"
+> đều cần dữ liệu để chạy, nên chúng hỏng cùng nhau đúng lúc người dùng cần nhất — lúc mới bắt đầu,
+> và lúc đã học hết phần mình yếu.
+
+### Bốn lỗi đồng thời, moi ra bởi hai ca test mới
+
+Thêm hai ca test cho nguồn thứ ba thì **ba ca khác đỏ lên** — không phải vì test sai, mà vì chúng
+tạo thêm đủ tải để lộ một chuỗi lỗi ghi đồng thời đã nằm sẵn ở đó.
+
+| Triệu chứng | Nguyên nhân thật | Sửa |
+|---|---|---|
+| Quiz mất bớt chủ đề | `replaceQuizTopics` xoá rồi ghi bằng **hai lần gọi**; lệnh xoá của luồng sau chen vào giữa loạt ghi của luồng trước | Gộp vào **một câu Cypher** dùng `UNWIND` |
+| Deadlock Neo4j | Hai luồng giành khoá trên cùng nút Quiz | Thử lại — cách xử lý chuẩn, không phải né bằng khoá to hơn |
+| `Cannot run more queries in this transaction` | Vòng lặp thử lại nằm **trong** phương thức `@Transactional`; Neo4j đã huỷ transaction khi deadlock nên lần thử thứ hai chạy trên xác chết | Tách phần đọc sang bean riêng, thử lại **ngoài** transaction |
+| `Node already exists with label Quiz` | Hai luồng cùng `MERGE` một nút chưa tồn tại | Bắt cả `DataIntegrityViolationException` rồi thử lại |
+
+Hai điều đáng ghi vào báo cáo:
+
+**`MERGE` không nguyên tử với luồng khác.** Tên gọi khiến người ta tin là "tạo nếu chưa có" một cách
+an toàn. Thực tế hai luồng cùng thấy "chưa có" rồi cùng tạo, và ràng buộc duy nhất chặn kẻ tới sau.
+Lỗi đó là lỗi *đụng độ* — thử lại được, chứ không phải lỗi dữ liệu.
+
+**Tách đọc khỏi ghi hoá ra là điều kiện để thử lại được.** Ban đầu tách chỉ vì "đừng giữ transaction
+JPA mở khi gọi sang Neo4j". Nhưng lý do thật quan trọng hơn: transaction đã chết thì không chạy thêm
+được câu nào, nên vòng lặp thử lại **bắt buộc** phải nằm ngoài. Đây cũng là lần thứ ba trong đồ án
+vấp cái bẫy `this.method()` không qua proxy Spring — nên lần này tách thành bean riêng ngay từ đầu.
+
+Và một lần nữa, thử lại an toàn **chỉ vì đồng bộ idempotent**.
+
 ### Nợ / chuyển sang ngày sau
-- **Cold start:** người chưa làm bài nào thì không có gợi ý. Khu "Gợi ý cho bạn" tự ẩn thay vì hiện
-  ô trống, nhưng đó là né chứ chưa phải giải.
+- ~~Cold start~~ — đã giải bằng nguồn gợi ý thứ ba (chủ đề chưa từng luyện).
 - Quiz **chưa ai làm** thì chưa có trong đồ thị nên không được gợi ý — đồ thị xây từ hành vi.
 - **FR-36** (LLM giải thích lý do gợi ý) chưa làm: mỗi lần mở trang lại tốn hạn mức AI, cần cache trước.
 - **FR-32** adaptive difficulty chưa làm.

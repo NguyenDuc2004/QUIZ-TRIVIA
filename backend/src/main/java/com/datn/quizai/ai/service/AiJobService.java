@@ -49,6 +49,7 @@ public class AiJobService {
     private final ObjectMapper objectMapper;
     private final AiJobStatusWriter statusWriter;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.datn.quizai.ai.provider.AiThrottleState throttleState;
 
     public AiJobService(AiJobRepository jobRepository,
                         QuestionGenerationService generationService,
@@ -56,7 +57,8 @@ public class AiJobService {
                         com.datn.quizai.user.repository.UserRepository userRepository,
                         ObjectMapper objectMapper,
                         AiJobStatusWriter statusWriter,
-                        ApplicationEventPublisher eventPublisher) {
+                        ApplicationEventPublisher eventPublisher,
+                        com.datn.quizai.ai.provider.AiThrottleState throttleState) {
         this.jobRepository = jobRepository;
         this.generationService = generationService;
         this.questionService = questionService;
@@ -64,6 +66,7 @@ public class AiJobService {
         this.objectMapper = objectMapper;
         this.statusWriter = statusWriter;
         this.eventPublisher = eventPublisher;
+        this.throttleState = throttleState;
     }
 
     /** Tạo job rồi trả về ngay; việc sinh đề chạy ở luồng nền. */
@@ -114,7 +117,9 @@ public class AiJobService {
 
     @Transactional(readOnly = true)
     public AiJobResponse get(UUID jobId, JwtService.AuthenticatedUser current) {
-        return AiJobResponse.from(requireOwned(jobId, current));
+        // Kèm thời gian còn phải chờ nếu đang vướng hạn mức: endpoint này bị hỏi lại liên tục
+        // trong lúc job chạy, và đó đúng là lúc người dùng cần biết vì sao lâu.
+        return AiJobResponse.from(requireOwned(jobId, current), throttleState.secondsRemaining());
     }
 
     /**

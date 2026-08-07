@@ -292,18 +292,68 @@ class RecommendationIntegrationTest {
         assertThat(objectMapper.readTree(body).findValuesAsText("quizId")).contains(peerOnlyQuiz);
     }
 
+    @Test
+    @DisplayName("Đã làm hết quiz thuộc chủ đề mình yếu thì vẫn được gợi ý chủ đề mới")
+    void shouldFallBackToUnexploredTopics() throws Exception {
+        String token = register("het-quiz-chu-de-yeu@example.com", "LEARNER");
+        UUID userId = currentUserId(token);
+
+        // Yếu "Mạng máy tính" và đã làm HẾT quiz thuộc chủ đề đó
+        String onlyWeakQuiz = quizWithTopic("Mạng máy tính cơ bản", "Mạng máy tính", 4);
+        graphSync.sync(UUID.fromString(takeQuiz(onlyWeakQuiz, token, 0)));
+
+        // Kho còn một quiz thuộc chủ đề hoàn toàn khác, chưa đụng tới
+        String unexplored = quizWithTopic("Cơ sở dữ liệu nhập môn", "Cơ sở dữ liệu", 4);
+        graphSync.rebuildForUser(userId);
+
+        // Xin nhiều hơn mặc định: kho test tích luỹ khá nhiều quiz qua các ca trước, mà ca này
+        // chỉ quan tâm quiz kia CÓ được gợi ý hay không, không quan tâm nó đứng thứ mấy.
+        String body = mockMvc.perform(get("/api/v1/recommendations").param("limit", "20")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode items = objectMapper.readTree(body);
+        // Không có nguồn thứ ba thì khu Gợi ý trống trơn, dù kho còn nguyên chủ đề chưa thử
+        assertThat(items.findValuesAsText("quizId")).contains(unexplored);
+
+        JsonNode suggestion = null;
+        for (JsonNode item : items) {
+            if (unexplored.equals(item.get("quizId").asText())) {
+                suggestion = item;
+            }
+        }
+        assertThat(suggestion).isNotNull();
+        assertThat(suggestion.get("source").asText()).isEqualTo("NEW_TOPIC");
+        assertThat(suggestion.get("reason").asText()).contains("Cơ sở dữ liệu");
+    }
+
+    @Test
+    @DisplayName("Người vừa đăng ký nhưng kho đã có quiz: được gợi ý ngay, không phải chờ làm bài (cold start)")
+    void shouldRecommendToBrandNewUser() throws Exception {
+        String existing = quizWithTopic("Thuật toán sắp xếp", "Thuật toán", 3);
+        graphSync.syncPublicCatalog();
+
+        String token = register("nguoi-vua-dang-ky@example.com", "LEARNER");
+
+        String body = mockMvc.perform(get("/api/v1/recommendations").param("limit", "20")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // Chưa có hành vi nào để phân tích, nhưng mọi chủ đề đều là mới với họ
+        assertThat(objectMapper.readTree(body).findValuesAsText("quizId")).contains(existing);
+    }
+
     // ================================================================ trường hợp biên
 
     @Test
-    @DisplayName("Người chưa làm bài nào: trả rỗng kèm lời nhắn, không phải một màn hình trống câm")
+    @DisplayName("Người chưa làm bài nào: lộ trình rỗng nhưng có lời nhắn, không phải màn hình trống câm")
     void shouldExplainEmptyStateForNewUser() throws Exception {
         String token = register("nguoi-moi@example.com", "LEARNER");
 
-        mockMvc.perform(get("/api/v1/recommendations")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
-
+        // Lộ trình thì đúng là rỗng — chưa có hành vi nào để dựng. Nhưng phải nói vì sao.
+        // (Gợi ý quiz thì KHÔNG rỗng nữa nhờ nguồn "chủ đề mới" — xem shouldRecommendToBrandNewUser)
         mockMvc.perform(get("/api/v1/recommendations/path")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())

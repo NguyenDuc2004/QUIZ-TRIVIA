@@ -1,7 +1,7 @@
 import { apiClient } from '@/shared/api/client'
 
 /** Vì sao quiz này được gợi ý — quyết định câu chữ và nhóm hiển thị. */
-export type RecommendationSource = 'WEAK_TOPIC' | 'SIMILAR_LEARNERS'
+export type RecommendationSource = 'WEAK_TOPIC' | 'SIMILAR_LEARNERS' | 'NEW_TOPIC'
 
 export interface RecommendedQuiz {
   quizId: string

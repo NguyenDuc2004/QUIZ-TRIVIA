@@ -27,6 +27,13 @@ public record RecommendedQuizResponse(
         /** Quiz chạm vào chủ đề người học đang làm sai nhiều. */
         WEAK_TOPIC,
         /** Người có hành vi làm bài giống mình đã làm quiz này. */
-        SIMILAR_LEARNERS
+        SIMILAR_LEARNERS,
+        /**
+         * Quiz thuộc chủ đề người học chưa từng luyện.
+         * <p>
+         * Nguồn dự phòng khi hai nguồn trên cạn — và là nguồn duy nhất có tác dụng với người vừa
+         * đăng ký, vốn chưa có hành vi nào để phân tích.
+         */
+        NEW_TOPIC
     }
 }

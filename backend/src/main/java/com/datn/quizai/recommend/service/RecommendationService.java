@@ -64,6 +64,18 @@ public class RecommendationService {
             }
         }
 
+        // Vẫn chưa đủ: đề xuất chủ đề chưa thử. Không có nhánh này thì người đã làm hết quiz thuộc
+        // chủ đề mình yếu sẽ thấy khu Gợi ý trống trơn, dù kho quiz còn nguyên chủ đề khác.
+        if (merged.size() < limit) {
+            for (Map<String, Object> row : safely(() -> repository.unexploredTopicQuizzes(userId, limit))) {
+                RecommendedQuizResponse item = fromNewTopic(row);
+                merged.putIfAbsent(item.quizId(), item);
+                if (merged.size() >= limit) {
+                    break;
+                }
+            }
+        }
+
         return List.copyOf(merged.values());
     }
 
@@ -140,6 +152,19 @@ public class RecommendationService {
                 List.of(),
                 peers,
                 0);
+    }
+
+    private RecommendedQuizResponse fromNewTopic(Map<String, Object> row) {
+        @SuppressWarnings("unchecked")
+        List<String> topics = (List<String>) row.getOrDefault("newTopics", List.of());
+        return new RecommendedQuizResponse(
+                UUID.fromString((String) row.get("quizId")),
+                (String) row.get("title"),
+                RecommendedQuizResponse.RecommendationSource.NEW_TOPIC,
+                "Chủ đề bạn chưa thử: " + String.join(", ", topics),
+                List.of(),
+                0,
+                asLong(row.get("attemptCount")));
     }
 
     /** Xem javadoc lớp: đồ thị hỏng thì gợi ý rỗng, không kéo sập trang. */

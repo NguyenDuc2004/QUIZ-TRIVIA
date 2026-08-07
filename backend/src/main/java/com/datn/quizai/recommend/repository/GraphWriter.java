@@ -65,60 +65,68 @@ public class GraphWriter {
     }
 
     /**
-     * Cạnh {@code (Quiz)-[:COVERS]->(Topic)}.
+     * Cạnh {@code (Quiz)-[:COVERS]->(Topic)} — thay toàn bộ, trong <b>một câu Cypher</b>.
      * <p>
-     * Xoá cạnh cũ trước khi ghi: chủ quiz có thể đã bỏ bớt câu, mà {@code MERGE} thì chỉ thêm chứ
-     * không biết cái gì đã biến mất. Không xoá thì quiz "phủ" mãi một chủ đề nó không còn câu nào.
+     * Phải xoá trước khi ghi: chủ quiz có thể đã bỏ bớt câu, mà {@code MERGE} chỉ biết thêm chứ
+     * không biết cái gì đã biến mất — không xoá thì quiz "phủ" mãi một chủ đề nó không còn câu nào.
+     * <p>
+     * <b>Xoá và ghi phải nằm chung một câu lệnh.</b> Tách làm hai lần gọi thì hai luồng cùng đồng
+     * bộ một quiz sẽ xen vào nhau: lệnh DELETE của luồng sau chạy giữa chừng loạt MERGE của luồng
+     * trước, và quiz mất bớt chủ đề. Chuyện này xảy ra thật — bài nộp phát sự kiện chạy nền, mà
+     * test lại gọi đồng bộ thẳng, hai bên đụng nhau và một chủ đề biến mất.
      */
     public void replaceQuizTopics(UUID quizId, List<TopicCount> topics) {
-        neo4j.query("MATCH (q:Quiz {id: $quizId})-[c:COVERS]->() DELETE c")
-                .bind(quizId.toString()).to("quizId")
-                .run();
+        List<Map<String, Object>> rows = topics.stream()
+                .map(t -> Map.<String, Object>of("name", t.topic(), "count", t.count()))
+                .toList();
 
-        for (TopicCount topic : topics) {
-            neo4j.query("""
-                            MERGE (q:Quiz {id: $quizId})
-                            MERGE (t:Topic {name: $topic})
-                            MERGE (q)-[c:COVERS]->(t)
-                              SET c.questionCount = $count
-                            """)
-                    .bindAll(Map.of(
-                            "quizId", quizId.toString(),
-                            "topic", topic.topic(),
-                            "count", topic.count()))
-                    .run();
-        }
+        neo4j.query("""
+                        MERGE (q:Quiz {id: $quizId})
+                        WITH q
+                        OPTIONAL MATCH (q)-[old:COVERS]->()
+                        DELETE old
+                        WITH DISTINCT q
+                        UNWIND $topics AS topic
+                        MERGE (t:Topic {name: topic.name})
+                        MERGE (q)-[c:COVERS]->(t)
+                          SET c.questionCount = topic.count
+                        """)
+                .bindAll(Map.of("quizId", quizId.toString(), "topics", rows))
+                .run();
     }
 
     /**
-     * Cạnh {@code (User)-[:PRACTICED]->(Topic)} — năng lực trên từng chủ đề.
+     * Cạnh {@code (User)-[:PRACTICED]->(Topic)} — năng lực trên từng chủ đề, thay toàn bộ.
      * <p>
-     * Cũng xoá trước khi ghi, vì đây là <b>ảnh chụp toàn bộ lịch sử</b> tính lại từ đầu chứ không
-     * phải phần tăng thêm. Ghi đè thẳng bằng MERGE cũng được với chủ đề còn dữ liệu, nhưng chủ đề
-     * mà mọi câu vừa bị xoá khỏi ngân hàng thì sẽ nằm lại vĩnh viễn.
+     * Đây là <b>ảnh chụp toàn bộ lịch sử</b> tính lại từ đầu chứ không phải phần tăng thêm, nên
+     * phải xoá cạnh cũ: chủ đề mà mọi câu vừa bị gỡ khỏi ngân hàng sẽ nằm lại vĩnh viễn nếu chỉ
+     * dùng MERGE.
+     * <p>
+     * Cũng gộp vào một câu lệnh, cùng lý do với {@link #replaceQuizTopics}: hai luồng đồng bộ
+     * cùng một người sẽ xen kẽ xoá/ghi và làm mất số liệu của một chủ đề.
      */
     public void replaceUserMastery(UUID userId, List<TopicMastery> mastery) {
-        neo4j.query("MATCH (:User {id: $userId})-[p:PRACTICED]->() DELETE p")
-                .bind(userId.toString()).to("userId")
-                .run();
+        List<Map<String, Object>> rows = mastery.stream()
+                .map(m -> Map.<String, Object>of(
+                        "name", m.topic(), "correct", m.correct(), "total", m.total()))
+                .toList();
 
-        for (TopicMastery item : mastery) {
-            neo4j.query("""
-                            MERGE (u:User {id: $userId})
-                            MERGE (t:Topic {name: $topic})
-                            MERGE (u)-[p:PRACTICED]->(t)
-                              SET p.correct = $correct,
-                                  p.total = $total,
-                                  p.accuracy = CASE WHEN $total > 0
-                                                    THEN toFloat($correct) / $total ELSE 0.0 END
-                            """)
-                    .bindAll(Map.of(
-                            "userId", userId.toString(),
-                            "topic", item.topic(),
-                            "correct", item.correct(),
-                            "total", item.total()))
-                    .run();
-        }
+        neo4j.query("""
+                        MERGE (u:User {id: $userId})
+                        WITH u
+                        OPTIONAL MATCH (u)-[old:PRACTICED]->()
+                        DELETE old
+                        WITH DISTINCT u
+                        UNWIND $mastery AS item
+                        MERGE (t:Topic {name: item.name})
+                        MERGE (u)-[p:PRACTICED]->(t)
+                          SET p.correct = item.correct,
+                              p.total = item.total,
+                              p.accuracy = CASE WHEN item.total > 0
+                                                THEN toFloat(item.correct) / item.total ELSE 0.0 END
+                        """)
+                .bindAll(Map.of("userId", userId.toString(), "mastery", rows))
+                .run();
     }
 
     /**

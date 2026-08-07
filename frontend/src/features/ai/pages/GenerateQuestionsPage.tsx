@@ -62,6 +62,7 @@ export default function GenerateQuestionsPage() {
   )
 
   const running = job?.status === 'PENDING' || job?.status === 'RUNNING'
+  const throttledSeconds = job?.aiThrottledSeconds ?? 0
   const questions = job?.status === 'SUCCEEDED' ? (job.result?.questions ?? []) : []
 
   const submit = async () => {
@@ -195,7 +196,19 @@ export default function GenerateQuestionsPage() {
           {running && (
             <div className="flex flex-col items-center gap-3 border border-line bg-white p-10">
               <Spin size="large" />
-              <Text className="text-ink-soft">AI đang soạn câu hỏi, thường mất 10–30 giây…</Text>
+              {/* Nói rõ đang chờ hạn mức hay đang soạn thật: cùng một vòng quay cho cả hai thì
+                  người dùng đợi ba phút rồi đi tìm lỗi ở chỗ khác, dù hệ thống vẫn đang chạy. */}
+              {throttledSeconds > 0 ? (
+                <>
+                  <Text className="font-bold">Đang xếp hàng chờ dịch vụ AI</Text>
+                  <Text className="text-ink-soft text-center">
+                    Gói miễn phí giới hạn số lượt mỗi phút. Khoảng {throttledSeconds} giây nữa sẽ thử
+                    lại — bạn cứ để trang mở, không cần bấm lại.
+                  </Text>
+                </>
+              ) : (
+                <Text className="text-ink-soft">AI đang soạn câu hỏi, thường mất 10–30 giây…</Text>
+              )}
             </div>
           )}
 

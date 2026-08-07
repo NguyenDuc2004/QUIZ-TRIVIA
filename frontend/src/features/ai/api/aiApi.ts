@@ -49,6 +49,8 @@ export interface AiJob {
   startedAt: string | null
   finishedAt: string | null
   createdAt: string
+  /** Số giây còn phải chờ vì nhà cung cấp AI đang chặn hạn mức; 0 = chạy bình thường. */
+  aiThrottledSeconds: number
 }
 
 export interface GenerateRequest {

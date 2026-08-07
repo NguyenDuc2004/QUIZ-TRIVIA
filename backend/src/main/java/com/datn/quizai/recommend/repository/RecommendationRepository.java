@@ -105,6 +105,34 @@ public class RecommendationRepository {
     }
 
     /**
+     * FR-34c — quiz thuộc chủ đề người học <b>chưa từng luyện</b>.
+     * <p>
+     * Nguồn thứ ba, thêm sau khi chạy thật mới thấy thiếu: hai nguồn đầu đều có thể cạn cùng
+     * lúc. Người học yếu Spring Boot nhưng đã làm hết quiz Spring Boot thì nguồn "chủ đề yếu"
+     * rỗng; hệ thống chỉ có vài người dùng thì nguồn "người giống bạn" cũng rỗng. Kết quả là
+     * một khu Gợi ý trống trơn trong khi kho quiz vẫn còn nguyên chủ đề họ chưa đụng tới.
+     * <p>
+     * Nguồn này cũng giải luôn bài toán <i>cold start</i>: người mới chưa luyện chủ đề nào thì
+     * mọi chủ đề đều là mới, nên có gợi ý ngay từ lần đăng nhập đầu tiên.
+     */
+    public Collection<Map<String, Object>> unexploredTopicQuizzes(UUID userId, int limit) {
+        return neo4j.query("""
+                        MATCH (q:Quiz)-[:COVERS]->(t:Topic)
+                        WHERE q.visibility = 'PUBLIC'
+                          AND NOT (:User {id: $userId})-[:ATTEMPTED]->(q)
+                          AND NOT (:User {id: $userId})-[:PRACTICED]->(t)
+                        WITH q, collect(DISTINCT t.name) AS newTopics
+                        OPTIONAL MATCH (:User)-[a:ATTEMPTED]->(q)
+                        RETURN q.id AS quizId, q.title AS title, newTopics,
+                               count(a) AS attemptCount
+                        ORDER BY attemptCount DESC, q.title
+                        LIMIT $limit
+                        """)
+                .bindAll(Map.of("userId", userId.toString(), "limit", limit))
+                .fetch().all();
+    }
+
+    /**
      * FR-35 — lộ trình học: chủ đề xếp theo mức độ yếu đo được, yếu nhất học trước.
      * <p>
      * Bản thiết kế đầu định xếp theo quan hệ tiên quyết giữa các chủ đề, nhưng không ai khai báo
