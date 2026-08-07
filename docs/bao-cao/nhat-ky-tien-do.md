@@ -1012,7 +1012,18 @@ ca dùng tài khoản riêng và assert đúng cạnh của mình. *Test đếm 
 chạy* — mà thứ tự chạy thì không ai kiểm soát.
 
 ### Kiểm thử
-**238/238** JUnit, thêm 16 ca chạy trên **Neo4j thật bằng Testcontainer** — không mock, vì cả tính
+| Loại | Kết quả |
+|---|---|
+| JUnit | **238/238** (thêm 16 ca chạy trên **Neo4j thật bằng Testcontainer**) |
+| Bộ kiểm chứng gợi ý trên hệ thống thật | **25/25** |
+| Hồi quy 10 bộ không dùng AI | **201/201** |
+| Hai bộ AI (sinh đề, chấm tự luận) | ⏸ chờ hạn mức Gemini hồi |
+
+Bộ kiểm chứng gợi ý đi qua toàn bộ ngăn xếp thật — HTTP, JWT, Neo4j của docker-compose — nên bắt
+được thứ Testcontainer không thấy: sai cấu hình kết nối, endpoint không lọt SecurityConfig, hay đồng
+bộ nền không chạy vì thiếu bean. Và nó **không cần hạn mức AI**, vì cả tính năng này là Cypher.
+
+Ghi chú: **238/238** JUnit, thêm 16 ca chạy trên **Neo4j thật bằng Testcontainer** — không mock, vì cả tính
 năng này *là* mấy câu Cypher; mock đi thì chỉ còn kiểm được việc gọi hàm, còn Cypher sai cú pháp hay
 sai logic đồ thị vẫn lọt.
 
