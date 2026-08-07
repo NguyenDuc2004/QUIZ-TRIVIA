@@ -51,13 +51,16 @@ public class AiGradingService {
     private final AttemptAnswerRepository answerRepository;
     private final AiOrchestrator aiOrchestrator;
     private final AttemptGradeWriter gradeWriter;
+    private final org.springframework.context.ApplicationEventPublisher events;
 
     public AiGradingService(AttemptAnswerRepository answerRepository,
                             AiOrchestrator aiOrchestrator,
-                            AttemptGradeWriter gradeWriter) {
+                            AttemptGradeWriter gradeWriter,
+                            org.springframework.context.ApplicationEventPublisher events) {
         this.answerRepository = answerRepository;
         this.aiOrchestrator = aiOrchestrator;
         this.gradeWriter = gradeWriter;
+        this.events = events;
     }
 
     /**
@@ -86,6 +89,10 @@ public class AiGradingService {
             gradeOne(answer, userId);
         }
         gradeWriter.recalculateTotal(attemptId);
+
+        // Đồ thị gợi ý (features/07) đã được dựng lúc nộp bài, khi câu tự luận còn 0 điểm — dựng
+        // lại với điểm thật, nếu không người học bị đánh giá yếu ở chủ đề họ vừa làm tốt.
+        events.publishEvent(new AttemptRegradedEvent(attemptId));
     }
 
     /**

@@ -234,23 +234,45 @@ CREATE INDEX ON material_chunks USING ivfflat (embedding vector_cosine_ops);
 
 ### 2.1. Node & quan hệ
 
-**Node:** `User`, `Quiz`, `Question`, `Topic`.
+**Node:** `User {id}`, `Quiz {id, title, visibility}`, `Topic {name}`.
 
 ```
-(User)-[:ATTEMPTED {score, date}]->(Quiz)
-(User)-[:INTERESTED_IN]->(Topic)
-(User)-[:WEAK_IN {level}]->(Topic)
-(Quiz)-[:BELONGS_TO]->(Topic)
-(Quiz)-[:HAS]->(Question)-[:TESTS]->(Topic)
-(Topic)-[:PREREQUISITE_OF]->(Topic)     // dựng lộ trình học
-(User)-[:SIMILAR_TO {score}]->(User)    // collaborative filtering
+(User)-[:ATTEMPTED {score, maxScore, accuracy, at}]->(Quiz)
+(User)-[:PRACTICED {correct, total, accuracy}]->(Topic)
+(Quiz)-[:COVERS {questionCount}]->(Topic)
 ```
+
+Ràng buộc duy nhất trên `User.id`, `Quiz.id`, `Topic.name` — tạo lúc ứng dụng khởi động. Neo4j không
+có schema nên thiếu bước này thì `MERGE` vẫn chạy, chỉ là **quét toàn bộ nút** mỗi lần và chậm dần
+theo kích thước đồ thị mà không có triệu chứng gì.
+
+> **Bản thiết kế đầu có nhiều quan hệ hơn — đã lược đi có chủ đích.** Chi tiết lý do ở
+> [features/07](features/07-recommendation-neo4j.md); tóm tắt:
+>
+> | Bỏ | Vì sao |
+> |---|---|
+> | `WEAK_IN` / `STRONG_IN` / `INTERESTED_IN` | Chỉ là `PRACTICED` nhìn qua một ngưỡng. Nướng ngưỡng vào **cạnh** thì đổi ngưỡng phải dựng lại cả đồ thị; để ở **truy vấn** thì đổi lúc nào cũng được. Cạnh giữ *sự thật đo được*, truy vấn giữ *cách diễn giải* |
+> | `SIMILAR_TO` | Tính được ngay trong truy vấn từ những quiz cùng làm. Lưu sẵn thì phải có job cập nhật, mà nó lỗi thời ngay sau mỗi bài nộp |
+> | `PREREQUISITE_OF` | **Không có nguồn dữ liệu.** Không ai khai báo "Vòng lặp phải học trước Mảng"; tự sinh là hệ thống bịa ra kiến thức sư phạm nó không có |
+> | `Question` node, `BELONGS_TO`, `HAS`, `TESTS` | Câu hỏi chưa dùng tới trong truy vấn nào. Chủ đề của quiz suy ra được từ `COVERS` — thêm nút chỉ để đồ thị trông phong phú là thêm thứ phải giữ đồng bộ mà không dùng |
 
 ### 2.2. Đồng bộ dữ liệu
 
-- Nguồn sự thật (source of truth) là PostgreSQL.
-- Sau mỗi `attempt`, phát sự kiện / job nền cập nhật đồ thị Neo4j (ATTEMPTED, WEAK_IN, SIMILAR_TO).
-- Truy cập qua **Spring Data Neo4j**, truy vấn bằng **Cypher**.
+- **Nguồn sự thật là PostgreSQL; Neo4j chỉ là view phân tích.** Hệ quả thực tế: đồ thị lệch hay mất
+  thì dựng lại được, nên không cần transaction hai pha, không cần rollback — chỉ cần **idempotent**.
+- Sau mỗi bài nộp, sự kiện `AttemptSubmittedEvent` (pha `AFTER_COMMIT`) khởi động job nền đồng bộ.
+  Đồng bộ **lần nữa** sau khi AI chấm xong câu tự luận (`AttemptRegradedEvent`) — lúc nộp những câu
+  đó còn 0 điểm nên năng lực tính ra sai.
+- Toàn bộ dùng `MERGE` + `SET`. Chạy lại bao nhiêu lần cũng cho cùng một đồ thị — bắt buộc, vì bước
+  này *cố ý* chạy hai lần cho mỗi bài.
+- Năng lực theo chủ đề **tính lại từ đầu** trên toàn bộ lịch sử, không cộng dồn: cộng dồn thì chạy
+  hai lần là số liệu nhân đôi.
+- `POST /recommendations/rebuild` dựng lại đồ thị của một người từ lịch sử — cần cho dữ liệu có
+  trước khi tính năng ra đời, và để phục hồi nếu Neo4j mất dữ liệu.
+- **Neo4j chết không kéo theo việc nộp bài:** đồng bộ chạy nền và nuốt lỗi; API gợi ý trả danh sách
+  rỗng thay vì 500.
+- Truy cập qua `Neo4jClient` với **Cypher viết tay**, không map `@Node` — đây là truy vấn phân tích
+  chứ không phải CRUD thực thể.
 
 ### 2.3. Ví dụ truy vấn gợi ý (Cypher)
 

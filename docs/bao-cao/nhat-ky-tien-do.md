@@ -24,6 +24,7 @@
 | 08/08 (chiều) | **FR-3 đăng nhập bằng Google** (luồng ID token) + vá lỗi đua Redis/CSDL | 7/7 | 🟢 xong |
 | 09/08 | **FR-30 AI chấm câu tự luận** (chấm nền + rubric + chống prompt injection) | 7/7 | 🟢 xong |
 | 09/08 (chiều) | **Lọc câu hỏi theo chủ đề** — soạn quiz theo môn không phải lật hết ngân hàng | 6/6 | 🟢 xong |
+| 09/08 (tối) | **Lát cắt 7: gợi ý quiz bằng Neo4j** — trụ cột MVP thứ tư | 7/7 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -916,6 +917,222 @@ không phân biệt hoa/thường, Guest bị chặn, và `/topics` không bị 
 - **"Khó khăn & cách giải quyết":** ví dụ tốt cho việc *tính năng có ở backend mà giao diện không
   gọi thì coi như không có*. Cũng là lý do nên tự đóng vai người dùng thử một tác vụ trọn vẹn
   ("làm một quiz Lịch sử") thay vì chỉ kiểm từng endpoint.
+
+---
+
+## 📅 CN — 09/08/2026 (tối) — Lát cắt 7: Gợi ý quiz bằng Neo4j
+
+**Mục tiêu:** Trụ cột MVP thứ tư, và là trụ cột duy nhất còn trống. Neo4j từ đầu đồ án tới giờ mới
+chỉ có kết nối — một CSDL đồ thị chạy trong docker-compose mà không làm gì thì rất khó bảo vệ.
+
+### Nhiệm vụ
+- [x] Mô hình đồ thị User–Topic–Quiz từ hành vi thật
+- [x] Job đồng bộ PostgreSQL → Neo4j, idempotent
+- [x] Cypher: gợi ý theo chủ đề yếu + lọc cộng tác
+- [x] Cypher: lộ trình học theo năng lực
+- [x] API `/recommendations`, `/path`, `/rebuild`
+- [x] Frontend: khu "Gợi ý cho bạn" + trang Lộ trình học
+- [x] 16 ca test với **Neo4j thật** (Testcontainer), tổng **238/238**
+
+### Việc đầu tiên phải làm là bỏ bớt bản thiết kế
+
+Spec viết từ đầu đồ án có hai thứ **không có nguồn dữ liệu**:
+
+| Trong spec | Vấn đề |
+|---|---|
+| `q.rating` để sắp xếp gợi ý | Chưa có tính năng đánh giá quiz. Sắp theo một con số không tồn tại thì thứ tự là ngẫu nhiên nhưng *trông có vẻ có căn cứ* — tệ hơn là không sắp |
+| `(Topic)-[:PREREQUISITE_OF]->(Topic)` | Không ai khai báo "Vòng lặp phải học trước Mảng". Tự sinh quan hệ tiên quyết là hệ thống bịa ra kiến thức sư phạm nó không có |
+
+Thay bằng: sắp theo **số câu của quiz khớp chủ đề đang yếu** rồi tới **số lượt làm thật**; và lộ
+trình xếp theo **mức độ yếu đo được**. Vẫn là gợi ý cá nhân hoá, chỉ là thành thật về căn cứ. Đã sửa
+cả `features/07` lẫn `database.md` cho khớp code, đúng quy trình "tài liệu là nguồn sự thật, lệch thì
+sửa cả hai".
+
+### Ba quan hệ, không phải bảy
+
+Bản đầu có `ATTEMPTED`, `INTERESTED_IN`, `WEAK_IN`, `BELONGS_TO`, `HAS`, `TESTS`, `PREREQUISITE_OF`,
+`SIMILAR_TO`. Rút còn ba:
+
+```
+(User)-[:ATTEMPTED {score, maxScore, accuracy, at}]->(Quiz)
+(User)-[:PRACTICED {correct, total, accuracy}]->(Topic)
+(Quiz)-[:COVERS {questionCount}]->(Topic)
+```
+
+Lý do đáng nhớ nhất: **`WEAK_IN` không phải là dữ liệu, nó là một cách diễn giải.** "Yếu" = tỷ lệ
+đúng dưới 60%. Nướng ngưỡng đó vào *cạnh* thì mỗi lần chỉnh phải dựng lại toàn bộ đồ thị; để ngưỡng
+trong *truy vấn* thì đổi lúc nào cũng được. Cạnh giữ sự thật đo được (đúng 4 trên 10 câu), truy vấn
+giữ cách hiểu.
+
+`SIMILAR_TO` cũng bỏ: "người giống tôi" tính ngay trong truy vấn từ những quiz cùng làm. Lưu sẵn thì
+phải có job cập nhật, mà nó lỗi thời ngay sau mỗi bài nộp.
+
+### Chỗ đồ thị thắng hẳn bảng quan hệ
+
+Truy vấn lọc cộng tác đi hai bước: *tôi* → *quiz đã làm* → *người khác cũng làm* → *quiz họ còn làm*.
+Với SQL đó là hai phép JOIN tự thân trên `quiz_attempts`; với Cypher nó viết đúng như cách nghĩ:
+
+```cypher
+MATCH (me:User {id: $userId})-[:ATTEMPTED]->(shared:Quiz)<-[:ATTEMPTED]-(peer:User)
+WHERE peer.id <> $userId
+WITH peer, count(DISTINCT shared) AS similarity
+ORDER BY similarity DESC LIMIT $peerLimit
+MATCH (peer)-[:ATTEMPTED]->(q:Quiz)
+WHERE NOT (:User {id: $userId})-[:ATTEMPTED]->(q) AND q.visibility = 'PUBLIC'
+RETURN q.id, sum(similarity) AS score ORDER BY score DESC
+```
+
+Đây là lập luận tốt nhất cho việc *vì sao đồ án cần Neo4j chứ không chỉ cần PostgreSQL* — nên dùng
+nguyên đoạn này trong báo cáo.
+
+### Idempotent không phải chuyện lý thuyết
+
+Đồng bộ **cố ý chạy hai lần cho mỗi bài**: một lần lúc nộp, một lần sau khi AI chấm xong câu tự luận
+— vì lúc nộp những câu đó còn 0 điểm nên năng lực tính ra sai, người học sẽ bị đánh giá yếu ở chủ đề
+họ vừa làm tốt.
+
+Nên toàn bộ dùng `MERGE`, và năng lực **tính lại từ đầu** trên toàn bộ lịch sử chứ không cộng dồn.
+Cộng dồn thì đúng chỗ này số liệu nhân đôi. Có một ca test riêng chạy đồng bộ ba lần rồi so số liệu.
+
+Thêm `POST /recommendations/rebuild`: dựng lại đồ thị của một người từ lịch sử. Cần vì hai lẽ — dữ
+liệu có *trước* khi tính năng này ra đời không nằm trong đồ thị, và Neo4j là view nên mất dữ liệu
+phải dựng lại được. Đó chính là ý nghĩa thực tế của câu "PostgreSQL là nguồn sự thật".
+
+### Neo4j chết không được kéo theo việc nộp bài
+
+Đồng bộ chạy nền và nuốt lỗi; API gợi ý trả danh sách rỗng thay vì 500; tạo ràng buộc lúc khởi động
+mà hỏng thì chỉ ghi log chứ không cản ứng dụng lên. Gợi ý là tính năng phụ trợ trên trang chủ —
+đánh đổi "Neo4j tắt thì trang chủ sập" là đánh đổi sai.
+
+### Một lỗi test tự gây ra, đáng ghi lại
+
+Ca test đầu assert `count(ATTEMPTED) > 0` trên **toàn đồ thị**. Chạy lẻ thì đạt, chạy cả bộ thì hỏng
+— vì con số đó phụ thuộc những ca chạy trước nó, thứ chẳng liên quan gì tới cái đang kiểm. Sửa: mỗi
+ca dùng tài khoản riêng và assert đúng cạnh của mình. *Test đếm toàn cục là test phụ thuộc thứ tự
+chạy* — mà thứ tự chạy thì không ai kiểm soát.
+
+### Kiểm thử
+| Loại | Kết quả |
+|---|---|
+| JUnit | **238/238** (thêm 16 ca chạy trên **Neo4j thật bằng Testcontainer**) |
+| Bộ kiểm chứng gợi ý trên hệ thống thật | **25/25** |
+| Hồi quy 10 bộ không dùng AI | **201/201** |
+| Hai bộ AI (sinh đề, chấm tự luận) | ⏸ chờ hạn mức Gemini hồi |
+
+Bộ kiểm chứng gợi ý đi qua toàn bộ ngăn xếp thật — HTTP, JWT, Neo4j của docker-compose — nên bắt
+được thứ Testcontainer không thấy: sai cấu hình kết nối, endpoint không lọt SecurityConfig, hay đồng
+bộ nền không chạy vì thiếu bean. Và nó **không cần hạn mức AI**, vì cả tính năng này là Cypher.
+
+Ghi chú: **238/238** JUnit, thêm 16 ca chạy trên **Neo4j thật bằng Testcontainer** — không mock, vì cả tính
+năng này *là* mấy câu Cypher; mock đi thì chỉ còn kiểm được việc gọi hàm, còn Cypher sai cú pháp hay
+sai logic đồ thị vẫn lọt.
+
+Ca đáng chú ý: đồng bộ ba lần không nhân đôi; quiz bỏ bớt câu thì cạnh `COVERS` cũ bị gỡ; trả lời
+1 câu sai thì **không** bị kết luận yếu; quiz riêng tư của người khác không lọt vào gợi ý; quiz bị
+xoá ở PostgreSQL thì nút bị gỡ khỏi đồ thị; và quiz **chưa ai làm** vẫn vào được danh mục.
+
+### Bấm thử xong mới lộ ra hai lỗi thật, và một đống rác do chính mình gây ra
+
+Giao diện chạy, test 234/234, nhưng mở trang Khám phá thì **không có gợi ý nào**. Ba nguyên nhân
+xếp chồng:
+
+**1. Đồ thị chỉ được dựng từ hành vi.** Quiz chưa ai làm thì không có nút trong Neo4j, nên không bao
+giờ được gợi ý. Mà gợi ý đúng là để giới thiệu quiz người ta *chưa* làm — hệ thống tự loại mất đúng
+thứ nó cần đề xuất. Sửa: tách `syncPublicCatalog()` đưa toàn bộ quiz công khai vào đồ thị, độc lập
+với việc có ai làm hay không. Việc một quiz phủ chủ đề nào là thuộc tính của chính nó, không phải
+hành vi của ai.
+
+**2. Đồng bộ chỉ biết thêm, không biết gỡ.** PostgreSQL còn 1 quiz mà Neo4j vẫn giữ 51 nút. Không
+gỡ thì hệ thống sẽ gợi ý một quiz đã bị xoá và người dùng bấm vào nhận 404. Thêm bước gỡ nút không
+còn trong CSDL quan hệ — chạy thật gỡ được **58 nút**.
+
+**3. Cơ sở dữ liệu đầy rác test — do chính bộ kiểm chứng của mình.**
+
+| | Trước dọn |
+|---|---|
+| Tài khoản | 294, trong đó **288 là `@example.com`** |
+| Quiz công khai | 204, trong đó **201 do script tạo** |
+| Câu hỏi có chủ đề | 36 / 326 |
+| Quiz công khai có chủ đề | **3 / 204** |
+
+Mấy ngày qua mỗi lần chạy `run_all.sh` là nó đăng ký tài khoản thật, tạo quiz thật, làm bài thật —
+**vào đúng CSDL đang dùng để phát triển**. Trang Khám phá thành một danh sách `Quiz QR gjatd1`,
+`Quiz LAN htz9la`, `Dò IP`, `Quiz rỗng`. Gợi ý không có gì để nói vì cả hệ thống chỉ còn ba chủ đề
+thật.
+
+Đã sao lưu rồi xoá toàn bộ tài khoản `@example.com` (cascade kéo theo 245 quiz, 310 câu hỏi, 144 bài
+làm). Sáu tài khoản thật giữ nguyên. Quan trọng hơn: **thêm bước dọn vào cuối `run_all.sh`** — không
+sửa gốc thì tuần sau lại y hệt.
+
+> Bài học: **script kiểm chứng chạy trên hệ thống thật là script ghi dữ liệu thật.** "Chỉ đọc để
+> kiểm tra" là ảo tưởng — nó đăng ký, nó tạo, nó nộp bài. Phải dọn ngay trong script, không phải
+> nhớ dọn sau.
+
+Một chi tiết nhỏ nhưng đúng như dự đoán: dữ liệu thật đã có sẵn `Mã trạng thái HTTP` (6 câu) và
+`mã trạng thái HTTP` (4 câu) — hai chủ đề tách đôi vì khác chữ hoa. Ô gõ-hoặc-chọn làm buổi chiều
+ngăn được từ nay, nhưng hai mục đã lỡ tách thì phải sửa tay.
+
+### Bấm thử lần hai: gợi ý vẫn rỗng, và đó là lỗi thiết kế chứ không phải thiếu dữ liệu
+
+Sau khi dọn CSDL và tạo thêm quiz có chủ đề, khu Gợi ý **vẫn trống**. Đọc đồ thị mới hiểu:
+
+| Chủ đề | Người học | Số quiz phủ | Đã làm hết chưa |
+|---|---|---|---|
+| Spring Boot | 0/15 → yếu | 2 | ✅ cả hai |
+| Java | 1/5 → yếu | 1 | ✅ |
+| Lập trình web | *chưa làm bao giờ* | 1 | ❌ |
+
+Gợi ý chỉ có hai nguồn — chủ đề yếu, và người giống mình — mà **cả hai cạn cùng lúc**: yếu chỗ nào
+thì đã làm hết quiz chỗ đó, còn hệ thống mới có một người dùng hoạt động nên lọc cộng tác cũng rỗng.
+Trong khi kho vẫn còn nguyên một quiz "Lập trình web" chưa ai đụng.
+
+Thêm **nguồn thứ ba: chủ đề chưa từng luyện**. Nó cũng giải luôn bài toán *cold start* đã ghi vào nợ
+hôm trước — người vừa đăng ký chưa có hành vi nào, nhưng mọi chủ đề đều là mới với họ.
+
+> Bài học: một hệ gợi ý phải có **nguồn không phụ thuộc hành vi** làm đáy. Hai nguồn "thông minh"
+> đều cần dữ liệu để chạy, nên chúng hỏng cùng nhau đúng lúc người dùng cần nhất — lúc mới bắt đầu,
+> và lúc đã học hết phần mình yếu.
+
+### Bốn lỗi đồng thời, moi ra bởi hai ca test mới
+
+Thêm hai ca test cho nguồn thứ ba thì **ba ca khác đỏ lên** — không phải vì test sai, mà vì chúng
+tạo thêm đủ tải để lộ một chuỗi lỗi ghi đồng thời đã nằm sẵn ở đó.
+
+| Triệu chứng | Nguyên nhân thật | Sửa |
+|---|---|---|
+| Quiz mất bớt chủ đề | `replaceQuizTopics` xoá rồi ghi bằng **hai lần gọi**; lệnh xoá của luồng sau chen vào giữa loạt ghi của luồng trước | Gộp vào **một câu Cypher** dùng `UNWIND` |
+| Deadlock Neo4j | Hai luồng giành khoá trên cùng nút Quiz | Thử lại — cách xử lý chuẩn, không phải né bằng khoá to hơn |
+| `Cannot run more queries in this transaction` | Vòng lặp thử lại nằm **trong** phương thức `@Transactional`; Neo4j đã huỷ transaction khi deadlock nên lần thử thứ hai chạy trên xác chết | Tách phần đọc sang bean riêng, thử lại **ngoài** transaction |
+| `Node already exists with label Quiz` | Hai luồng cùng `MERGE` một nút chưa tồn tại | Bắt cả `DataIntegrityViolationException` rồi thử lại |
+
+Hai điều đáng ghi vào báo cáo:
+
+**`MERGE` không nguyên tử với luồng khác.** Tên gọi khiến người ta tin là "tạo nếu chưa có" một cách
+an toàn. Thực tế hai luồng cùng thấy "chưa có" rồi cùng tạo, và ràng buộc duy nhất chặn kẻ tới sau.
+Lỗi đó là lỗi *đụng độ* — thử lại được, chứ không phải lỗi dữ liệu.
+
+**Tách đọc khỏi ghi hoá ra là điều kiện để thử lại được.** Ban đầu tách chỉ vì "đừng giữ transaction
+JPA mở khi gọi sang Neo4j". Nhưng lý do thật quan trọng hơn: transaction đã chết thì không chạy thêm
+được câu nào, nên vòng lặp thử lại **bắt buộc** phải nằm ngoài. Đây cũng là lần thứ ba trong đồ án
+vấp cái bẫy `this.method()` không qua proxy Spring — nên lần này tách thành bean riêng ngay từ đầu.
+
+Và một lần nữa, thử lại an toàn **chỉ vì đồng bộ idempotent**.
+
+### Nợ / chuyển sang ngày sau
+- ~~Cold start~~ — đã giải bằng nguồn gợi ý thứ ba (chủ đề chưa từng luyện).
+- Quiz **chưa ai làm** thì chưa có trong đồ thị nên không được gợi ý — đồ thị xây từ hành vi.
+- **FR-36** (LLM giải thích lý do gợi ý) chưa làm: mỗi lần mở trang lại tốn hạn mức AI, cần cache trước.
+- **FR-32** adaptive difficulty chưa làm.
+- Chưa đo *chất lượng* gợi ý — cần người thật dùng rồi đánh giá, chưa có cách đo tự động.
+
+### Ghi chú báo cáo
+- **Mục 1 (tổng quan công nghệ):** đoạn Cypher lọc cộng tác ở trên là lập luận cụ thể nhất cho việc
+  vì sao chọn CSDL đồ thị — dùng thay cho những câu chung chung kiểu "Neo4j mạnh về quan hệ".
+- **Mục 2.4 (thiết kế CSDL):** bảng "bỏ quan hệ nào, vì sao" — đặc biệt luận điểm *cạnh giữ sự thật,
+  truy vấn giữ cách diễn giải*.
+- **Mục 2.3:** đồng bộ idempotent giữa hai CSDL, và nguyên tắc CSDL phụ hỏng không kéo sập luồng chính.
+- **"Khó khăn & cách giải quyết":** phải cắt bớt bản thiết kế vì hai quan hệ không có nguồn dữ liệu.
+  Thà nhận là hệ thống chưa biết còn hơn dựng một lộ trình trông thông minh mà không giải thích được.
 
 ---
 

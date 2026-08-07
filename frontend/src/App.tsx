@@ -8,6 +8,7 @@ import RegisterPage from '@/features/auth/pages/RegisterPage'
 import { useIsAuthenticated } from '@/features/auth/store/authStore'
 import AttemptPage from '@/features/attempt/pages/AttemptPage'
 import MyAttemptsPage from '@/features/attempt/pages/MyAttemptsPage'
+import LearningPathPage from '@/features/recommend/pages/LearningPathPage'
 import QuizIntroPage from '@/features/attempt/pages/QuizIntroPage'
 import BrowseQuizzesPage from '@/features/quiz/pages/BrowseQuizzesPage'
 import GenerateQuestionsPage from '@/features/ai/pages/GenerateQuestionsPage'
@@ -63,6 +64,7 @@ export default function App() {
         {/* Một đường dẫn cho cả lúc đang làm và lúc xem kết quả — phân biệt theo attempt.status */}
         <Route path="/attempts/:id" element={<AttemptPage />} />
         <Route path="/my-attempts" element={<MyAttemptsPage />} />
+        <Route path="/learning-path" element={<LearningPathPage />} />
         {/* Sảnh phòng đấu cần đăng nhập vì chỉ thành viên mới mở được phòng */}
         <Route path="/rooms" element={<RoomLobbyPage />} />
         {/* Khu vực AI — controller đã chặn ở BE, chỉ CREATOR/ADMIN gọi được */}

@@ -41,14 +41,17 @@ public class AiOrchestrator {
     private static final int MAX_ATTEMPTS_PER_PROVIDER = 3;
 
     /**
-     * Tác vụ nền được thử nhiều lần hơn.
+     * Tác vụ nền được thử thêm một lần so với request đồng bộ — nhưng chỉ một.
      * <p>
-     * Ba lần là hợp lý khi có người ngồi đợi. Với job nền vấp hạn mức tính theo phút thì mỗi lần
-     * thử tiêu một cửa sổ chờ ~60 giây, mà chỉ cần một job khác chen vào đúng lúc là mất lượt —
-     * ba lần không đủ để một tài liệu nhiều đoạn đi hết. Chờ thêm vài phút không phiền ai, còn
-     * đánh job là FAILED thì người dùng phải bấm lại từ đầu.
+     * Ban đầu để 6, với lý lẽ "job nền chờ lâu không phiền ai". Sai ở chỗ: hạn mức của Gemini bản
+     * miễn phí không chỉ tính theo phút mà còn <b>theo ngày</b> (20 lượt/ngày cho model sinh văn
+     * bản). Khi đã cạn hạn mức ngày thì thử lại <i>không bao giờ thành công</i>, mà mỗi lần thử
+     * vẫn <b>tiêu một lượt</b> — một job hỏng đốt 6 trong 20 lượt của cả ngày.
+     * <p>
+     * Bốn lần đủ để vượt qua một cửa sổ hạn mức theo phút (thứ thật sự hồi lại được), và không
+     * biến một lần hỏng thành thảm hoạ hạn mức.
      */
-    private static final int MAX_ATTEMPTS_BACKGROUND = 6;
+    private static final int MAX_ATTEMPTS_BACKGROUND = 4;
     /** Giãn cách giữa các lần thử, tăng dần để không dồn thêm tải lên provider đang quá tải. */
     private static final long BASE_BACKOFF_MILLIS = 1200;
 
