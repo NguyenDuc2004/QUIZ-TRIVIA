@@ -6,6 +6,8 @@ export type RecommendationSource = 'WEAK_TOPIC' | 'SIMILAR_LEARNERS' | 'NEW_TOPI
 export interface RecommendedQuiz {
   quizId: string
   title: string
+  /** `null` khi quiz chưa có ảnh — vẽ ô trống cùng kích thước, **không** bịa ảnh thay thế. */
+  thumbnailUrl: string | null
   source: RecommendationSource
   /** Lý do viết sẵn từ backend — hiện thẳng lên thẻ, frontend không tự chế lại. */
   reason: string

@@ -3,6 +3,7 @@ package com.datn.quizai.recommend.service;
 import com.datn.quizai.recommend.dto.LearningPathResponse;
 import com.datn.quizai.recommend.dto.RecommendedQuizResponse;
 import com.datn.quizai.recommend.dto.TopicMasteryResponse;
+import com.datn.quizai.quiz.repository.QuizRepository;
 import com.datn.quizai.recommend.repository.RecommendationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Gợi ý quiz và lộ trình học từ đồ thị (docs/features/07, FR-34 & FR-35).
@@ -31,9 +33,12 @@ public class RecommendationService {
     private static final int WEAK_TOPIC_SHARE = 6;
 
     private final RecommendationRepository repository;
+    private final QuizRepository quizRepository;
 
-    public RecommendationService(RecommendationRepository repository) {
+    public RecommendationService(RecommendationRepository repository,
+                                 QuizRepository quizRepository) {
         this.repository = repository;
+        this.quizRepository = quizRepository;
     }
 
     /**
@@ -76,7 +81,37 @@ public class RecommendationService {
             }
         }
 
-        return List.copyOf(merged.values());
+        return withFreshDisplayData(merged.values());
+    }
+
+    /**
+     * Thay tiêu đề và ảnh bìa bằng bản đọc từ PostgreSQL, <b>một truy vấn cho cả danh sách</b>.
+     * <p>
+     * Neo4j giữ quan hệ, không giữ thứ để hiển thị. Nhân bản ảnh bìa sang đồ thị thì mỗi lần chủ
+     * quiz đổi ảnh, thẻ gợi ý lại trỏ vào file cũ đã bị xoá — mà đồ thị chỉ được đồng bộ khi có bài
+     * nộp mới, nên nó có thể cũ rất lâu.
+     * <p>
+     * Quiz không còn trong PostgreSQL bị <b>loại khỏi danh sách</b>: nút rác trong đồ thị không được
+     * phép hiện thành một thẻ bấm vào là 404.
+     */
+    private List<RecommendedQuizResponse> withFreshDisplayData(
+            Collection<RecommendedQuizResponse> items) {
+        if (items.isEmpty()) {
+            return List.of();
+        }
+
+        Map<UUID, QuizRepository.QuizCardRow> cards = quizRepository
+                .findCardsByIds(items.stream().map(RecommendedQuizResponse::quizId).toList())
+                .stream()
+                .collect(Collectors.toMap(QuizRepository.QuizCardRow::getId, row -> row));
+
+        return items.stream()
+                .filter(item -> cards.containsKey(item.quizId()))
+                .map(item -> {
+                    QuizRepository.QuizCardRow card = cards.get(item.quizId());
+                    return item.withDisplayData(card.getTitle(), card.getThumbnailUrl());
+                })
+                .toList();
     }
 
     /** Lộ trình học: chủ đề xếp theo mức độ yếu đo được (FR-35). */
@@ -135,6 +170,7 @@ public class RecommendationService {
         return new RecommendedQuizResponse(
                 UUID.fromString((String) row.get("quizId")),
                 (String) row.get("title"),
+                null,   // ảnh bìa nạp từ PostgreSQL ở withFreshDisplayData()
                 RecommendedQuizResponse.RecommendationSource.WEAK_TOPIC,
                 "Ôn lại " + String.join(", ", weakTopics) + " — bạn đang làm sai nhiều ở đây",
                 weakTopics,
@@ -147,6 +183,7 @@ public class RecommendationService {
         return new RecommendedQuizResponse(
                 UUID.fromString((String) row.get("quizId")),
                 (String) row.get("title"),
+                null,   // ảnh bìa nạp từ PostgreSQL ở withFreshDisplayData()
                 RecommendedQuizResponse.RecommendationSource.SIMILAR_LEARNERS,
                 peers + " người học giống bạn đã làm quiz này",
                 List.of(),
@@ -160,6 +197,7 @@ public class RecommendationService {
         return new RecommendedQuizResponse(
                 UUID.fromString((String) row.get("quizId")),
                 (String) row.get("title"),
+                null,   // ảnh bìa nạp từ PostgreSQL ở withFreshDisplayData()
                 RecommendedQuizResponse.RecommendationSource.NEW_TOPIC,
                 "Chủ đề bạn chưa thử: " + String.join(", ", topics),
                 List.of(),

@@ -3,6 +3,7 @@ import { Alert, Card, Skeleton, Space, Statistic, Table, Tag, Tooltip, Typograph
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
+import { formatPercent } from '../format'
 import ScoreDistributionChart from '../components/ScoreDistributionChart'
 import type { HardQuestion, QuizAttemptSummary } from '../api/analyticsApi'
 import { useQuizAttempts, useQuizStats } from '../hooks/useAnalyticsQueries'
@@ -155,20 +156,10 @@ export default function QuizStatsPage() {
               <Statistic title="Số người học" value={stats.distinctLearners} />
             </Card>
             <Card>
-              <Statistic
-                title="Điểm trung bình"
-                value={stats.averagePercent ?? 0}
-                precision={1}
-                suffix="%"
-              />
+              <Statistic title="Điểm trung bình" value={formatPercent(stats.averagePercent)} />
             </Card>
             <Card>
-              <Statistic
-                title="Nộp kịp giờ"
-                value={stats.completionPercent ?? 0}
-                precision={1}
-                suffix="%"
-              />
+              <Statistic title="Nộp kịp giờ" value={formatPercent(stats.completionPercent)} />
               {/* Con số này chỉ có nghĩa khi quiz có giới hạn thời gian — nói rõ nó đo cái gì */}
               <Text className="text-ink-soft text-xs">phần còn lại là bài bị hết giờ</Text>
             </Card>

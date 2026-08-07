@@ -175,6 +175,62 @@ class RecommendationIntegrationTest {
         assertThat(coveredTopics(quizId)).contains("Chủ đề mới tinh");
     }
 
+    // ================================================================ dữ liệu hiển thị của thẻ gợi ý
+
+    @Test
+    @DisplayName("Thẻ gợi ý lấy tiêu đề và ảnh bìa từ PostgreSQL, không dùng bản sao trong đồ thị")
+    void shouldReadCardDataFromPostgres() throws Exception {
+        String token = register("anh-bia@example.com", "LEARNER");
+        String quizId = quizWithTopic("Tên cũ trong đồ thị", "Chủ đề ảnh bìa", 3);
+
+        // Đưa quiz vào đồ thị với tiêu đề hiện tại, rồi mới đổi tên + thêm ảnh ở PostgreSQL.
+        // Đồ thị chỉ được đồng bộ khi có bài nộp mới, nên bản sao trong đó CÒN CŨ ở thời điểm gợi ý.
+        graphSync.syncPublicCatalog();
+        mockMvc.perform(put("/api/v1/quizzes/{id}", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Tên mới ở PostgreSQL","visibility":"PUBLIC",
+                                 "thumbnailUrl":"/uploads/anh-bia-test.png"}
+                                """))
+                .andExpect(status().isOk());
+
+        JsonNode card = findRecommendation(token, quizId);
+        assertThat(card).as("quiz công khai phải được gợi ý cho người mới").isNotNull();
+        assertThat(card.get("title").asText()).isEqualTo("Tên mới ở PostgreSQL");
+        assertThat(card.get("thumbnailUrl").asText()).isEqualTo("/uploads/anh-bia-test.png");
+    }
+
+    @Test
+    @DisplayName("Quiz chưa có ảnh: thumbnailUrl là null, KHÔNG phải chuỗi rỗng hay ảnh bịa")
+    void shouldReturnNullThumbnailWhenQuizHasNoImage() throws Exception {
+        String token = register("khong-anh@example.com", "LEARNER");
+        String quizId = quizWithTopic("Quiz không ảnh", "Chủ đề không ảnh", 3);
+        graphSync.syncPublicCatalog();
+
+        JsonNode card = findRecommendation(token, quizId);
+        assertThat(card).isNotNull();
+        // Frontend dựa vào null để vẽ khối màu thay thế; chuỗi rỗng sẽ thành thẻ <img src="">
+        assertThat(card.get("thumbnailUrl").isNull()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Nút rác còn trong đồ thị nhưng quiz đã xoá: KHÔNG hiện thành thẻ bấm vào là 404")
+    void shouldDropRecommendationsForDeletedQuizzes() throws Exception {
+        String token = register("goi-y-quiz-da-xoa@example.com", "LEARNER");
+        String quizId = quizWithTopic("Quiz sẽ bị xoá khỏi CSDL", "Chủ đề quiz đã xoá", 3);
+        graphSync.syncPublicCatalog();
+        assertThat(findRecommendation(token, quizId)).isNotNull();
+
+        // Xoá ở PostgreSQL nhưng CỐ Ý không chạy syncPublicCatalog: mô phỏng khoảng thời gian đồ thị
+        // còn cũ. Danh sách gợi ý phải tự loại quiz không còn tồn tại.
+        mockMvc.perform(delete("/api/v1/quizzes/{id}", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken))
+                .andExpect(status().isNoContent());
+
+        assertThat(findRecommendation(token, quizId)).isNull();
+    }
+
     // ================================================================ gợi ý
 
     @Test
@@ -465,6 +521,26 @@ class RecommendationIntegrationTest {
                 .bind(quizId).to("quizId")
                 .fetchAs(String.class).mappedBy((ts, rec) -> rec.get("name").asString())
                 .all().stream().toList();
+    }
+
+    /**
+     * Thẻ gợi ý của một quiz cụ thể, hoặc {@code null} nếu quiz đó không được gợi ý.
+     * <p>
+     * Lấy {@code limit} rộng để phép kiểm nói về "quiz có trong danh sách hay không" chứ không vô
+     * tình nói về "quiz có nằm trong 4 thẻ đầu hay không".
+     */
+    private JsonNode findRecommendation(String token, String quizId) throws Exception {
+        String body = mockMvc.perform(get("/api/v1/recommendations").param("limit", "50")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        for (JsonNode item : objectMapper.readTree(body)) {
+            if (item.get("quizId").asText().equals(quizId)) {
+                return item;
+            }
+        }
+        return null;
     }
 
     /** Quiz công khai gồm {@code questionCount} câu cùng một chủ đề. */

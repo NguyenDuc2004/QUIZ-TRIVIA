@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -85,4 +87,27 @@ public interface QuizRepository extends JpaRepository<Quiz, UUID> {
             where q.id = :id
             """)
     Optional<Quiz> findByIdWithQuestions(@Param("id") UUID id);
+
+    /**
+     * Tiêu đề + ảnh bìa của nhiều quiz trong <b>một</b> truy vấn.
+     * <p>
+     * Dùng cho những chỗ đã biết id từ nguồn khác (gợi ý lấy id từ Neo4j) và chỉ cần đủ dữ liệu để
+     * vẽ thẻ. Nạp cả thực thể {@code Quiz} ở đây là kéo theo owner, category và các collection —
+     * tốn kém mà không dùng tới; còn hỏi từng id một thì thành N+1.
+     * <p>
+     * Id không còn trong bảng thì <b>không có dòng tương ứng</b>: chỗ gọi dựa vào đó để loại quiz
+     * đã xoá ra khỏi danh sách.
+     */
+    @Query("select q.id as id, q.title as title, q.thumbnailUrl as thumbnailUrl "
+            + "from Quiz q where q.id in :ids")
+    List<QuizCardRow> findCardsByIds(@Param("ids") Collection<UUID> ids);
+
+    /** Đủ để vẽ một thẻ quiz, không hơn. */
+    interface QuizCardRow {
+        UUID getId();
+
+        String getTitle();
+
+        String getThumbnailUrl();
+    }
 }

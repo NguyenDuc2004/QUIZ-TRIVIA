@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Button, Card, Skeleton, Space, Statistic, Typography } from 'antd'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
+import { formatPercent } from '../format'
 import ProgressTrendChart from '../components/ProgressTrendChart'
 import { useMyProgress } from '../hooks/useAnalyticsQueries'
 
@@ -60,12 +61,7 @@ export default function MyProgressPage() {
               )}
             </Card>
             <Card>
-              <Statistic
-                title="Điểm trung bình"
-                value={data.averagePercent ?? 0}
-                precision={1}
-                suffix="%"
-              />
+              <Statistic title="Điểm trung bình" value={formatPercent(data.averagePercent)} />
             </Card>
           </div>
 

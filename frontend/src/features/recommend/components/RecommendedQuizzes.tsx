@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Button, Skeleton, Tag, Typography } from 'antd'
+import { coverOf } from '@/features/quiz/coverGradient'
 import type { RecommendationSource } from '../api/recommendApi'
 import { useRecommendedQuizzes } from '../hooks/useRecommendQueries'
 
@@ -49,21 +50,39 @@ export default function RecommendedQuizzes() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {data.map((item) => (
-          <div key={item.quizId} className="flex flex-col border border-line p-4">
-            <Tag color={SOURCE_COLOR[item.source]} className="mr-0! mb-2 self-start">
-              {SOURCE_LABEL[item.source]}
-            </Tag>
+          <div key={item.quizId} className="flex flex-col overflow-hidden border border-line">
+            {/*
+              Ảnh bìa 16:9, cùng khuôn với thẻ ở lưới Khám phá — một quiz phải trông như chính nó ở
+              mọi chỗ nó xuất hiện. Chưa có ảnh thì vẽ khối màu bằng `coverOf` dùng chung, nên cùng
+              quiz ra cùng màu ở cả hai trang.
+            */}
+            {item.thumbnailUrl ? (
+              <img
+                src={item.thumbnailUrl}
+                alt=""
+                loading="lazy"
+                className="aspect-video w-full object-cover"
+              />
+            ) : (
+              <div className="aspect-video w-full" style={{ background: coverOf(item.title) }} />
+            )}
 
-            <Text className="mb-1 font-bold">{item.title}</Text>
+            <div className="flex flex-1 flex-col p-4">
+              <Tag color={SOURCE_COLOR[item.source]} className="mr-0! mb-2 self-start">
+                {SOURCE_LABEL[item.source]}
+              </Tag>
 
-            {/* Lý do do backend viết — gợi ý không nói vì sao thì người dùng không có căn cứ để tin */}
-            <Text className="mb-3 text-ink-soft text-xs">{item.reason}</Text>
+              <Text className="line-clamp-2-title mb-1 font-bold">{item.title}</Text>
 
-            <Link to={`/quizzes/${item.quizId}`} className="mt-auto">
-              <Button size="small" block>
-                Làm thử
-              </Button>
-            </Link>
+              {/* Lý do do backend viết — gợi ý không nói vì sao thì người dùng không có căn cứ để tin */}
+              <Text className="mb-3 text-ink-soft text-xs">{item.reason}</Text>
+
+              <Link to={`/quizzes/${item.quizId}`} className="mt-auto">
+                <Button size="small" block>
+                  Làm thử
+                </Button>
+              </Link>
+            </div>
           </div>
         ))}
       </div>
