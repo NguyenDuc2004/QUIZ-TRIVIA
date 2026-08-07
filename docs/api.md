@@ -52,6 +52,7 @@ DELETE /api/v1/quizzes/{id}             Xóa quiz (câu hỏi vẫn còn trong n
 
 GET    /api/v1/questions                Ngân hàng câu hỏi của tôi (type, difficulty,
                                         topic, q + phân trang)                          ✅
+GET    /api/v1/questions/topics         Chủ đề của tôi kèm số câu mỗi chủ đề            ✅
 POST   /api/v1/questions                Tạo câu hỏi                                     ✅
 GET    /api/v1/questions/{id}           Chi tiết câu hỏi                                ✅
 PUT    /api/v1/questions/{id}           Sửa (thay toàn bộ lựa chọn)                     ✅
@@ -78,6 +79,15 @@ Trả về `{ url, fileName, size, contentType }`; lấy `url` gán vào `quizze
 URL bên ngoài trả **400** (tránh link chết và pixel theo dõi nhúng qua ảnh bên thứ ba).
 
 **Quyền:** `GET /categories`, `GET /quizzes`, `GET /quizzes/{id}` mở cho Guest (quiz PRIVATE của người khác trả **404**). Còn lại yêu cầu vai trò **CREATOR/ADMIN** và **quyền sở hữu** (sửa/xóa của người khác → **403**). `GET /quizzes?mine=true` yêu cầu đăng nhập.
+
+**Chủ đề câu hỏi.** `topic` là **cột chữ tự do trên `questions`**, không phải bảng riêng — không
+bắt người soạn tạo chủ đề trước rồi mới viết được câu hỏi đầu tiên. `GET /questions/topics` gom lại
+các giá trị đã dùng kèm số câu; giao diện dùng nó để (1) lọc ngân hàng, (2) lọc trong hộp chọn câu
+lúc soạn quiz, (3) gợi ý khi gõ ô Chủ đề — thiếu (3) thì hôm nay gõ "Lịch sử Việt Nam", mai gõ
+"Lịch sử VN" và thành hai chủ đề, lọc sẽ sót mà không ai biết vì sao.
+
+Lọc `?topic=` khớp **chính xác nhưng không phân biệt hoa/thường**. Danh sách chủ đề là dữ liệu
+riêng: chỉ trả chủ đề của chính người gọi.
 
 **Luật theo loại câu hỏi** (validate ở service, trả 400 nếu vi phạm):
 

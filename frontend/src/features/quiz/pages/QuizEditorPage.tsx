@@ -1,13 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Alert, Button, List, Modal, Space, Table, Tag, Typography } from 'antd'
+import { Alert, Button, Input, List, Modal, Select, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { getApiErrorMessage } from '@/shared/api/client'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
-import type { Question } from '../api/quizApi'
-import { DIFFICULTY_COLOR, DIFFICULTY_LABEL, QUESTION_TYPE_LABEL, VISIBILITY_LABEL } from '../constants'
-import { useQuestionBank, useQuizDetail, useSetQuizQuestions } from '../hooks/useQuizQueries'
+import type { Difficulty, Question } from '../api/quizApi'
+import {
+  DIFFICULTY_COLOR,
+  DIFFICULTY_LABEL,
+  DIFFICULTY_OPTIONS,
+  QUESTION_TYPE_LABEL,
+  VISIBILITY_LABEL,
+} from '../constants'
+import {
+  useQuestionBank,
+  useQuestionTopics,
+  useQuizDetail,
+  useSetQuizQuestions,
+} from '../hooks/useQuizQueries'
 import QuestionFormModal from '../components/QuestionFormModal'
 
 const { Text } = Typography
@@ -224,9 +235,28 @@ function QuestionPickerModal({
 }) {
   const [page, setPage] = useState(0)
   const [checked, setChecked] = useState<Question[]>([])
-  const { data, isFetching } = useQuestionBank({ page, size: 8 })
+  const [keyword, setKeyword] = useState('')
+  const [topic, setTopic] = useState<string | undefined>()
+  const [difficulty, setDifficulty] = useState<Difficulty | undefined>()
+
+  // Lọc ngay ở truy vấn chứ không lọc sau khi tải: ngân hàng có thể hàng trăm câu, mà mỗi lần chỉ
+  // lấy về 8 câu — lọc phía client thì chỉ lọc được trong 8 câu đó, gần như vô dụng.
+  const { data, isFetching } = useQuestionBank({
+    page,
+    size: 8,
+    q: keyword || undefined,
+    topic,
+    difficulty,
+  })
+  const { data: topics } = useQuestionTopics()
 
   const available = (data?.content ?? []).filter((q) => !excludeIds.has(q.id))
+
+  /** Đổi bộ lọc thì phải về trang đầu, nếu không sẽ rơi vào trang trống của kết quả mới. */
+  const changeFilter = (apply: () => void) => {
+    apply()
+    setPage(0)
+    }
 
   return (
     <Modal
@@ -245,14 +275,52 @@ function QuestionPickerModal({
         onClose()
       }}
     >
+      <Space wrap className="mb-3 w-full">
+        <Input.Search
+          allowClear
+          placeholder="Tìm trong nội dung câu hỏi"
+          style={{ width: 260 }}
+          onSearch={(value) => changeFilter(() => setKeyword(value))}
+        />
+        <Select
+          allowClear
+          showSearch
+          placeholder="Chủ đề"
+          style={{ width: 220 }}
+          value={topic}
+          onChange={(value) => changeFilter(() => setTopic(value))}
+          options={(topics ?? []).map((item) => ({
+            value: item.topic,
+            label: `${item.topic} (${item.questionCount})`,
+          }))}
+          notFoundContent="Chưa có câu hỏi nào được đặt chủ đề"
+        />
+        <Select
+          allowClear
+          placeholder="Độ khó"
+          style={{ width: 140 }}
+          value={difficulty}
+          onChange={(value) => changeFilter(() => setDifficulty(value))}
+          options={DIFFICULTY_OPTIONS}
+        />
+      </Space>
+
       <List
         loading={isFetching}
         dataSource={available}
         locale={{
           emptyText: (
             <EmptyState
-              title="Không còn câu hỏi nào để thêm"
-              hint="Mọi câu trong ngân hàng đã nằm trong quiz này."
+              title={
+                keyword || topic || difficulty
+                  ? 'Không có câu nào khớp bộ lọc'
+                  : 'Không còn câu hỏi nào để thêm'
+              }
+              hint={
+                keyword || topic || difficulty
+                  ? 'Thử bỏ bớt điều kiện lọc, hoặc soạn câu mới cho chủ đề này.'
+                  : 'Mọi câu trong ngân hàng đã nằm trong quiz này.'
+              }
             />
           ),
         }}

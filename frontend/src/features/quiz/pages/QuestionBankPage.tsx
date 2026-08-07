@@ -11,7 +11,7 @@ import {
   QUESTION_TYPE_LABEL,
   QUESTION_TYPE_OPTIONS,
 } from '../constants'
-import { useDeleteQuestion, useQuestionBank } from '../hooks/useQuizQueries'
+import { useDeleteQuestion, useQuestionBank, useQuestionTopics } from '../hooks/useQuizQueries'
 import QuestionFormModal from '../components/QuestionFormModal'
 
 const { Text } = Typography
@@ -22,6 +22,7 @@ export default function QuestionBankPage() {
   const [keyword, setKeyword] = useState('')
   const [type, setType] = useState<QuestionType | undefined>()
   const [difficulty, setDifficulty] = useState<Difficulty | undefined>()
+  const [topic, setTopic] = useState<string | undefined>()
   const [editing, setEditing] = useState<Question | null>(null)
   const [creating, setCreating] = useState(false)
 
@@ -31,7 +32,9 @@ export default function QuestionBankPage() {
     q: keyword || undefined,
     type,
     difficulty,
+    topic,
   })
+  const { data: topics } = useQuestionTopics()
   const deleteQuestion = useDeleteQuestion()
 
   const columns: ColumnsType<Question> = [
@@ -134,6 +137,23 @@ export default function QuestionBankPage() {
               setPage(0)
             }}
             options={QUESTION_TYPE_OPTIONS}
+          />
+          <Select
+            allowClear
+            showSearch
+            placeholder="Chủ đề"
+            style={{ width: 220 }}
+            value={topic}
+            onChange={(value) => {
+              setTopic(value)
+              setPage(0)
+            }}
+            // Kèm số câu để thấy ngay chủ đề nào đủ câu dựng được một quiz
+            options={(topics ?? []).map((item) => ({
+              value: item.topic,
+              label: `${item.topic} (${item.questionCount})`,
+            }))}
+            notFoundContent="Chưa có câu hỏi nào được đặt chủ đề"
           />
           <Select
             allowClear

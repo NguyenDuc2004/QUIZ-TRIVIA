@@ -130,9 +130,18 @@ export const quizApi = {
     apiClient.put<QuizDetail>(`/quizzes/${id}/questions`, { questionIds }).then((res) => res.data),
 }
 
+/** Một chủ đề trong ngân hàng, kèm số câu đang mang chủ đề đó. */
+export interface Topic {
+  topic: string
+  questionCount: number
+}
+
 export const questionApi = {
   list: (params: QuestionListParams) =>
     apiClient.get<PageResponse<Question>>('/questions', { params }).then((res) => res.data),
+
+  /** Chủ đề đã dùng trong ngân hàng — để lọc và để gợi ý lúc soạn câu mới. */
+  listTopics: () => apiClient.get<Topic[]>('/questions/topics').then((res) => res.data),
 
   create: (body: QuestionBody) =>
     apiClient.post<Question>('/questions', body).then((res) => res.data),

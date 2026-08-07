@@ -40,6 +40,29 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
                             @Param("keyword") String keyword,
                             Pageable pageable);
 
+    /**
+     * Các chủ đề người dùng đã đặt, kèm số câu mỗi chủ đề.
+     * <p>
+     * Gom theo <b>tên gốc</b> nhưng sắp theo tên viết thường, để "Lịch sử" và "lịch sử" nằm cạnh
+     * nhau trong danh sách gợi ý — người dùng nhìn thấy là biết mình từng gõ hai kiểu và tự chọn
+     * lại một kiểu. Không tự gộp: đó là dữ liệu của họ, hệ thống không được lặng lẽ sửa.
+     */
+    @Query("""
+            select q.topic as topic, count(q) as questionCount
+            from Question q
+            where q.owner.id = :ownerId and q.topic is not null and q.topic <> ''
+            group by q.topic
+            order by lower(q.topic)
+            """)
+    List<TopicCount> findTopics(@Param("ownerId") UUID ownerId);
+
+    /** Một dòng của danh sách chủ đề. */
+    interface TopicCount {
+        String getTopic();
+
+        long getQuestionCount();
+    }
+
     @Query("""
             select distinct q from Question q
               join fetch q.owner

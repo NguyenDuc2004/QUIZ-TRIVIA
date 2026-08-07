@@ -6,6 +6,7 @@ import com.datn.quizai.quiz.service.QuestionService;
 import com.datn.quizai.auth.service.JwtService;
 import com.datn.quizai.common.dto.PageResponse;
 import com.datn.quizai.quiz.dto.QuestionRequest;
+import com.datn.quizai.quiz.dto.TopicResponse;
 import com.datn.quizai.quiz.dto.QuestionResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -57,6 +59,13 @@ public class QuestionController {
             @RequestParam(required = false, name = "q") String keyword,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return questionService.listMyBank(current.id(), type, difficulty, topic, keyword, pageable);
+    }
+
+    @GetMapping("/topics")
+    @Operation(summary = "Các chủ đề trong ngân hàng của tôi, kèm số câu mỗi chủ đề. "
+            + "Dùng để lọc câu hỏi và gợi ý khi soạn câu mới.")
+    public List<TopicResponse> listMyTopics(@AuthenticationPrincipal JwtService.AuthenticatedUser current) {
+        return questionService.listMyTopics(current.id());
     }
 
     @GetMapping("/{id}")

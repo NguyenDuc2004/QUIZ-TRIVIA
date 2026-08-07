@@ -23,6 +23,7 @@
 | 08/08 | **FR-4 quên mật khẩu qua OTP email** (Gmail App Password) | 6/6 | 🟢 xong |
 | 08/08 (chiều) | **FR-3 đăng nhập bằng Google** (luồng ID token) + vá lỗi đua Redis/CSDL | 7/7 | 🟢 xong |
 | 09/08 | **FR-30 AI chấm câu tự luận** (chấm nền + rubric + chống prompt injection) | 7/7 | 🟢 xong |
+| 09/08 (chiều) | **Lọc câu hỏi theo chủ đề** — soạn quiz theo môn không phải lật hết ngân hàng | 6/6 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -852,6 +853,69 @@ Ghi rõ ở đây thay vì báo một tổng đẹp là vì đúng tinh thần *
   0/10). Số liệu định lượng còn nợ.
 - **"Khó khăn & cách giải quyết":** hạn mức 5 lượt/phút là ví dụ rất tốt — lỗi chỉ hiện khi chạy
   thật, không test nào bắt được, và cách sửa phải đi vào thiết kế chứ không phải tăng số lần thử lại.
+
+---
+
+## 📅 CN — 09/08/2026 (chiều) — Lọc câu hỏi theo chủ đề
+
+**Mục tiêu:** Người dùng phản ánh: *"muốn làm quiz Lịch sử thì phải lọc hết trong ngân hàng xem đâu
+là câu về lịch sử"*. Kiểm lại thì tình trạng còn tệ hơn mô tả.
+
+### Hiện trạng trước khi sửa
+
+| Chỗ | Lọc theo chủ đề |
+|---|---|
+| Backend `GET /questions?topic=` | ✅ **đã có sẵn từ lát cắt 2** |
+| Trang Ngân hàng câu hỏi | ❌ chỉ có Loại + Độ khó |
+| **Hộp chọn câu khi soạn quiz** | ❌ **không có bộ lọc nào cả** — lật từng trang 8 câu |
+
+Chỗ thứ ba mới là chỗ đau nhất, và cũng là chỗ dễ bỏ sót nhất khi tự kiểm: trang ngân hàng ít nhất
+còn có *hai* bộ lọc nên nhìn qua tưởng ổn, còn hộp chọn câu thì trần trụi mà không ai để ý vì nó nằm
+trong một modal.
+
+Đáng nói: **backend đã làm được việc này từ lâu, chỉ là giao diện không cho gọi.** Một tính năng có
+mà không dùng được thì với người dùng nó chính là không có.
+
+### Chủ đề: cột chữ tự do hay bảng riêng?
+
+Cân nhắc hai hướng và chọn hướng nhẹ:
+
+| | Bảng `topics` riêng | **Cột chữ + gợi ý (đã chọn)** |
+|---|---|---|
+| Soạn câu đầu tiên | Phải đi tạo chủ đề trước | Gõ thẳng |
+| Dữ liệu cũ | Cần migration chuyển đổi | Dùng được ngay |
+| Đổi tên chủ đề | Sửa một chỗ, mọi câu đổi theo | Phải sửa từng câu |
+| Chống trôi chính tả | Chặt bằng khoá ngoại | Bằng gợi ý lúc gõ |
+
+Chọn cột chữ vì hai dòng đầu quan trọng hơn hai dòng sau ở giai đoạn này: bắt người dùng dựng danh
+mục trước khi viết được câu hỏi đầu tiên là thêm rào cản cho việc họ vốn muốn làm nhanh. Đổi lại
+phải trả giá ở chỗ "Lịch sử Việt Nam" và "Lịch sử VN" thành hai chủ đề — nên ô Chủ đề lúc soạn câu
+đổi thành **gõ-hoặc-chọn**, xổ sẵn những chủ đề đã dùng kèm số câu. Nâng lên bảng riêng sau này
+không vỡ gì, vì cột vẫn ở nguyên đó.
+
+### Đã làm
+- `GET /questions/topics` — chủ đề của tôi kèm số câu, sắp theo bảng chữ cái không phân biệt hoa/thường.
+- Bộ lọc chủ đề ở trang Ngân hàng câu hỏi.
+- Hộp chọn câu lúc soạn quiz: thêm **tìm kiếm + chủ đề + độ khó** (trước đó không có gì).
+- Ô Chủ đề đổi thành gõ-hoặc-chọn.
+
+Hai chi tiết cố ý: lọc chạy **ở truy vấn** chứ không lọc sau khi tải (mỗi lần chỉ lấy 8 câu, lọc phía
+client thì chỉ lọc trong 8 câu đó — gần như vô dụng), và đổi bộ lọc thì **về trang đầu**, nếu không
+sẽ rơi vào trang trống của kết quả mới.
+
+Số câu hiện kèm mỗi chủ đề *(Lịch sử Việt Nam (12))* — không phải để trang trí: nó trả lời ngay câu
+"chủ đề nào đủ câu để dựng một quiz".
+
+### Kiểm thử
+**222/222** JUnit (thêm 5 ca: liệt kê chủ đề kèm số câu, không lộ chủ đề giữa các tài khoản, lọc
+không phân biệt hoa/thường, Guest bị chặn, và `/topics` không bị nuốt bởi `/{id}`).
+
+### Ghi chú báo cáo
+- **Mục 2.6 (use case):** bổ sung luồng "dựng quiz theo môn từ ngân hàng" — trước đây spec có nhắc
+  `topic` nhưng không mô tả người dùng dùng nó thế nào.
+- **"Khó khăn & cách giải quyết":** ví dụ tốt cho việc *tính năng có ở backend mà giao diện không
+  gọi thì coi như không có*. Cũng là lý do nên tự đóng vai người dùng thử một tác vụ trọn vẹn
+  ("làm một quiz Lịch sử") thay vì chỉ kiểm từng endpoint.
 
 ---
 
