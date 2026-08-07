@@ -11,7 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -77,10 +80,48 @@ public class GraphSyncService {
      */
     public int rebuildForUser(UUID userId) {
         graphWriter.ensureConstraints();
+        // Dựng lại cả danh mục: không có nó thì dù biết người này yếu chủ đề gì cũng không có quiz
+        // nào trong đồ thị để mà gợi ý.
+        syncPublicCatalog();
         List<UUID> attemptIds = graphSource.findFinishedAttemptIds(userId);
         attemptIds.forEach(this::syncQuietly);
         log.info("Đã dựng lại đồ thị gợi ý cho người dùng {} từ {} bài làm", userId, attemptIds.size());
         return attemptIds.size();
+    }
+
+    /**
+     * Đưa toàn bộ quiz công khai và chủ đề của chúng vào đồ thị.
+     * <p>
+     * Tách khỏi đồng bộ theo bài làm vì đây là <b>danh mục</b>, không phải hành vi: việc một
+     * quiz phủ chủ đề nào là thuộc tính của chính nó. Không có bước này thì quiz chưa ai làm
+     * sẽ không nằm trong đồ thị và không bao giờ được gợi ý — mà gợi ý đúng là để giới thiệu
+     * quiz người ta <i>chưa</i> làm, nên hệ thống tự loại mất đúng thứ nó cần đề xuất.
+     *
+     * @return số quiz đã đưa vào
+     */
+    @Transactional(readOnly = true)
+    public int syncPublicCatalog() {
+        Map<UUID, List<GraphWriter.TopicCount>> byQuiz = new LinkedHashMap<>();
+        Map<UUID, String> titles = new LinkedHashMap<>();
+
+        for (AttemptGraphRepository.CatalogRow row : graphSource.findPublicQuizCatalog()) {
+            titles.put(row.getQuizId(), row.getQuizTitle());
+            byQuiz.computeIfAbsent(row.getQuizId(), key -> new ArrayList<>())
+                    .add(new GraphWriter.TopicCount(row.getTopic(), row.getQuestionCount()));
+        }
+
+        byQuiz.forEach((quizId, topics) -> {
+            graphWriter.upsertQuizNode(quizId, titles.get(quizId), "PUBLIC");
+            graphWriter.replaceQuizTopics(quizId, topics);
+        });
+
+        // Gỡ nút của quiz/tài khoản đã bị xoá ở PostgreSQL. Không có bước này thì đồ thị chỉ lớn
+        // lên mãi, và tệ hơn: hệ thống gợi ý một quiz đã biến mất, người dùng bấm vào nhận 404.
+        long pruned = graphWriter.pruneDeleted(graphSource.findAllUserIds(), graphSource.findAllQuizIds());
+
+        log.info("Đồ thị gợi ý: {} quiz công khai, gỡ {} nút không còn trong PostgreSQL",
+                byQuiz.size(), pruned);
+        return byQuiz.size();
     }
 
     /** Nuốt lỗi và chỉ ghi log — xem javadoc lớp về việc vì sao Neo4j hỏng không được lan ra. */

@@ -121,6 +121,63 @@ public class GraphWriter {
         }
     }
 
+    /**
+     * Tạo/cập nhật nút Quiz mà <b>không</b> cần ai làm bài — dùng khi dựng danh mục.
+     * <p>
+     * Gợi ý là để giới thiệu quiz người ta chưa làm; quiz chưa ai đụng tới mà không có trong
+     * đồ thị thì hệ thống tự loại mất đúng thứ nó cần đề xuất.
+     */
+    public void upsertQuizNode(UUID quizId, String title, String visibility) {
+        neo4j.query("""
+                        MERGE (q:Quiz {id: $quizId})
+                          SET q.title = $title, q.visibility = $visibility
+                        """)
+                .bindAll(Map.of(
+                        "quizId", quizId.toString(),
+                        "title", title,
+                        "visibility", visibility))
+                .run();
+    }
+
+    /**
+     * Gỡ khỏi đồ thị những nút mà PostgreSQL không còn.
+     * <p>
+     * Đồng bộ chỉ biết <i>thêm</i>: quiz hay tài khoản bị xoá ở CSDL quan hệ thì nút của nó nằm
+     * lại trong Neo4j vĩnh viễn. Hậu quả không chỉ là rác — hệ thống sẽ <b>gợi ý một quiz đã bị
+     * xoá</b>, người dùng bấm vào nhận 404. Đây là mặt còn thiếu của câu "Neo4j là view":
+     * view phải phản chiếu cả những gì đã biến mất.
+     * <p>
+     * Topic thì xoá theo kiểu khác — chỉ xoá khi không còn cạnh nào trỏ tới. Chủ đề không có
+     * bảng riêng ở PostgreSQL nên không đối chiếu được, nhưng một chủ đề không còn quiz lẫn
+     * người học nào gắn với nó thì hiển nhiên là tàn dư.
+     *
+     * @return số nút đã gỡ
+     */
+    public long pruneDeleted(List<UUID> validUserIds, List<UUID> validQuizIds) {
+        List<String> users = validUserIds.stream().map(UUID::toString).toList();
+        List<String> quizzes = validQuizIds.stream().map(UUID::toString).toList();
+
+        long removed = 0;
+        removed += deleteCount("MATCH (q:Quiz) WHERE NOT q.id IN $ids DETACH DELETE q RETURN count(q) AS c",
+                "ids", quizzes);
+        removed += deleteCount("MATCH (u:User) WHERE NOT u.id IN $ids DETACH DELETE u RETURN count(u) AS c",
+                "ids", users);
+
+        // Chủ đề mồ côi: không còn quiz nào phủ, không còn ai luyện
+        removed += neo4j.query("MATCH (t:Topic) WHERE NOT (t)<--() DELETE t RETURN count(t) AS c")
+                .fetchAs(Long.class).mappedBy((ts, rec) -> rec.get("c").asLong())
+                .one().orElse(0L);
+
+        return removed;
+    }
+
+    private long deleteCount(String cypher, String param, List<String> ids) {
+        return neo4j.query(cypher)
+                .bind(ids).to(param)
+                .fetchAs(Long.class).mappedBy((ts, rec) -> rec.get("c").asLong())
+                .one().orElse(0L);
+    }
+
     /** Số nút và cạnh hiện có — để endpoint chẩn đoán nói được đồ thị đã có gì chưa. */
     public Map<String, Object> stats() {
         return neo4j.query("""

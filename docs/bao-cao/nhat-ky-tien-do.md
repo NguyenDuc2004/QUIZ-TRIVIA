@@ -932,7 +932,7 @@ chỉ có kết nối — một CSDL đồ thị chạy trong docker-compose mà
 - [x] Cypher: lộ trình học theo năng lực
 - [x] API `/recommendations`, `/path`, `/rebuild`
 - [x] Frontend: khu "Gợi ý cho bạn" + trang Lộ trình học
-- [x] 12 ca test với **Neo4j thật** (Testcontainer), tổng **234/234**
+- [x] 14 ca test với **Neo4j thật** (Testcontainer), tổng **236/236**
 
 ### Việc đầu tiên phải làm là bỏ bớt bản thiết kế
 
@@ -1012,12 +1012,54 @@ ca dùng tài khoản riêng và assert đúng cạnh của mình. *Test đếm 
 chạy* — mà thứ tự chạy thì không ai kiểm soát.
 
 ### Kiểm thử
-**234/234** JUnit, thêm 12 ca chạy trên **Neo4j thật bằng Testcontainer** — không mock, vì cả tính
+**236/236** JUnit, thêm 14 ca chạy trên **Neo4j thật bằng Testcontainer** — không mock, vì cả tính
 năng này *là* mấy câu Cypher; mock đi thì chỉ còn kiểm được việc gọi hàm, còn Cypher sai cú pháp hay
 sai logic đồ thị vẫn lọt.
 
 Ca đáng chú ý: đồng bộ ba lần không nhân đôi; quiz bỏ bớt câu thì cạnh `COVERS` cũ bị gỡ; trả lời
-1 câu sai thì **không** bị kết luận yếu; quiz riêng tư của người khác không lọt vào gợi ý.
+1 câu sai thì **không** bị kết luận yếu; quiz riêng tư của người khác không lọt vào gợi ý; quiz bị
+xoá ở PostgreSQL thì nút bị gỡ khỏi đồ thị; và quiz **chưa ai làm** vẫn vào được danh mục.
+
+### Bấm thử xong mới lộ ra hai lỗi thật, và một đống rác do chính mình gây ra
+
+Giao diện chạy, test 234/234, nhưng mở trang Khám phá thì **không có gợi ý nào**. Ba nguyên nhân
+xếp chồng:
+
+**1. Đồ thị chỉ được dựng từ hành vi.** Quiz chưa ai làm thì không có nút trong Neo4j, nên không bao
+giờ được gợi ý. Mà gợi ý đúng là để giới thiệu quiz người ta *chưa* làm — hệ thống tự loại mất đúng
+thứ nó cần đề xuất. Sửa: tách `syncPublicCatalog()` đưa toàn bộ quiz công khai vào đồ thị, độc lập
+với việc có ai làm hay không. Việc một quiz phủ chủ đề nào là thuộc tính của chính nó, không phải
+hành vi của ai.
+
+**2. Đồng bộ chỉ biết thêm, không biết gỡ.** PostgreSQL còn 1 quiz mà Neo4j vẫn giữ 51 nút. Không
+gỡ thì hệ thống sẽ gợi ý một quiz đã bị xoá và người dùng bấm vào nhận 404. Thêm bước gỡ nút không
+còn trong CSDL quan hệ — chạy thật gỡ được **58 nút**.
+
+**3. Cơ sở dữ liệu đầy rác test — do chính bộ kiểm chứng của mình.**
+
+| | Trước dọn |
+|---|---|
+| Tài khoản | 294, trong đó **288 là `@example.com`** |
+| Quiz công khai | 204, trong đó **201 do script tạo** |
+| Câu hỏi có chủ đề | 36 / 326 |
+| Quiz công khai có chủ đề | **3 / 204** |
+
+Mấy ngày qua mỗi lần chạy `run_all.sh` là nó đăng ký tài khoản thật, tạo quiz thật, làm bài thật —
+**vào đúng CSDL đang dùng để phát triển**. Trang Khám phá thành một danh sách `Quiz QR gjatd1`,
+`Quiz LAN htz9la`, `Dò IP`, `Quiz rỗng`. Gợi ý không có gì để nói vì cả hệ thống chỉ còn ba chủ đề
+thật.
+
+Đã sao lưu rồi xoá toàn bộ tài khoản `@example.com` (cascade kéo theo 245 quiz, 310 câu hỏi, 144 bài
+làm). Sáu tài khoản thật giữ nguyên. Quan trọng hơn: **thêm bước dọn vào cuối `run_all.sh`** — không
+sửa gốc thì tuần sau lại y hệt.
+
+> Bài học: **script kiểm chứng chạy trên hệ thống thật là script ghi dữ liệu thật.** "Chỉ đọc để
+> kiểm tra" là ảo tưởng — nó đăng ký, nó tạo, nó nộp bài. Phải dọn ngay trong script, không phải
+> nhớ dọn sau.
+
+Một chi tiết nhỏ nhưng đúng như dự đoán: dữ liệu thật đã có sẵn `Mã trạng thái HTTP` (6 câu) và
+`mã trạng thái HTTP` (4 câu) — hai chủ đề tách đôi vì khác chữ hoa. Ô gõ-hoặc-chọn làm buổi chiều
+ngăn được từ nay, nhưng hai mục đã lỡ tách thì phải sửa tay.
 
 ### Nợ / chuyển sang ngày sau
 - **Cold start:** người chưa làm bài nào thì không có gợi ý. Khu "Gợi ý cho bạn" tự ẩn thay vì hiện

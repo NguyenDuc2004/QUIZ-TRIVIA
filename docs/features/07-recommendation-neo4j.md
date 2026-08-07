@@ -120,8 +120,25 @@ quiz trộn câu nhiều chủ đề thì nó "phủ" tất cả các chủ đ�
   sách rỗng kèm ghi chú thay vì 500. Gợi ý là tính năng phụ trợ, không đáng kéo sập luồng chính.
 - Đánh giá: gợi ý có hợp lý theo năng lực không — [roadmap.md](../roadmap.md).
 
+## Đồng bộ phải phản chiếu cả những gì đã biến mất
+
+Bản đầu chỉ biết *thêm*: quiz hay tài khoản bị xoá ở PostgreSQL thì nút của nó nằm lại trong Neo4j
+vĩnh viễn. Hậu quả không chỉ là rác — hệ thống sẽ **gợi ý một quiz đã bị xoá**, người dùng bấm vào
+nhận 404. Đây là mặt còn thiếu của câu "Neo4j là view".
+
+`syncPublicCatalog()` giờ làm hai việc: đưa danh mục quiz công khai vào đồ thị, rồi **gỡ** mọi nút
+Quiz/User mà PostgreSQL không còn, cùng những Topic không còn cạnh nào trỏ tới.
+
+Cũng ở đây sửa một lỗi thiết kế nặng hơn: lúc đầu đồ thị **chỉ được dựng khi có người làm bài**, nên
+quiz chưa ai đụng tới thì không có trong đồ thị và không bao giờ được gợi ý. Mà gợi ý đúng là để giới
+thiệu quiz người ta *chưa* làm — hệ thống tự loại mất đúng thứ nó cần đề xuất. Việc một quiz phủ chủ
+đề nào là thuộc tính của chính quiz đó, không phải hành vi của ai, nên phải vào đồ thị độc lập.
+
 ## Chưa làm
 - **FR-36** LLM giải thích lý do gợi ý — sẽ tốn thêm hạn mức AI cho mỗi lần mở trang; cần cân nhắc
   cache trước khi bật.
 - **FR-32** Adaptive difficulty trong phiên làm bài.
-- Người dùng chưa làm bài nào thì đồ thị trống, chưa có gợi ý khởi đầu (bài toán *cold start*).
+- Người dùng chưa làm bài nào thì chưa có gợi ý (bài toán *cold start*). Khu "Gợi ý cho bạn" tự ẩn
+  thay vì hiện ô trống, nhưng đó là né chứ chưa phải giải.
+- Gỡ nút dùng `WHERE NOT id IN $ids` — với vài trăm bản ghi thì không sao, nhưng đây là phép so
+  danh sách nên sẽ chậm dần; ngân hàng quiz lớn thì phải đổi sang đánh dấu theo lô.

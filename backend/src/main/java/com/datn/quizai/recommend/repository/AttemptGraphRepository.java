@@ -76,6 +76,46 @@ public interface AttemptGraphRepository extends JpaRepository<QuizAttempt, UUID>
             """)
     List<TopicMasteryRow> findUserTopicMastery(@Param("userId") UUID userId);
 
+    /**
+     * Mọi quiz công khai kèm chủ đề và số câu — dựng phần "danh mục" của đồ thị.
+     * <p>
+     * <b>Vì sao tách khỏi luồng đồng bộ theo bài làm:</b> lúc đầu đồ thị chỉ được dựng khi có
+     * người làm bài, nên quiz chưa ai đụng tới thì không có trong đồ thị và <i>không bao giờ</i>
+     * được gợi ý. Nhưng gợi ý đúng là để giới thiệu quiz người ta <b>chưa</b> làm — hệ thống
+     * tự loại mất đúng thứ nó cần đề xuất. Việc một quiz phủ chủ đề nào là thuộc tính của
+     * chính quiz đó, không phải hành vi của ai, nên phải vào đồ thị độc lập.
+     */
+    @Query("""
+            select qz.id as quizId, qz.title as quizTitle,
+                   q.topic as topic, count(qq) as questionCount
+            from QuizQuestion qq
+              join qq.question q
+              join qq.quiz qz
+            where qz.visibility = com.datn.quizai.quiz.domain.Visibility.PUBLIC
+              and q.topic is not null and q.topic <> ''
+            group by qz.id, qz.title, q.topic
+            """)
+    List<CatalogRow> findPublicQuizCatalog();
+
+    /** Id mọi người dùng còn tồn tại — để gỡ nút của tài khoản đã bị xoá khỏi đồ thị. */
+    @Query("select u.id from User u")
+    List<UUID> findAllUserIds();
+
+    /** Id mọi quiz còn tồn tại (cả PUBLIC lẫn PRIVATE — quiz riêng tư vẫn có nút hợp lệ). */
+    @Query("select z.id from Quiz z")
+    List<UUID> findAllQuizIds();
+
+    /** Một cặp (quiz công khai, chủ đề) kèm số câu. */
+    interface CatalogRow {
+        UUID getQuizId();
+
+        String getQuizTitle();
+
+        String getTopic();
+
+        long getQuestionCount();
+    }
+
     /** Id mọi bài đã kết thúc của một người — dùng khi dựng lại đồ thị từ lịch sử. */
     @Query("""
             select a.id from QuizAttempt a

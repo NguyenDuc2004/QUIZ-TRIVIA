@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -141,6 +142,37 @@ class RecommendationIntegrationTest {
         graphSync.sync(UUID.fromString(attemptId));
 
         assertThat(coveredTopics(quizId)).contains("Sử cũ").doesNotContain("Toán cũ");
+    }
+
+    @Test
+    @DisplayName("Quiz bị xoá khỏi PostgreSQL thì nút của nó bị gỡ khỏi đồ thị")
+    void shouldPruneNodesDeletedInPostgres() throws Exception {
+        String token = register("bi-xoa@example.com", "LEARNER");
+        String quizId = quizWithTopic("Quiz sắp bị xoá", "Chủ đề sắp mất", 3);
+        graphSync.sync(UUID.fromString(takeQuiz(quizId, token, 1)));
+        assertThat(quizNodeExists(quizId)).isTrue();
+
+        // Chủ quiz xoá hẳn quiz ở CSDL quan hệ
+        mockMvc.perform(delete("/api/v1/quizzes/{id}", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken))
+                .andExpect(status().isNoContent());
+
+        graphSync.syncPublicCatalog();
+
+        // Không gỡ thì hệ thống sẽ gợi ý một quiz đã biến mất và người dùng bấm vào nhận 404
+        assertThat(quizNodeExists(quizId)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Quiz công khai chưa ai làm vẫn vào được đồ thị — nếu không thì không bao giờ được gợi ý")
+    void shouldPutUntouchedPublicQuizIntoCatalog() throws Exception {
+        String quizId = quizWithTopic("Chưa ai làm", "Chủ đề mới tinh", 3);
+
+        // Không ai làm bài này cả — chỉ chạy đồng bộ danh mục
+        graphSync.syncPublicCatalog();
+
+        assertThat(quizNodeExists(quizId)).isTrue();
+        assertThat(coveredTopics(quizId)).contains("Chủ đề mới tinh");
     }
 
     // ================================================================ gợi ý
@@ -369,6 +401,13 @@ class RecommendationIntegrationTest {
                 .bindAll(Map.of("userId", userId.toString(), "topic", topic))
                 .fetchAs(Long.class).mappedBy((ts, rec) -> rec.get("total").asLong())
                 .one().orElse(0L);
+    }
+
+    private boolean quizNodeExists(String quizId) {
+        return neo4jClient.query("MATCH (q:Quiz {id: $quizId}) RETURN count(q) AS c")
+                .bind(quizId).to("quizId")
+                .fetchAs(Long.class).mappedBy((ts, rec) -> rec.get("c").asLong())
+                .one().orElse(0L) > 0;
     }
 
     private List<String> coveredTopics(String quizId) {

@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 /**
@@ -24,16 +25,24 @@ public class GraphSchemaInitializer {
     private static final Logger log = LoggerFactory.getLogger(GraphSchemaInitializer.class);
 
     private final GraphWriter graphWriter;
+    private final GraphSyncService graphSyncService;
 
-    public GraphSchemaInitializer(GraphWriter graphWriter) {
+    public GraphSchemaInitializer(GraphWriter graphWriter, GraphSyncService graphSyncService) {
         this.graphWriter = graphWriter;
+        this.graphSyncService = graphSyncService;
     }
 
+    /**
+     * Chạy ở luồng nền: dựng danh mục có thể mất vài giây với ngân hàng quiz lớn, mà không việc gì
+     * phải bắt ứng dụng chờ nó xong mới nhận request đầu tiên.
+     */
+    @Async("aiTaskExecutor")
     @EventListener(ApplicationReadyEvent.class)
     public void createConstraints() {
         try {
             graphWriter.ensureConstraints();
             log.info("Đồ thị gợi ý: đã có ràng buộc duy nhất cho User/Quiz/Topic");
+            graphSyncService.syncPublicCatalog();
         } catch (Exception e) {
             log.warn("Chưa tạo được ràng buộc Neo4j ({}). Gợi ý sẽ chưa chạy cho tới khi Neo4j lên; "
                     + "phần còn lại của hệ thống không bị ảnh hưởng.", e.getMessage());
