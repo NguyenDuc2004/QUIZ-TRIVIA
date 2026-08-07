@@ -25,6 +25,7 @@
 | 09/08 | **FR-30 AI chấm câu tự luận** (chấm nền + rubric + chống prompt injection) | 7/7 | 🟢 xong |
 | 09/08 (chiều) | **Lọc câu hỏi theo chủ đề** — soạn quiz theo môn không phải lật hết ngân hàng | 6/6 | 🟢 xong |
 | 09/08 (tối) | **Lát cắt 7: gợi ý quiz bằng Neo4j** — trụ cột MVP thứ tư | 7/7 | 🟢 xong |
+| 10/08 | **Đo tải phòng đấu — số liệu mục 3.5** (bắt buộc theo phiếu) | 5/5 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -1133,6 +1134,103 @@ Và một lần nữa, thử lại an toàn **chỉ vì đồng bộ idempotent*
 - **Mục 2.3:** đồng bộ idempotent giữa hai CSDL, và nguyên tắc CSDL phụ hỏng không kéo sập luồng chính.
 - **"Khó khăn & cách giải quyết":** phải cắt bớt bản thiết kế vì hai quan hệ không có nguồn dữ liệu.
   Thà nhận là hệ thống chưa biết còn hơn dựng một lộ trình trông thông minh mà không giải thích được.
+
+---
+
+## 📅 T2 — 10/08/2026 — Đo tải phòng đấu, số liệu mục 3.5
+
+**Mục tiêu:** Một trong hai con số bắt buộc của phiếu giao đề tài. Kế hoạch ghi rõ *"không lùi load
+test & đánh giá AI"*, và đây là phần duy nhất làm được ngay vì không đụng hạn mức Gemini.
+
+### Nhiệm vụ
+- [x] Viết harness đo độ trễ phát câu hỏi qua STOMP thật
+- [x] Chạy thang 10 → 200 người/phòng
+- [x] Tách nghẽn: phát tán xuống hay xử lý đáp án lên
+- [x] Chứng minh vai trò Redis Pub/Sub bằng hai instance
+- [x] Ghi số liệu vào `docs/bao-cao/so-lieu-3.5-hieu-nang-realtime.md`
+
+### Không dùng k6 như kế hoạch — và vì sao thế là đúng
+
+Kế hoạch viết "k6/Gatling". Cả hai **không nói được STOMP over SockJS** nếu không viết thêm
+extension, mà thứ cần đo lại chính là đường đó. Harness tự viết dùng đúng thư viện
+`@stomp/stompjs` mà trình duyệt dùng, nên nó nói giao thức thật thay vì giả lập.
+
+Điểm hay: **không phải sửa một dòng code nghiệp vụ nào để đo được.** Sự kiện `QUESTION` vốn đã mang
+`deadlineAtMillis` cho client đếm ngược; trừ đi thời lượng câu là ra mốc máy chủ phát đi.
+
+### Kết quả
+
+| Người chơi | P50 | P95 | Sự kiện mất |
+|---:|---:|---:|---:|
+| 10 | 18 ms | 20 ms | 0 |
+| 30 | 26 ms | 32 ms | 0 |
+| 50 | 48 ms | 52 ms | 0 |
+| 100 | 180 ms | 216 ms | 0 |
+| 150 | 542 ms | 566 ms | 0 |
+| 200 | 1 411 ms | 1 509 ms | 0 |
+
+**Không mất một sự kiện nào ở mọi mức.** Hệ thống không rơi tin nhắn, chỉ chậm dần — kiểu suy giảm
+dễ chịu: người chơi thấy câu hỏi tới muộn chứ không ai bị bỏ lại. Ngưỡng thực dụng **100 người/phòng**.
+
+### Con số tổng không nói được nghẽn ở đâu — phải tách ra mới thấy
+
+Ở mức 200 người, P50 (1 411 ms) và P95 (1 509 ms) **gần bằng nhau**. Nếu chậm do phát tán xuống thì
+người nhận đầu phải nhanh hơn hẳn người cuối, tức khoảng cách phải rộng. Nó hẹp ⇒ mọi người trễ như
+nhau ⇒ nghẽn xảy ra *trước* lúc phát tán.
+
+Kiểm chứng bằng cách chạy lại 200 người **không gửi đáp án**:
+
+| 200 người | P50 | P95 |
+|---|---:|---:|
+| Có gửi đáp án | 1 411 ms | 1 509 ms |
+| Chỉ nhận câu hỏi | **262 ms** | **638 ms** |
+
+**80% độ trễ đến từ xử lý 200 đáp án gửi lên**, không phải phát câu hỏi xuống. Lệnh "câu tiếp" của
+chủ phòng phải xếp hàng sau chúng trên cùng một kênh vào.
+
+> Đây là loại kết luận chỉ có được khi **đọc hình dạng phân bố** rồi thiết kế một phép đo để kiểm
+> giả thuyết, thay vì nhìn một con số tổng rồi đoán. Nếu tối ưu theo trực giác ban đầu — cải thiện
+> phát tán — thì gần như không được gì.
+
+### Vai trò Redis: phiếu bảo "so sánh có/không", nhưng không có chế độ "không"
+
+Kiến trúc cho **mọi** sự kiện đi qua Redis, kể cả tới người chơi trên chính instance vừa phát. Bỏ
+Redis không làm chậm hơn — nó làm phòng đấu nhiều instance **không còn tồn tại**.
+
+Chứng minh bằng suy luận loại trừ: chạy hai instance (8080, 8081) dùng chung Redis, chia 40 người
+chơi hai bên, host bắt đầu ván trên A.
+
+| Nối vào | Mong đợi | Nhận được | P50 | P95 |
+|---|---:|---:|---:|---:|
+| A — cùng instance host | 60 | **60** | 38 ms | 41 ms |
+| B — instance khác | 60 | **60** | 40 ms | 42 ms |
+
+Hai JVM không có kênh liên lạc nào khác (broker Spring nằm trong bộ nhớ từng instance, PostgreSQL
+không phải kênh nhắn tin) ⇒ Redis là con đường duy nhất có thể. **Chi phí của khả năng mở rộng
+ngang: khoảng 2 ms.**
+
+### Một lần đo sai suýt thành kết luận sai
+
+Lần chạy đầu báo *"100 người: host không nối được"*, trông như đã chạm giới hạn máy chủ. Thực ra
+harness nối host **sau cùng**, khi 100 client trong cùng một tiến trình Node đã làm vòng lặp sự kiện
+bận rộn — kết nối cuối chờ quá hạn. Nối host trước là chạy tới 200 người không vấn đề.
+
+> Nếu ghi thẳng "hệ thống chịu được tối đa 50 người" vào báo cáo thì đó là một con số sai, mà lại
+> sai theo hướng khiêm tốn nên không ai nghi ngờ. **Công cụ đo cũng là một phần của phép đo.**
+
+### Nợ / chuyển sang ngày sau
+- Chưa đo với **mạng thật** — con số hiện tại không gồm độ trễ mạng.
+- Chưa đo nhiều phòng chạy song song, chưa đo RAM/CPU.
+- Ở mức 200 người, một phần độ trễ có thể là của chính công cụ đo (một tiến trình Node giữ 200
+  WebSocket). Muốn tách hẳn thì phải chạy client trên máy khác.
+- **Mục 3.6 (độ chính xác AI)** vẫn trống — chờ hạn mức Gemini hồi.
+
+### Ghi chú báo cáo
+- **Mục 3.5:** dùng thẳng `docs/bao-cao/so-lieu-3.5-hieu-nang-realtime.md`, đã viết theo đúng khung.
+- **Mục 1 (công nghệ):** con số "2 ms cho khả năng mở rộng ngang" là lập luận cụ thể cho việc chọn
+  Redis Pub/Sub thay vì gửi thẳng vào broker.
+- **"Khó khăn & cách giải quyết":** hai chuyện đáng kể — công cụ đo tự tạo ra một giới hạn giả, và
+  việc phải tách phép đo mới tìm đúng nghẽn.
 
 ---
 
