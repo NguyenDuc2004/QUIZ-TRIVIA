@@ -141,7 +141,7 @@ chưa cache theo hash(prompt).
 
 - **T2 07/09** — [ ] `[tùy chọn]` **Flashcard + SRS** (tái dùng pipeline RAG) — backend · [ ] `[tùy chọn]` Thuật toán lặp lại ngắt quãng
 - **T3 08/09** — [ ] `[tùy chọn]` FE Flashcard · [ ] `[tùy chọn]` **Chống gian lận**: thu thập hành vi + risk score
-- **T4 09/09** — [ ] **Load test real-time** (k6/Gatling): N người/phòng, đo P95 latency, throughput · [ ] So sánh có/không Redis Pub/Sub
+- **T4 09/09** — [x] **Load test real-time**: 10→200 người/phòng, P95 20→1509 ms, 0 sự kiện mất *(xong 10/08)* · [x] Chứng minh vai trò Redis Pub/Sub bằng hai instance *(xong 10/08)*
 - **T5 10/09** — [ ] **Đánh giá độ chính xác AI**: sinh đề, chấm tự luận, tỉ lệ grounded — thu thập số liệu
 - **T6 11/09** — [ ] Tối ưu hiệu năng cơ bản (index, cache) · [ ] Rà soát bảo mật (JWT, RBAC, prompt injection) · [ ] `[tùy chọn]` tối ưu query sâu
 - **T7 12/09** — [ ] Sửa lỗi tổng hợp · [ ] Bổ sung test còn thiếu
