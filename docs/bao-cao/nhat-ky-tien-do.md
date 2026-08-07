@@ -62,6 +62,31 @@ Hai chi tiết nhỏ nhưng cố ý: chỉ hỏi Redis khi bài **còn câu ch�
 liên tục nên không nên chạm Redis vô ích), và bài đã xong thì **không nhắc chuyện hạn mức** dù hệ
 thống đang căng — nhắc là gây hiểu nhầm. Cả hai đều có ca test riêng.
 
+### Lấp lỗ hổng test của lát cắt 5 — và lộ ra một lỗi im lặng
+
+Lát cắt 6 sửa vào `QuestionGenerationService` và `MaterialIngestionService` (cho phép chờ lâu hơn
+khi vướng hạn mức). Lúc định hoãn phần kiểm chứng lại thì nhận ra: **hai lớp đó không có test tự
+động nào cả.** Cả thư mục `ai/` chỉ có test cho hai lớp thuần logic (`QuestionJsonParser`,
+`TextChunker`); toàn bộ *luồng* nạp học liệu và sinh đề chỉ được kiểm bằng bộ nghiệm thu chạy tay
+với Gemini thật — nghĩa là hết hạn mức là mất luôn khả năng biết luồng có vỡ hay không.
+
+Viết `AiGenerationIntegrationTest` (12 ca, mock `AiOrchestrator` nên không cần mạng): nạp học liệu →
+READY, embedding hỏng → FAILED kèm lý do, job sinh đề chạy nền, mô hình lỗi → FAILED, JSON hỏng →
+không lưu rác vào ngân hàng, học liệu và job là dữ liệu riêng, Learner bị chặn, và Creator phải duyệt
+thì câu mới vào ngân hàng.
+
+**Ngay lần chạy đầu nó bắt được một lỗi có sẵn:** câu do AI sinh, sau khi Creator duyệt, vào ngân
+hàng với `source = MANUAL` — `AiJobService.approve` gọi `questionService.create` vốn để mặc định.
+`docs/database.md` đã ghi cột `source: manual / ai_generated` từ đầu, nhưng không có gì gán giá trị
+kia. Hậu quả: câu AI nằm lẫn với câu tự soạn, **không còn cách nào tách ra** — mất luôn khả năng
+thống kê "AI đóng góp bao nhiêu phần ngân hàng đề" (một con số đáng có trong báo cáo) lẫn khả năng
+rà lại nếu phát hiện một model sinh hàng loạt câu sai. Đã sửa, và gắn thêm `ai_metadata` ghi jobId
+để truy ngược được sau nhiều tháng.
+
+Đáng nói: lỗi này **không làm request nào đỏ lên**. API trả 201, câu hỏi hiện đúng trên giao diện,
+bộ nghiệm thu tay với Gemini thật cũng đạt — vì không ai nghĩ tới việc kiểm cột `source`. Chỉ có
+test viết ra để hỏi đúng câu hỏi đó mới thấy.
+
 ### Nợ / chuyển sang ngày sau
 - _(...)_
 
@@ -685,7 +710,7 @@ không làm được, và cũng là lý do đề tài này cần AI chứ không
 - [x] Chấm nền sau khi nộp: `@TransactionalEventListener(AFTER_COMMIT)` + `@Async`
 - [x] API giải thích đáp án + Creator chấm tay ghi đè
 - [x] Frontend: ô rubric, màn kết quả hiện nhận xét, tự cập nhật khi chấm xong
-- [x] Test **205/205** JUnit (thêm 45 ca) + **kiểm chứng chấm thật bằng Gemini** 31/31 + hồi quy 176/176 (bộ không dùng AI)
+- [x] Test **217/217** JUnit (thêm 57 ca) + **kiểm chứng chấm thật bằng Gemini** 31/31 + hồi quy 176/176 (bộ không dùng AI)
 - [x] Vá hạn mức 429 phát hiện lúc chạy thật
 
 ### Vì sao chấm nền chứ không chấm ngay lúc nộp
@@ -789,7 +814,7 @@ tinh thần "backend là nơi quyết định URL trong mã QR" đã chốt ở 
 
 | Loại | Kết quả |
 |---|---|
-| JUnit | **205/205** (thêm 45 ca: 14 parser, 7 dựng prompt, 17 tích hợp, 7 đọc gợi ý chờ 429) |
+| JUnit | **217/217** (thêm 57 ca: 14 parser, 7 dựng prompt, 17 tích hợp chấm, 12 tích hợp sinh đề, 7 đọc gợi ý chờ 429) |
 | Bộ chấm tự luận với **Gemini thật** | **31/31** |
 | Hồi quy các bộ không dùng AI (9 bộ) | **176/176** |
 | Bộ AI + RAG sinh đề (22 ca) | ⏸ **chưa chạy lại được** — cạn hạn mức Gemini trong ngày |
@@ -811,7 +836,8 @@ Ghi rõ ở đây thay vì báo một tổng đẹp là vì đúng tinh thần *
 - Chưa đo **độ chính xác** chấm so với người chấm (số liệu mục 3.6) — cần bộ bài mẫu có đáp án
   người chấm sẵn, chưa dựng.
 - Chatbot RAG (features/08) là phần còn lại của tuần 6, chưa làm.
-- **Chạy lại bộ AI + RAG sinh đề** khi hạn mức Gemini hồi (`bash run_all.sh`, bỏ `SKIP_AI=1`).
+- **Chạy lại bộ AI + RAG sinh đề** khi hạn mức Gemini hồi (`bash run_all.sh`, bỏ `SKIP_AI=1`) — giờ
+  chỉ còn để đo *chất lượng câu hỏi* với mô hình thật; phần *luồng* đã có test tự động.
 - Gói miễn phí không đủ cho một lượt hồi quy đầy đủ có hai bộ AI. Nếu cần số liệu mục 3.5/3.6 đầy đủ
   thì phải nâng gói, hoặc chạy hai bộ AI vào hai ngày khác nhau.
 

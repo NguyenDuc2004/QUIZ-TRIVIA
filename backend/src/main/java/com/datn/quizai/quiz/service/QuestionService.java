@@ -2,6 +2,7 @@ package com.datn.quizai.quiz.service;
 
 import com.datn.quizai.quiz.domain.Difficulty;
 import com.datn.quizai.quiz.domain.Question;
+import com.datn.quizai.quiz.domain.QuestionSource;
 import com.datn.quizai.quiz.domain.QuestionOption;
 import com.datn.quizai.quiz.domain.QuestionType;
 import com.datn.quizai.quiz.repository.QuestionRepository;
@@ -54,9 +55,25 @@ public class QuestionService {
 
     @Transactional
     public QuestionResponse create(QuestionRequest request, UUID ownerId) {
+        return create(request, ownerId, QuestionSource.MANUAL, null);
+    }
+
+    /**
+     * Tạo câu hỏi kèm <b>nguồn gốc</b>.
+     * <p>
+     * Câu do AI sinh phải mang {@link QuestionSource#AI_GENERATED} và bản ghi audit (provider,
+     * model). Không đánh dấu thì sau khi Creator duyệt, câu AI nằm lẫn với câu tự soạn và không
+     * còn cách nào tách ra — mất luôn khả năng thống kê "AI đóng góp bao nhiêu phần ngân hàng đề"
+     * lẫn khả năng rà lại nếu một model sinh ra hàng loạt câu sai.
+     */
+    @Transactional
+    public QuestionResponse create(QuestionRequest request, UUID ownerId,
+                                   QuestionSource source, String aiMetadata) {
         User owner = userRepository.getReferenceById(ownerId);
 
         Question question = new Question(owner, request.type(), request.content().trim());
+        question.setSource(source);
+        question.setAiMetadata(aiMetadata);
         applyRequest(question, request);
 
         return QuestionResponse.from(questionRepository.save(question));
