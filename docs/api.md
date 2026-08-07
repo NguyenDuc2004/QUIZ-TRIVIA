@@ -109,12 +109,14 @@ GET    /api/v1/attempts                 Lịch sử làm bài của tôi (quizId
 GET    /api/v1/quizzes/{id}/leaderboard Xếp hạng người học, tối đa 50 dòng         ✅
 
 POST   /api/v1/attempts/{a}/answers/{b}/explain  Nhờ AI giải thích một câu          ✅
+GET    /api/v1/attempts/{id}/grading             Chủ quiz đọc phần tự luận để chấm  ✅
 PATCH  /api/v1/attempts/{a}/answers/{b}/grade    Chủ quiz chấm tay, ghi đè điểm AI  ✅
 ```
 
 **Quyền:** toàn bộ mục này yêu cầu **đăng nhập** — Guest không làm bài, không xem bảng xếp hạng.
 Quiz PRIVATE của người khác trả **404**. Bài làm là dữ liệu riêng: người khác *và cả chủ quiz/Admin*
-truy cập đều nhận **404** (thống kê cho Creator nằm ở features/09).
+truy cập đều nhận **404**. Ngoại lệ duy nhất là hai endpoint chấm tay
+(`GET .../grading` + `PATCH .../grade`) — xem bên dưới; thống kê tổng hợp cho Creator ở §8.
 Không giới hạn theo vai trò: **chủ quiz làm được bài trên quiz của mình** (kể cả PRIVATE) để tự kiểm đề,
 và cũng bị giấu đáp án như mọi người — nhưng bài của họ **không lên bảng xếp hạng** vì đã biết trước
 đáp án (điểm vẫn lưu trong lịch sử cá nhân).
@@ -157,9 +159,19 @@ là điểm tạm.
 mô hình bị dụ cho điểm tối đa. Chấm tay cũng chịu cùng trần đó. Kết quả AI về **sau** khi Creator đã
 chấm tay thì bị bỏ qua: người luôn thắng máy.
 
-**`PATCH .../grade`** là ngoại lệ có chủ đích của luật "bài của ai người ấy xem" — chấm tay thì buộc
-phải xem được bài. Phạm vi hẹp hết mức: chỉ chủ đúng quiz đó (hoặc Admin), chỉ sửa điểm và nhận xét
-của một câu, không liệt kê được bài làm của ai. Người khác nhận **404**, không phải 403.
+**Chấm tay là ngoại lệ có chủ đích** của luật "bài của ai người ấy xem" — chấm mà không đọc được bài
+thì chấm bằng gì. Hai endpoint, phạm vi bó đúng bằng mục đích:
+
+| Endpoint | Cho ai | Phạm vi |
+|---|---|---|
+| `GET /attempts/{id}/grading` | chủ quiz (hoặc Admin) | **chỉ câu `SHORT_ANSWER`** của bài đó, kèm rubric, đáp án mẫu và những gì AI đã nói. Câu trắc nghiệm không có trong response — máy chấm rồi, không có gì để xem lại |
+| `PATCH .../answers/{b}/grade` | chủ quiz (hoặc Admin) | sửa điểm + nhận xét của **một** câu |
+
+Cả hai trả **404** cho người không sở hữu quiz — kể cả chính người học (họ đã có
+`GET /attempts/{id}` với đúng thứ họ được thấy). Không có endpoint nào liệt kê bài làm theo người
+học; danh sách duy nhất là theo **quiz mình sở hữu** (§8).
+
+`GET .../grading` trả 409 khi bài **chưa nộp**: chưa nộp thì chưa có gì để chấm.
 
 **`POST .../explain`** chỉ chạy trên bài **đã nộp** của chính mình — giải thích trước khi nộp là
 đường vòng để lấy đáp án. Với câu có đáp án cố định, AI **chỉ giải thích chứ không chấm**: chấm đã
@@ -416,9 +428,27 @@ WebSocket: subscribe `/user/queue/notifications` (real-time in-app).
 
 ## 8. Thống kê — `/analytics`
 ```
-GET    /api/v1/analytics/me              Tiến độ cá nhân (điểm mạnh/yếu theo chủ đề)
-GET    /api/v1/analytics/quizzes/{id}    Thống kê 1 quiz (Creator)
+GET    /api/v1/analytics/me                       Tiến độ của tôi (FR-26)
+GET    /api/v1/analytics/quizzes/{id}             Thống kê 1 quiz — chỉ chủ quiz (FR-27)
+GET    /api/v1/analytics/quizzes/{id}/attempts    Bài làm trên quiz của tôi, kèm cờ cần chấm tay
 ```
+
+Cả ba đều **yêu cầu đăng nhập**. Hai endpoint `/quizzes/{id}` trả **404** khi quiz không thuộc
+người gọi — không phải 403, để không tiết lộ quiz đó có tồn tại (§10).
+
+`/analytics/me` **không** trả điểm mạnh/yếu theo chủ đề. Phần đó ở `/recommendations/path` (§7),
+tính từ đồ thị Neo4j. Tính lại cùng kết luận từ PostgreSQL sẽ cho hai API nói về một chuyện bằng hai
+cách trên hai kho dữ liệu, rồi đến lúc chúng lệch nhau thì không biết tin cái nào.
+
+`averagePercent` và `completionPercent` là `null` khi **chưa có dữ liệu** — không phải `0`. 0% nghĩa
+là làm mà sai hết, khác hẳn chưa làm gì; client phải phân biệt hai trạng thái này.
+
+`scoreDistribution` luôn có **đúng 10 phần tử** (mười khoảng 10%), kể cả khoảng chưa ai đạt. Trả
+thiếu thì mỗi client tự chèn số 0 một kiểu và trục biểu đồ lệch nhau.
+
+`hardestQuestions` đã lọc bỏ câu có **dưới 3 lượt trả lời** và câu **chưa chấm xong**
+(`PENDING_AI`/`AI_FAILED`): câu sai 1/1 lượt chỉ nói lên là ít người làm, còn tính câu chờ AI là sai
+thì câu tự luận nào cũng thành câu khó nhất đề.
 
 ## 9. Admin — `/admin`
 ```

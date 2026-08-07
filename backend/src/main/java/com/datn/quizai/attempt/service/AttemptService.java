@@ -1,5 +1,6 @@
 package com.datn.quizai.attempt.service;
 
+import com.datn.quizai.ai.grading.GradingPromptBuilder;
 import com.datn.quizai.attempt.domain.AnswerPayload;
 import com.datn.quizai.attempt.domain.AttemptAnswer;
 import com.datn.quizai.attempt.domain.AttemptMode;
@@ -10,6 +11,7 @@ import com.datn.quizai.attempt.dto.AnswerFeedbackResponse;
 import com.datn.quizai.attempt.dto.AttemptDetailResponse;
 import com.datn.quizai.attempt.dto.AttemptSummaryResponse;
 import com.datn.quizai.attempt.dto.ExplanationResponse;
+import com.datn.quizai.attempt.dto.GradingViewResponse;
 import com.datn.quizai.attempt.dto.LeaderboardEntryResponse;
 import com.datn.quizai.attempt.dto.OverrideGradeRequest;
 import com.datn.quizai.attempt.dto.StartAttemptRequest;
@@ -55,8 +57,9 @@ import java.util.stream.Collectors;
  *       kèm điểm tối đa, nên chủ quiz sửa đề giữa chừng không làm hỏng bài đang làm.</li>
  *   <li><b>Không lộ đáp án khi chưa nộp</b> — đáp án đúng chỉ nằm trong response sau khi bài
  *       chuyển sang trạng thái kết thúc (riêng chế độ luyện tập thì lộ từng câu vừa trả lời).</li>
- *   <li><b>Bài của ai người ấy xem</b> — kể cả chủ quiz cũng không đọc được bài làm của người
- *       khác qua các API này; truy cập nhầm trả 404 để không tiết lộ bài đó tồn tại.</li>
+ *   <li><b>Bài của ai người ấy xem</b> — truy cập nhầm trả 404 để không tiết lộ bài đó tồn tại.
+ *       Ngoại lệ duy nhất: {@link #gradingView} cho chủ quiz đọc <i>phần tự luận</i> của bài làm
+ *       trên quiz mình sở hữu, vì không đọc được bài thì không chấm tay được (features/09).</li>
  * </ol>
  */
 @Service
@@ -302,6 +305,61 @@ public class AttemptService {
 
         gradeWriter.applyHumanGrade(attempt, answer, request.score(), request.feedback());
         return detailOf(attempt);
+    }
+
+    /**
+     * Bài làm nhìn từ phía người chấm — chỉ câu tự luận (features/09, trả nợ features/06).
+     * <p>
+     * Đây là <b>ngoại lệ có chủ đích</b> của luật "bài của ai người ấy xem", và là ngoại lệ duy nhất:
+     * chủ quiz đọc được phần tự luận của bài làm trên quiz mình sở hữu. Không có nó thì
+     * {@link #overrideGrade} vô nghĩa — chấm mà không đọc được bài thì chấm bằng gì. Phạm vi bị bó
+     * đúng bằng mục đích: chỉ câu {@code SHORT_ANSWER}, chỉ trên quiz mình sở hữu.
+     */
+    @Transactional(readOnly = true)
+    public GradingViewResponse gradingView(UUID attemptId, JwtService.AuthenticatedUser current) {
+        QuizAttempt attempt = attemptRepository.findByIdWithAnswers(attemptId)
+                .orElseThrow(() -> BusinessException.notFound("Không tìm thấy bài làm"));
+
+        requireQuizOwner(attempt, current);
+
+        if (!attempt.getStatus().isFinished()) {
+            throw BusinessException.conflict("Bài này chưa nộp, chưa chấm được");
+        }
+
+        List<GradingViewResponse.EssayAnswer> answers = attempt.getAnswers().stream()
+                .filter(a -> a.getQuestion().getType() == QuestionType.SHORT_ANSWER)
+                .sorted(Comparator.comparing(AttemptAnswer::getOrderIndex))
+                .map(AttemptService::toEssayAnswer)
+                .toList();
+
+        return new GradingViewResponse(
+                attempt.getId(),
+                attempt.getQuiz().getId(),
+                attempt.getQuiz().getTitle(),
+                attempt.getUser().getDisplayName(),
+                attempt.getSubmittedAt(),
+                attempt.getTotalScore(),
+                attempt.getMaxScore(),
+                answers);
+    }
+
+    private static GradingViewResponse.EssayAnswer toEssayAnswer(AttemptAnswer answer) {
+        Question question = answer.getQuestion();
+        AnswerPayload payload = answer.getUserAnswer();
+
+        return new GradingViewResponse.EssayAnswer(
+                answer.getId(),
+                answer.getOrderIndex(),
+                question.getContent(),
+                question.getRubric(),
+                GradingPromptBuilder.sampleAnswer(question),
+                payload == null ? null : payload.text(),
+                answer.getScore(),
+                answer.getMaxScore(),
+                answer.getGradedBy(),
+                answer.getAiFeedback(),
+                answer.getAiSuggestions(),
+                answer.getGradedBy() == GradedBy.PENDING_AI || answer.getGradedBy() == GradedBy.AI_FAILED);
     }
 
     /**

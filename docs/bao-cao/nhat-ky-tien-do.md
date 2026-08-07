@@ -26,6 +26,7 @@
 | 09/08 (chiều) | **Lọc câu hỏi theo chủ đề** — soạn quiz theo môn không phải lật hết ngân hàng | 6/6 | 🟢 xong |
 | 09/08 (tối) | **Lát cắt 7: gợi ý quiz bằng Neo4j** — trụ cột MVP thứ tư | 7/7 | 🟢 xong |
 | 10/08 | **Đo tải phòng đấu — số liệu mục 3.5** (bắt buộc theo phiếu) | 5/5 | 🟢 xong |
+| 10/08 (chiều) | **Lát cắt 9: thống kê** (FR-26, FR-27) + trả nợ màn chấm tay của lát cắt 6 | 7/7 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -1231,6 +1232,112 @@ bận rộn — kết nối cuối chờ quá hạn. Nối host trước là ch�
   Redis Pub/Sub thay vì gửi thẳng vào broker.
 - **"Khó khăn & cách giải quyết":** hai chuyện đáng kể — công cụ đo tự tạo ra một giới hạn giả, và
   việc phải tách phép đo mới tìm đúng nghẽn.
+
+---
+
+## 📅 T2 — 10/08/2026 (chiều) — Lát cắt 9: Thống kê, và món nợ hoá ra to hơn ghi chép
+
+**Mục tiêu:** FR-26 (tiến độ người học) + FR-27 (thống kê cho Creator). Chọn lát cắt này vì nó mở
+khoá luôn màn chấm tay mà lát cắt 6 đang nợ.
+
+**Xong:** 5 truy vấn gộp · 3 API thống kê + 1 API đọc bài để chấm · 3 trang frontend · 13 ca test mới ·
+hồi quy **251/251** xanh · không cần migration mới.
+
+### Món nợ được ghi sai mức độ
+
+`docs/features/06` ghi: *"Chưa có màn hình cho Creator duyệt danh sách bài cần chấm tay — API đã có,
+giao diện chờ features/09."* Đọc câu đó thì tưởng chỉ còn việc vẽ giao diện.
+
+Bắt tay vào làm mới thấy thiếu **cả đường đọc bài**:
+
+```
+Creator có:  PATCH /attempts/{a}/answers/{b}/grade   ← ghi điểm
+Creator KHÔNG có: cách nào đọc bài làm
+GET /attempts/{id} dùng loadOwnAttempt() → Creator nhận 404 (đúng thiết kế)
+```
+
+Nghĩa là tính năng chấm tay của lát cắt 6 **chưa bao giờ dùng được**, không phải "thiếu giao diện" mà
+là *chấm mà không đọc được bài thì chấm bằng gì*. Test của lát cắt 6 vẫn xanh vì nó gọi PATCH với
+`answerId` lấy từ token của **người học** — thứ Creator không có.
+
+> Bài học: nợ kỹ thuật tự ghi thường ghi nhẹ hơn thực tế, vì lúc ghi thì mình đang nhìn từ phía cái
+> đã làm được. **Kiểm bằng cách đi trọn một vòng theo vai của người dùng thật** — vào bằng cửa nào,
+> bấm gì, đọc gì — chứ không phải điểm danh xem endpoint nào đã có.
+
+Thêm `GET /attempts/{id}/grading`, phạm vi bó đúng bằng mục đích: **chỉ câu tự luận**, chỉ quiz mình
+sở hữu. Không dùng lại `AttemptDetailResponse` — đó là màn hình *người học xem bài mình làm*, có đáp
+án đúng và lời giải. Một DTO phục vụ hai vai thì mỗi lần thêm trường lại phải nghĩ "trường này ai
+được thấy", và sẽ có lần nghĩ sai.
+
+Cũng phải sửa javadoc của `AttemptService`: nó khẳng định *"kể cả chủ quiz cũng không đọc được bài làm
+của người khác qua các API này"* — sau thay đổi này câu đó thành sai. Tài liệu nói sai về bảo mật
+nguy hiểm hơn không nói gì, vì người đọc sau sẽ tin nó mà không kiểm.
+
+### Ba chỗ số liệu dễ ra kết quả sai — và vì sao chúng khó thấy
+
+Đặc điểm chung: **không có cái nào làm hệ thống báo lỗi.** Nó chỉ cho ra một con số trông hợp lý.
+
+| Chỗ sai | Nếu làm sai thì thấy gì |
+|---|---|
+| Trả `0` khi chưa có dữ liệu | Người chưa làm bài nào hiện *"điểm trung bình 0%"* — trông như học sinh kém nhất lớp |
+| Tính câu `PENDING_AI`/`AI_FAILED` là câu sai | **Câu tự luận nào cũng thành câu khó nhất đề**, Creator đi sửa một câu hỏi không có vấn đề gì |
+| Không lọc câu quá ít lượt trả lời | Câu sai 1/1 lượt hiện *"tỉ lệ sai 100%"*, đứng đầu bảng câu khó |
+
+Chỗ thứ hai là chính lỗi đã mắc khi đo mục 3.6 hôm trước (gộp *"AI chấm 0 điểm"* với *"AI không
+chạy"*). Lần này biết trước nên viết `graded_by in (AUTO, AI, HUMAN)` ngay từ câu truy vấn đầu, và
+thêm một ca test riêng để nó không quay lại.
+
+Chỗ thứ ba dùng đúng ngưỡng **3 lượt** của features/07 — cùng một câu hỏi "bao nhiêu dữ liệu mới đủ
+để kết luận", nên không có lý gì mỗi chỗ trả lời một kiểu.
+
+### Ô nhập điểm để trống, không điền sẵn 0
+
+Câu `AI_FAILED` có `score = 0` trong CSDL. Điền 0 vào ô nhập là mớm cho người chấm một con số **vô
+nghĩa** — 0 ở đó là giá trị mặc định của cột, không phải kết luận về bài làm — rồi họ bấm lưu và bài
+thành 0 điểm thật. Để trống thì nút Lưu bị chặn tới khi có người thực sự quyết định.
+
+Cùng lý do, bảng bài làm ghi *"chưa phải điểm cuối"* dưới điểm của bài còn câu chờ chấm.
+
+### Hai lỗi trong test của chính mình
+
+Chạy lần đầu 2/13 đỏ, **cả hai đều là lỗi fixture, không phải lỗi code**:
+
+- `shouldScopeProgressToCaller` dùng tài khoản fixture chung → tài khoản đó đã có bài từ ca chạy
+  trước, điểm trung bình 25% thay vì 100%. Đúng cái bẫy đã gặp ở test Neo4j: **chạy lẻ thì đạt, chạy
+  cả bộ thì hỏng**. Sửa bằng tài khoản riêng cho ca đó.
+- Kỳ vọng điểm 8 trong khi thực tế 7 — tôi copy fixture từ test lát cắt 6 (câu trắc nghiệm 2 điểm)
+  nhưng ở đây câu Đúng/Sai chỉ 1 điểm.
+
+Không có lỗi nào của phần code chính. Điều đó không có nghĩa là test vô ích: nó chứng minh
+`left join a.answers` không nhân đôi số dòng, phân bố điểm đủ 10 khoảng, bài 100% rơi vào khoảng cuối
+chứ không tạo khoảng thứ mười một, và quiz người khác trả 404 — những thứ chỉ CSDL thật kiểm được.
+
+### Quyết định phạm vi
+
+- **FR-28 (xuất PDF) bỏ.** Mức [C] Could, và nó chỉ đóng gói lại đúng số liệu đã có trên màn hình.
+  Đổi lấy một thư viện sinh PDF kèm bộ font tiếng Việt riêng thì không xứng.
+- **Điểm mạnh/yếu theo chủ đề KHÔNG làm lại ở đây** dù FR-26 có nhắc. Phần đó đã ở trang Lộ trình,
+  tính từ Neo4j. Tính lại từ PostgreSQL sẽ có hai màn hình nói cùng một chuyện bằng hai cách trên hai
+  kho dữ liệu — khớp nhau hôm nay, lệch nhau vào ngày ai đó sửa một trong hai công thức, và lúc đó
+  không có cách nào biết màn nào đúng. Trang Tiến độ dẫn sang trang Lộ trình.
+- **Không thêm migration.** Mọi số liệu suy ra được từ bảng đã có; bảng tổng hợp sẵn chỉ đáng làm khi
+  truy vấn thật sự chậm, mà nó chưa chậm.
+- **Biểu đồ viết tay** bằng SVG + CSS. Thư viện biểu đồ nhẹ nhất cũng nặng hơn cả tính năng này và
+  mang theo bảng màu riêng đi ngược hệ thống giao diện.
+
+### Còn lại / rủi ro
+- **Mục 3.6 vẫn trống** — chờ hạn mức Gemini hồi. Không liên quan tới lát cắt này.
+- Trong CSDL dev còn **5 tài khoản + 7 quiz rác** từ kịch bản đo mục 3.6 (`danhgia-*`,
+  `hai-instance-*`). Chưa xoá vì đang chờ đo lại; xoá sau khi mục 3.6 xong.
+- Chưa xem thật trên trình duyệt — build và test xanh **không** đồng nghĩa với trang chạy được.
+
+### Ghi chú báo cáo
+- **Chương 2 (phân tích thiết kế):** lấy bảng "ba chỗ số liệu dễ ra kết quả sai" làm ví dụ cho việc
+  *ràng buộc dữ liệu nằm ở tầng truy vấn*, không phải ở giao diện.
+- **"Khó khăn & cách giải quyết":** món nợ tự ghi nhẹ hơn thực tế — kiểm nợ bằng cách đi trọn một
+  vòng theo vai người dùng, không phải điểm danh endpoint.
+- **Mục 3.4 (kiểm thử):** 251 ca, trong đó lát cắt 9 thêm 13 ca. Nêu rõ vì sao dùng PostgreSQL thật
+  thay vì mock repository.
 
 ---
 

@@ -6,6 +6,9 @@ import LoginPage from '@/features/auth/pages/LoginPage'
 import ProfilePage from '@/features/auth/pages/ProfilePage'
 import RegisterPage from '@/features/auth/pages/RegisterPage'
 import { useIsAuthenticated } from '@/features/auth/store/authStore'
+import GradeAttemptPage from '@/features/analytics/pages/GradeAttemptPage'
+import MyProgressPage from '@/features/analytics/pages/MyProgressPage'
+import QuizStatsPage from '@/features/analytics/pages/QuizStatsPage'
 import AttemptPage from '@/features/attempt/pages/AttemptPage'
 import MyAttemptsPage from '@/features/attempt/pages/MyAttemptsPage'
 import LearningPathPage from '@/features/recommend/pages/LearningPathPage'
@@ -64,6 +67,7 @@ export default function App() {
         {/* Một đường dẫn cho cả lúc đang làm và lúc xem kết quả — phân biệt theo attempt.status */}
         <Route path="/attempts/:id" element={<AttemptPage />} />
         <Route path="/my-attempts" element={<MyAttemptsPage />} />
+        <Route path="/my-progress" element={<MyProgressPage />} />
         <Route path="/learning-path" element={<LearningPathPage />} />
         {/* Sảnh phòng đấu cần đăng nhập vì chỉ thành viên mới mở được phòng */}
         <Route path="/rooms" element={<RoomLobbyPage />} />
@@ -73,6 +77,10 @@ export default function App() {
         {/* Bộ mặt "bảng điều khiển": bảng quản lý */}
         <Route path="/my-quizzes" element={<MyQuizzesPage />} />
         <Route path="/my-quizzes/:id" element={<QuizEditorPage />} />
+        {/* Thống kê và chấm tay nằm DƯỚI quiz vì cả hai chỉ có nghĩa với chủ quiz; BE cũng trả
+            404 cho quiz của người khác nên đường dẫn không tiết lộ gì */}
+        <Route path="/my-quizzes/:id/stats" element={<QuizStatsPage />} />
+        <Route path="/my-quizzes/:id/attempts/:attemptId" element={<GradeAttemptPage />} />
         <Route path="/question-bank" element={<QuestionBankPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
