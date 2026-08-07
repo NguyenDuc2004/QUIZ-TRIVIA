@@ -3,6 +3,7 @@ import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Alert,
+  AutoComplete,
   Button,
   Checkbox,
   Form,
@@ -15,7 +16,7 @@ import {
 } from 'antd'
 import type { Question, QuestionBody, QuestionType } from '../api/quizApi'
 import { DIFFICULTY_OPTIONS, QUESTION_TYPE_HINT, QUESTION_TYPE_OPTIONS } from '../constants'
-import { useCreateQuestion, useUpdateQuestion } from '../hooks/useQuizQueries'
+import { useCreateQuestion, useQuestionTopics, useUpdateQuestion } from '../hooks/useQuizQueries'
 import { questionSchema, type QuestionForm } from '../schema'
 
 interface Props {
@@ -54,6 +55,11 @@ function defaultOptions(type: QuestionType) {
 export default function QuestionFormModal({ open, question, onClose }: Props) {
   const createQuestion = useCreateQuestion()
   const updateQuestion = useUpdateQuestion()
+  const { data: topics } = useQuestionTopics()
+  const topicOptions = (topics ?? []).map((item) => ({
+    value: item.topic,
+    label: `${item.topic} (${item.questionCount} câu)`,
+  }))
 
   const {
     control,
@@ -250,11 +256,26 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
             />
           </Form.Item>
 
-          <Form.Item label="Chủ đề" help="Dùng để lọc và cho hệ gợi ý Neo4j sau này">
+          <Form.Item label="Chủ đề" help="Dùng để lọc câu hỏi khi soạn quiz">
             <Controller
               name="topic"
               control={control}
-              render={({ field }) => <Input {...field} placeholder="Ví dụ: Vòng lặp" style={{ width: 220 }} />}
+              render={({ field }) => (
+                // Gõ tự do được, nhưng xổ sẵn chủ đề đã dùng: không có gợi ý thì hôm nay gõ
+                // "Lịch sử Việt Nam", mai gõ "Lịch sử VN" và thành hai chủ đề khác nhau,
+                // lọc sẽ sót câu mà không ai biết vì sao.
+                <AutoComplete
+                  {...field}
+                  style={{ width: 260 }}
+                  placeholder="Ví dụ: Lịch sử Việt Nam"
+                  options={topicOptions}
+                  filterOption={(input, option) =>
+                    String(option?.value ?? '')
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                />
+              )}
             />
           </Form.Item>
         </Space>

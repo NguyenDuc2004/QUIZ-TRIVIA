@@ -103,6 +103,20 @@ export function useQuestionBank(params: QuestionListParams) {
   })
 }
 
+/**
+ * Danh sách chủ đề trong ngân hàng.
+ * <p>
+ * Để `staleTime` dài: chủ đề chỉ đổi khi người dùng soạn câu mới, mà hook này bị gọi ở ba màn hình
+ * (ngân hàng, hộp chọn câu, form soạn câu) nên hỏi lại mỗi lần mở là thừa.
+ */
+export function useQuestionTopics() {
+  return useQuery({
+    queryKey: [QUESTION_KEY, 'topics'],
+    queryFn: () => questionApi.listTopics(),
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
 export function useCreateQuestion() {
   const queryClient = useQueryClient()
   return useMutation({

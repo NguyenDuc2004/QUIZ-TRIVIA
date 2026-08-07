@@ -278,6 +278,102 @@ class QuizManagementIntegrationTest {
         return created.get("id").asText();
     }
 
+    // ================================================================ chủ đề câu hỏi
+
+    @Test
+    @DisplayName("Liệt kê chủ đề của tôi kèm số câu, xếp theo bảng chữ cái không phân biệt hoa/thường")
+    void shouldListMyTopicsWithCounts() throws Exception {
+        String token = register("chu-de@example.com", "CREATOR");
+        createQuestionWithTopic(token, "Trận Bạch Đằng năm nào?", "Lịch sử Việt Nam");
+        createQuestionWithTopic(token, "Ai ban hành bộ luật Hồng Đức?", "Lịch sử Việt Nam");
+        createQuestionWithTopic(token, "Chiến tranh thế giới thứ hai kết thúc năm nào?", "Lịch sử thế giới");
+        createQuestionWithTopic(token, "1 + 1 = ?", null);   // không đặt chủ đề
+
+        mockMvc.perform(get("/api/v1/questions/topics")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                // Câu không có chủ đề không tạo ra một mục rỗng trong danh sách chọn
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].topic").value("Lịch sử thế giới"))
+                .andExpect(jsonPath("$[0].questionCount").value(1))
+                .andExpect(jsonPath("$[1].topic").value("Lịch sử Việt Nam"))
+                // Số câu là thứ giúp người dùng biết chủ đề nào đủ câu để dựng một quiz
+                .andExpect(jsonPath("$[1].questionCount").value(2));
+    }
+
+    @Test
+    @DisplayName("Chủ đề của người khác không lọt vào danh sách của mình")
+    void shouldNotLeakTopicsBetweenAccounts() throws Exception {
+        String mine = register("chu-de-cua-toi@example.com", "CREATOR");
+        String theirs = register("chu-de-nguoi-khac@example.com", "CREATOR");
+
+        createQuestionWithTopic(theirs, "Câu của người khác", "Chủ đề riêng tư");
+        createQuestionWithTopic(mine, "Câu của tôi", "Chủ đề của tôi");
+
+        mockMvc.perform(get("/api/v1/questions/topics")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + mine))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].topic").value("Chủ đề của tôi"));
+    }
+
+    @Test
+    @DisplayName("Lọc ngân hàng theo chủ đề — đây là thứ giúp dựng quiz theo môn mà không lật hết ngân hàng")
+    void shouldFilterQuestionBankByTopic() throws Exception {
+        String token = register("loc-chu-de@example.com", "CREATOR");
+        createQuestionWithTopic(token, "Trận Bạch Đằng", "Lịch sử");
+        createQuestionWithTopic(token, "Bộ luật Hồng Đức", "Lịch sử");
+        createQuestionWithTopic(token, "Đạo hàm của x bình phương", "Toán");
+
+        mockMvc.perform(get("/api/v1/questions").param("topic", "Lịch sử")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2));
+
+        // Lọc không phân biệt hoa/thường: người dùng gõ lại tên chủ đề khác kiểu vẫn ra
+        mockMvc.perform(get("/api/v1/questions").param("topic", "lỊcH sỬ")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2));
+
+        mockMvc.perform(get("/api/v1/questions").param("topic", "Chủ đề không tồn tại")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    @DisplayName("Guest không xem được danh sách chủ đề — đó là dữ liệu riêng")
+    void shouldRejectGuestOnTopics() throws Exception {
+        mockMvc.perform(get("/api/v1/questions/topics"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Đường dẫn /topics không bị nuốt bởi /{id}")
+    void shouldNotConfuseTopicsPathWithQuestionId() throws Exception {
+        String token = register("duong-dan-topics@example.com", "CREATOR");
+
+        // `/questions/{id}` nhận UUID; nếu Spring khớp nhầm thì sẽ trả 400 vì "topics" không phải UUID
+        mockMvc.perform(get("/api/v1/questions/topics")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    /** Tạo câu hỏi kèm chủ đề; truyền null để tạo câu không đặt chủ đề. */
+    private void createQuestionWithTopic(String token, String content, String topic) throws Exception {
+        String topicField = topic == null ? "" : ",\"topic\":\"%s\"".formatted(topic);
+        mockMvc.perform(post("/api/v1/questions")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"type":"TRUE_FALSE","content":"%s","difficulty":"EASY","points":1%s,
+                                 "options":[{"content":"Đúng","correct":true},{"content":"Sai","correct":false}]}
+                                """.formatted(content, topicField)))
+                .andExpect(status().isCreated());
+    }
+
     private String createQuestion(String token, String type, String content) throws Exception {
         String options = switch (type) {
             case "TRUE_FALSE" -> "[{\"content\":\"Đúng\",\"correct\":true},{\"content\":\"Sai\",\"correct\":false}]";

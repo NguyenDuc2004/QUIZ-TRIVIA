@@ -12,6 +12,7 @@ import com.datn.quizai.common.dto.PageResponse;
 import com.datn.quizai.common.exception.BusinessException;
 import com.datn.quizai.quiz.dto.QuestionOptionRequest;
 import com.datn.quizai.quiz.dto.QuestionRequest;
+import com.datn.quizai.quiz.dto.TopicResponse;
 import com.datn.quizai.quiz.dto.QuestionResponse;
 import com.datn.quizai.user.domain.User;
 import com.datn.quizai.user.repository.UserRepository;
@@ -44,6 +45,17 @@ public class QuestionService {
                 questionRepository.findBank(ownerId, type, difficulty, lowerOrNull(topic),
                         likePattern(keyword), pageable),
                 QuestionResponse::from);
+    }
+
+    /**
+     * Danh sách chủ đề người dùng đã dùng, kèm số câu — để giao diện vừa lọc được vừa gợi ý lúc
+     * soạn câu mới, thay vì bắt họ nhớ chính xác mình đã gõ chữ gì lần trước.
+     */
+    @Transactional(readOnly = true)
+    public List<TopicResponse> listMyTopics(UUID ownerId) {
+        return questionRepository.findTopics(ownerId).stream()
+                .map(row -> new TopicResponse(row.getTopic(), row.getQuestionCount()))
+                .toList();
     }
 
     @Transactional(readOnly = true)

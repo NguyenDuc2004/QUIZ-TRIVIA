@@ -72,7 +72,7 @@ ai_request_logs (audit các lần gọi AI)
 | explanation | text | giải thích đáp án, hiện sau khi nộp |
 | rubric | text | *(V9)* tiêu chí chấm câu tự luận. Không có rubric thì mô hình tự nghĩ ra thang điểm riêng và hai lần chấm cùng một bài lệch nhau |
 | difficulty | enum | |
-| topic | varchar | |
+| topic | varchar | chữ tự do, **không phải bảng riêng** — gom lại khi cần qua `GET /questions/topics`. Không bắt tạo chủ đề trước mới soạn được câu |
 | points | int | |
 | source | enum | manual / ai_generated |
 | ai_metadata | jsonb | provider, model, prompt_hash |
