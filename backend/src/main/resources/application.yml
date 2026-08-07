@@ -104,6 +104,14 @@ app:
     max-image-size-bytes: ${MAX_IMAGE_SIZE_BYTES:2097152}   # 2MB
   ai:
     provider-order: ${AI_PROVIDER_ORDER:gemini,grok}
+    # Số lần thử lại tối đa cho tác vụ AI chạy nền khi vướng hạn mức nhà cung cấp.
+    # Mặc định 4 — đủ vượt một cửa sổ hạn mức tính theo phút (Gemini miễn phí: 5 lượt/phút).
+    #
+    # ĐẶT VỀ 1 KHI ĐO ĐỘ CHÍNH XÁC AI (báo cáo mục 3.6): mỗi lần thử tiêu một lượt trong hạn mức
+    # NGÀY (20 lượt), nên phép đo 8 bài với 4 lần thử có thể đốt 32 lượt — hết hạn mức nó cần để
+    # chạy. Đã xảy ra một lần và làm sai luôn số liệu.
+    #   ./mvnw spring-boot:run -Dspring-boot.run.arguments=--app.ai.max-attempts-background=1
+    max-attempts-background: ${AI_MAX_ATTEMPTS_BACKGROUND:4}
     gemini:
       api-key: ${GEMINI_API_KEY:}
       # gemini-2.5-flash đã bị Google khoá với tài khoản mới (404 NOT_FOUND)

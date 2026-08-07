@@ -41,17 +41,14 @@ public class AiOrchestrator {
     private static final int MAX_ATTEMPTS_PER_PROVIDER = 3;
 
     /**
-     * Tác vụ nền được thử thêm một lần so với request đồng bộ — nhưng chỉ một.
+     * Số lần thử tối đa cho tác vụ nền — <b>đọc từ cấu hình</b>, không phải hằng số cứng.
      * <p>
-     * Ban đầu để 6, với lý lẽ "job nền chờ lâu không phiền ai". Sai ở chỗ: hạn mức của Gemini bản
-     * miễn phí không chỉ tính theo phút mà còn <b>theo ngày</b> (20 lượt/ngày cho model sinh văn
-     * bản). Khi đã cạn hạn mức ngày thì thử lại <i>không bao giờ thành công</i>, mà mỗi lần thử
-     * vẫn <b>tiêu một lượt</b> — một job hỏng đốt 6 trong 20 lượt của cả ngày.
-     * <p>
-     * Bốn lần đủ để vượt qua một cửa sổ hạn mức theo phút (thứ thật sự hồi lại được), và không
-     * biến một lần hỏng thành thảm hoạ hạn mức.
+     * Cần cấu hình được vì con số này quyết định mức tiêu thụ hạn mức: một lời gọi hỏng với 4 lần
+     * thử đốt 4 lượt trong tổng hạn mức ngày. Khi <i>đo</i> độ chính xác AI thì phải đặt về 1 —
+     * không thì chính phép đo đốt hết hạn mức nó cần để chạy. Chuyện này đã xảy ra một lần.
      */
-    private static final int MAX_ATTEMPTS_BACKGROUND = 4;
+    private final int maxAttemptsBackground;
+
     /** Giãn cách giữa các lần thử, tăng dần để không dồn thêm tải lên provider đang quá tải. */
     private static final long BASE_BACKOFF_MILLIS = 1200;
 
@@ -79,9 +76,11 @@ public class AiOrchestrator {
     public AiOrchestrator(List<AiProvider> providers,
                           AiRequestLogger requestLogger,
                           AiThrottleState throttleState,
-                          @Value("${app.ai.provider-order}") String providerOrder) {
+                          @Value("${app.ai.provider-order}") String providerOrder,
+                          @Value("${app.ai.max-attempts-background:4}") int maxAttemptsBackground) {
         this.requestLogger = requestLogger;
         this.throttleState = throttleState;
+        this.maxAttemptsBackground = maxAttemptsBackground;
 
         Map<String, AiProvider> byName = new LinkedHashMap<>();
         providers.forEach(provider -> byName.put(provider.name(), provider));
@@ -187,7 +186,7 @@ public class AiOrchestrator {
             // overloaded" và 429 của nhà cung cấp thường hết sau vài giây, mà chuyển provider
             // thì kết quả sinh ra khác chất lượng. Chỉ khi provider này hết cơ hội mới đi tiếp.
             int maxAttempts = waitCapMillis >= BACKGROUND_WAIT_CAP_MILLIS
-                    ? MAX_ATTEMPTS_BACKGROUND : MAX_ATTEMPTS_PER_PROVIDER;
+                    ? maxAttemptsBackground : MAX_ATTEMPTS_PER_PROVIDER;
 
             for (int attempt = 1; attempt <= maxAttempts; attempt++) {
                 try {
