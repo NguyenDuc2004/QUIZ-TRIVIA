@@ -71,13 +71,19 @@ export default function LearningPathPage() {
                     </div>
                     <Text className="text-ink-soft text-xs">
                       Đúng {item.correct}/{item.total} câu
+                      {/* Nói thẳng khi chưa đủ căn cứ, thay vì im lặng để người đọc tự suy ra
+                          rằng "không có nhãn Cần ôn" nghĩa là "đang ổn" */}
+                      {item.total < 3 && ' · chưa đủ dữ liệu để đánh giá'}
                     </Text>
                   </div>
 
+                  {/* Hiện CON SỐ, không dùng status success/exception: Ant Design vẽ dấu tích cho
+                      `success` bất kể tỷ lệ là bao nhiêu, nên chủ đề 0/2 câu (chưa đủ dữ liệu để
+                      kết luận nên weak=false) lại được gắn tích xanh như thể đang làm tốt. */}
                   <Progress
                     percent={Math.round(item.accuracy * 100)}
                     size="small"
-                    status={item.weak ? 'exception' : 'success'}
+                    strokeColor={item.weak ? '#ff4d4f' : '#52c41a'}
                     className="w-40!"
                   />
 
