@@ -217,8 +217,13 @@ function AttemptResult({ detail }: { detail: AttemptDetail }) {
   const { attempt, questions } = detail
 
   const percent = attempt.maxScore > 0 ? Math.round((attempt.totalScore / attempt.maxScore) * 100) : 0
-  const pendingAi = useMemo(
-    () => questions.filter((q) => q.gradedBy === 'PENDING_AI').length,
+  // Lấy thẳng từ backend thay vì tự đếm: cùng một con số quyết định có hỏi lại hay không
+  // (xem `useAttempt`), hai chỗ đếm hai kiểu là mầm mống lệch nhau.
+  const pendingAi = detail.gradingPending
+  // Biết là "đang xếp hàng" hay "sắp xong" thì nói khác nhau — cùng một vòng quay câm là tệ nhất
+  const throttled = detail.aiThrottledSeconds
+  const failedAi = useMemo(
+    () => questions.filter((q) => q.gradedBy === 'AI_FAILED').length,
     [questions],
   )
 
@@ -260,13 +265,36 @@ function AttemptResult({ detail }: { detail: AttemptDetail }) {
         <Alert
           type="info"
           showIcon
-          message={`${pendingAi} câu tự luận đang chờ AI chấm nên hiện tính 0 điểm. Điểm cuối có thể cao hơn.`}
+          message={
+            throttled > 0
+              ? `Đang xếp hàng chờ dịch vụ AI — khoảng ${throttled} giây nữa`
+              : `AI đang chấm ${pendingAi} câu tự luận`
+          }
+          description={
+            throttled > 0
+              ? `Dịch vụ AI đang bận, ${pendingAi} câu tự luận phải chờ tới lượt. Bạn cứ đóng trang, điểm vẫn được chấm và lưu lại.`
+              : 'Điểm đang hiển thị là điểm tạm, phần tự luận chưa được cộng. Trang tự cập nhật khi chấm xong — không cần tải lại.'
+          }
+        />
+      )}
+
+      {failedAi > 0 && (
+        <Alert
+          type="warning"
+          showIcon
+          message={`${failedAi} câu chưa chấm tự động được`}
+          description="Những câu này đang tính 0 điểm và cần giáo viên chấm tay. Liên hệ người tạo quiz nếu bạn cho rằng điểm chưa đúng."
         />
       )}
 
       <div className="flex flex-col gap-4">
         {questions.map((question) => (
-          <QuestionReview key={question.questionId} question={question} />
+          <QuestionReview
+            key={question.questionId}
+            question={question}
+            attemptId={attempt.id}
+            throttledSeconds={throttled}
+          />
         ))}
       </div>
     </Space>

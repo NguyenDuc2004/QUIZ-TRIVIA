@@ -28,6 +28,11 @@ public class GeminiProvider implements AiProvider {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiProvider.class);
 
+    /** Khớp cả {@code "retryDelay": "52s"} lẫn {@code Please retry in 52.03s}. */
+    private static final java.util.regex.Pattern RETRY_DELAY_PATTERN =
+            java.util.regex.Pattern.compile("retry(?:Delay)?\"?\\s*(?:in|:)?\\s*\"?(\\d+(?:\\.\\d+)?)s",
+                    java.util.regex.Pattern.CASE_INSENSITIVE);
+
     private static final String BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
     private static final Duration TIMEOUT = Duration.ofSeconds(90);
 
@@ -165,12 +170,41 @@ public class GeminiProvider implements AiProvider {
         } catch (WebClientResponseException e) {
             // 429 (hết hạn mức) và 5xx là lỗi tạm thời → đáng chuyển sang provider dự phòng
             boolean retryable = e.getStatusCode().is5xxServerError() || e.getStatusCode().value() == 429;
-            log.warn("Gemini trả {} cho {}: {}", e.getStatusCode(), path, e.getResponseBodyAsString());
-            throw new AiProviderException(name(), "HTTP " + e.getStatusCode(), retryable, e);
+            String errorBody = e.getResponseBodyAsString();
+            log.warn("Gemini trả {} cho {}: {}", e.getStatusCode(), path, errorBody);
+            throw new AiProviderException(name(), "HTTP " + e.getStatusCode(), retryable,
+                    retryAfterMillis(errorBody), e);
 
         } catch (RuntimeException e) {
             // Timeout hoặc lỗi mạng — cũng là tạm thời
             throw new AiProviderException(name(), "Gọi API thất bại: " + e.getMessage(), true, e);
+        }
+    }
+
+    /**
+     * Đọc thời gian chờ Gemini đề nghị khi vượt hạn mức.
+     * <p>
+     * Nó nằm ở hai chỗ tuỳ loại lỗi: khối {@code RetryInfo.retryDelay} dạng {@code "52s"}, hoặc
+     * chỉ nằm trong câu tiếng Anh {@code "Please retry in 52.03s"}. Bắt cả hai vì Gemini không
+     * nhất quán, mà thiếu con số này thì backoff mặc định vài giây không bao giờ qua nổi cửa sổ
+     * hạn mức tính theo phút.
+     *
+     * @return mili-giây cần chờ, 0 nếu không tìm thấy
+     */
+    // Để mức package cho test đọc được: đây là phần dễ vỡ nhất khi Gemini đổi câu chữ thông báo lỗi
+    long retryAfterMillis(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return 0;
+        }
+        java.util.regex.Matcher matcher = RETRY_DELAY_PATTERN.matcher(responseBody);
+        if (!matcher.find()) {
+            return 0;
+        }
+        try {
+            double seconds = Double.parseDouble(matcher.group(1));
+            return Math.round(seconds * 1000);
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 

@@ -69,7 +69,8 @@ ai_request_logs (audit các lần gọi AI)
 | owner_id | FK users | |
 | type | enum | single / multiple / true_false / fill_blank / short_answer |
 | content | text | |
-| explanation | text | |
+| explanation | text | giải thích đáp án, hiện sau khi nộp |
+| rubric | text | *(V9)* tiêu chí chấm câu tự luận. Không có rubric thì mô hình tự nghĩ ra thang điểm riêng và hai lần chấm cùng một bài lệch nhau |
 | difficulty | enum | |
 | topic | varchar | |
 | points | int | |
@@ -109,9 +110,17 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 | user_answer | jsonb | `{"optionIds":[…]}` hoặc `{"text":"…"}`; NULL = chưa trả lời |
 | is_correct | boolean | NULL khi chưa chấm hoặc đang chờ AI |
 | score, max_score | integer | `max_score` chốt từ `questions.points` lúc bắt đầu |
-| ai_feedback | text | nhận xét của AI (features/06) |
-| graded_by | varchar | NOT_GRADED / AUTO / PENDING_AI / AI / HUMAN |
+| ai_feedback | text | nhận xét về bài đã làm (features/06) |
+| ai_suggestions | text | *(V9)* việc cần làm để khá hơn — tách khỏi nhận xét để giao diện nhấn mạnh riêng |
+| graded_by | varchar | NOT_GRADED / AUTO / PENDING_AI / AI / **AI_FAILED** *(V9)* / HUMAN |
 | answered_at | timestamptz | |
+| graded_at | timestamptz | *(V9)* chấm xong lúc nào — để dò câu kẹt `PENDING_AI` quá lâu |
+
+> Index bộ phận `idx_attempt_answers_pending_ai ... WHERE graded_by = 'PENDING_AI'` *(V9)*: chỉ đánh
+> trên số ít bản ghi đang chờ, không phình theo toàn bộ lịch sử làm bài.
+>
+> `AI_FAILED` là **trạng thái dừng** khi gọi mô hình hỏng. Không có nó thì câu nằm mãi ở
+> `PENDING_AI` và người học thấy "đang chấm" vĩnh viễn mà không ai biết là đã hỏng.
 
 **learning_materials** *(V6)* — học liệu cho RAG
 | Cột | Kiểu | Ghi chú |

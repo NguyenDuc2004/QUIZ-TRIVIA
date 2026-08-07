@@ -1,14 +1,23 @@
-import { Tag, Typography } from 'antd'
+import { useState } from 'react'
+import { Button, Spin, Tag, Typography } from 'antd'
 import { QUESTION_TYPE_LABEL } from '@/features/quiz/constants'
 import type { AttemptQuestion } from '../api/attemptApi'
 import { GRADED_BY_LABEL } from '../constants'
+import { useExplainAnswer } from '../hooks/useAttemptQueries'
 
 const { Text, Paragraph } = Typography
 
 /** Nhãn trạng thái của một câu sau khi chấm. */
 function verdict(question: AttemptQuestion) {
   if (question.gradedBy === 'PENDING_AI') {
-    return <Tag color="purple">Chờ AI chấm</Tag>
+    return <Tag color="purple">AI đang chấm…</Tag>
+  }
+  if (question.gradedBy === 'AI_FAILED') {
+    return <Tag color="orange">Chưa chấm được</Tag>
+  }
+  // Câu tự luận thường được điểm một phần: "Đúng/Sai" không mô tả đúng, hiện điểm mới đúng
+  if (question.gradedBy === 'AI' && question.correct !== true && (question.score ?? 0) > 0) {
+    return <Tag color="gold">Đúng một phần</Tag>
   }
   if (question.correct === true) {
     return <Tag color="green">Đúng</Tag>
@@ -29,7 +38,19 @@ function isBlank(question: AttemptQuestion) {
  * Một câu ở màn xem kết quả: đáp án đúng, lựa chọn người dùng đã chọn và giải thích (FR-17).
  * Chỉ dùng được với dữ liệu bài <b>đã nộp</b> — lúc đang làm backend để null hết các trường này.
  */
-export default function QuestionReview({ question }: { question: AttemptQuestion }) {
+export default function QuestionReview({
+  question,
+  attemptId,
+  throttledSeconds = 0,
+}: {
+  question: AttemptQuestion
+  /** Có id bài làm thì hiện nút nhờ AI giải thích; bỏ trống thì ẩn (dùng ở màn không có bài). */
+  attemptId?: string
+  /** Lớn hơn 0 nghĩa là đang chờ hạn mức AI, không phải sắp chấm xong. */
+  throttledSeconds?: number
+}) {
+  const [explanation, setExplanation] = useState<string | null>(null)
+  const explain = useExplainAnswer(attemptId)
   const chosen = new Set(question.userAnswer?.optionIds ?? [])
   const correctIds = new Set(question.correctOptionIds ?? [])
   const isChoice = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE'].includes(question.type)
@@ -96,19 +117,57 @@ export default function QuestionReview({ question }: { question: AttemptQuestion
         </div>
       )}
 
+      {question.gradedBy === 'PENDING_AI' && (
+        <div className="mt-3 flex items-center gap-2 border border-line bg-surface-subtle p-3">
+          <Spin size="small" />
+          <Text className="text-ink-soft text-xs">
+            {throttledSeconds > 0
+              ? `Đang chờ tới lượt gọi dịch vụ AI — khoảng ${throttledSeconds} giây nữa.`
+              : 'AI đang chấm câu này. Điểm sẽ tự cập nhật, không cần tải lại trang.'}
+          </Text>
+        </div>
+      )}
+
       {question.aiFeedback && (
         <div className="mt-3 border border-line p-3">
           <Text className="text-ink-soft text-xs font-bold">
             Nhận xét · {GRADED_BY_LABEL[question.gradedBy ?? 'AI']}
           </Text>
           <Paragraph className="mb-0! whitespace-pre-wrap">{question.aiFeedback}</Paragraph>
+
+          {question.aiSuggestions && (
+            <>
+              <Text className="mt-3 block text-ink-soft text-xs font-bold">Để làm tốt hơn</Text>
+              <Paragraph className="mb-0! whitespace-pre-wrap">{question.aiSuggestions}</Paragraph>
+            </>
+          )}
         </div>
       )}
 
-      {question.gradedBy === 'PENDING_AI' && (
-        <Text className="mt-3 block text-ink-soft text-xs">
-          Câu tự luận cần AI chấm — tính năng chấm tự luận sẽ bổ sung ở giai đoạn sau, hiện tạm tính 0 điểm.
-        </Text>
+      {/* Giải thích do AI viết theo yêu cầu — khác với phần Giải thích cố định do Creator soạn.
+          Mỗi lần bấm là một lời gọi mô hình nên chỉ gọi khi người học chủ động muốn. */}
+      {attemptId && (
+        <div className="mt-3">
+          {explanation ? (
+            <div className="border-l-2 border-brand bg-surface-subtle p-3">
+              <Text className="text-ink-soft text-xs font-bold">AI giải thích</Text>
+              <Paragraph className="mb-0! whitespace-pre-wrap">{explanation}</Paragraph>
+            </div>
+          ) : (
+            <Button
+              size="small"
+              loading={explain.isPending}
+              onClick={() =>
+                explain.mutate(question.answerId, {
+                  onSuccess: (data) =>
+                    setExplanation(data.explanation || 'AI chưa đưa ra được giải thích cho câu này.'),
+                })
+              }
+            >
+              Nhờ AI giải thích
+            </Button>
+          )}
+        </div>
       )}
     </div>
   )

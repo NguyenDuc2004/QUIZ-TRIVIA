@@ -82,6 +82,11 @@ OTP_TTL_MINUTES        # mặc định 10
 OTP_MAX_ATTEMPTS       # mặc định 5
 OTP_RESEND_COOLDOWN    # mặc định 60 (giây)
 
+# Hạn mức AI
+APP_AI_ASYNC_POOL_SIZE # số luồng chạy tác vụ AI nền, mặc định 1 (tuần tự).
+                       # Để 1 vì Gemini miễn phí giới hạn 5 lượt/phút — chạy song song chỉ khiến
+                       # các job tranh nhau rồi cùng 429. Nâng lên khi dùng gói trả phí.
+
 # Đăng nhập Google
 GOOGLE_CLIENT_ID       # OAuth 2.0 Client ID loại "Web application" (Google Cloud Console)
                        # KHÔNG cần Client Secret. Frontend đọc cùng giá trị qua VITE_GOOGLE_CLIENT_ID

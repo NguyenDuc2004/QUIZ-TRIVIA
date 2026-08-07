@@ -6,6 +6,17 @@ import { attemptApi, type AnswerBody, type AttemptMode } from '../api/attemptApi
 
 const ATTEMPT_KEY = 'attempts'
 
+/** Nhịp hỏi lại khi AI còn đang chấm — đủ nhanh để thấy điểm nhảy, đủ chậm để không dội API. */
+const GRADING_POLL_MS = 3000
+
+/**
+ * Nhịp hỏi lại khi biết chắc AI đang bị chặn hạn mức.
+ * <p>
+ * Hỏi mỗi 3 giây trong lúc chờ cả phút là gọi hai chục lần vô ích. Giãn ra, nhưng vẫn đủ dày để
+ * đồng hồ đếm ngược trên màn hình không nhảy giật.
+ */
+const THROTTLED_POLL_MS = 10000
+
 export function useAttempt(attemptId: string | undefined) {
   return useQuery({
     queryKey: [ATTEMPT_KEY, attemptId],
@@ -13,6 +24,13 @@ export function useAttempt(attemptId: string | undefined) {
     enabled: Boolean(attemptId),
     // Bài đang làm giữ trạng thái ở local (đáp án đang chọn), tự refetch sẽ ghi đè mất
     refetchOnWindowFocus: false,
+    // Chấm tự luận chạy nền (features/06): hỏi lại cho tới khi hết câu chờ, rồi dừng hẳn.
+    // Không có nhánh này thì người học phải tự bấm F5 mới thấy điểm phần tự luận.
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data?.gradingPending) return false
+      return data.aiThrottledSeconds > 0 ? THROTTLED_POLL_MS : GRADING_POLL_MS
+    },
   })
 }
 
@@ -55,6 +73,14 @@ export function useAnswerQuestion(attemptId: string | undefined) {
   })
 }
 
+/** Nhờ AI giải thích một câu. Không lưu vào CSDL nên mỗi lần bấm là một lời gọi mô hình. */
+export function useExplainAnswer(attemptId: string | undefined) {
+  return useMutation({
+    mutationFn: (answerId: string) => attemptApi.explain(attemptId!, answerId),
+    onError: (error) => message.error(getApiErrorMessage(error)),
+  })
+}
+
 export function useSubmitAttempt(attemptId: string | undefined) {
   const queryClient = useQueryClient()
 
@@ -64,7 +90,11 @@ export function useSubmitAttempt(attemptId: string | undefined) {
       queryClient.setQueryData([ATTEMPT_KEY, data.attempt.id], data)
       queryClient.invalidateQueries({ queryKey: [ATTEMPT_KEY, 'history'] })
       queryClient.invalidateQueries({ queryKey: ['leaderboard', data.attempt.quizId] })
-      message.success(`Đã nộp bài — ${data.attempt.totalScore}/${data.attempt.maxScore} điểm`)
+      message.success(
+        data.gradingPending > 0
+          ? `Đã nộp bài — AI đang chấm ${data.gradingPending} câu tự luận`
+          : `Đã nộp bài — ${data.attempt.totalScore}/${data.attempt.maxScore} điểm`,
+      )
     },
     onError: (error) => message.error(getApiErrorMessage(error)),
   })

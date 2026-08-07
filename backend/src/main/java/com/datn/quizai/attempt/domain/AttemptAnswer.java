@@ -66,8 +66,13 @@ public class AttemptAnswer {
     @Column(name = "max_score", nullable = false)
     private int maxScore = 1;
 
+    /** Nhận xét về bài đã làm (features/06). */
     @Column(name = "ai_feedback", columnDefinition = "text")
     private String aiFeedback;
+
+    /** Việc cần làm để khá hơn — tách khỏi nhận xét để giao diện nhấn mạnh riêng. */
+    @Column(name = "ai_suggestions", columnDefinition = "text")
+    private String aiSuggestions;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "graded_by", nullable = false, length = 15)
@@ -75,6 +80,10 @@ public class AttemptAnswer {
 
     @Column(name = "answered_at")
     private OffsetDateTime answeredAt;
+
+    /** Chấm xong lúc nào — để dò câu kẹt {@code PENDING_AI} quá lâu. */
+    @Column(name = "graded_at")
+    private OffsetDateTime gradedAt;
 
     public AttemptAnswer(Question question, int orderIndex) {
         this.question = question;
@@ -84,5 +93,10 @@ public class AttemptAnswer {
 
     public boolean isAnswered() {
         return userAnswer != null && !userAnswer.isEmpty();
+    }
+
+    /** Câu đã nộp nhưng AI chưa chấm xong — người học đang thấy "đang chấm". */
+    public boolean isAwaitingAi() {
+        return gradedBy == GradedBy.PENDING_AI;
     }
 }

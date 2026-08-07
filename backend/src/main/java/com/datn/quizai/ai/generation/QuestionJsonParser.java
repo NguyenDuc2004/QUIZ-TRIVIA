@@ -1,8 +1,8 @@
 package com.datn.quizai.ai.generation;
 
+import com.datn.quizai.ai.AiJson;
 import com.datn.quizai.quiz.domain.Difficulty;
 import com.datn.quizai.quiz.domain.QuestionType;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -40,7 +40,7 @@ public final class QuestionJsonParser {
     }
 
     public static ParseResult parse(String rawJson) {
-        JsonNode root = readTree(stripCodeFence(rawJson));
+        JsonNode root = AiJson.read(rawJson);
 
         JsonNode array = root.path("questions");
         if (!array.isArray()) {
@@ -78,12 +78,12 @@ public final class QuestionJsonParser {
     // ------------------------------------------------------------------ nội bộ
 
     private static GeneratedQuestion readQuestion(JsonNode node) {
-        String content = text(node, "question", "content");
+        String content = AiJson.text(node, "question", "content");
         if (content.isBlank()) {
             throw new IllegalArgumentException("Thiếu nội dung câu hỏi");
         }
 
-        QuestionType type = parseType(text(node, "type"));
+        QuestionType type = parseType(AiJson.text(node, "type"));
         List<GeneratedQuestion.Option> options = readOptions(node, type);
         validate(type, options, content);
 
@@ -91,10 +91,10 @@ public final class QuestionJsonParser {
                 type,
                 content.trim(),
                 options,
-                text(node, "explanation").trim(),
-                parseDifficulty(text(node, "difficulty")),
-                emptyToNull(text(node, "topic").trim()),
-                emptyToNull(text(node, "sourceExcerpt", "source").trim()));
+                AiJson.text(node, "explanation").trim(),
+                parseDifficulty(AiJson.text(node, "difficulty")),
+                emptyToNull(AiJson.text(node, "topic").trim()),
+                emptyToNull(AiJson.text(node, "sourceExcerpt", "source").trim()));
     }
 
     /**
@@ -124,7 +124,7 @@ public final class QuestionJsonParser {
 
         for (JsonNode option : raw) {
             if (option.isObject()) {
-                String value = text(option, "content", "text").trim();
+                String value = AiJson.text(option, "content", "text").trim();
                 if (!value.isBlank()) {
                     options.add(new GeneratedQuestion.Option(value, option.path("correct").asBoolean(false)));
                 }
@@ -201,38 +201,6 @@ public final class QuestionJsonParser {
     /**
      * Gỡ khối ```json ... ``` mà mô hình hay bọc quanh JSON dù đã yêu cầu trả JSON thuần.
      */
-    private static String stripCodeFence(String raw) {
-        String text = raw == null ? "" : raw.trim();
-        if (!text.startsWith("```")) {
-            return text;
-        }
-        int firstNewline = text.indexOf('\n');
-        int lastFence = text.lastIndexOf("```");
-        if (firstNewline < 0 || lastFence <= firstNewline) {
-            return text;
-        }
-        return text.substring(firstNewline + 1, lastFence).trim();
-    }
-
-    private static JsonNode readTree(String json) {
-        try {
-            return MAPPER.readTree(json);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Mô hình trả về JSON không đọc được", e);
-        }
-    }
-
-    /** Lấy giá trị của trường đầu tiên có mặt — mỗi mô hình đặt tên một kiểu. */
-    private static String text(JsonNode node, String... fields) {
-        for (String field : fields) {
-            JsonNode value = node.path(field);
-            if (value.isTextual()) {
-                return value.asText();
-            }
-        }
-        return "";
-    }
-
     private static String emptyToNull(String value) {
         return value == null || value.isBlank() ? null : value;
     }

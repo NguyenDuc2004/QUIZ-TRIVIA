@@ -139,7 +139,8 @@ public class AiJobService {
             if (index == null || index < 0 || index >= generated.size()) {
                 throw BusinessException.badRequest("Vị trí câu hỏi không hợp lệ: " + index);
             }
-            saved.add(questionService.create(toQuestionRequest(generated.get(index)), current.id()));
+            saved.add(questionService.create(toQuestionRequest(generated.get(index)), current.id(),
+                    com.datn.quizai.quiz.domain.QuestionSource.AI_GENERATED, aiMetadataOf(job)));
         }
 
         log.info("Creator {} đã duyệt {}/{} câu hỏi từ job {}",
@@ -168,14 +169,25 @@ public class AiJobService {
         }
     }
 
+    /**
+     * Vết audit gắn vào câu hỏi: job nào, provider và model nào đã sinh ra nó.
+     * <p>
+     * Cần để trả lời được câu "câu hỏi sai này từ đâu ra" sau nhiều tháng, và để rà lại hàng loạt
+     * nếu phát hiện một model sinh đề kém.
+     */
+    private String aiMetadataOf(AiJob job) {
+        return toJson(java.util.Map.of("jobId", job.getId().toString(), "type", job.getType().name()));
+    }
+
     /** Câu AI sinh mặc định 1 điểm; Creator chỉnh lại sau khi lưu nếu muốn. */
     private QuestionRequest toQuestionRequest(GeneratedQuestion question) {
         List<QuestionOptionRequest> options = question.options().stream()
                 .map(option -> new QuestionOptionRequest(option.content(), option.correct()))
                 .toList();
 
+        // rubric để null: mô hình sinh đề không tự đặt tiêu chí chấm, Creator soạn khi cần (features/06)
         return new QuestionRequest(
-                question.type(), question.content(), question.explanation(),
+                question.type(), question.content(), question.explanation(), null,
                 question.difficulty(), question.topic(), 1, null, options);
     }
 

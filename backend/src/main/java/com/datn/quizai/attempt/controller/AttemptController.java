@@ -3,7 +3,9 @@ package com.datn.quizai.attempt.controller;
 import com.datn.quizai.attempt.dto.AnswerFeedbackResponse;
 import com.datn.quizai.attempt.dto.AttemptDetailResponse;
 import com.datn.quizai.attempt.dto.AttemptSummaryResponse;
+import com.datn.quizai.attempt.dto.ExplanationResponse;
 import com.datn.quizai.attempt.dto.LeaderboardEntryResponse;
+import com.datn.quizai.attempt.dto.OverrideGradeRequest;
 import com.datn.quizai.attempt.dto.StartAttemptRequest;
 import com.datn.quizai.attempt.dto.SubmitAnswerRequest;
 import com.datn.quizai.attempt.service.AttemptService;
@@ -19,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -81,6 +84,27 @@ public class AttemptController {
     public AttemptDetailResponse submit(@AuthenticationPrincipal JwtService.AuthenticatedUser current,
                                         @PathVariable UUID attemptId) {
         return attemptService.submit(attemptId, current);
+    }
+
+    @PostMapping("/attempts/{attemptId}/answers/{answerId}/explain")
+    @Operation(summary = "Nhờ AI giải thích một câu trong bài đã nộp (FR-30). "
+            + "Chỉ chủ bài làm gọi được, và chỉ sau khi đã nộp.")
+    public ExplanationResponse explain(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
+            @PathVariable UUID attemptId,
+            @PathVariable UUID answerId) {
+        return attemptService.explain(attemptId, answerId, current);
+    }
+
+    @PatchMapping("/attempts/{attemptId}/answers/{answerId}/grade")
+    @Operation(summary = "Chủ quiz chấm tay, ghi đè điểm AI (FR-30). "
+            + "Điểm bị ép về khoảng [0, điểm tối đa của câu].")
+    public AttemptDetailResponse overrideGrade(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
+            @PathVariable UUID attemptId,
+            @PathVariable UUID answerId,
+            @Valid @RequestBody OverrideGradeRequest request) {
+        return attemptService.overrideGrade(attemptId, answerId, request, current);
     }
 
     @GetMapping("/attempts")

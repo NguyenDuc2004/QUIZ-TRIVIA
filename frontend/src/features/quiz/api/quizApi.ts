@@ -49,6 +49,8 @@ export interface Question {
   type: QuestionType
   content: string
   explanation: string | null
+  /** Tiêu chí chấm câu tự luận (features/06). */
+  rubric: string | null
   difficulty: Difficulty
   topic: string | null
   points: number
@@ -77,6 +79,7 @@ export interface QuestionBody {
   type: QuestionType
   content: string
   explanation?: string | null
+  rubric?: string | null
   difficulty?: Difficulty
   topic?: string | null
   points?: number | null
