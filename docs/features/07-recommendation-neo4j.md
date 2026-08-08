@@ -150,6 +150,70 @@ nguyên chủ đề người ta chưa đụng tới.
 Nguồn thứ ba cũng giải luôn *cold start*: người vừa đăng ký chưa có hành vi nào, nhưng mọi chủ đề
 đều là mới với họ, nên có gợi ý ngay từ lần đăng nhập đầu tiên.
 
+## Rỗng thì nói vì sao rỗng, không im lặng biến mất
+
+Ba nguồn vẫn cạn được cùng lúc — khi người học **đã làm hết** quiz công khai đang có. Lúc đó danh
+sách rỗng là **câu trả lời đúng**, nhưng giao diện lại ẩn hẳn khu Gợi ý.
+
+Thiết kế ban đầu ẩn nó với lý do: *"người mới thấy 'Gợi ý cho bạn: (trống)' thì chỉ thấy hệ thống
+hỏng"*. Lập luận đúng cho người mới, nhưng ẩn đi lại tạo ra **đúng nỗi nghi đó theo đường khác** —
+người dùng biết tính năng tồn tại, không thấy nó, và kết luận là hỏng. Thực tế đã hiểu nhầm như vậy
+hai lần trước khi sửa.
+
+`/recommendations` vì thế trả `{ items, note }` thay cho một mảng trần, giống `/path` vốn đã làm vậy.
+Ba tình huống rỗng, ba việc nên làm khác nhau:
+
+| Tình huống | `note` |
+|---|---|
+| Kho chưa có quiz công khai có câu hỏi | "Chưa có quiz công khai nào có câu hỏi để gợi ý." |
+| Đã làm hết quiz đang có | "Bạn đã làm hết quiz công khai đang có. Quiz mới xuất bản sẽ xuất hiện ở đây." |
+| Không truy vấn được đồ thị | "Chưa lấy được gợi ý lúc này. Thử lại sau ít phút." |
+
+Tình huống thứ ba đáng chú ý: trước đây Neo4j hỏng thì lỗi bị nuốt và trả rỗng — đúng (gợi ý không
+được kéo sập trang chủ) nhưng **nuốt xong im lặng**, nên người dùng nhận đúng một màn hình trống
+giống hệt khi đã làm hết quiz. Hai chuyện hoàn toàn khác nhau. Nay `safely()` ghi nhận việc hỏng vào
+một cờ để câu giải thích nói đúng chuyện đang xảy ra.
+
+Câu chữ do **backend** viết, không phải frontend: chỉ backend biết đang là tình huống nào. Riêng
+lỗi mạng/401 thì không có `note` nào cả, và giao diện ẩn hẳn khu đó — đoán hộ backend thì dễ nói sai.
+
+## Bộ test từng xoá sạch đồ thị của máy dev
+
+Truy được lỗi này đúng từ triệu chứng "khu Gợi ý trống" ở trên — và suýt đổ oan cho code gợi ý.
+
+PostgreSQL với Redis đã an toàn nhờ Testcontainers, nhưng **11 lớp test khởi động cả ứng dụng mà
+không khai báo `Neo4jContainer`**. Không có container thì cấu hình rơi về mặc định
+`bolt://localhost:7687` — đúng Neo4j dev đang chạy bằng `docker compose`.
+
+Chuỗi hậu quả:
+
+```
+Test khởi động Spring context
+  → GraphSchemaInitializer chạy ở ApplicationReadyEvent
+  → syncPublicCatalog()
+  → pruneDeleted(id hợp lệ lấy từ PostgreSQL CỦA TEST — gần như rỗng)
+  → XOÁ mọi nút không có trong đó = toàn bộ đồ thị dev
+```
+
+Đo thật: cắm một nút mốc vào Neo4j dev rồi chạy **đúng một ca test chỉ kiểm mã 401** — đồ thị còn
+`0 users, 0 quizzes`. Bật bản sửa, chạy lại ca đó: nút mốc còn nguyên.
+
+Sửa bằng `systemPropertyVariables` của surefire trong `pom.xml`, trỏ `spring.neo4j.uri` vào cổng
+không ai nghe. Ứng dụng vốn đã chịu được Neo4j chết nên test chạy bình thường. Lớp nào thật sự cần
+Neo4j thì khai báo `Neo4jContainer` + `@ServiceConnection`, và bean `ConnectionDetails` được ưu tiên
+hơn thuộc tính.
+
+> **Không** đặt ở `src/test/resources/application.yml`: file đó **che hẳn** `application.yml` của
+> `main` chứ không gộp vào, làm mất sạch cấu hình khác. Đã thử và hỏng ngay ở placeholder
+> `app.ai.gemini.model`.
+
+Hai bài học tách bạch:
+
+1. **Dịch vụ nào không được container hoá thì test sẽ lặng lẽ dùng bản thật.** Testcontainers chỉ
+   bảo vệ những gì mình khai báo; thiếu một cái là thủng, mà lỗ thủng đó không báo gì cả.
+2. **Đừng tin triệu chứng chỉ đúng nguyên nhân.** "Khu Gợi ý trống" trỏ về phía code gợi ý, nhưng
+   thủ phạm nằm ở cấu hình test — cách duy nhất phân biệt được là đo trước/sau chứ không phải đọc code.
+
 ## Ghi đồng thời: ba lớp phải sửa, không phải một
 
 Chạy test đầy đủ moi ra một chuỗi lỗi đồng thời — hai luồng cùng đồng bộ hai bài *khác nhau* nhưng

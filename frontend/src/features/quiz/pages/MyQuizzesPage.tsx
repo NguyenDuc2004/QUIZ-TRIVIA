@@ -96,9 +96,15 @@ export default function MyQuizzesPage() {
           </Link>
           {/* Chủ quiz làm được bài trên quiz của mình, kể cả quiz riêng tư — dùng để tự kiểm đề */}
           {row.questionCount > 0 && (
-            <Link to={`/quizzes/${row.id}`} className="text-sm font-bold">
-              Làm thử
-            </Link>
+            <>
+              <Link to={`/quizzes/${row.id}`} className="text-sm font-bold">
+                Làm thử
+              </Link>
+              {/* Cửa vào thống kê VÀ vào việc chấm tay câu tự luận (features/09) */}
+              <Link to={`/my-quizzes/${row.id}/stats`} className="text-sm font-bold">
+                Thống kê
+              </Link>
+            </>
           )}
           <Button type="link" size="small" onClick={() => setEditing(row)}>
             Sửa

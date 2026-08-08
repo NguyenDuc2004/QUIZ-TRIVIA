@@ -132,8 +132,14 @@ public final class GradingPromptBuilder {
         return prompt.toString();
     }
 
-    /** Đáp án mẫu: câu tự luận/điền khuyết lưu ở options, mỗi option là một cách trả lời được chấp nhận. */
-    private static String sampleAnswer(Question question) {
+    /**
+     * Đáp án mẫu: câu tự luận/điền khuyết lưu ở options, mỗi option là một cách trả lời được chấp nhận.
+     * <p>
+     * Public vì màn hình chấm tay (features/09) cũng hiện đáp án mẫu, và nó phải hiện <b>đúng chuỗi
+     * mà AI đã nhìn</b>. Ghép lại lần thứ hai ở tầng khác là mở đường cho hai bên chấm theo hai bản
+     * đáp án hơi khác nhau.
+     */
+    public static String sampleAnswer(Question question) {
         List<QuestionOption> correct = question.getOptions().stream()
                 .filter(QuestionOption::isCorrect)
                 .toList();

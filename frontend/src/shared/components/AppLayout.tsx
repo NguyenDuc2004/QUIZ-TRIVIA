@@ -67,6 +67,9 @@ export default function AppLayout() {
           <NavLink to="/learning-path" className={navLinkClass}>
             Lộ trình
           </NavLink>
+          <NavLink to="/my-progress" className={navLinkClass}>
+            Tiến độ
+          </NavLink>
           <NavLink to="/my-attempts" className={navLinkClass}>
             Lịch sử
           </NavLink>

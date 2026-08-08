@@ -4,6 +4,7 @@ import com.datn.quizai.attempt.dto.AnswerFeedbackResponse;
 import com.datn.quizai.attempt.dto.AttemptDetailResponse;
 import com.datn.quizai.attempt.dto.AttemptSummaryResponse;
 import com.datn.quizai.attempt.dto.ExplanationResponse;
+import com.datn.quizai.attempt.dto.GradingViewResponse;
 import com.datn.quizai.attempt.dto.LeaderboardEntryResponse;
 import com.datn.quizai.attempt.dto.OverrideGradeRequest;
 import com.datn.quizai.attempt.dto.StartAttemptRequest;
@@ -94,6 +95,15 @@ public class AttemptController {
             @PathVariable UUID attemptId,
             @PathVariable UUID answerId) {
         return attemptService.explain(attemptId, answerId, current);
+    }
+
+    @GetMapping("/attempts/{attemptId}/grading")
+    @Operation(summary = "Chủ quiz đọc phần tự luận của một bài làm để chấm tay (FR-30). "
+            + "Chỉ câu tự luận, chỉ trên quiz mình sở hữu; bài của quiz người khác trả 404.")
+    public GradingViewResponse gradingView(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
+            @PathVariable UUID attemptId) {
+        return attemptService.gradingView(attemptId, current);
     }
 
     @PatchMapping("/attempts/{attemptId}/answers/{answerId}/grade")
