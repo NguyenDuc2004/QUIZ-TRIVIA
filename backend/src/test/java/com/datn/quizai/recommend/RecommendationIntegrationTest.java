@@ -231,6 +231,44 @@ class RecommendationIntegrationTest {
         assertThat(findRecommendation(token, quizId)).isNull();
     }
 
+    @Test
+    @DisplayName("Nút rác KHÔNG ăn mất chỗ: xoá 2 quiz đầu bảng thì danh sách vẫn đủ 4, không tụt còn 2")
+    void shouldNotLetStaleNodesEatRecommendationSlots() throws Exception {
+        // Bộ lọc quiz-đã-xoá chạy SAU khi danh sách đã cắt theo limit, nên nếu không hỏi lại đồ thị
+        // thì nút rác chiếm chỗ và người dùng nhận danh sách ngắn hơn — có khi trống trơn, dù kho
+        // quiz còn nguyên. Đúng lỗi "khám phá không hiện gì" đã gặp.
+        String token = register("khong-an-mat-cho@example.com", "LEARNER");
+        String topic = "Chủ đề bị ăn chỗ";
+        // Sáu quiz để sau khi xoá hai vẫn còn đủ bốn của riêng ca này
+        for (int i = 1; i <= 6; i++) {
+            quizWithTopic("Quiz ăn chỗ " + i, topic, 2);
+        }
+        graphSync.syncPublicCatalog();
+
+        JsonNode before = recommendations(token, 4);
+        assertThat(before).hasSize(4);
+
+        // Xoá hai quiz đứng đầu danh sách, CỐ Ý không đồng bộ lại đồ thị: mô phỏng khoảng thời gian
+        // đồ thị còn giữ nút của quiz đã biến mất
+        List<String> deleted = new java.util.ArrayList<>();
+        for (int i = 0; i < 2; i++) {
+            String doomed = before.get(i).get("quizId").asText();
+            deleted.add(doomed);
+            mockMvc.perform(delete("/api/v1/quizzes/{id}", doomed)
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken))
+                    .andExpect(status().isNoContent());
+        }
+
+        JsonNode after = recommendations(token, 4);
+
+        assertThat(after).as("mất 2 nút rác thì phải lấp lại cho đủ, không trả về 2").hasSize(4);
+        for (JsonNode item : after) {
+            assertThat(item.get("quizId").asText())
+                    .as("quiz đã xoá không được xuất hiện")
+                    .isNotIn(deleted);
+        }
+    }
+
     // ================================================================ gợi ý
 
     @Test
@@ -521,6 +559,16 @@ class RecommendationIntegrationTest {
                 .bind(quizId).to("quizId")
                 .fetchAs(String.class).mappedBy((ts, rec) -> rec.get("name").asString())
                 .all().stream().toList();
+    }
+
+    /** Danh sách gợi ý của một người, đúng như API trả về. */
+    private JsonNode recommendations(String token, int limit) throws Exception {
+        String body = mockMvc.perform(get("/api/v1/recommendations")
+                        .param("limit", String.valueOf(limit))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(body);
     }
 
     /**

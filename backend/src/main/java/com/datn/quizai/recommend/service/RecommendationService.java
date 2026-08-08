@@ -50,6 +50,28 @@ public class RecommendationService {
      * liên quan gì tới chỗ người này đang hổng.
      */
     public List<RecommendedQuizResponse> recommendQuizzes(UUID userId, int limit) {
+        Collected first = collect(userId, limit);
+
+        // Nút quiz đã xoá bị loại ở bước lấy dữ liệu hiển thị, mà lúc đó danh sách đã cắt theo
+        // limit — nên nút rác "ăn" mất chỗ và người dùng nhận ít gợi ý hơn, có khi trống trơn dù kho
+        // quiz còn nguyên. Hỏi lại đồ thị với limit rộng hơn đúng bằng số bị loại.
+        //
+        // Chỉ chạy khi THẬT SỰ có nút bị loại, không chạy khi đơn giản là kho ít quiz — nếu không thì
+        // mỗi lượt gợi ý trên kho nhỏ đều tốn thêm một vòng truy vấn đồ thị mà không đổi được gì.
+        if (first.dropped() > 0) {
+            Collected wider = collect(userId, limit + first.dropped());
+            List<RecommendedQuizResponse> items = wider.items();
+            return items.size() > limit ? List.copyOf(items.subList(0, limit)) : items;
+        }
+
+        return first.items();
+    }
+
+    /** Kết quả một lượt trộn: danh sách đã làm tươi, kèm số nút bị loại vì quiz không còn tồn tại. */
+    private record Collected(List<RecommendedQuizResponse> items, int dropped) {
+    }
+
+    private Collected collect(UUID userId, int limit) {
         Map<UUID, RecommendedQuizResponse> merged = new LinkedHashMap<>();
 
         int weakSlots = Math.min(limit, WEAK_TOPIC_SHARE);
@@ -81,7 +103,8 @@ public class RecommendationService {
             }
         }
 
-        return withFreshDisplayData(merged.values());
+        List<RecommendedQuizResponse> items = withFreshDisplayData(merged.values());
+        return new Collected(items, merged.size() - items.size());
     }
 
     /**
