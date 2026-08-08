@@ -144,3 +144,35 @@ Và điều hướng kèm `?expired=1` để trang đăng nhập nói rõ *"Phi�
 Riêng các endpoint trong `NO_RETRY_PATHS` (`/auth/login`, `/register`, `/refresh`, `/logout`) trả 401
 là chuyện bình thường — sai mật khẩu, refresh token chết — nên để form tự hiện lỗi, không đá người
 dùng ra khỏi trang đang thao tác.
+
+### 4. `ProtectedRoute` coi "không có access token" là "chưa đăng nhập"
+
+Lỗi nặng nhất trong bốn, và nó **không nằm trong interceptor** — nên sửa xong ba lỗi trên vẫn còn.
+
+`useIsAuthenticated()` xét `Boolean(user && tokenStorage.getAccess())`. Nhưng access token sống 15
+phút, nên **sự tồn tại của nó chưa bao giờ là bằng chứng phiên còn sống**: nó có thể đã hết hạn mà
+vẫn nằm nguyên trong localStorage. Thứ quyết định phiên còn hay hết là **refresh token**.
+
+Cái sai đó tạo ra một bất đối xứng vô lý cho *cùng một* trạng thái phiên "cần làm mới token":
+
+| Access token | Kết quả |
+|---|---|
+| hết hạn nhưng **còn** | coi là đã đăng nhập → trang hiện ra → interceptor làm mới → chạy bình thường ✅ |
+| **không còn** | coi là chưa đăng nhập → `ProtectedRoute` đẩy về /login **trước khi** có request nào kịp làm mới ❌ |
+
+Phiên còn cứu được, xử lý hai kiểu khác nhau chỉ vì cái token chết có tình cờ còn trong localStorage
+hay không. Nay xét `access || refresh`.
+
+Refresh token *chết* (khác *không có*) vẫn cho qua — và đúng như vậy: lời gọi API đầu tiên sẽ 401,
+interceptor thử làm mới, thất bại rồi kết thúc phiên **kèm thông báo**. Chặn ở tầng giao diện thì
+người dùng bị đẩy đi mà không ai nói vì sao.
+
+### Thứ tự xoá phiên: một cuộc đua nhỏ nhưng làm mất hẳn thông báo
+
+`endSession()` **không** được xoá state React trước khi điều hướng cứng. Zustand cập nhật đồng bộ →
+React kịp render lại → `ProtectedRoute` thấy "chưa đăng nhập" và tự `Navigate` sang `/login` **trần**,
+cướp mất `?expired=1`. Người dùng lại về đúng tình trạng bị đẩy ra mà không biết vì sao.
+
+Nên tách hai hàm: `clearStoredSession()` chỉ xoá localStorage (dùng ngay trước điều hướng cứng — trang
+mới nạp lại từ localStorage nên thế là đủ), còn `clearPersistedSession()` xoá cả state, dùng khi
+**không** điều hướng (đã đang ở trang đăng nhập).

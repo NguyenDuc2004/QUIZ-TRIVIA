@@ -1,5 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
-import { clearPersistedSession } from '@/features/auth/store/authStore'
+import { clearPersistedSession, clearStoredSession } from '@/features/auth/store/authStore'
 import { tokenStorage } from './tokenStorage'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
@@ -58,10 +58,15 @@ function refreshAccessToken(refreshToken: string): Promise<string> {
  * lỗi. `?expired=1` để trang đăng nhập nói đúng một câu: phiên đã hết, đăng nhập lại.
  */
 function endSession() {
-  clearPersistedSession()
-  if (window.location.pathname !== '/login') {
-    window.location.assign('/login?expired=1')
+  if (window.location.pathname === '/login') {
+    // Không điều hướng thì không có lần nạp lại trang nào dọn state hộ — phải tự dọn
+    clearPersistedSession()
+    return
   }
+  // Thứ tự quan trọng: chỉ xoá localStorage rồi điều hướng cứng. Xoá state React trước thì
+  // ProtectedRoute kịp Navigate sang '/login' trần và `?expired=1` mất theo.
+  clearStoredSession()
+  window.location.assign('/login?expired=1')
 }
 
 /**
