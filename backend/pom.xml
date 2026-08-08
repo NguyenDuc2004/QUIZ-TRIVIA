@@ -225,6 +225,42 @@
                     </excludes>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <!--
+                          TEST KHÔNG ĐƯỢC ĐỤNG VÀO DỊCH VỤ THẬT TRÊN MÁY LẬP TRÌNH VIÊN.
+
+                          PostgreSQL và Redis đã an toàn nhờ Testcontainers + @ServiceConnection ở
+                          từng lớp test. Neo4j thì không: 11 lớp test khởi động cả ứng dụng nhưng
+                          không khai báo Neo4jContainer, nên chúng lặng lẽ nối vào
+                          bolt://localhost:7687 — đúng Neo4j dev đang chạy bằng docker compose.
+
+                          Hậu quả nặng: lúc khởi động, GraphSchemaInitializer gọi
+                          syncPublicCatalog(), và bước đó GỠ mọi nút không có trong PostgreSQL mà nó
+                          đang nối tới. Với test thì đó là CSDL tạm gần như rỗng, nên mỗi lần chạy
+                          `mvn test` là một lần XOÁ SẠCH đồ thị gợi ý của máy dev. Triệu chứng duy
+                          nhất nhìn thấy được là "khu Gợi ý trống", rất dễ đổ oan cho code gợi ý.
+
+                          Trỏ vào cổng không ai nghe là cắt hẳn đường đó. Ứng dụng vốn đã chịu được
+                          Neo4j chết nên test vẫn chạy bình thường.
+
+                          Đặt ở đây chứ KHÔNG phải src/test/resources/application.yml: file đó CHE
+                          hẳn application.yml của main thay vì gộp vào, làm mất sạch cấu hình khác
+                          (đã thử và hỏng ngay ở placeholder app.ai.gemini.model).
+
+                          Lớp test nào thật sự cần Neo4j thì khai báo Neo4jContainer +
+                          @ServiceConnection — bean ConnectionDetails được ưu tiên hơn thuộc tính.
+                        -->
+                        <spring.neo4j.uri>bolt://localhost:7699</spring.neo4j.uri>
+                        <spring.neo4j.connection-timeout>1s</spring.neo4j.connection-timeout>
+                        <spring.neo4j.pool.connection-acquisition-timeout>1s</spring.neo4j.pool.connection-acquisition-timeout>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

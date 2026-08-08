@@ -27,6 +27,7 @@
 | 09/08 (tối) | **Lát cắt 7: gợi ý quiz bằng Neo4j** — trụ cột MVP thứ tư | 7/7 | 🟢 xong |
 | 10/08 | **Đo tải phòng đấu — số liệu mục 3.5** (bắt buộc theo phiếu) | 5/5 | 🟢 xong |
 | 10/08 (chiều) | **Lát cắt 9: thống kê** (FR-26, FR-27) + trả nợ màn chấm tay của lát cắt 6 | 7/7 | 🟢 xong |
+| 10/08 (tối) | Vá 3 lỗi lộ ra khi chạy thật, trong đó **bộ test xoá sạch đồ thị máy dev** | 3/3 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -1338,6 +1339,97 @@ chứ không tạo khoảng thứ mười một, và quiz người khác trả 4
   vòng theo vai người dùng, không phải điểm danh endpoint.
 - **Mục 3.4 (kiểm thử):** 251 ca, trong đó lát cắt 9 thêm 13 ca. Nêu rõ vì sao dùng PostgreSQL thật
   thay vì mock repository.
+
+---
+
+## 📅 T2 — 10/08/2026 (tối) — Ba lỗi chỉ lộ ra khi chạy thật, và một cái nằm trong bộ test
+
+**Mục tiêu:** Xem lát cắt 9 trên trình duyệt trước khi tạo PR. Không lỗi nào dưới đây bị build hay
+257 ca test bắt được.
+
+### Chuỗi truy vết bắt đầu từ một câu hỏi rất đơn giản
+
+Ảnh chụp màn hình kèm câu *"phần này ảnh đâu"* — thẻ ở khu Gợi ý không có ảnh bìa. Kéo sợi chỉ đó ra
+được ba lỗi xếp chồng, mỗi lỗi lộ ra sau khi sửa lỗi trước.
+
+**Lỗi 1 — thẻ gợi ý đọc dữ liệu hiển thị từ bản sao trong Neo4j.**
+Không phải quên thêm một trường. Tiêu đề đang lấy từ nhãn trên nút đồ thị, mà đồ thị chỉ đồng bộ khi
+có bài nộp mới → chủ quiz đổi tên xong thì thẻ còn hiện tên cũ rất lâu. Nhân bản thêm ảnh bìa sang đó
+sẽ hỏng nặng hơn: đổi ảnh thì thẻ trỏ vào file đã xoá. Sửa theo hướng ngược lại — **Neo4j chỉ cho ID
+và lý do gợi ý, mọi thứ để hiển thị đọc từ PostgreSQL** bằng một truy vấn cho cả danh sách.
+
+**Lỗi 2 — nút rác ăn mất chỗ.** Do chính bản sửa ở trên đẻ ra: bộ lọc quiz-đã-xoá chạy *sau* khi
+danh sách đã cắt theo `limit`. Đồ thị còn 4 nút rác thì cả 4 chỗ bị chiếm rồi mới lọc → danh sách
+rỗng. Đúng lỗi "khám phá không hiện gì" đã gặp, chỉ đổi nguyên nhân.
+
+> Viết test xong tôi **tạm bỏ bản sửa rồi chạy lại**: đỏ thật, `4 → 2`. Test mà xanh cả khi có lỗi
+> thì không canh gì cả — và bước kiểm này chỉ tốn một phút.
+
+**Lỗi 3 — khu Gợi ý im lặng biến mất.** Xem mục dưới.
+
+### Rỗng vì đã làm hết ≠ rỗng vì hỏng
+
+Sau khi dọn dữ liệu rác, khu Gợi ý vẫn trống. Soi thẳng vào đồ thị mới rõ: người dùng **đã làm hết**
+cả 5 quiz có câu hỏi, nên cả ba nguồn cạn cùng lúc. **0 gợi ý là câu trả lời đúng.**
+
+Nhưng giao diện ẩn hẳn khu đó, nên không phân biệt được với "hỏng" — và thực tế đã hiểu nhầm thành
+hỏng **hai lần**. Thiết kế ban đầu ẩn nó với lý do *"người mới thấy ô trống thì tưởng hệ thống hỏng"*;
+lập luận đúng cho người mới, nhưng ẩn đi lại tạo ra đúng nỗi nghi đó theo đường khác.
+
+`/recommendations` đổi sang `{ items, note }` giống `/path` vốn đã vậy. Ba tình huống rỗng, ba việc
+người dùng nên làm khác nhau nên không gộp một câu. Tình huống thứ ba là **lỗi im lặng có sẵn từ
+trước**: Neo4j hỏng thì lỗi bị nuốt và trả rỗng — đúng, nhưng nuốt xong không nói gì nên trông y hệt
+lúc đã làm hết quiz.
+
+### Bộ test xoá sạch đồ thị của máy dev
+
+Lỗi đáng kể nhất trong ngày, và tôi suýt đổ oan cho code gợi ý.
+
+PostgreSQL với Redis đã an toàn nhờ Testcontainers, nhưng **11 lớp test khởi động cả ứng dụng mà
+không khai báo `Neo4jContainer`**. Thiếu container thì cấu hình rơi về mặc định `bolt://localhost:7687`
+— đúng Neo4j dev đang chạy bằng `docker compose`. Rồi:
+
+```
+Test khởi động Spring context
+  → GraphSchemaInitializer → syncPublicCatalog()
+  → pruneDeleted(id hợp lệ lấy từ PostgreSQL CỦA TEST — gần như rỗng)
+  → XOÁ mọi nút không có trong đó = toàn bộ đồ thị dev
+```
+
+Đo thật thay vì suy đoán: cắm một nút mốc vào Neo4j dev, chạy **đúng một ca test chỉ kiểm mã 401**.
+
+| | Số nút còn lại |
+|---|---|
+| Trước bản sửa | `0 users, 0 quizzes` — mất sạch |
+| Sau bản sửa | nút mốc còn nguyên, 5 quiz nguyên vẹn |
+
+Sửa bằng `systemPropertyVariables` của surefire, trỏ `spring.neo4j.uri` vào cổng không ai nghe.
+**Không** dùng `src/test/resources/application.yml`: file đó *che hẳn* `application.yml` của `main`
+chứ không gộp vào — thử và hỏng ngay ở placeholder `app.ai.gemini.model`. Mất thêm một lượt nữa mới
+nhận ra `target/test-classes/application.yml` vẫn còn bản sao cũ sau khi đã xoá ở `src`.
+
+> Ba bài học, tách bạch:
+> 1. **Testcontainers chỉ bảo vệ những gì mình khai báo.** Thiếu một dịch vụ là test lặng lẽ dùng bản
+>    thật, và lỗ thủng đó không báo gì cả.
+> 2. **Triệu chứng không trỏ đúng thủ phạm.** "Khu Gợi ý trống" chỉ về phía code gợi ý; thủ phạm nằm
+>    ở cấu hình test. Phân biệt được là nhờ **đo trước/sau**, không phải nhờ đọc code.
+> 3. **Xoá file nguồn không xoá bản đã build.** `rm src/...` xong vẫn hỏng vì `target/test-classes`
+>    còn bản cũ.
+
+### Kỷ luật giữ sạch CSDL dev
+
+Hai lần cần token thật để kiểm chứng, tôi tạo tài khoản tạm rồi **xoá ngay sau khi đo xong**, kiểm
+lại `count(*) where email like '%@example.com'` về 0. Chính đống rác từ kịch bản đo hôm trước (18 tài
+khoản, 21 quiz) đã làm khu Gợi ý toàn quiz "Quiz đo tải 3mqtrf" — công cụ kiểm chứng mà không tự dọn
+thì nó thành dữ liệu bẩn của ngày hôm sau.
+
+### Ghi chú báo cáo
+- **Mục 3.4 (kiểm thử):** dùng chuyện "bộ test xoá đồ thị dev" làm ví dụ cho việc *cô lập môi trường
+  test* — và cho việc test xanh không đồng nghĩa với test đúng.
+- **"Khó khăn & cách giải quyết":** ba lỗi xếp chồng, mỗi cái chỉ lộ ra sau khi sửa cái trước; và
+  cách phân biệt "rỗng đúng" với "rỗng do hỏng".
+- **Chương 2:** `{ items, note }` thay cho mảng trần là ví dụ cụ thể cho nguyên tắc *API phải nói
+  được vì sao không có dữ liệu*.
 
 ---
 

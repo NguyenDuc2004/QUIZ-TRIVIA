@@ -177,6 +177,43 @@ một cờ để câu giải thích nói đúng chuyện đang xảy ra.
 Câu chữ do **backend** viết, không phải frontend: chỉ backend biết đang là tình huống nào. Riêng
 lỗi mạng/401 thì không có `note` nào cả, và giao diện ẩn hẳn khu đó — đoán hộ backend thì dễ nói sai.
 
+## Bộ test từng xoá sạch đồ thị của máy dev
+
+Truy được lỗi này đúng từ triệu chứng "khu Gợi ý trống" ở trên — và suýt đổ oan cho code gợi ý.
+
+PostgreSQL với Redis đã an toàn nhờ Testcontainers, nhưng **11 lớp test khởi động cả ứng dụng mà
+không khai báo `Neo4jContainer`**. Không có container thì cấu hình rơi về mặc định
+`bolt://localhost:7687` — đúng Neo4j dev đang chạy bằng `docker compose`.
+
+Chuỗi hậu quả:
+
+```
+Test khởi động Spring context
+  → GraphSchemaInitializer chạy ở ApplicationReadyEvent
+  → syncPublicCatalog()
+  → pruneDeleted(id hợp lệ lấy từ PostgreSQL CỦA TEST — gần như rỗng)
+  → XOÁ mọi nút không có trong đó = toàn bộ đồ thị dev
+```
+
+Đo thật: cắm một nút mốc vào Neo4j dev rồi chạy **đúng một ca test chỉ kiểm mã 401** — đồ thị còn
+`0 users, 0 quizzes`. Bật bản sửa, chạy lại ca đó: nút mốc còn nguyên.
+
+Sửa bằng `systemPropertyVariables` của surefire trong `pom.xml`, trỏ `spring.neo4j.uri` vào cổng
+không ai nghe. Ứng dụng vốn đã chịu được Neo4j chết nên test chạy bình thường. Lớp nào thật sự cần
+Neo4j thì khai báo `Neo4jContainer` + `@ServiceConnection`, và bean `ConnectionDetails` được ưu tiên
+hơn thuộc tính.
+
+> **Không** đặt ở `src/test/resources/application.yml`: file đó **che hẳn** `application.yml` của
+> `main` chứ không gộp vào, làm mất sạch cấu hình khác. Đã thử và hỏng ngay ở placeholder
+> `app.ai.gemini.model`.
+
+Hai bài học tách bạch:
+
+1. **Dịch vụ nào không được container hoá thì test sẽ lặng lẽ dùng bản thật.** Testcontainers chỉ
+   bảo vệ những gì mình khai báo; thiếu một cái là thủng, mà lỗ thủng đó không báo gì cả.
+2. **Đừng tin triệu chứng chỉ đúng nguyên nhân.** "Khu Gợi ý trống" trỏ về phía code gợi ý, nhưng
+   thủ phạm nằm ở cấu hình test — cách duy nhất phân biệt được là đo trước/sau chứ không phải đọc code.
+
 ## Ghi đồng thời: ba lớp phải sửa, không phải một
 
 Chạy test đầy đủ moi ra một chuỗi lỗi đồng thời — hai luồng cùng đồng bộ hai bài *khác nhau* nhưng
