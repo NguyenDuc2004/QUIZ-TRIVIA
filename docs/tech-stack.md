@@ -27,7 +27,7 @@
 | Thành phần | Công nghệ | Ghi chú |
 |-----------|-----------|---------|
 | Provider chính | **Google Gemini API** | `gemini-3.6-flash` (nhanh), `gemini-2.5-pro` (chất lượng) |
-| Provider dự phòng | **xAI Grok API** | Gói miễn phí, fallback khi Gemini lỗi |
+| Provider dự phòng | **xAI Grok API** | Fallback khi Gemini lỗi tạm thời. ⚠️ **Không có gói miễn phí** — team mới chưa nạp tín dụng thì mọi lời gọi trả 403 `permission-denied`. Đo thật ngày 08/08/2026: key hợp lệ nhưng bị chặn ở tầng quyền. Vì vậy `GROK_API_KEY` để trống, và fallback hiện **chưa chạy thật** dù cơ chế đã hiện thực xong |
 | Embedding | Gemini embedding | Tạo vector cho RAG |
 | HTTP client | Spring `WebClient` | Gọi REST của LLM |
 | Abstraction | ~~Spring AI~~ (không dùng) | Gọi trực tiếp qua `WebClient`, tự viết `AiOrchestrator` để kiểm soát fallback/quota |
@@ -108,7 +108,12 @@ MAX_IMAGE_SIZE_BYTES   # mặc định 2097152 (2MB)
 
 # AI
 GEMINI_API_KEY, GEMINI_MODEL
-GROK_API_KEY, GROK_MODEL
+GROK_API_KEY          # ĐỂ TRỐNG nếu team xAI chưa có tín dụng.
+                      # Điền key của team không tín dụng còn TỆ HƠN để trống: Gemini hết hạn mức
+                      # sẽ chuyển sang Grok, Grok trả 403 (lỗi không tạm thời), và thông báo
+                      # "hết hạn mức, chờ N giây" bị thay bằng "permission denied" khó hiểu.
+                      # Để trống thì AiOrchestrator lọc Grok ra khỏi danh sách ngay từ đầu.
+GROK_MODEL            # mặc định grok-4.5 — grok-2 đã bị xAI gỡ ("Model not found")
 AI_PROVIDER_ORDER=gemini,grok
 ```
 

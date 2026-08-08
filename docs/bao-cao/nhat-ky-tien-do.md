@@ -28,6 +28,7 @@
 | 10/08 | **Đo tải phòng đấu — số liệu mục 3.5** (bắt buộc theo phiếu) | 5/5 | 🟢 xong |
 | 10/08 (chiều) | **Lát cắt 9: thống kê** (FR-26, FR-27) + trả nợ màn chấm tay của lát cắt 6 | 7/7 | 🟢 xong |
 | 10/08 (tối) | Vá 3 lỗi lộ ra khi chạy thật, trong đó **bộ test xoá sạch đồ thị máy dev** | 3/3 | 🟢 xong |
+| 10/08 (đêm) | Chuẩn bị đo mục 3.6 · chốt: **xAI Grok không có gói miễn phí** | 4/4 | 🟡 chờ hạn mức |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -1430,6 +1431,115 @@ thì nó thành dữ liệu bẩn của ngày hôm sau.
   cách phân biệt "rỗng đúng" với "rỗng do hỏng".
 - **Chương 2:** `{ items, note }` thay cho mảng trần là ví dụ cụ thể cho nguyên tắc *API phải nói
   được vì sao không có dữ liệu*.
+
+---
+
+## 📅 T2 — 10/08/2026 (đêm) — Chuẩn bị đo mục 3.6, và kết luận về Grok
+
+**Mục tiêu:** Con số bắt buộc cuối cùng của phiếu. Không xong được hôm nay, nhưng gỡ được ba chướng
+ngại và sửa hai lỗi thật.
+
+### Phép đo tự đốt hạn mức nó cần để chạy
+
+Kịch bản đo đầu tiên bắn 8 bài chấm liên tiếp. Mỗi bài dính 429 rồi **thử lại 4 lần** → một bài hỏng
+tiêu 4 lượt. 8 bài × 4 = tới 32 lượt, trong khi hạn mức ngày của Gemini miễn phí chỉ **20**.
+
+Sửa hai chỗ:
+- Giãn nhịp **70 giây giữa các lượt** (hạn mức là 5 lượt/phút).
+- Cho số lần thử lại **đọc từ cấu hình** thay vì hằng số cứng, để phiên đo đặt về 1:
+  `--app.ai.max-attempts-background=1`.
+
+> Bài học: **phép đo tiêu tài nguyên giống như tải thật.** Chính sách thử lại thiết kế cho "job nền
+> chờ lâu không phiền ai" trở thành có hại khi tài nguyên giới hạn theo ngày chứ không theo phút.
+
+### Lỗi đo suýt vào báo cáo
+
+Lần chạy đầu in ra:
+
+```
+Đủ 3 ý, diễn đạt rõ    AI 0/10 · chuẩn 9–10 · LỆCH 9
+```
+
+Bài trả lời **đầy đủ, chính xác** mà 0 điểm. Nếu tin con số này thì báo cáo sẽ ghi *"AI chấm sai hoàn
+toàn, sai lệch trung bình 6/10"* — trong khi thực tế **AI chưa từng được gọi**. Trạng thái `AI_FAILED`
+cũng để cột `score` bằng 0, và kịch bản đọc thẳng cột đó.
+
+Sửa: bài nào `gradedBy != AI` bị **loại khỏi thống kê**, không tính là 0 điểm, và in rõ "không đo
+được" kèm lý do.
+
+> Gộp *"AI chấm 0 điểm"* với *"AI không chạy"* làm hỏng chính con số đang đo — và nó sẽ trôi vào báo
+> cáo mà không ai phát hiện, vì con số trông có vẻ hợp lý.
+
+### Chốt về Grok: không có gói miễn phí
+
+Ý hay từ phía người dùng: kiến trúc đã có fallback Gemini→Grok, vậy dùng Grok để vượt hạn mức Gemini.
+Đúng về nguyên tắc — và giải luôn chỉ số fallback của mục 3.6.
+
+Thử thật với key xAI mới tạo:
+
+| Thử | Kết quả |
+|---|---|
+| `/v1/chat/completions` + `grok-2` | `Model not found: grok-2` |
+| `/v1/chat/completions` + `grok-4.5` | `permission-denied: team doesn't have any credits` |
+| `/v1/responses` + `grok-4.5` (đúng mẫu console) | `permission-denied` |
+| `/v1/models` | `permission-denied` |
+
+Hai kết luận riêng biệt, đừng lẫn:
+
+1. **`grok-2` đã bị xAI gỡ** — cấu hình đang trỏ vào model không tồn tại. Đây là lỗi thật, độc lập
+   với chuyện tiền: dù có tín dụng, fallback vẫn hỏng vì sai tên. Đã sửa sang `grok-4.5`.
+2. **xAI không có gói miễn phí.** Key hợp lệ, ký đúng, nhưng team chưa nạp tín dụng thì bị chặn ở
+   tầng quyền trước khi tới model.
+
+Lỗi đầu che lỗi sau: `Model not found` xuất hiện trước `permission-denied` vì xAI kiểm tên model
+trước khi kiểm quyền. Sửa tên model mới lộ ra rào chặn thật là tiền — nên tôi đã kết luận sớm một lần
+rồi phải nói lại.
+
+### Vì sao KHÔNG điền key vào `.env` dù đã có
+
+Điền key của team không tín dụng **tệ hơn để trống**:
+
+```
+Gemini hết hạn mức (429 — lỗi TẠM THỜI)
+   → chuyển sang Grok
+   → Grok trả 403 (lỗi KHÔNG tạm thời)
+   → dừng, ném lỗi của Grok ra ngoài
+```
+
+Người dùng đang nhận *"hết hạn mức, chờ 52 giây"* — thông báo hữu ích — sẽ nhận thành *"permission
+denied"*. Để trống thì `AiOrchestrator` lọc Grok ra ngay từ đầu và thông báo giữ nguyên đúng.
+
+Cũng sửa một câu **sai sự thật** trong `tech-stack.md`: dòng mô tả Grok ghi *"Gói miễn phí"*. Không
+đúng, và nếu để nguyên thì báo cáo sẽ khẳng định một điều kiểm chứng được là sai.
+
+### Quyết định: không nạp tiền cho fallback
+
+Fallback là mức **[S] Should**, không phải Must. Bỏ nó không ảnh hưởng bốn trụ cột MVP. Mục 3.6 vẫn
+đo được ba trên bốn chỉ số bằng Gemini.
+
+Trong báo cáo ghi đúng thực tế: *"Cơ chế fallback đã hiện thực và có test tự động che phủ; chưa đo
+được thời gian chuyển thật vì xAI không cung cấp gói miễn phí."* Giới hạn nêu thật, có lý do kiểm
+chứng được — hơn hẳn một con số bịa cho đủ bảng.
+
+### Kế hoạch mục 3.6 (mai, khi hạn mức Gemini hồi)
+
+| Chỉ số | Đo được? | Cách đo |
+|---|---|---|
+| Chất lượng sinh đề | ✅ | % câu qua bộ kiểm duyệt cấu trúc, 2 chủ đề × 5 câu |
+| Độ chính xác chấm tự luận | ✅ | Sai lệch điểm so với **đáp án theo rubric** trên 6 bài mẫu |
+| Chống prompt injection | ✅ | 2 bài tấn công trong cùng bộ mẫu (đã có kết quả sơ bộ 3/3 chặn được) |
+| Thời gian chuyển Gemini→Grok | ❌ | xAI không có gói miễn phí |
+
+Lệnh chạy: khởi động backend với `--app.ai.max-attempts-background=1` rồi
+`node danhgia_ai.mjs` — khoảng 12 phút, tiêu ~10 lượt trong hạn mức 20.
+
+### Ghi chú báo cáo
+- **Mục 3.6:** nói rõ đối chiếu với **đáp án theo rubric**, chưa phải với người chấm thật. Rubric
+  quyết định điểm nên "đúng" là thứ suy ra được từ tiêu chí, không phải ý kiến của người viết kịch bản.
+- **"Khó khăn & cách giải quyết":** hai chuyện đáng kể — phép đo tự đốt hạn mức, và việc gộp
+  "AI chấm 0" với "AI không chạy" làm hỏng số liệu.
+- **Mục 1 (công nghệ):** lý do thực tế cho việc chọn hai provider nhưng chỉ chạy một, và giới hạn
+  của gói miễn phí ảnh hưởng tới thiết kế thế nào.
 
 ---
 
