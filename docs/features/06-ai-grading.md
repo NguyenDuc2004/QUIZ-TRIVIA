@@ -119,6 +119,9 @@ phải công cụ soạn nội dung.
 phải xem được bài. Phạm vi hẹp hết mức — chỉ chủ đúng quiz đó (hoặc Admin), chỉ sửa điểm và nhận xét
 của một câu, không liệt kê được bài làm của ai. Người khác nhận 404, không phải 403.
 
+Endpoint **đọc** bài để chấm (`GET /attempts/{id}/grading`) và danh sách bài cần chấm được bổ sung ở
+[features/09](09-analytics.md) — xem phần "Nợ kỹ thuật" dưới đây.
+
 ## Dữ liệu liên quan
 `questions.rubric`, `attempt_answers` (score, ai_feedback, ai_suggestions, graded_by, graded_at) —
 [database.md](../database.md), migration V9.
@@ -134,6 +137,9 @@ của một câu, không liệt kê được bài làm của ai. Người khác 
 
 ## Nợ kỹ thuật
 - Giải thích **không được lưu**, mỗi lần bấm là một lời gọi mô hình mới.
-- Chưa có màn hình cho Creator duyệt danh sách bài cần chấm tay — API đã có, giao diện chờ
-  [features/09](09-analytics.md).
+- ✅ *Đã trả ở [features/09](09-analytics.md):* màn hình cho Creator duyệt bài cần chấm tay.
+  Nợ này lớn hơn mức nó được ghi lại ở đây: không chỉ thiếu giao diện mà **thiếu cả endpoint đọc bài
+  để chấm** — `PATCH .../grade` một mình thì chấm mà không xem được bài làm. Lát cắt 9 thêm
+  `GET /attempts/{id}/grading` (chỉ câu tự luận, chỉ chủ quiz) và
+  `GET /analytics/quizzes/{id}/attempts` (danh sách kèm cờ cần chấm).
 - Chưa giới hạn hạn mức chấm theo người dùng.

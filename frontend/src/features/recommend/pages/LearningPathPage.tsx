@@ -110,9 +110,8 @@ export default function LearningPathPage() {
           <RecommendedQuizzes />
 
           <Paragraph className="text-ink-soft text-xs">
-            Thứ tự trên dựa hoàn toàn vào <b>tỷ lệ trả lời đúng của bạn</b>, không dựa vào quan hệ
-            tiên quyết giữa các chủ đề — hệ thống chưa có dữ liệu đó nên không suy đoán. Một chủ đề
-            chỉ bị đánh giá khi bạn đã trả lời ít nhất 3 câu thuộc chủ đề đó.
+            Thứ tự trên dựa hoàn toàn vào <b>tỷ lệ trả lời đúng của bạn</b>. Một chủ đề chỉ bị đánh
+            giá khi bạn đã trả lời ít nhất 3 câu thuộc chủ đề đó.
           </Paragraph>
         </>
       )}

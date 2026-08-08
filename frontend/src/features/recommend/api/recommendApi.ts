@@ -6,6 +6,8 @@ export type RecommendationSource = 'WEAK_TOPIC' | 'SIMILAR_LEARNERS' | 'NEW_TOPI
 export interface RecommendedQuiz {
   quizId: string
   title: string
+  /** `null` khi quiz chưa có ảnh — vẽ ô trống cùng kích thước, **không** bịa ảnh thay thế. */
+  thumbnailUrl: string | null
   source: RecommendationSource
   /** Lý do viết sẵn từ backend — hiện thẳng lên thẻ, frontend không tự chế lại. */
   reason: string
@@ -26,6 +28,17 @@ export interface TopicMastery {
   availableQuizzes: number
 }
 
+export interface Recommendations {
+  items: RecommendedQuiz[]
+  /**
+   * Lý do danh sách rỗng, do backend viết; `null` khi **có** gợi ý.
+   *
+   * Ba tình huống rỗng khác nhau hẳn (kho chưa có quiz / đã làm hết / chưa lấy được đồ thị) nên
+   * frontend **không tự chế câu chữ** — nó không biết đang là tình huống nào.
+   */
+  note: string | null
+}
+
 export interface LearningPath {
   topics: TopicMastery[]
   weakCount: number
@@ -36,7 +49,7 @@ export interface LearningPath {
 export const recommendApi = {
   quizzes: (limit = 8) =>
     apiClient
-      .get<RecommendedQuiz[]>('/recommendations', { params: { limit } })
+      .get<Recommendations>('/recommendations', { params: { limit } })
       .then((res) => res.data),
 
   path: () => apiClient.get<LearningPath>('/recommendations/path').then((res) => res.data),
