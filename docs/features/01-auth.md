@@ -92,3 +92,55 @@ GET  /v3/api-docs/**, /swagger-ui/**            (tài liệu API, môi trường
 - `GET /quizzes/{id}` với Guest **không kèm danh sách câu hỏi** (tránh lộ đề); chỉ trả tiêu đề, mô tả, danh mục, độ khó, số câu, thời lượng.
 - Quiz `visibility = private` với Guest trả **404** (không phải 403) để không lộ sự tồn tại của tài nguyên.
 - WebSocket `/ws`: xác thực JWT ngay tại handshake, Guest bị từ chối kết nối.
+
+## Hết phiên ở phía client: ba lỗi trong axios interceptor
+
+Phát hiện khi làm features/09 — giao diện **trông như vẫn đăng nhập** trong khi mọi API cần quyền đều
+trả 401. Cả ba lỗi đều không làm hỏng build và không ca test nào bắt được.
+
+### 1. Nhánh "không có refresh token" lặng lẽ bỏ qua
+
+Interceptor bản đầu chỉ xử lý nhánh *làm mới thất bại*. Trường hợp **không có** refresh token thì
+`shouldRefresh` bằng `false` và nó `reject` trong im lặng — không xoá phiên, không điều hướng:
+
+```
+token chết + user vẫn còn trong localStorage
+  → header hiện tên người dùng như đang đăng nhập
+  → GET /quizzes vẫn tải được (API công khai, không cần token!)
+  → mọi API cần quyền 401, khu nào cần quyền thì trống trơn
+```
+
+Người dùng không có cách nào biết mình cần đăng nhập lại. Cái làm nó khó thấy là **API công khai vẫn
+chạy** nên trang trông vẫn sống. Nay **mọi** lối 401 không cứu được đều đi qua `endSession()`.
+
+### 2. Nhiều request cùng gặp 401 → mỗi request tự đi làm mới
+
+Backend **luân chuyển** refresh token (`refreshTokenService.rotate`), nên lượt làm mới đầu tiên làm
+token cũ mất hiệu lực ngay. Một trang mở ra thường bắn vài request cần quyền cùng lúc:
+
+```
+3 request 401 cùng lúc → 3 lượt refresh song song
+  lượt 1: đổi được token mới, token cũ chết
+  lượt 2, 3: cầm token đã chết → thất bại → endSession()
+  ⇒ đẩy người dùng ra trang đăng nhập DÙ PHIÊN VẪN CÒN CỨU ĐƯỢC
+```
+
+Sửa bằng một biến `refreshInFlight` giữ lượt đang chạy: mọi request cùng chờ đúng một lượt.
+
+### 3. Xoá token nhưng không xoá `user`, và không nói vì sao
+
+`tokenStorage.clear()` chỉ xoá hai khoá token; `user` do `persist` của Zustand lưu ở khoá
+`quizai-auth` vẫn còn. Nay có `clearPersistedSession()` xoá cả ba — xoá **thẳng khoá localStorage**
+chứ không chỉ gọi `clearSession()`, vì `persist` ghi xuống đĩa không đồng bộ mà ngay sau đó là một
+lần điều hướng cứng, nên bản ghi có thể chưa kịp xuống.
+
+Và điều hướng kèm `?expired=1` để trang đăng nhập nói rõ *"Phiên đăng nhập đã hết"*. Bị ném ra trang
+đăng nhập không rõ vì sao thì người dùng tưởng hệ thống lỗi.
+
+> Câu thông báo ghi *"những câu bạn đã trả lời vẫn được lưu"* — đúng, vì mỗi câu được gửi lên server
+> ngay khi chọn (hoặc khi rời ô với câu tự luận). **Không** hứa "không mất gì": chữ đang gõ mà chưa
+> rời ô thì vẫn mất.
+
+Riêng các endpoint trong `NO_RETRY_PATHS` (`/auth/login`, `/register`, `/refresh`, `/logout`) trả 401
+là chuyện bình thường — sai mật khẩu, refresh token chết — nên để form tự hiện lỗi, không đá người
+dùng ra khỏi trang đang thao tác.

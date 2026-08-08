@@ -1,7 +1,7 @@
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router-dom'
-import { Button, Form, Input, Typography } from 'antd'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Alert, Button, Form, Input, Typography } from 'antd'
 import GoogleLoginButton from '../components/GoogleLoginButton'
 import { useLogin } from '../hooks/useAuthMutations'
 import { loginSchema, type LoginForm } from '../schema'
@@ -11,6 +11,10 @@ const { Title, Paragraph } = Typography
 /** Trang đăng nhập — khối giữa trang, viền mảnh, nút đen full-width (docs/ui-design-system.md). */
 export default function LoginPage() {
   const login = useLogin()
+  // `?expired=1` do axios interceptor gắn khi phiên hết hạn. Bị đưa về đây mà không được nói vì sao
+  // thì người dùng tưởng hệ thống lỗi — nhất là khi họ đang làm dở việc gì.
+  const [searchParams] = useSearchParams()
+  const sessionExpired = searchParams.get('expired') === '1'
   const {
     control,
     handleSubmit,
@@ -33,6 +37,18 @@ export default function LoginPage() {
         <Paragraph className="mb-6! text-center text-ink-soft text-xs">
           Học và thi đấu cùng trợ lý AI
         </Paragraph>
+
+        {sessionExpired && (
+          <Alert
+            type="warning"
+            showIcon
+            className="mb-4"
+            message="Phiên đăng nhập đã hết"
+            // Nói đúng thứ được giữ: mỗi câu được lưu lên server ngay khi chọn/rời ô, nên bài dở làm
+            // tiếp được. Hứa "không mất gì" thì sai — chữ đang gõ mà chưa rời ô thì vẫn mất.
+            description="Đăng nhập lại để tiếp tục. Những câu bạn đã trả lời vẫn được lưu."
+          />
+        )}
 
         {/* Validation do React Hook Form + Zod đảm nhiệm, antd chỉ lo phần hiển thị */}
         <Form layout="vertical" onFinish={handleSubmit((values) => login.mutate(values))}>
