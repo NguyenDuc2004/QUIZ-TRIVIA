@@ -150,6 +150,33 @@ nguyên chủ đề người ta chưa đụng tới.
 Nguồn thứ ba cũng giải luôn *cold start*: người vừa đăng ký chưa có hành vi nào, nhưng mọi chủ đề
 đều là mới với họ, nên có gợi ý ngay từ lần đăng nhập đầu tiên.
 
+## Rỗng thì nói vì sao rỗng, không im lặng biến mất
+
+Ba nguồn vẫn cạn được cùng lúc — khi người học **đã làm hết** quiz công khai đang có. Lúc đó danh
+sách rỗng là **câu trả lời đúng**, nhưng giao diện lại ẩn hẳn khu Gợi ý.
+
+Thiết kế ban đầu ẩn nó với lý do: *"người mới thấy 'Gợi ý cho bạn: (trống)' thì chỉ thấy hệ thống
+hỏng"*. Lập luận đúng cho người mới, nhưng ẩn đi lại tạo ra **đúng nỗi nghi đó theo đường khác** —
+người dùng biết tính năng tồn tại, không thấy nó, và kết luận là hỏng. Thực tế đã hiểu nhầm như vậy
+hai lần trước khi sửa.
+
+`/recommendations` vì thế trả `{ items, note }` thay cho một mảng trần, giống `/path` vốn đã làm vậy.
+Ba tình huống rỗng, ba việc nên làm khác nhau:
+
+| Tình huống | `note` |
+|---|---|
+| Kho chưa có quiz công khai có câu hỏi | "Chưa có quiz công khai nào có câu hỏi để gợi ý." |
+| Đã làm hết quiz đang có | "Bạn đã làm hết quiz công khai đang có. Quiz mới xuất bản sẽ xuất hiện ở đây." |
+| Không truy vấn được đồ thị | "Chưa lấy được gợi ý lúc này. Thử lại sau ít phút." |
+
+Tình huống thứ ba đáng chú ý: trước đây Neo4j hỏng thì lỗi bị nuốt và trả rỗng — đúng (gợi ý không
+được kéo sập trang chủ) nhưng **nuốt xong im lặng**, nên người dùng nhận đúng một màn hình trống
+giống hệt khi đã làm hết quiz. Hai chuyện hoàn toàn khác nhau. Nay `safely()` ghi nhận việc hỏng vào
+một cờ để câu giải thích nói đúng chuyện đang xảy ra.
+
+Câu chữ do **backend** viết, không phải frontend: chỉ backend biết đang là tình huống nào. Riêng
+lỗi mạng/401 thì không có `note` nào cả, và giao diện ẩn hẳn khu đó — đoán hộ backend thì dễ nói sai.
+
 ## Ghi đồng thời: ba lớp phải sửa, không phải một
 
 Chạy test đầy đủ moi ra một chuỗi lỗi đồng thời — hai luồng cùng đồng bộ hai bài *khác nhau* nhưng

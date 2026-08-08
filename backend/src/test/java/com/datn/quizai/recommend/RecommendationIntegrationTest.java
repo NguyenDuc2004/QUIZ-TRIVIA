@@ -286,12 +286,7 @@ class RecommendationIntegrationTest {
         graphSync.rebuildForUser(userId);
         syncQuizIntoGraph(suggested);
 
-        String body = mockMvc.perform(get("/api/v1/recommendations")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
-        JsonNode items = objectMapper.readTree(body);
+        JsonNode items = recommendations(token, 8);
         List<String> ids = items.findValuesAsText("quizId");
 
         assertThat(ids).contains(suggested);
@@ -378,12 +373,8 @@ class RecommendationIntegrationTest {
         graphSync.sync(UUID.fromString(takeQuiz(sharedQuiz, peerToken, 3)));
         graphSync.sync(UUID.fromString(takeQuiz(peerOnlyQuiz, peerToken, 3)));
 
-        String body = mockMvc.perform(get("/api/v1/recommendations")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
-        assertThat(objectMapper.readTree(body).findValuesAsText("quizId")).contains(peerOnlyQuiz);
+        assertThat(recommendations(learnerToken, 8).findValuesAsText("quizId"))
+                .contains(peerOnlyQuiz);
     }
 
     @Test
@@ -402,12 +393,7 @@ class RecommendationIntegrationTest {
 
         // Xin nhiều hơn mặc định: kho test tích luỹ khá nhiều quiz qua các ca trước, mà ca này
         // chỉ quan tâm quiz kia CÓ được gợi ý hay không, không quan tâm nó đứng thứ mấy.
-        String body = mockMvc.perform(get("/api/v1/recommendations").param("limit", "20")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
-        JsonNode items = objectMapper.readTree(body);
+        JsonNode items = recommendations(token, 20);
         // Không có nguồn thứ ba thì khu Gợi ý trống trơn, dù kho còn nguyên chủ đề chưa thử
         assertThat(items.findValuesAsText("quizId")).contains(unexplored);
 
@@ -430,13 +416,8 @@ class RecommendationIntegrationTest {
 
         String token = register("nguoi-vua-dang-ky@example.com", "LEARNER");
 
-        String body = mockMvc.perform(get("/api/v1/recommendations").param("limit", "20")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
         // Chưa có hành vi nào để phân tích, nhưng mọi chủ đề đều là mới với họ
-        assertThat(objectMapper.readTree(body).findValuesAsText("quizId")).contains(existing);
+        assertThat(recommendations(token, 20).findValuesAsText("quizId")).contains(existing);
     }
 
     // ================================================================ trường hợp biên
@@ -477,6 +458,44 @@ class RecommendationIntegrationTest {
     }
 
     @Test
+    @DisplayName("Đã làm hết quiz đang có: danh sách rỗng NHƯNG có câu giải thích, không im lặng biến mất")
+    void shouldExplainWhyThereIsNothingToRecommend() throws Exception {
+        // Khu Gợi ý ẩn khi rỗng thì người dùng không phân biệt được "hết quiz để gợi ý" với "tính
+        // năng hỏng" — đã hiểu nhầm thành hỏng trên thực tế. Câu giải thích do backend viết vì chỉ
+        // nó biết đang là tình huống nào.
+        String token = register("da-lam-het@example.com", "LEARNER");
+
+        // Làm hết mọi quiz công khai đang có trong đồ thị, kể cả quiz do ca khác tạo
+        for (int round = 0; round < 5; round++) {
+            JsonNode items = recommendations(token, 50);
+            if (items.isEmpty()) {
+                break;
+            }
+            for (JsonNode item : items) {
+                takeQuizIgnoringFailure(item.get("quizId").asText(), token);
+            }
+        }
+
+        JsonNode body = recommendationsBody(token, 4);
+        assertThat(body.get("items")).isEmpty();
+        assertThat(body.get("note").asText())
+                .as("rỗng thì phải nói vì sao rỗng")
+                .contains("đã làm hết");
+    }
+
+    @Test
+    @DisplayName("Có gợi ý thì KHÔNG kèm ghi chú — thêm một dòng chữ thừa chỉ làm loãng")
+    void shouldNotAddNoteWhenThereAreRecommendations() throws Exception {
+        String token = register("co-goi-y@example.com", "LEARNER");
+        quizWithTopic("Quiz cho người có gợi ý", "Chủ đề có gợi ý", 3);
+        graphSync.syncPublicCatalog();
+
+        JsonNode body = recommendationsBody(token, 4);
+        assertThat(body.get("items")).isNotEmpty();
+        assertThat(body.get("note").isNull()).isTrue();
+    }
+
+    @Test
     @DisplayName("Guest không xem được gợi ý — gợi ý dựa trên lịch sử của chính người gọi")
     void shouldRejectGuest() throws Exception {
         mockMvc.perform(get("/api/v1/recommendations")).andExpect(status().isUnauthorized());
@@ -498,11 +517,8 @@ class RecommendationIntegrationTest {
         // Quiz riêng tư thì người ngoài không vào làm được (404) — chính chủ tự làm để nó vào đồ thị
         graphSync.sync(UUID.fromString(takeQuiz(privateQuiz, creatorToken, 0)));
 
-        String body = mockMvc.perform(get("/api/v1/recommendations")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andReturn().getResponse().getContentAsString();
-
-        assertThat(objectMapper.readTree(body).findValuesAsText("quizId")).doesNotContain(privateQuiz);
+        assertThat(recommendations(token, 8).findValuesAsText("quizId"))
+                .doesNotContain(privateQuiz);
     }
 
     // ================================================================ helper
@@ -561,8 +577,27 @@ class RecommendationIntegrationTest {
                 .all().stream().toList();
     }
 
-    /** Danh sách gợi ý của một người, đúng như API trả về. */
+    /**
+     * Làm một quiz và bỏ qua nếu không làm được.
+     * <p>
+     * Dùng khi cần "làm cho hết mọi quiz được gợi ý": vài quiz do ca khác tạo có thể đã bị xoá hoặc
+     * đổi trạng thái giữa chừng, và ca test này không quan tâm tới chúng.
+     */
+    private void takeQuizIgnoringFailure(String quizId, String token) {
+        try {
+            graphSync.sync(UUID.fromString(takeQuiz(quizId, token, 0)));
+        } catch (Exception | AssertionError ignored) {
+            // Không làm được thì thôi — mục tiêu là làm cạn danh sách gợi ý, không phải quiz cụ thể
+        }
+    }
+
+    /** Chỉ mảng gợi ý — dùng cho phần lớn phép kiểm. */
     private JsonNode recommendations(String token, int limit) throws Exception {
+        return recommendationsBody(token, limit).get("items");
+    }
+
+    /** Cả thân phản hồi, gồm `note` — dùng khi kiểm câu giải thích lúc danh sách rỗng. */
+    private JsonNode recommendationsBody(String token, int limit) throws Exception {
         String body = mockMvc.perform(get("/api/v1/recommendations")
                         .param("limit", String.valueOf(limit))
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
@@ -578,12 +613,7 @@ class RecommendationIntegrationTest {
      * tình nói về "quiz có nằm trong 4 thẻ đầu hay không".
      */
     private JsonNode findRecommendation(String token, String quizId) throws Exception {
-        String body = mockMvc.perform(get("/api/v1/recommendations").param("limit", "50")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
-        for (JsonNode item : objectMapper.readTree(body)) {
+        for (JsonNode item : recommendations(token, 50)) {
             if (item.get("quizId").asText().equals(quizId)) {
                 return item;
             }

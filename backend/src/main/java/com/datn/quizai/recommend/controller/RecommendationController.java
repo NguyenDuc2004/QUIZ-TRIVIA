@@ -2,7 +2,7 @@ package com.datn.quizai.recommend.controller;
 
 import com.datn.quizai.auth.service.JwtService;
 import com.datn.quizai.recommend.dto.LearningPathResponse;
-import com.datn.quizai.recommend.dto.RecommendedQuizResponse;
+import com.datn.quizai.recommend.dto.RecommendationsResponse;
 import com.datn.quizai.recommend.service.GraphSyncService;
 import com.datn.quizai.recommend.service.RecommendationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,9 +42,10 @@ public class RecommendationController {
     }
 
     @GetMapping
-    @Operation(summary = "Quiz gợi ý cho tôi (FR-34). Trộn hai nguồn: quiz chạm chủ đề tôi đang yếu, "
-            + "và quiz mà những người học có hành vi giống tôi đã làm. Mỗi mục kèm lý do.")
-    public List<RecommendedQuizResponse> recommend(
+    @Operation(summary = "Quiz gợi ý cho tôi (FR-34). Trộn ba nguồn: quiz chạm chủ đề tôi đang yếu, "
+            + "quiz mà những người học có hành vi giống tôi đã làm, và chủ đề tôi chưa thử. Mỗi mục "
+            + "kèm lý do; danh sách rỗng thì `note` nói rõ VÌ SAO rỗng.")
+    public RecommendationsResponse recommend(
             @AuthenticationPrincipal JwtService.AuthenticatedUser current,
             @RequestParam(defaultValue = "" + DEFAULT_LIMIT) int limit) {
         return recommendationService.recommendQuizzes(current.id(), Math.clamp(limit, 1, MAX_LIMIT));

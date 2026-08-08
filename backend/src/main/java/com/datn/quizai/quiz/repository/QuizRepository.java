@@ -102,6 +102,16 @@ public interface QuizRepository extends JpaRepository<Quiz, UUID> {
             + "from Quiz q where q.id in :ids")
     List<QuizCardRow> findCardsByIds(@Param("ids") Collection<UUID> ids);
 
+    /**
+     * Số quiz công khai <b>có câu hỏi</b>.
+     * <p>
+     * Dùng để trả lời "kho có gì để gợi ý hay không". Quiz công khai mà 0 câu hỏi thì không tính:
+     * gợi ý nó ra thì người dùng bấm vào cũng không làm được gì.
+     */
+    @Query("select count(distinct q.id) from Quiz q join q.quizQuestions qq "
+            + "where q.visibility = com.datn.quizai.quiz.domain.Visibility.PUBLIC")
+    long countPublicQuizzesWithQuestions();
+
     /** Đủ để vẽ một thẻ quiz, không hơn. */
     interface QuizCardRow {
         UUID getId();

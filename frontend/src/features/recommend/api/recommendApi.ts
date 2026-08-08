@@ -28,6 +28,17 @@ export interface TopicMastery {
   availableQuizzes: number
 }
 
+export interface Recommendations {
+  items: RecommendedQuiz[]
+  /**
+   * Lý do danh sách rỗng, do backend viết; `null` khi **có** gợi ý.
+   *
+   * Ba tình huống rỗng khác nhau hẳn (kho chưa có quiz / đã làm hết / chưa lấy được đồ thị) nên
+   * frontend **không tự chế câu chữ** — nó không biết đang là tình huống nào.
+   */
+  note: string | null
+}
+
 export interface LearningPath {
   topics: TopicMastery[]
   weakCount: number
@@ -38,7 +49,7 @@ export interface LearningPath {
 export const recommendApi = {
   quizzes: (limit = 8) =>
     apiClient
-      .get<RecommendedQuiz[]>('/recommendations', { params: { limit } })
+      .get<Recommendations>('/recommendations', { params: { limit } })
       .then((res) => res.data),
 
   path: () => apiClient.get<LearningPath>('/recommendations/path').then((res) => res.data),

@@ -1,6 +1,7 @@
 package com.datn.quizai.recommend.service;
 
 import com.datn.quizai.recommend.dto.LearningPathResponse;
+import com.datn.quizai.recommend.dto.RecommendationsResponse;
 import com.datn.quizai.recommend.dto.RecommendedQuizResponse;
 import com.datn.quizai.recommend.dto.TopicMasteryResponse;
 import com.datn.quizai.quiz.repository.QuizRepository;
@@ -49,8 +50,35 @@ public class RecommendationService {
      * (chưa sai gì) không có gợi ý nào, còn chỉ theo cộng tác thì gợi ý trôi theo đám đông mà không
      * liên quan gì tới chỗ người này đang hổng.
      */
-    public List<RecommendedQuizResponse> recommendQuizzes(UUID userId, int limit) {
-        Collected first = collect(userId, limit);
+    public RecommendationsResponse recommendQuizzes(UUID userId, int limit) {
+        GraphHealth health = new GraphHealth();
+        List<RecommendedQuizResponse> items = merge(userId, limit, health);
+        return RecommendationsResponse.of(items, noteForEmpty(health));
+    }
+
+    /**
+     * Vì sao danh sách rỗng — ba tình huống, ba việc người dùng nên làm khác nhau.
+     * <p>
+     * Chỉ chạy khi danh sách rỗng, nên câu đếm quiz không tốn gì trong trường hợp thường.
+     */
+    private String noteForEmpty(GraphHealth health) {
+        if (health.failed) {
+            // Nói thật là chưa lấy được, đừng để người dùng tưởng kho quiz trống rỗng
+            return "Chưa lấy được gợi ý lúc này. Thử lại sau ít phút.";
+        }
+        if (quizRepository.countPublicQuizzesWithQuestions() == 0) {
+            return "Chưa có quiz công khai nào có câu hỏi để gợi ý.";
+        }
+        return "Bạn đã làm hết quiz công khai đang có. Quiz mới xuất bản sẽ xuất hiện ở đây.";
+    }
+
+    /** Đồ thị có hỏng trong lượt truy vấn này không — quyết định câu giải thích khi rỗng. */
+    private static final class GraphHealth {
+        private boolean failed;
+    }
+
+    private List<RecommendedQuizResponse> merge(UUID userId, int limit, GraphHealth health) {
+        Collected first = collect(userId, limit, health);
 
         // Nút quiz đã xoá bị loại ở bước lấy dữ liệu hiển thị, mà lúc đó danh sách đã cắt theo
         // limit — nên nút rác "ăn" mất chỗ và người dùng nhận ít gợi ý hơn, có khi trống trơn dù kho
@@ -59,7 +87,7 @@ public class RecommendationService {
         // Chỉ chạy khi THẬT SỰ có nút bị loại, không chạy khi đơn giản là kho ít quiz — nếu không thì
         // mỗi lượt gợi ý trên kho nhỏ đều tốn thêm một vòng truy vấn đồ thị mà không đổi được gì.
         if (first.dropped() > 0) {
-            Collected wider = collect(userId, limit + first.dropped());
+            Collected wider = collect(userId, limit + first.dropped(), health);
             List<RecommendedQuizResponse> items = wider.items();
             return items.size() > limit ? List.copyOf(items.subList(0, limit)) : items;
         }
@@ -71,17 +99,17 @@ public class RecommendationService {
     private record Collected(List<RecommendedQuizResponse> items, int dropped) {
     }
 
-    private Collected collect(UUID userId, int limit) {
+    private Collected collect(UUID userId, int limit, GraphHealth health) {
         Map<UUID, RecommendedQuizResponse> merged = new LinkedHashMap<>();
 
         int weakSlots = Math.min(limit, WEAK_TOPIC_SHARE);
-        for (Map<String, Object> row : safely(() -> repository.weakTopicQuizzes(userId, weakSlots))) {
+        for (Map<String, Object> row : safely(health, () -> repository.weakTopicQuizzes(userId, weakSlots))) {
             RecommendedQuizResponse item = fromWeakTopic(row);
             merged.put(item.quizId(), item);
         }
 
         if (merged.size() < limit) {
-            for (Map<String, Object> row : safely(() -> repository.peerQuizzes(userId, limit))) {
+            for (Map<String, Object> row : safely(health, () -> repository.peerQuizzes(userId, limit))) {
                 RecommendedQuizResponse item = fromPeers(row);
                 // Quiz đã lọt vào vì chủ đề yếu thì giữ nguyên lý do đó — nó cụ thể hơn
                 merged.putIfAbsent(item.quizId(), item);
@@ -94,7 +122,7 @@ public class RecommendationService {
         // Vẫn chưa đủ: đề xuất chủ đề chưa thử. Không có nhánh này thì người đã làm hết quiz thuộc
         // chủ đề mình yếu sẽ thấy khu Gợi ý trống trơn, dù kho quiz còn nguyên chủ đề khác.
         if (merged.size() < limit) {
-            for (Map<String, Object> row : safely(() -> repository.unexploredTopicQuizzes(userId, limit))) {
+            for (Map<String, Object> row : safely(health, () -> repository.unexploredTopicQuizzes(userId, limit))) {
                 RecommendedQuizResponse item = fromNewTopic(row);
                 merged.putIfAbsent(item.quizId(), item);
                 if (merged.size() >= limit) {
@@ -229,11 +257,28 @@ public class RecommendationService {
     }
 
     /** Xem javadoc lớp: đồ thị hỏng thì gợi ý rỗng, không kéo sập trang. */
-    private Collection<Map<String, Object>> safely(java.util.function.Supplier<Collection<Map<String, Object>>> query) {
+    private Collection<Map<String, Object>> safely(
+            java.util.function.Supplier<Collection<Map<String, Object>>> query) {
+        return safely(null, query);
+    }
+
+    /**
+     * Như trên, nhưng <b>ghi nhận</b> việc đồ thị hỏng vào {@code health}.
+     * <p>
+     * Nuốt lỗi rồi trả rỗng là đúng (gợi ý không được kéo sập trang chủ), nhưng nuốt xong <i>im
+     * lặng</i> thì người dùng nhận đúng một màn hình trống giống như khi đã làm hết quiz — hai
+     * chuyện hoàn toàn khác nhau. Cờ này để câu giải thích nói đúng chuyện đang xảy ra.
+     */
+    private Collection<Map<String, Object>> safely(
+            GraphHealth health,
+            java.util.function.Supplier<Collection<Map<String, Object>>> query) {
         try {
             return query.get();
         } catch (Exception e) {
             log.warn("Không truy vấn được đồ thị gợi ý: {}", e.getMessage());
+            if (health != null) {
+                health.failed = true;
+            }
             return List.of();
         }
     }

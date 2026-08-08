@@ -366,8 +366,23 @@ kiện thứ hai quan trọng không kém: sai 1 trên 1 câu là 0% nhưng khô
 **Không có `rating`.** Hệ thống chưa có tính năng đánh giá quiz, nên gợi ý sắp theo *số câu khớp chủ
 đề đang yếu* rồi tới *số lượt làm thật* — không sắp theo một con số không tồn tại.
 
-`/path` trả kèm `note` giải thích khi chưa đủ dữ liệu (chưa làm bài nào, chưa đủ 3 câu một chủ đề,
-hoặc không yếu chủ đề nào). Danh sách rỗng mà không nói vì sao thì người dùng tưởng hệ thống hỏng.
+**Danh sách rỗng phải nói được vì sao rỗng.** Cả hai endpoint trả `{ items | topics, note }` chứ
+không trả thẳng một mảng:
+
+| Endpoint | `note` khi rỗng |
+|---|---|
+| `/path` | chưa làm bài nào · chưa đủ 3 câu một chủ đề · không yếu chủ đề nào |
+| `/recommendations` | kho chưa có quiz công khai có câu hỏi · **đã làm hết quiz đang có** · không truy vấn được đồ thị |
+
+`note` là `null` khi danh sách **có** dữ liệu — lúc đó không có gì cần giải thích, thêm một dòng chữ
+chỉ làm loãng.
+
+Ba tình huống rỗng của `/recommendations` dẫn tới **ba việc người dùng nên làm khác nhau**, nên
+không gộp thành một câu chung. Frontend không tự chế câu chữ vì nó không biết đang là tình huống
+nào; riêng lỗi mạng/401 thì không có `note` và giao diện ẩn hẳn khu đó.
+
+> Giao diện **ẩn hẳn khu Gợi ý khi rỗng** là thiết kế ban đầu, và nó sai: người dùng biết tính năng
+> tồn tại, không thấy nó, và kết luận là hỏng. Đã hiểu nhầm như vậy trên thực tế trước khi có `note`.
 
 **Neo4j hỏng thì trả rỗng, không trả 500** — gợi ý là tính năng phụ trợ trên trang chủ, không đáng
 kéo cả trang sập.
