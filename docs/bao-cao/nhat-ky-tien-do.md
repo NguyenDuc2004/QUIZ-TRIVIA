@@ -1658,6 +1658,135 @@ không phụ thuộc học liệu mà ca khác chia sẻ.
 
 ---
 
+## 📅 T5 — 13/08/2026 — Chỉ mục vector làm sai kết quả, và bốn chỗ giao diện hứa quá tay
+
+**Mục tiêu:** đưa lát cắt 8 đi hết một lượt bằng tay trên trình duyệt trước khi mở PR. Không thêm tính
+năng, chỉ kiểm chứng thứ hôm 11/08 đã báo là xong.
+
+**Xong:** một lỗi truy xuất RAG (nặng) · **một lỗi rò dữ liệu giữa các tài khoản** · bốn chỗ điều
+hướng/nội dung sai theo vai trò · migration V11 · 2 ca test mới (một ca hành vi, một chốt chặn schema).
+
+### Lỗi nặng: chỉ mục ANN lọc sau, quyền lọc trước
+
+Đăng nhập bằng tài khoản người học rồi hỏi trợ lý một câu **nằm gần như nguyên văn** trong tài liệu đã
+bật chia sẻ. Trợ lý đáp *"chưa có tài liệu nào liên quan"*. `sources` rỗng.
+
+Kho vector không hề rỗng — kiểm từng lớp một:
+
+| Kiểm | Kết quả |
+|---|---|
+| Tài liệu `shared = true`, `status = READY` | ✅ |
+| 9 đoạn, đủ 9 embedding, 768 chiều, đã chuẩn hoá | ✅ |
+| Điều kiện lọc quyền chạy tay bằng SQL | ✅ 9 dòng |
+| Ngưỡng `MAX_DISTANCE = 0.75` quá chặt? | ❌ log ghi `0 đoạn` — chưa tới bước lọc ngưỡng |
+| SQL và tham số backend gửi đi (log `TRACE`) | ✅ đúng y file nguồn |
+
+Cùng một câu truy vấn, thêm `order by distance limit 5` thì ra **0 dòng**, bỏ `limit` ra **9 dòng**.
+`EXPLAIN ANALYZE` chỉ đúng thủ phạm: `Index Scan using idx_material_chunks_embedding` trả về **2 dòng**,
+cả 2 thuộc tài liệu chưa chia sẻ, `Join Filter` loại sạch → rỗng.
+
+```
+ivfflat.probes = 1  (mặc định) → 0 đoạn
+ivfflat.probes = 100 (quét hết) → 5 đoạn, khoảng cách 0.193–0.319
+```
+
+Cơ chế: index xấp xỉ lấy `n` đoạn gần nhất **toàn kho** trước, bộ lọc quyền áp lên `n` dòng đó sau.
+Ứng viên không được phép đọc bị loại và **không có gì bù lại**. IVFFlat chia vector thành `lists = 100`
+cụm mà chỉ quét 1 cụm; trên vài chục vector, một cụm gần như không chứa gì.
+
+**Sửa:** lọc quyền trong CTE `materialized` rồi mới tính khoảng cách trên đúng tập được phép đọc — tìm
+chính xác, không xấp xỉ. V11 bỏ luôn index: ở quy mô vài trăm tới vài nghìn đoạn, quét thẳng nhanh hơn
+dựng cây và không bỏ sót. Sau khi sửa: `5 đoạn, giữ 5`, khoảng cách 0.194–0.287, câu trả lời bám slide
+và trích dẫn đúng tên tài liệu.
+
+> Bài học: **thêm chỉ mục là một quyết định về độ đúng, không chỉ về tốc độ.** Chỉ mục xấp xỉ đứng
+> trước một bộ lọc quyền thì đổi cả kết quả, và đổi trong im lặng — không lỗi, không cảnh báo, kho dữ
+> liệu chỉ trông như rỗng. Đây cũng là lần thứ hai trong dự án một lỗi RAG chọn cách *trả về rỗng* thay
+> vì *báo hỏng*; cả hai lần đều chỉ lộ ra khi có người đi hết luồng bằng tay.
+
+### Bốn chỗ giao diện hứa thứ người dùng không có quyền làm
+
+Cùng một gốc: trang Học liệu chỉ dành cho Creator, nhưng giao diện không nhất quán với điều đó.
+
+| Chỗ | Trước | Sau |
+|---|---|---|
+| Navbar | không có mục Học liệu cho **bất kỳ** vai trò nào — trang chỉ vào được bằng gõ URL | có, chỉ hiện với CREATOR/ADMIN |
+| Route `/ai/materials`, `/ai/generate` | ai đăng nhập cũng vào được, rồi ăn 403 từ API → trang toàn lỗi | sai vai trò thì đưa về `/quizzes` |
+| Gợi ý ô chat | *"tài liệu **của bạn**…"* cho mọi người | người học: *"…học liệu mà người tạo nội dung đã chia sẻ"* |
+| Chú thích dưới ô nhập | luôn mời vào trang Học liệu | người học: *"Học liệu do người tạo nội dung nạp và chia sẻ."* |
+
+`ProtectedRoute` nhận thêm prop `roles` để dùng lại cho các khu vực phân quyền sau. Kiểm chứng bằng
+tài khoản người học thật: `GET /api/v1/ai/materials` → **403**, tức backend vốn đã chặn đúng; chỗ hỏng
+nằm ở tầng giao diện, mời người dùng vào cửa mà sau đó không mở.
+
+> Bài học: một trang **có mà không có đường tới** thì coi như chưa xong. Và giao diện nói với người
+> dùng những gì họ *sẽ làm được* — nói quá tay thì thành lời hứa suông, dù backend hoàn toàn đúng.
+
+### Lỗi nặng thứ hai: đăng nhập tài khoản này, thấy dữ liệu tài khoản kia
+
+Đăng nhập lần lượt hai tài khoản trên cùng trình duyệt thì **thấy lịch sử chat của tài khoản trước**.
+
+Backend không sai: `findByUserIdOrderByUpdatedAtDesc(userId)` và `findOwned(id, userId)` đều lọc theo
+người gọi. Lỗi ở client, và cơ chế rất đời thường: đăng xuất rồi đăng nhập đều là **điều hướng phía
+client**, không có lần nạp lại trang nào ở giữa, nên `QueryClient` tạo một lần ở `main.tsx` sống nguyên
+qua cả hai phiên cùng toàn bộ dữ liệu đã tải. Cộng thêm `staleTime: 30_000`, dữ liệu người trước còn
+được coi là *tươi* nên trang hiện ra ngay mà **không gọi lại API**.
+
+Không giới hạn ở lịch sử chat — mọi thứ đi qua cache đều rò: lượt làm bài, tiến độ, quiz của tôi, ngân
+hàng câu hỏi, học liệu.
+
+**Sửa:** `queryClient.clear()` ở cả bốn lối đổi danh tính (`useLogin`, `useGoogleLogin`, `useRegister`,
+`useLogout`). Xoá ở cả lối vào và lối ra vì hai lối không bao hàm nhau — mở thẳng `/login` mà chưa từng
+bấm đăng xuất là chuyện thường. Ở lối vào xoá **trước** `setSession()`, để không tồn tại khoảnh khắc nào
+danh tính là người mới mà cache là dữ liệu người cũ.
+
+Chưa viết được ca test tự động: frontend **chưa dựng hạ tầng test** (không vitest/jest). Ghi vào nợ chứ
+không tự mở rộng phạm vi — nhưng đây đúng là loại lỗi một ca test rẻ tiền bắt được.
+
+> Bài học: **xoá phiên không chỉ là xoá token.** Phải xoá mọi thứ lưu theo danh tính, mà trong ứng dụng
+> một trang thì cache dữ liệu là chỗ dễ quên nhất: nó không nằm trong localStorage để lộ ra khi dọn, và
+> nó biến mất mỗi lần F5 nên dò lỗi bằng tay rất dễ tưởng không có vấn đề. Cả ba lỗi nặng của dự án tới
+> giờ (nhánh `materialId = null`, chỉ mục IVFFlat, và lần này) đều **không làm chương trình báo lỗi** —
+> chúng chỉ trả về dữ liệu sai một cách yên lặng.
+
+### Nợ / chuyển sang ngày sau
+
+- **[!] Người học không thấy mình được hỏi trên tài liệu nào.** Cột `shared` lo được việc truy xuất ra
+  gì, nhưng không có đường nào cho người học *xem danh sách* tài liệu đã chia sẻ: `GET /ai/materials`
+  vừa chặn CREATOR/ADMIN vừa chỉ trả tài liệu của chính mình, nên mở quyền cũng vẫn rỗng. Họ chỉ biết
+  một tài liệu tồn tại sau khi đã hỏi trúng nó qua khối `sources` — trước đó là hỏi mò. Kèm theo:
+  `ChatAskRequest.materialId` (giới hạn câu hỏi trong một tài liệu) đã có ở backend và `useChat` cũng
+  nhận tham số đó, nhưng giao diện không có cách chọn vì không có danh sách — nửa tính năng xây rồi mà
+  chưa dùng được. Hướng làm đã ghi ở `features/08`: endpoint `GET /ai/chat/materials` đặt trong
+  `ChatController`, trả **chỉ metadata**, không trả nội dung.
+- **[!] Frontend chưa có hạ tầng test** (không vitest/jest). Lỗi rò cache giữa hai tài khoản hôm nay là
+  đúng loại một ca test rẻ tiền bắt được, mà hiện không có chỗ nào để viết ca đó.
+- `RecommendationIntegrationTest` vẫn chờ chạy lại.
+- **Đo lại mục 3.6:** mọi số grounding trước 13/08 đo trên đường truy xuất đang lỗi.
+- Chương 1 và Chương 2 của báo cáo.
+
+### Ghi chú báo cáo
+- **Chương 1 (công nghệ):** pgvector — đánh đổi giữa tìm chính xác và tìm xấp xỉ (IVFFlat/HNSW), và
+  điều kiện để ANN có nghĩa (số vector phải lớn hơn số cụm rất nhiều lần).
+- **Chương 2 (thiết kế):** thứ tự *lọc quyền trước, xếp hạng sau* là một ràng buộc thiết kế của RAG có
+  phân quyền, không phải chi tiết tối ưu.
+- **Mục 3.4 (kiểm thử):** đây là ví dụ tốt cho *giới hạn của kiểm thử hồi quy*, nên viết thẳng cả phần
+  không làm được. Bộ test cũ xanh suốt dù lỗi đang tồn tại, vì mỗi ca chỉ chèn 2 đoạn — quá ít để bộ tối
+  ưu chọn đi qua chỉ mục. Tôi viết ca hồi quy theo hành vi, rồi **thử lại bằng chính truy vấn bản lỗi để
+  xem test có đỏ không: nó vẫn xanh.** Thử buộc bằng `enable_seqscan = off` trên một kết nối riêng cũng
+  không đủ, vì câu truy vấn thật có JOIN nên kế hoạch rẽ hướng khác. Kết luận: lỗi này phụ thuộc **kế
+  hoạch thực thi**, không phụ thuộc ngữ nghĩa SQL, nên không tái hiện ổn định ở quy mô dữ liệu test.
+  Thay bằng **chốt chặn ở tầng schema** — khẳng định `material_chunks` không có chỉ mục `ivfflat`/`hnsw`,
+  tức chặn đúng điều kiện làm lỗi tái phát, kèm thông điệp chỉ rõ phải làm gì nếu thật sự cần ANN. Bài
+  học đáng ghi: **một ca test xanh ở cả bản đúng và bản lỗi thì không bảo vệ gì cả** — phải thử làm nó
+  đỏ mới biết nó có tác dụng.
+- **Mục 3.6 (độ chính xác AI):** số đo trước ngày này lấy trên đường truy xuất đang lỗi. Nếu có phần
+  đánh giá grounding thì phải **đo lại** sau V11.
+- **"Khó khăn & cách giải quyết":** hai mục trên. Điểm chung: cả hai đều không làm chương trình báo lỗi,
+  nên chỉ chạy thật mới thấy — build xanh và test xanh đều không đủ.
+
+---
+
 ## 🧩 Mẫu ngày (copy để dùng)
 
 ```markdown
