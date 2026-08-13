@@ -134,6 +134,66 @@ class MaterialChunkRepositoryTest {
     }
 
     @Test
+    @DisplayName("Đoạn được phép đọc phải tìm ra dù có NHIỀU đoạn riêng tư gần hơn nó")
+    void shouldFindPermittedChunkEvenWhenPrivateOnesAreCloser() {
+        // Tái hiện lỗi mà bản trước mắc: câu SQL phẳng "where <quyền> order by distance limit n" khiến
+        // PostgreSQL dùng index vector lấy n đoạn gần nhất TOÀN KHO rồi mới lọc quyền lên n dòng đó.
+        // Đoạn không được phép đọc bị loại mà không có gì bù lại, nên kết quả rỗng dù kho có đoạn hợp lệ.
+        //
+        // Ở đây 10 đoạn riêng tư của người khác đều gần vector truy vấn hơn đoạn đã chia sẻ. Với limit 5,
+        // cách xếp-trước-lọc-sau sẽ chọn đúng 5 đoạn riêng tư rồi loại sạch → trả về rỗng.
+        UUID privateOfOther = insertMaterial(otherOwnerId, "Tài liệu riêng của người khác", true);
+        for (int i = 0; i < 10; i++) {
+            insertChunk(privateOfOther, i, "Đoạn riêng tư " + i, queryVector());
+        }
+
+        UUID shared = insertMaterial(otherOwnerId, "Bài giảng đã chia sẻ", true);
+        insertChunk(shared, 0, "Đoạn đã chia sẻ, xa hơn một chút", tiltedVector(0.4f));
+        jdbc.update("update learning_materials set shared = true where id = ?", shared);
+
+        List<MaterialChunkRepository.Chunk> found =
+                repository.searchSimilarIncludingShared(ownerId, null, queryVector(), 5);
+
+        assertThat(found).as("lọc quyền phải xảy ra TRƯỚC khi xếp theo khoảng cách và cắt limit")
+                .hasSize(1);
+        assertThat(found.getFirst().materialTitle()).isEqualTo("Bài giảng đã chia sẻ");
+    }
+
+    @Test
+    @DisplayName("Kho vector KHÔNG được có chỉ mục xấp xỉ — chỉ mục ANN đứng trước bộ lọc quyền làm mất kết quả")
+    void shouldNotHaveApproximateIndexOnEmbedding() {
+        // Chốt chặn ở tầng schema, không phải tầng hành vi — và đây là lựa chọn có cân nhắc.
+        //
+        // Lỗi thật (13/08) là: chỉ mục IVFFlat lấy n đoạn gần nhất TOÀN KHO rồi mới lọc quyền lên n
+        // dòng đó, nên đoạn được phép đọc bị loại mất mà không có gì bù lại. Trên dev, trợ lý trả lời
+        // "không có tài liệu" trong khi kho có 9 đoạn hợp lệ nói đúng chủ đề câu hỏi.
+        //
+        // Đã thử viết ca hồi quy theo hành vi và KHÔNG tái hiện được ổn định: lỗi chỉ xuất hiện khi bộ
+        // tối ưu chọn đi qua chỉ mục, mà với lượng dữ liệu một ca test dựng ra thì nó luôn chọn quét
+        // tuần tự — và quét tuần tự thì lọc quyền chạy trước nên kết quả đúng kể cả với câu SQL sai.
+        // Thử buộc bằng `enable_seqscan = off` trên một kết nối riêng cũng không đủ: câu truy vấn thật
+        // có JOIN nên kế hoạch rẽ hướng khác. Một ca test xanh trong cả hai trường hợp thì không bảo vệ
+        // gì cả, chỉ tạo cảm giác an toàn — nên bỏ nó đi và chặn ở chỗ chặn được.
+        //
+        // Chỗ chặn được là chính điều kiện làm lỗi tái phát: sự tồn tại của một chỉ mục xấp xỉ. Ai thêm
+        // lại `ivfflat`/`hnsw` sẽ thấy ca này đỏ kèm lời giải thích, thay vì thấy trợ lý im lặng trả về
+        // rỗng vài tuần sau đó.
+        List<String> approximateIndexes = jdbc.queryForList("""
+                select indexdef from pg_indexes
+                where tablename = 'material_chunks'
+                  and (indexdef ilike '%ivfflat%' or indexdef ilike '%hnsw%')
+                """, String.class);
+
+        assertThat(approximateIndexes).as("""
+                Có chỉ mục ANN trên material_chunks. Truy xuất RAG phải lọc quyền đọc TRƯỚC rồi mới xếp \
+                theo khoảng cách; chỉ mục xấp xỉ làm ngược lại nên bỏ sót đoạn được phép đọc, và bỏ sót \
+                trong im lặng. Nếu thật sự cần ANN vì kho đã quá lớn: dùng HNSW kèm \
+                `SET hnsw.iterative_scan = relaxed_order` (pgvector 0.8) và kiểm lại bằng dữ liệu thật, \
+                rồi mới sửa ca test này.""")
+                .isEmpty();
+    }
+
+    @Test
     @DisplayName("Tài liệu chưa xử lý xong bị loại — vector của nó chưa đáng tin để trả lời")
     void shouldIgnoreMaterialsNotReady() {
         UUID processing = insertMaterial(ownerId, "Đang xử lý", false);

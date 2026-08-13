@@ -97,24 +97,47 @@ public class MaterialChunkRepository {
         // đường tiêm SQL; id vẫn đi qua tham số.
         String materialFilter = materialId == null ? "" : " and m.id = ? ";
 
+        // Thứ tự phải trùng thứ tự dấu ? xuất hiện trong câu SQL bên dưới: điều kiện quyền nằm trong
+        // CTE nên đi trước, vector của câu hỏi nằm ở truy vấn ngoài nên đi sau.
         List<Object> args = new ArrayList<>();
-        args.add(toVectorLiteral(queryEmbedding));
         args.add(userId);
         args.add(includeShared);
         if (materialId != null) {
             args.add(materialId);
         }
+        args.add(toVectorLiteral(queryEmbedding));
         args.add(limit);
 
+        // LỌC QUYỀN TRƯỚC, xếp theo khoảng cách SAU — thứ tự này là bắt buộc, không phải tuỳ chọn.
+        //
+        // Bản trước viết một câu phẳng "where <điều kiện quyền> order by distance limit ?". PostgreSQL
+        // thấy "order by <toán tử vector> limit n" liền dùng index IVFFlat để lấy đúng n ứng viên gần
+        // nhất TOÀN KHO, rồi mới join lọc quyền lên n dòng đó. Đo thật trên dữ liệu đang có: index trả
+        // về 2 dòng, cả 2 thuộc tài liệu chưa chia sẻ, join loại sạch → trợ lý trả lời "không có tài
+        // liệu" trong khi kho có đúng 9 đoạn hợp lệ nói về chính câu hỏi. Với ivfflat.probes = 1 (mặc
+        // định) ra 0 đoạn, đặt probes = 100 ra 5 — cùng một câu truy vấn.
+        //
+        // Nguy hiểm ở chỗ nó IM LẶNG: không lỗi, không cảnh báo, chỉ là kho vector trông như rỗng.
+        //
+        // `materialized` buộc PostgreSQL dựng xong tập được phép đọc rồi mới tính khoảng cách trên
+        // đúng tập đó — tức tìm chính xác (exact), không phải xấp xỉ. Kho học liệu ở quy mô này chỉ
+        // vài trăm tới vài nghìn đoạn nên quét thẳng còn nhanh hơn dựng cây, và quan trọng hơn: nó
+        // không bao giờ bỏ sót. Khi kho vượt cỡ vài chục nghìn đoạn thì mới cần ANN, và lúc đó phải
+        // bật kèm iterative scan của pgvector 0.8 (`hnsw.iterative_scan`) để index tự quét thêm khi
+        // bộ lọc quyền loại bớt ứng viên — chứ không quay lại cách cũ.
         String sql = """
-                        select c.id, c.material_id, m.title, c.chunk_index, c.content,
-                               c.embedding <=> cast(? as vector) as distance
-                        from material_chunks c
-                                 join learning_materials m on m.id = c.material_id
-                        where (m.owner_id = ? or (? and m.shared = true))
-                          and m.status = 'READY'
-                          and c.embedding is not null
+                        with duoc_phep_doc as materialized (
+                            select c.id, c.material_id, m.title, c.chunk_index, c.content, c.embedding
+                            from material_chunks c
+                                     join learning_materials m on m.id = c.material_id
+                            where (m.owner_id = ? or (? and m.shared = true))
+                              and m.status = 'READY'
+                              and c.embedding is not null
                         """ + materialFilter + """
+                        )
+                        select id, material_id, title, chunk_index, content,
+                               embedding <=> cast(? as vector) as distance
+                        from duoc_phep_doc
                         order by distance
                         limit ?
                         """;

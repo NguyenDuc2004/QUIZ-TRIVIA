@@ -1,0 +1,34 @@
+-- ============================================================
+--  V11 — Bỏ index IVFFlat trên material_chunks
+-- ============================================================
+-- Index này (tạo ở V6) không tăng tốc gì trong dự án, nhưng đã làm SAI KẾT QUẢ truy xuất RAG.
+--
+-- Cách nó gây lỗi: truy vấn RAG phải lọc quyền đọc trước ("tài liệu của tôi HOẶC tài liệu người khác
+-- đã bật shared"), rồi mới xếp theo khoảng cách vector. Nhưng khi câu SQL có dạng
+-- "order by embedding <=> ? limit n", PostgreSQL dùng index này lấy đúng n đoạn gần nhất TOÀN KHO
+-- rồi mới áp bộ lọc quyền lên n đoạn đó. Ứng viên nào không được phép đọc thì bị loại, và không có
+-- gì bù lại — kết quả trả về ít hơn n, thường là rỗng.
+--
+-- Đo thật trên dữ liệu dev (20 đoạn, 9 đoạn thuộc tài liệu đã chia sẻ, câu hỏi đúng chủ đề tài liệu
+-- đó): index trả 2 ứng viên, cả 2 thuộc tài liệu chưa chia sẻ, sau lọc còn 0. Cùng câu truy vấn,
+-- đặt ivfflat.probes = 100 thì ra 5 đoạn với khoảng cách 0.193–0.319. Nghĩa là tài liệu đúng vẫn
+-- nằm đó, chỉ là index không nhìn tới.
+--
+-- Hậu quả không phải chậm mà là SAI, và sai trong im lặng: không lỗi, không cảnh báo, kho vector chỉ
+-- trông như rỗng. Trợ lý học tập vì thế luôn trả lời "không có tài liệu nào phù hợp" — đúng thứ mà
+-- một trợ lý bám học liệu không được phép nói khi học liệu có sẵn.
+--
+-- Lý do gốc: IVFFlat chia vector thành `lists` cụm và mặc định chỉ quét 1 cụm (probes = 1). Với
+-- lists = 100 trên vài chục vector, mỗi cụm chỉ vài phần tử, nên một cụm gần như không chứa gì.
+-- Index xấp xỉ chỉ có nghĩa khi số vector lớn hơn số cụm rất nhiều lần.
+--
+-- Truy vấn đã sửa để lọc quyền trong CTE `materialized` rồi mới tính khoảng cách, tức tìm chính xác
+-- trên đúng tập được phép đọc (MaterialChunkRepository#search). Ở quy mô vài trăm tới vài nghìn đoạn,
+-- quét thẳng nhanh hơn dựng cây và không bao giờ bỏ sót. Giữ index lại chỉ còn hai tác dụng: tốn thêm
+-- công ghi mỗi lần nạp học liệu, và mời người sửa sau này vô tình rơi lại vào đúng cái bẫy này.
+--
+-- Khi nào cần ANN trở lại: khi số đoạn vượt cỡ vài chục nghìn và quét thẳng thành nút cổ chai. Lúc đó
+-- dùng HNSW (chính xác hơn IVFFlat, không cần huấn luyện) và BẮT BUỘC bật iterative scan của
+-- pgvector 0.8 — `SET hnsw.iterative_scan = relaxed_order` — để index tự quét thêm khi bộ lọc quyền
+-- loại bớt ứng viên. Không có nó thì lỗi trên quay lại y nguyên.
+DROP INDEX IF EXISTS idx_material_chunks_embedding;
