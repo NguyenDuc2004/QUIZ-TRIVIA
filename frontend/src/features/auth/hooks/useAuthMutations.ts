@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { message } from 'antd'
 import { getApiErrorMessage } from '@/shared/api/client'
@@ -6,13 +6,34 @@ import { tokenStorage } from '@/shared/api/tokenStorage'
 import { authApi, type LoginBody, type RegisterBody } from '../api/authApi'
 import { useAuthStore } from '../store/authStore'
 
+/**
+ * Xoá sạch cache TanStack Query mỗi khi người đang đăng nhập thay đổi.
+ * <p>
+ * Đây là <b>rào chắn quyền riêng tư</b>, không phải tối ưu hiệu năng. Đăng xuất rồi đăng nhập tài
+ * khoản khác là điều hướng phía client — trang không nạp lại, nên `QueryClient` sống nguyên qua cả
+ * hai phiên. Với `staleTime: 30_000`, dữ liệu của người trước còn được coi là tươi nên các trang hiện
+ * nó ra ngay mà không gọi lại API: đăng nhập tài khoản A xong thấy lịch sử chat của tài khoản B. Đã
+ * gặp thật trên máy dev, và không chỉ lịch sử chat — mọi thứ đi qua cache đều rò: lượt làm bài, tiến
+ * độ, quiz của tôi, ngân hàng câu hỏi, học liệu.
+ * <p>
+ * Xoá ở <b>cả</b> lối vào và lối ra, vì hai lối không bao hàm nhau: người dùng có thể mở thẳng
+ * `/login` mà chưa từng bấm đăng xuất.
+ */
+function clearQueryCache(queryClient: QueryClient) {
+  queryClient.clear()
+}
+
 export function useLogin() {
   const setSession = useAuthStore((state) => state.setSession)
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
 
   return useMutation({
     mutationFn: (body: LoginBody) => authApi.login(body),
     onSuccess: (result) => {
+      // Xoá TRƯỚC khi đặt phiên mới: không để tồn tại khoảnh khắc nào mà danh tính đã là người mới
+      // trong khi cache vẫn là dữ liệu người cũ
+      clearQueryCache(queryClient)
       setSession(result)
       message.success(`Xin chào ${result.user.displayName}`)
       navigate('/', { replace: true })
@@ -23,11 +44,13 @@ export function useLogin() {
 
 export function useGoogleLogin() {
   const setSession = useAuthStore((state) => state.setSession)
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
 
   return useMutation({
     mutationFn: (idToken: string) => authApi.loginWithGoogle(idToken),
     onSuccess: (result) => {
+      clearQueryCache(queryClient)
       setSession(result)
       message.success(`Xin chào ${result.user.displayName}`)
       navigate('/', { replace: true })
@@ -38,11 +61,13 @@ export function useGoogleLogin() {
 
 export function useRegister() {
   const setSession = useAuthStore((state) => state.setSession)
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
 
   return useMutation({
     mutationFn: (body: RegisterBody) => authApi.register(body),
     onSuccess: (result) => {
+      clearQueryCache(queryClient)
       setSession(result)
       message.success('Tạo tài khoản thành công')
       navigate('/', { replace: true })
@@ -53,6 +78,7 @@ export function useRegister() {
 
 export function useLogout() {
   const clearSession = useAuthStore((state) => state.clearSession)
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
 
   return useMutation({
@@ -65,6 +91,7 @@ export function useLogout() {
     // Dù gọi API thất bại vẫn phải xóa phiên ở client
     onSettled: () => {
       clearSession()
+      clearQueryCache(queryClient)
       navigate('/login', { replace: true })
     },
   })
