@@ -15,6 +15,22 @@ export interface ChatSession {
   updatedAt: string
 }
 
+/**
+ * Một học liệu người dùng được phép hỏi trợ lý.
+ *
+ * Cố ý **không có** trường nội dung: người học được *hỏi trên* tài liệu, không được *đọc toàn văn*
+ * tài liệu của người khác — đúng lằn ranh đã đặt ra khi thêm cờ chia sẻ.
+ */
+export interface AskableMaterial {
+  id: string
+  title: string
+  topic: string | null
+  sourceType: string | null
+  chunkCount: number
+  /** false = tài liệu của người khác đã chia sẻ; để giao diện nói rõ nguồn, không để người học nhầm là của mình. */
+  mine: boolean
+}
+
 export interface ChatMessage {
   id: string
   role: 'USER' | 'ASSISTANT'
@@ -31,6 +47,9 @@ export type ChatStreamEvent =
   | { type: 'error'; message: string }
 
 export const chatApi = {
+  askableMaterials: () =>
+    apiClient.get<AskableMaterial[]>('/ai/chat/materials').then((res) => res.data),
+
   sessions: () => apiClient.get<ChatSession[]>('/ai/chat/sessions').then((res) => res.data),
 
   messages: (sessionId: string) =>

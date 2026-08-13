@@ -1,6 +1,7 @@
 package com.datn.quizai.chat.controller;
 
 import com.datn.quizai.auth.service.JwtService;
+import com.datn.quizai.chat.dto.AskableMaterialResponse;
 import com.datn.quizai.chat.dto.ChatAskRequest;
 import com.datn.quizai.chat.dto.ChatMessageResponse;
 import com.datn.quizai.chat.dto.ChatSessionResponse;
@@ -103,6 +104,19 @@ public class ChatController {
                 });
 
         return Flux.concat(meta, tokens);
+    }
+
+    /**
+     * Đặt ở đây chứ không ở {@code AiController}: lớp đó gắn {@code @PreAuthorize} CREATOR/ADMIN cấp
+     * lớp, mà danh sách này người học cũng phải xem được. Đục một lỗ ngoại lệ trong luật phân quyền
+     * của cả lớp là cách chắc chắn để sau này có người mở quyền quá tay.
+     */
+    @GetMapping("/materials")
+    @Operation(summary = "Học liệu tôi được phép hỏi trợ lý: tài liệu của tôi + tài liệu đã được "
+            + "chia sẻ. Chỉ trả metadata, KHÔNG trả nội dung tài liệu.")
+    public List<AskableMaterialResponse> askableMaterials(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser current) {
+        return chatService.askableMaterials(current.id());
     }
 
     @GetMapping("/sessions")

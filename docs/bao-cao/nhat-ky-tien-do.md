@@ -1749,9 +1749,32 @@ không tự mở rộng phạm vi — nhưng đây đúng là loại lỗi một
 > giờ (nhánh `materialId = null`, chỉ mục IVFFlat, và lần này) đều **không làm chương trình báo lỗi** —
 > chúng chỉ trả về dữ liệu sai một cách yên lặng.
 
+### Trả nợ trong ngày: người học thấy được mình hỏi trên tài liệu nào
+
+Món nợ ghi ở đầu ngày đã làm xong ngay trong ngày. `GET /api/v1/ai/chat/materials` trả danh sách học
+liệu người gọi được phép hỏi; giao diện `/assistant` thêm khối **"Học liệu hỏi được"** ở cột trái, bấm
+một tài liệu là giới hạn câu hỏi trong đúng tài liệu đó.
+
+Bốn quyết định khi làm, mỗi cái tránh một cách hỏng cụ thể:
+
+| Quyết định | Tránh được gì |
+|---|---|
+| Đặt endpoint ở `ChatController`, không phải `AiController` | Lớp kia chặn CREATOR/ADMIN cấp lớp; đục lỗ ngoại lệ trong luật phân quyền của cả lớp là cách chắc chắn để sau này có người mở quyền quá tay |
+| Chỉ trả metadata, **không** trả `content` | Trả kèm nội dung là mở một đường đọc trọn tài liệu mà chủ của nó chưa từng đồng ý — phá đúng lằn ranh đặt ra khi thêm cột `shared` |
+| Dùng **cùng phạm vi quyền** với truy vấn vector | Hai chỗ lệch nhau thì giao diện liệt kê một danh sách khác với thứ trợ lý thật sự đọc được: người dùng thấy tài liệu trong danh sách mà hỏi mãi không ra |
+| Chỉ liệt kê tài liệu `READY` | Tài liệu đang xử lý chưa có vector; liệt kê ra khiến người học tưởng hỏi được rồi nhận về câu "không biết" |
+
+Kiểm chứng thật bằng tài khoản người học mới: danh sách trả về **đúng 1 tài liệu** đã chia sẻ (không
+thấy 2 tài liệu riêng tư của người khác), `mine = false`, và **không có trường nội dung** trong phản hồi.
+Hỏi kèm `materialId` thì khối `sources` trả về đúng tài liệu được chọn. `ChatIntegrationTest` 20/20
+(thêm 3 ca: phạm vi quyền, không lộ nội dung, cờ `mine` của chủ tài liệu).
+
+Cũng trong hôm nay, `RecommendationIntegrationTest` đã chạy lại được sau khi Docker hết nghẽn: **22/22
+xanh**.
+
 ### Nợ / chuyển sang ngày sau
 
-- **[!] Người học không thấy mình được hỏi trên tài liệu nào.** Cột `shared` lo được việc truy xuất ra
+- ~~**[!] Người học không thấy mình được hỏi trên tài liệu nào.**~~ **Đã làm** — xem mục trên. Cột `shared` lo được việc truy xuất ra
   gì, nhưng không có đường nào cho người học *xem danh sách* tài liệu đã chia sẻ: `GET /ai/materials`
   vừa chặn CREATOR/ADMIN vừa chỉ trả tài liệu của chính mình, nên mở quyền cũng vẫn rỗng. Họ chỉ biết
   một tài liệu tồn tại sau khi đã hỏi trúng nó qua khối `sources` — trước đó là hỏi mò. Kèm theo:
@@ -1761,7 +1784,7 @@ không tự mở rộng phạm vi — nhưng đây đúng là loại lỗi một
   `ChatController`, trả **chỉ metadata**, không trả nội dung.
 - **[!] Frontend chưa có hạ tầng test** (không vitest/jest). Lỗi rò cache giữa hai tài khoản hôm nay là
   đúng loại một ca test rẻ tiền bắt được, mà hiện không có chỗ nào để viết ca đó.
-- `RecommendationIntegrationTest` vẫn chờ chạy lại.
+- ~~`RecommendationIntegrationTest` vẫn chờ chạy lại.~~ **Đã chạy: 22/22 xanh.**
 - **Đo lại mục 3.6:** mọi số grounding trước 13/08 đo trên đường truy xuất đang lỗi.
 - Chương 1 và Chương 2 của báo cáo.
 

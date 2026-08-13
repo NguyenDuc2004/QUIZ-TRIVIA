@@ -13,6 +13,19 @@ export function useChatSessions() {
   })
 }
 
+/**
+ * Học liệu người dùng được phép hỏi.
+ *
+ * Không có danh sách này thì người học hỏi mò — không biết kho có tài liệu gì, và chỉ biết một tài
+ * liệu tồn tại sau khi tình cờ hỏi trúng nó.
+ */
+export function useAskableMaterials() {
+  return useQuery({
+    queryKey: [CHAT_KEY, 'materials'],
+    queryFn: () => chatApi.askableMaterials(),
+  })
+}
+
 export function useChatMessages(sessionId: string | null) {
   return useQuery({
     queryKey: [CHAT_KEY, 'messages', sessionId],

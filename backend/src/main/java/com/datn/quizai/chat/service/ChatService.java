@@ -3,11 +3,13 @@ package com.datn.quizai.chat.service;
 import com.datn.quizai.ai.chat.ChatPromptBuilder;
 import com.datn.quizai.ai.provider.AiOrchestrator;
 import com.datn.quizai.ai.provider.AiPrompt;
+import com.datn.quizai.ai.repository.LearningMaterialRepository;
 import com.datn.quizai.ai.repository.MaterialChunkRepository;
 import com.datn.quizai.chat.domain.ChatMessage;
 import com.datn.quizai.chat.domain.ChatRole;
 import com.datn.quizai.chat.domain.ChatSession;
 import com.datn.quizai.chat.domain.ChatSource;
+import com.datn.quizai.chat.dto.AskableMaterialResponse;
 import com.datn.quizai.chat.dto.ChatMessageResponse;
 import com.datn.quizai.chat.dto.ChatSessionResponse;
 import com.datn.quizai.chat.repository.ChatMessageRepository;
@@ -67,8 +69,12 @@ public class ChatService {
     /** Độ dài đoạn trích lưu kèm câu trả lời — đủ để đối chiếu, không phải để đọc lại cả tài liệu. */
     private static final int SOURCE_EXCERPT_CHARS = 300;
 
+    /** Số học liệu liệt kê cho người dùng chọn — đủ để chọn, không biến thành trang duyệt tài liệu. */
+    private static final int ASKABLE_LIMIT = 50;
+
     private final AiOrchestrator aiOrchestrator;
     private final MaterialChunkRepository chunkRepository;
+    private final LearningMaterialRepository materialRepository;
     private final ChatSessionRepository sessionRepository;
     private final ChatMessageRepository messageRepository;
     private final UserRepository userRepository;
@@ -76,16 +82,33 @@ public class ChatService {
 
     public ChatService(AiOrchestrator aiOrchestrator,
                        MaterialChunkRepository chunkRepository,
+                       LearningMaterialRepository materialRepository,
                        ChatSessionRepository sessionRepository,
                        ChatMessageRepository messageRepository,
                        UserRepository userRepository,
                        ChatMessageWriter messageWriter) {
         this.aiOrchestrator = aiOrchestrator;
         this.chunkRepository = chunkRepository;
+        this.materialRepository = materialRepository;
         this.sessionRepository = sessionRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.messageWriter = messageWriter;
+    }
+
+    /**
+     * Học liệu người dùng được phép hỏi trợ lý — của chính họ cộng tài liệu đã được chia sẻ.
+     * <p>
+     * Không có danh sách này thì người học hỏi mò: họ không biết kho có tài liệu gì, thuộc chủ đề nào,
+     * và chỉ biết một tài liệu tồn tại <i>sau khi</i> tình cờ hỏi trúng nó qua khối trích dẫn. Đây cũng
+     * là điều kiện để dùng được tham số {@code materialId} vốn đã có ở API hỏi đáp: có danh sách thì
+     * giao diện mới cho chọn giới hạn câu hỏi trong một tài liệu.
+     */
+    @Transactional(readOnly = true)
+    public List<AskableMaterialResponse> askableMaterials(UUID userId) {
+        return materialRepository.findAskable(userId, Limit.of(ASKABLE_LIMIT)).stream()
+                .map(m -> AskableMaterialResponse.from(m, userId))
+                .toList();
     }
 
     /** Kết quả bước chuẩn bị: đủ thứ để bắt đầu stream, và transaction đã đóng. */
