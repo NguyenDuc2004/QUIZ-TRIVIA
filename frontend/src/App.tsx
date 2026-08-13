@@ -75,9 +75,24 @@ export default function App() {
         <Route path="/assistant" element={<AssistantPage />} />
         {/* Sảnh phòng đấu cần đăng nhập vì chỉ thành viên mới mở được phòng */}
         <Route path="/rooms" element={<RoomLobbyPage />} />
-        {/* Khu vực AI — controller đã chặn ở BE, chỉ CREATOR/ADMIN gọi được */}
-        <Route path="/ai/materials" element={<MaterialsPage />} />
-        <Route path="/ai/generate" element={<GenerateQuestionsPage />} />
+        {/* Khu vực AI — AiController chặn CREATOR/ADMIN ở BE; chặn thêm ở FE để người học gõ tay
+            đường dẫn thì được đưa về chỗ khác thay vì thấy một trang chỉ toàn lỗi 403 */}
+        <Route
+          path="/ai/materials"
+          element={
+            <ProtectedRoute roles={['CREATOR', 'ADMIN']}>
+              <MaterialsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ai/generate"
+          element={
+            <ProtectedRoute roles={['CREATOR', 'ADMIN']}>
+              <GenerateQuestionsPage />
+            </ProtectedRoute>
+          }
+        />
         {/* Bộ mặt "bảng điều khiển": bảng quản lý */}
         <Route path="/my-quizzes" element={<MyQuizzesPage />} />
         <Route path="/my-quizzes/:id" element={<QuizEditorPage />} />

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Alert, Button, Input, Popconfirm, Skeleton, Space, Spin, Tooltip, Typography } from 'antd'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
+import { useAuthStore } from '@/features/auth/store/authStore'
 import type { ChatMessage } from '../api/chatApi'
 import {
   mergeMessages,
@@ -26,6 +27,11 @@ export default function AssistantPage() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  // Người học không sở hữu học liệu (V10): họ chỉ hỏi trên tài liệu Creator đã bật chia sẻ. Nói
+  // "tài liệu của bạn" hay mời họ vào trang Học liệu đều là hứa thứ họ không có quyền chạm tới.
+  const role = useAuthStore((state) => state.user?.role)
+  const canCreate = role === 'CREATOR' || role === 'ADMIN'
 
   const { data: sessions, isPending: sessionsLoading } = useChatSessions()
   const { data: savedMessages, isPending: messagesLoading } = useChatMessages(sessionId)
@@ -134,7 +140,11 @@ export default function AssistantPage() {
             ) : messages.length === 0 ? (
               <EmptyState
                 title="Hỏi trợ lý một câu về nội dung bạn đang học"
-                hint="Trợ lý chỉ trả lời dựa trên học liệu — tài liệu của bạn, và tài liệu người tạo nội dung đã chia sẻ"
+                hint={
+                  canCreate
+                    ? 'Trợ lý chỉ trả lời dựa trên học liệu — tài liệu của bạn, và tài liệu người tạo nội dung đã chia sẻ'
+                    : 'Trợ lý chỉ trả lời dựa trên học liệu mà người tạo nội dung đã chia sẻ'
+                }
               />
             ) : (
               <Space direction="vertical" size="large" className="w-full">
@@ -182,8 +192,14 @@ export default function AssistantPage() {
             </div>
             <Text className="text-ink-soft mt-2 block text-xs">
               Trợ lý chỉ dựa trên học liệu. Chưa có tài liệu nào phù hợp thì nó sẽ nói thẳng là không
-              biết, thay vì đoán. Người tạo nội dung nạp tài liệu ở{' '}
-              <Link to="/ai/materials">trang Học liệu</Link>.
+              biết, thay vì đoán.{' '}
+              {canCreate ? (
+                <>
+                  Nạp thêm tài liệu ở <Link to="/ai/materials">trang Học liệu</Link>.
+                </>
+              ) : (
+                'Học liệu do người tạo nội dung nạp và chia sẻ.'
+              )}
             </Text>
           </div>
         </section>

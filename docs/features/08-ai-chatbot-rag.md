@@ -57,6 +57,28 @@ Hai đường truy xuất tách bạch:
 | `searchSimilar` | sinh đề (features/05) | **chỉ tài liệu của chính mình** — soạn đề thì không có lý do lấy nội dung người khác |
 | `searchSimilarIncludingShared` | trợ lý học tập | tài liệu của mình **+** tài liệu người khác đã bật `shared` |
 
+### Còn thiếu: người học không thấy mình được hỏi trên tài liệu nào  🔧 *(nợ, 13/08/2026)*
+
+Cột `shared` giải quyết việc *truy xuất ra được gì*, nhưng chưa giải quyết việc *người học biết có gì
+để hỏi*. Hiện không có đường nào cho họ xem danh sách:
+
+- `GET /ai/materials` nằm trong `AiController` (chặn CREATOR/ADMIN cấp lớp) và gọi `listMine(ownerId)`
+  — nên kể cả mở quyền thì người học vẫn nhận danh sách rỗng, vì họ không sở hữu tài liệu nào.
+- Không có endpoint nào trả tài liệu đã `shared`.
+- Người học chỉ biết một tài liệu tồn tại **sau khi** đã hỏi trúng nó, qua khối `sources` của câu trả
+  lời. Trước đó là hỏi mò: không biết có tài liệu gì, thuộc chủ đề gì, có đáng hỏi không.
+
+Hệ quả kèm theo: `ChatAskRequest.materialId` (giới hạn câu hỏi trong một tài liệu) đã có ở backend và
+hook `useChat` cũng nhận tham số đó, nhưng **giao diện không có cách nào chọn** vì không có danh sách
+để chọn từ. Nửa tính năng đã xây mà chưa dùng được.
+
+Hướng làm khi trả nợ: endpoint `GET /ai/chat/materials` đặt trong `ChatController` (mở cho mọi người đã
+đăng nhập, **không** nhồi vào `AiController` — đục lỗ ngoại lệ trong luật phân quyền cấp lớp là cách
+chắc chắn để sau này có người mở quyền quá tay), trả **chỉ metadata** của tài liệu người gọi đọc được:
+`id`, `title`, `topic`, `sourceType`. Không trả `content` và không trả đoạn nào: người học được *hỏi
+trên* tài liệu, không được *đọc toàn văn* tài liệu của người khác — lằn ranh này phải giữ đúng như lúc
+đặt ra cột `shared`.
+
 ## Streaming thật, không giả lập
 
 `AiProvider.stream()` gọi `:streamGenerateContent?alt=sse` của Gemini. **Không** làm kiểu gọi
