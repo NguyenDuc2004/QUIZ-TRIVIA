@@ -2,6 +2,7 @@ package com.datn.quizai.ai.service;
 
 import com.datn.quizai.ai.domain.LearningMaterial;
 import com.datn.quizai.ai.domain.MaterialSourceType;
+import com.datn.quizai.ai.domain.MaterialStatus;
 import com.datn.quizai.ai.dto.CreateMaterialRequest;
 import com.datn.quizai.ai.dto.MaterialResponse;
 import com.datn.quizai.ai.rag.TextExtractor;
@@ -99,6 +100,32 @@ public class MaterialService {
                 sourceTypeOf(file.getOriginalFilename()), null);
 
         eventPublisher.publishEvent(new MaterialCreatedEvent(material.getId(), text, ownerId));
+        return MaterialResponse.from(material);
+    }
+
+    /**
+     * Bật/tắt chia sẻ học liệu cho người học (features/08).
+     * <p>
+     * Chỉ chủ tài liệu quyết định, và <b>không</b> có API nào cho Admin bật hộ: chia sẻ nội dung của
+     * người khác là việc của chính họ.
+     * <p>
+     * Tắt chia sẻ có hiệu lực <b>ngay lượt hỏi tiếp theo</b> — truy vấn vector đọc cờ trực tiếp, không
+     * qua bản sao nào. Nhưng câu trả lời đã sinh ra trước đó vẫn giữ nguyên phần trích dẫn: nó là bản
+     * ghi của việc đã xảy ra, sửa lại thì lịch sử hội thoại thành sai.
+     */
+    @Transactional
+    public MaterialResponse setShared(UUID materialId, boolean shared,
+                                      JwtService.AuthenticatedUser current) {
+        LearningMaterial material = requireOwned(materialId, current);
+
+        if (shared && material.getStatus() != MaterialStatus.READY) {
+            // Tài liệu chưa nạp xong thì chưa có vector nào, chia sẻ ra cũng không ai truy xuất được —
+            // để bật được sẽ tạo ra một công tắc bật rồi mà không có tác dụng gì
+            throw BusinessException.conflict(
+                    "Tài liệu chưa xử lý xong nên chưa chia sẻ được. Đợi trạng thái chuyển sang Sẵn sàng.");
+        }
+
+        material.setShared(shared);
         return MaterialResponse.from(material);
     }
 

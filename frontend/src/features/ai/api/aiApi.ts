@@ -16,6 +16,8 @@ export interface Material {
   charCount: number
   chunkCount: number
   errorMessage: string | null
+  /** Cho người học hỏi trợ lý AI trên tài liệu này hay chưa (features/08). */
+  shared: boolean
   createdAt: string
 }
 
@@ -88,6 +90,12 @@ export const aiApi = {
       .post<Material>('/ai/materials/upload', form, { headers: { 'Content-Type': undefined } })
       .then((res) => res.data)
   },
+
+  /** Bật/tắt chia sẻ học liệu cho người học. Tài liệu chưa xử lý xong trả 409. */
+  setMaterialShared: (id: string, shared: boolean) =>
+    apiClient
+      .patch<Material>(`/ai/materials/${id}/shared`, null, { params: { shared } })
+      .then((res) => res.data),
 
   deleteMaterial: (id: string) => apiClient.delete<void>(`/ai/materials/${id}`).then((res) => res.data),
 

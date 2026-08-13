@@ -1,5 +1,6 @@
 package com.datn.quizai.ai.provider;
 
+import com.datn.quizai.ai.AiJson;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -97,6 +99,75 @@ public class GeminiProvider implements AiProvider {
                 usage.path("promptTokenCount").isMissingNode() ? null : usage.get("promptTokenCount").asInt(),
                 usage.path("candidatesTokenCount").isMissingNode() ? null : usage.get("candidatesTokenCount").asInt(),
                 latency);
+    }
+
+    @Override
+    public boolean supportsStreaming() {
+        return true;
+    }
+
+    /**
+     * Gọi {@code :streamGenerateContent?alt=sse} và bóc phần văn bản của từng mảnh.
+     * <p>
+     * {@code alt=sse} là bắt buộc: không có nó, Gemini trả về <b>một mảng JSON</b> gửi dần chứ không
+     * phải Server-Sent Events, và mảnh đầu tiên là ký tự {@code [} — không cách nào tách từng mảnh
+     * mà không tự viết bộ phân tích JSON theo luồng.
+     * <p>
+     * Mảnh nào không bóc được văn bản thì <b>bỏ qua</b>, không ném lỗi: mảnh cuối của Gemini chỉ chứa
+     * {@code usageMetadata} và {@code finishReason}, hoàn toàn hợp lệ mà không có chữ nào.
+     */
+    @Override
+    public Flux<String> stream(AiPrompt prompt) {
+        if (!isConfigured()) {
+            return Flux.error(new AiProviderException(name(), "Chưa cấu hình GEMINI_API_KEY", false, null));
+        }
+
+        Map<String, Object> body = Map.of(
+                "systemInstruction", Map.of("parts", List.of(Map.of("text", prompt.systemInstruction()))),
+                "contents", List.of(Map.of("role", "user",
+                        "parts", List.of(Map.of("text", prompt.userPrompt())))),
+                "generationConfig", Map.of("temperature", prompt.temperature()));
+
+        return webClient.post()
+                .uri("/models/" + model + ":streamGenerateContent?alt=sse")
+                .header("x-goog-api-key", apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.TEXT_EVENT_STREAM)
+                .bodyValue(body)
+                .retrieve()
+                .bodyToFlux(String.class)
+                .mapNotNull(this::extractDelta)
+                .onErrorMap(this::toProviderException);
+    }
+
+    /** @return phần văn bản của một mảnh, hoặc null nếu mảnh đó không mang chữ nào */
+    private String extractDelta(String chunk) {
+        try {
+            String text = AiJson.readTree(chunk)
+                    .path("candidates").path(0)
+                    .path("content").path("parts").path(0)
+                    .path("text").asText("");
+            return text.isEmpty() ? null : text;
+        } catch (Exception e) {
+            // Mảnh lỗi định dạng thì bỏ, không kéo đổ cả luồng: người dùng thà thiếu vài chữ hơn là
+            // mất cả câu trả lời đang chạy dở
+            log.warn("Bỏ qua mảnh SSE không đọc được từ Gemini: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private Throwable toProviderException(Throwable error) {
+        if (error instanceof AiProviderException) {
+            return error;
+        }
+        if (error instanceof WebClientResponseException e) {
+            boolean retryable = e.getStatusCode().is5xxServerError() || e.getStatusCode().value() == 429;
+            String errorBody = e.getResponseBodyAsString();
+            log.warn("Gemini trả {} khi stream: {}", e.getStatusCode(), errorBody);
+            return new AiProviderException(name(), "HTTP " + e.getStatusCode(), retryable,
+                    retryAfterMillis(errorBody), e);
+        }
+        return new AiProviderException(name(), "Lỗi mạng khi stream: " + error.getMessage(), true, null);
     }
 
     @Override

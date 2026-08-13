@@ -64,6 +64,9 @@ export default function AppLayout() {
           <NavLink to="/rooms" className={navLinkClass}>
             Phòng đấu
           </NavLink>
+          <NavLink to="/assistant" className={navLinkClass}>
+            Trợ lý AI
+          </NavLink>
           <NavLink to="/learning-path" className={navLinkClass}>
             Lộ trình
           </NavLink>

@@ -25,6 +25,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -105,6 +106,16 @@ public class AiController {
             @RequestParam(required = false) String topic) {
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(materialService.createFromFile(file, title, topic, current.id()));
+    }
+
+    @PatchMapping("/materials/{id}/shared")
+    @Operation(summary = "Bật/tắt chia sẻ học liệu cho người học (features/08). Chỉ tài liệu đã bật "
+            + "mới được trợ lý AI dùng để trả lời cho người khác; tài liệu chưa xử lý xong trả 409.")
+    public MaterialResponse setMaterialShared(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
+            @PathVariable UUID id,
+            @RequestParam boolean shared) {
+        return materialService.setShared(id, shared, current);
     }
 
     @DeleteMapping("/materials/{id}")

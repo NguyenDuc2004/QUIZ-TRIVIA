@@ -1,6 +1,19 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, Button, Form, Input, Modal, Popconfirm, Space, Table, Tag, Typography, Upload } from 'antd'
+import {
+  Alert,
+  Button,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Space,
+  Switch,
+  Table,
+  Tag,
+  Typography,
+  Upload,
+} from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
@@ -10,6 +23,7 @@ import {
   useCreateMaterial,
   useDeleteMaterial,
   useMaterials,
+  useSetMaterialShared,
   useUploadMaterial,
 } from '../hooks/useAiQueries'
 
@@ -37,6 +51,7 @@ export default function MaterialsPage() {
   const { data, isFetching } = useMaterials({ page, size: 10 })
   const uploadMaterial = useUploadMaterial()
   const deleteMaterial = useDeleteMaterial()
+  const setShared = useSetMaterialShared()
 
   const columns: ColumnsType<Material> = [
     {
@@ -85,6 +100,30 @@ export default function MaterialsPage() {
         ) : (
           <Text className="text-ink-soft text-xs">—</Text>
         ),
+    },
+    {
+      title: 'Chia sẻ',
+      key: 'shared',
+      width: 210,
+      render: (_, row) => (
+        <Space direction="vertical" size={0}>
+          <Switch
+            size="small"
+            checked={row.shared}
+            // Chỉ bật được khi đã xử lý xong: tài liệu chưa có vector thì chia sẻ ra cũng không ai
+            // truy xuất được, và một công tắc bật rồi mà vô tác dụng thì tệ hơn là không cho bật
+            disabled={row.status !== 'READY' || setShared.isPending}
+            onChange={(shared) => setShared.mutate({ id: row.id, shared })}
+          />
+          <Text className="text-ink-soft text-xs">
+            {row.status !== 'READY'
+              ? 'Xử lý xong mới chia sẻ được'
+              : row.shared
+                ? 'Người học hỏi được trên tài liệu này'
+                : 'Chỉ bạn dùng được'}
+          </Text>
+        </Space>
+      ),
     },
     {
       title: '',

@@ -9,6 +9,7 @@ import { useIsAuthenticated } from '@/features/auth/store/authStore'
 import GradeAttemptPage from '@/features/analytics/pages/GradeAttemptPage'
 import MyProgressPage from '@/features/analytics/pages/MyProgressPage'
 import QuizStatsPage from '@/features/analytics/pages/QuizStatsPage'
+import AssistantPage from '@/features/chat/pages/AssistantPage'
 import AttemptPage from '@/features/attempt/pages/AttemptPage'
 import MyAttemptsPage from '@/features/attempt/pages/MyAttemptsPage'
 import LearningPathPage from '@/features/recommend/pages/LearningPathPage'
@@ -69,6 +70,9 @@ export default function App() {
         <Route path="/my-attempts" element={<MyAttemptsPage />} />
         <Route path="/my-progress" element={<MyProgressPage />} />
         <Route path="/learning-path" element={<LearningPathPage />} />
+        {/* Trợ lý học tập: mở cho MỌI người đã đăng nhập, không riêng CREATOR — người học chính là
+            đối tượng nó phục vụ (features/08) */}
+        <Route path="/assistant" element={<AssistantPage />} />
         {/* Sảnh phòng đấu cần đăng nhập vì chỉ thành viên mới mở được phòng */}
         <Route path="/rooms" element={<RoomLobbyPage />} />
         {/* Khu vực AI — controller đã chặn ở BE, chỉ CREATOR/ADMIN gọi được */}

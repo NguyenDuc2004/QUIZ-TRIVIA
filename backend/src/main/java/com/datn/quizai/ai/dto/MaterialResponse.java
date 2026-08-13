@@ -18,6 +18,8 @@ public record MaterialResponse(
         int charCount,
         int chunkCount,
         String errorMessage,
+        /** Có cho người học hỏi trợ lý AI trên tài liệu này hay không (features/08). */
+        boolean shared,
         OffsetDateTime createdAt
 ) {
     public static MaterialResponse from(LearningMaterial material) {
@@ -25,6 +27,6 @@ public record MaterialResponse(
                 material.getId(), material.getTitle(), material.getTopic(),
                 material.getSourceType(), material.getStatus(), material.getFileUrl(),
                 material.getCharCount(), material.getChunkCount(),
-                material.getErrorMessage(), material.getCreatedAt());
+                material.getErrorMessage(), material.isShared(), material.getCreatedAt());
     }
 }

@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -123,6 +124,90 @@ public class AiOrchestrator {
     public AiCompletion complete(AiPrompt prompt, String feature, UUID userId, boolean background) {
         return callWithFallback(feature, userId, provider -> provider.complete(prompt), provider -> true,
                 background ? BACKGROUND_WAIT_CAP_MILLIS : INTERACTIVE_WAIT_CAP_MILLIS);
+    }
+
+    /**
+     * Sinh văn bản theo luồng token, cho trợ lý học tập (features/08).
+     * <p>
+     * <b>Fallback chỉ hoạt động TRƯỚC mảnh đầu tiên.</b> Đây là giới hạn thật, không phải thiếu sót:
+     * một khi người dùng đã thấy chữ hiện ra, chuyển sang provider khác sẽ nối tiếp câu trả lời của
+     * mô hình A bằng câu trả lời của mô hình B — hai mạch văn khác nhau ghép vào nhau thành một đoạn
+     * vô nghĩa, mà người đọc không có cách nào biết chỗ nối ở đâu. Thà dừng và báo lỗi.
+     * <p>
+     * Cũng vì vậy mà ở đây <b>không thử lại chính provider đó</b> như {@link #complete}: thử lại nghĩa
+     * là sinh lại từ đầu, và nếu đã phát chữ rồi thì không rút lại được.
+     */
+    public Flux<String> stream(AiPrompt prompt, String feature, UUID userId) {
+        List<AiProvider> candidates = orderedProviders.stream()
+                .filter(AiProvider::isConfigured)
+                .filter(AiProvider::supportsStreaming)
+                .toList();
+
+        if (candidates.isEmpty()) {
+            return Flux.error(new BusinessException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+                    "Chưa cấu hình provider AI nào hỗ trợ streaming."));
+        }
+        return streamFrom(candidates, 0, prompt, feature, userId);
+    }
+
+    private Flux<String> streamFrom(List<AiProvider> candidates, int index,
+                                    AiPrompt prompt, String feature, UUID userId) {
+        AiProvider provider = candidates.get(index);
+        long startedAt = System.currentTimeMillis();
+        StringBuilder answer = new StringBuilder();
+
+        return provider.stream(prompt)
+                .doOnNext(answer::append)
+                .doOnComplete(() -> {
+                    requestLogger.logSuccess(userId, feature, new AiCompletion(
+                            provider.name(), provider.model(), answer.toString(),
+                            null, null, System.currentTimeMillis() - startedAt));
+                    throttleState.clear();
+                })
+                .onErrorResume(error -> {
+                    String message = error.getMessage();
+                    requestLogger.logFailure(userId, feature, provider, message);
+
+                    // Đã phát chữ ra rồi thì hết đường lui — xem javadoc của stream()
+                    if (!answer.isEmpty()) {
+                        log.warn("{} lỗi GIỮA luồng sau {} ký tự, không chuyển provider được: {}",
+                                provider.name(), answer.length(), message);
+                        return Flux.error(error);
+                    }
+
+                    boolean retryable = error instanceof AiProviderException e && e.isRetryable();
+                    boolean hasNext = index + 1 < candidates.size();
+                    if (retryable && hasNext) {
+                        log.warn("{} lỗi trước mảnh đầu ({}), chuyển sang {}",
+                                provider.name(), message, candidates.get(index + 1).name());
+                        return streamFrom(candidates, index + 1, prompt, feature, userId);
+                    }
+
+                    rememberThrottle(error);
+                    return Flux.error(giveUpStreaming(error));
+                });
+    }
+
+    /**
+     * Ghi lại thời điểm hết hạn mức để giao diện nói được "chờ N giây" thay vì chỉ "lỗi".
+     * <p>
+     * Dùng chung cờ với luồng {@link #complete}: hạn mức là của cả tài khoản Google, không phải của
+     * riêng từng tính năng.
+     */
+    private void rememberThrottle(Throwable error) {
+        if (error instanceof AiProviderException e && e.getRetryAfterMillis() > 0) {
+            throttleState.markThrottled(e.getRetryAfterMillis());
+        }
+    }
+
+    private Throwable giveUpStreaming(Throwable error) {
+        if (error instanceof AiProviderException e && e.getRetryAfterMillis() > 0) {
+            long seconds = Math.max(1, e.getRetryAfterMillis() / 1000);
+            return new BusinessException(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,
+                    "Đã hết hạn mức gọi AI. Thử lại sau " + seconds + " giây.");
+        }
+        return new BusinessException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+                "Trợ lý AI đang không phản hồi. Thử lại sau ít phút.");
     }
 
     /**

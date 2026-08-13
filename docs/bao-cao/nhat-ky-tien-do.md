@@ -28,6 +28,7 @@
 | 10/08 | **Đo tải phòng đấu — số liệu mục 3.5** (bắt buộc theo phiếu) | 5/5 | 🟢 xong |
 | 10/08 (chiều) | **Lát cắt 9: thống kê** (FR-26, FR-27) + trả nợ màn chấm tay của lát cắt 6 | 7/7 | 🟢 xong |
 | 10/08 (tối) | Vá 3 lỗi lộ ra khi chạy thật, trong đó **bộ test xoá sạch đồ thị máy dev** | 3/3 | 🟢 xong |
+| 11/08 | **Lát cắt 8: Trợ lý học tập RAG** (FR-31) — [M] cuối cùng của phiếu | 7/7 | 🟢 xong |
 | 10/08 (đêm) | Chuẩn bị đo mục 3.6 · chốt: **xAI Grok không có gói miễn phí** | 4/4 | 🟡 chờ hạn mức |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
@@ -1540,6 +1541,120 @@ Lệnh chạy: khởi động backend với `--app.ai.max-attempts-background=1`
   "AI chấm 0" với "AI không chạy" làm hỏng số liệu.
 - **Mục 1 (công nghệ):** lý do thực tế cho việc chọn hai provider nhưng chỉ chạy một, và giới hạn
   của gói miễn phí ảnh hưởng tới thiết kế thế nào.
+
+---
+
+## 📅 T3 — 11/08/2026 — Lát cắt 8: Trợ lý học tập RAG, và ba lỗi chỉ máy thật mới lộ
+
+**Mục tiêu:** FR-31 — tính năng mức [M] **cuối cùng** còn thiếu của phiếu giao đề tài. Trước hôm nay
+tôi từng kết luận nhầm rằng phần bắt buộc đã đóng sau mục 3.6; đọc lại `features/README.md` mới thấy
+08 vẫn là [M] và `api.md` còn đánh dấu ⏳.
+
+**Xong:** migration V10 · streaming SSE thật · 4 API chat · công tắc chia sẻ học liệu · trang
+`/assistant` · 17 ca test mới + 6 ca cho kho vector.
+
+### Đặc tả đòi một thứ dữ liệu không đỡ được
+
+`features/08` viết *"Learner hỏi khái niệm → nhận giải thích bám học liệu"*. Nhưng:
+
+| Sự thật trong code | Hệ quả |
+|---|---|
+| `learning_materials` chỉ có `owner_id`, không liên kết quiz, không cờ công khai | học liệu là tài sản riêng của Creator |
+| truy vấn vector lọc `where m.owner_id = ?` | truy vấn người này không lôi được tài liệu người khác |
+| `AiController` gắn `@PreAuthorize` CREATOR/ADMIN cấp lớp | Learner không chạm được khu học liệu |
+
+Learner **không sở hữu học liệu nào**, nên chatbot của họ sẽ truy xuất được **con số không** — và mô
+hình trả lời bằng kiến thức nền, tức là bịa. Đây không phải bất tiện nhỏ mà là lỗ hổng ở gốc: bịa
+chính là thứ RAG sinh ra để chống.
+
+Hỏi ý người hướng dẫn dự án trước khi code, chọn phương án nhỏ nhất giải quyết được: thêm cột
+`learning_materials.shared`, mặc định **false**. Không mở mặc định vì tài liệu tải lên trước khi có
+tính năng này thì chủ của chúng chưa từng đồng ý chia sẻ.
+
+> Bài học: **đặc tả có thể mâu thuẫn với schema mà không ai nhận ra**, cho tới khi có người thật sự
+> đi hết một luồng. Chỗ để phát hiện là lúc đọc dữ liệu, không phải lúc đọc yêu cầu.
+
+### Ba lỗi chỉ lộ ra khi chạy thật
+
+Không lỗi nào làm hỏng build; hai lỗi đầu còn không lỗi test nếu không cố tình đi tìm.
+
+**1. Spring Security giết luồng SSE ngay lần chạy đầu.**
+
+```
+Unable to handle the Spring Security Exception because the response is already committed
+```
+
+Nhịp dispatch `ASYNC` là phần tiếp của request đã qua kiểm quyền, nhưng bộ lọc JWT kế thừa
+`OncePerRequestFilter` nên cố tình không chạy lại → `SecurityContext` trống → request bị chặn **giữa
+luồng**, lúc header đã gửi đi rồi. Mọi endpoint SSE đều chết. Sửa bằng
+`dispatcherTypeMatchers(ASYNC).permitAll()`.
+
+**2. Mảnh token mất khoảng trắng đầu — chữ dính vào nhau.**
+
+Chuẩn SSE quy định client bỏ *một* khoảng trắng đứng ngay sau `data:`, mà mảnh của Gemini rất thường
+bắt đầu bằng space. Đo thật khi gửi chuỗi thô:
+
+```
+Gửi:  "Vòng lặp" " for" " dùng" " khi" " biết" " trước"
+Nhận: "Vòng lặpfordùngkhibiếttrước"
+```
+
+Bọc mảnh trong JSON `{"t":"…"}` là hết. Tôi **tạm bỏ bản sửa rồi chạy lại test** để chắc nó canh đúng
+chỗ — đỏ thật.
+
+**3. Nhánh `materialId = null` của truy vấn vector lặng lẽ trả rỗng — lỗi có từ lát cắt 5.**
+
+Đây là lỗi nặng nhất trong ngày. Câu SQL viết `(cast(? as uuid) is null or m.id = cast(? as uuid))`
+rồi truyền `null` vào. Đo trên PostgreSQL thật, cùng một câu hỏi:
+
+| Tham số | Kết quả |
+|---|---|
+| `materialId` cụ thể | **1 đoạn**, khoảng cách 0.238 |
+| `materialId = null` | **0 đoạn** |
+
+Không lỗi, không cảnh báo — chỉ là kho vector coi như rỗng. Và nhánh `null` đúng là nhánh cả hai tính
+năng RAG dùng nhiều nhất:
+
+- Trợ lý trả lời *"tài liệu không đề cập"* dù kho đầy tài liệu đúng chủ đề.
+- **Sinh đề (features/05)** với `useMaterials = true` nhưng không chọn tài liệu cụ thể thì không có
+  ngữ cảnh nào → mô hình sinh câu hỏi từ kiến thức nền của nó. Tức là trụ cột RAG của đề tài đã hỏng
+  ở một nhánh mà không ai biết, vì kết quả vẫn ra câu hỏi trông hợp lý.
+
+Sửa bằng cách ghép điều kiện ở Java thay vì truyền `null` vào SQL, và thêm hẳn
+`MaterialChunkRepositoryTest` (6 ca) canh đúng nhánh đó.
+
+> Bài học: **một truy vấn trả rỗng nhìn giống hệt một truy vấn không có dữ liệu.** Nhánh nào của câu
+> SQL cũng phải có ít nhất một ca test đòi nó trả về *có*, không chỉ ca đòi nó trả về *không*.
+
+### Cách tôi tự làm chậm mình
+
+Tôi khởi động lại backend dev bảy lần để dò lỗi số 3, mỗi lần gần một phút, và vẫn không ra. Chuyển
+sang viết test ở tầng repository với Testcontainers thì ra ngay — vì dữ liệu do chính test chèn nên
+không phụ thuộc học liệu mà ca khác chia sẻ.
+
+> Dò lỗi bằng cách chạy tay ứng dụng thật chỉ hợp khi chưa biết lỗi ở đâu. Khi đã khoanh được vào một
+> hàm, viết test cho hàm đó **nhanh hơn** và để lại thứ dùng được mãi.
+
+### Quyết định thiết kế
+
+- **Streaming thật**, gọi `:streamGenerateContent?alt=sse`. Không giả lập bằng cách gọi `complete()`
+  rồi cắt nhỏ chuỗi: thứ người dùng cảm nhận là *thời gian tới chữ đầu tiên*, mà cách giả lập giữ
+  nguyên đúng con số đó.
+- **Fallback chỉ chạy trước mảnh đầu tiên.** Đã phát chữ rồi mà đổi provider thì nối câu trả lời của
+  hai mô hình thành một đoạn vô nghĩa. Ghi rõ giới hạn này thay vì giả vờ fallback liền mạch.
+- **`ChatController` riêng**, không nhồi vào `AiController` (lớp đó CREATOR/ADMIN cấp lớp). Đục một
+  lỗ ngoại lệ trong luật phân quyền của cả lớp là cách chắc chắn để sau này có người mở quyền quá tay.
+- **Frontend dùng `fetch` chứ không `EventSource`**: `EventSource` chỉ gửi `GET` và không đặt được
+  header, nên không mang nổi `Authorization`. Đổi lại được `AbortSignal` cho nút Dừng — nhưng cũng
+  mất luôn interceptor làm mới token, nên phải tự gọi hàm refresh dùng chung.
+
+### Ghi chú báo cáo
+- **Chương 1 (công nghệ):** SSE với Spring MVC và lý do không dùng `EventSource` ở phía client.
+- **Chương 2:** cột `shared` là ví dụ cho việc *đặc tả phải khớp mô hình dữ liệu*; nêu cả mâu thuẫn
+  ban đầu chứ không chỉ nêu kết quả.
+- **Mục 3.4 (kiểm thử):** lỗi nhánh `materialId = null` là ví dụ đắt giá cho *nhánh nào cũng cần một
+  ca test đòi nó trả về có*.
+- **"Khó khăn & cách giải quyết":** ba lỗi trên, và chuyện dò lỗi bằng chạy tay chậm hơn viết test.
 
 ---
 

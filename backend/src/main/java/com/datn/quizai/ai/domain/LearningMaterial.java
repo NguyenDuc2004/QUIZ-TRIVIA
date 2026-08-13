@@ -60,6 +60,16 @@ public class LearningMaterial extends BaseEntity {
     @Column(name = "error_message", columnDefinition = "text")
     private String errorMessage;
 
+    /**
+     * Cho phép mọi người học hỏi trợ lý AI trên tài liệu này (features/08).
+     * <p>
+     * Mặc định <b>false</b>: chia sẻ phải là hành động có ý thức của chủ tài liệu. Bật mặc định thì
+     * mọi tài liệu đã tải lên trước khi có tính năng này bỗng thành công khai, mà chủ của chúng chưa
+     * từng đồng ý điều đó.
+     */
+    @Column(nullable = false)
+    private boolean shared = false;
+
     public LearningMaterial(User owner, String title, MaterialSourceType sourceType) {
         this.owner = owner;
         this.title = title;
