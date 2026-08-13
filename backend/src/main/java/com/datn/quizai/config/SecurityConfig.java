@@ -81,6 +81,14 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
                 .authorizeHttpRequests(auth -> auth
+                        // Nhịp dispatch ASYNC là PHẦN TIẾP của một request đã qua kiểm quyền ở nhịp
+                        // REQUEST, không phải một request mới — bên ngoài không tạo ra nó được. Phải
+                        // cho qua vì bộ lọc JWT kế thừa OncePerRequestFilter nên cố tình không chạy
+                        // lại ở nhịp async; nếu vẫn kiểm quyền ở đây thì SecurityContext trống và
+                        // request bị chặn GIỮA luồng, lúc header đã gửi đi rồi. Triệu chứng đúng như
+                        // vậy: "Unable to handle the Spring Security Exception because the response is
+                        // already committed" — mọi endpoint SSE (trợ lý học tập, features/08) đều chết.
+                        .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ASYNC).permitAll()
                         // Không chặn dispatch nội bộ tới /error, nếu không mọi 404/500 của
                         // người dùng chưa đăng nhập đều bị biến thành 401.
                         .requestMatchers("/error").permitAll()

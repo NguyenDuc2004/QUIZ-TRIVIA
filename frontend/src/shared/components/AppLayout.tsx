@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Button, Input, Layout, Space, Tag, Typography } from 'antd'
+import { Avatar, Dropdown, Input, Layout, Space, Tag, Typography } from 'antd'
+import type { MenuProps } from 'antd'
+import { DownOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
 import { useAuthStore } from '@/features/auth/store/authStore'
 
@@ -36,6 +38,25 @@ export default function AppLayout() {
       isActive ? 'text-brand-strong' : 'text-ink hover:text-brand-strong'
     }`
 
+  // Đăng xuất nằm dưới một đường kẻ và là mục cuối: nó là hành động duy nhất trong menu không thể
+  // hoàn tác bằng một lần bấm nữa, nên không đặt cạnh mục điều hướng thường.
+  const accountMenuItems: MenuProps['items'] = [
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: 'Trang cá nhân',
+      onClick: () => navigate('/profile'),
+    },
+    { type: 'divider' },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: 'Đăng xuất',
+      disabled: logout.isPending,
+      onClick: () => logout.mutate(),
+    },
+  ]
+
   return (
     <Layout className="min-h-screen">
       <Header className="sticky top-0 z-10 flex items-center gap-6 border-b border-line bg-white! px-6!">
@@ -64,6 +85,9 @@ export default function AppLayout() {
           <NavLink to="/rooms" className={navLinkClass}>
             Phòng đấu
           </NavLink>
+          <NavLink to="/assistant" className={navLinkClass}>
+            Trợ lý AI
+          </NavLink>
           <NavLink to="/learning-path" className={navLinkClass}>
             Lộ trình
           </NavLink>
@@ -81,6 +105,9 @@ export default function AppLayout() {
               <NavLink to="/question-bank" className={navLinkClass}>
                 Ngân hàng câu hỏi
               </NavLink>
+              <NavLink to="/ai/materials" className={navLinkClass}>
+                Học liệu
+              </NavLink>
               <NavLink to="/ai/generate" className={navLinkClass}>
                 Sinh đề AI
               </NavLink>
@@ -90,16 +117,30 @@ export default function AppLayout() {
 
         <Space size={8} className="ml-auto shrink-0">
           {user && (
-            <Link to="/profile" className="flex items-center gap-2">
-              <Text className="text-ink! text-sm font-bold">{user.displayName}</Text>
-              <Tag color={ROLE_COLOR[user.role]} className="mr-0!">
-                {ROLE_LABEL[user.role] ?? user.role}
-              </Tag>
-            </Link>
+            <Dropdown menu={{ items: accountMenuItems }} trigger={['click']} placement="bottomRight">
+              {/* Vùng bấm gộp avatar + tên + vai trò: cả khối là một đích bấm, không phải ba đích
+                  cạnh nhau. `DownOutlined` để người dùng biết đây là menu xổ xuống chứ không phải
+                  một đường dẫn — bỏ nó đi thì không có gì báo rằng bấm vào sẽ mở thêm lựa chọn. */}
+              <button
+                type="button"
+                className="flex cursor-pointer items-center gap-2 border-0 bg-transparent p-0"
+              >
+                <Avatar
+                  size={28}
+                  src={user.avatarUrl ?? undefined}
+                  icon={<UserOutlined />}
+                  className="shrink-0"
+                >
+                  {user.displayName?.trim().charAt(0).toUpperCase()}
+                </Avatar>
+                <Text className="text-ink! text-sm font-bold">{user.displayName}</Text>
+                <Tag color={ROLE_COLOR[user.role]} className="mr-0!">
+                  {ROLE_LABEL[user.role] ?? user.role}
+                </Tag>
+                <DownOutlined className="text-ink-soft text-[10px]" />
+              </button>
+            </Dropdown>
           )}
-          <Button size="small" loading={logout.isPending} onClick={() => logout.mutate()}>
-            Đăng xuất
-          </Button>
         </Space>
       </Header>
 

@@ -52,6 +52,34 @@ function refreshAccessToken(refreshToken: string): Promise<string> {
 }
 
 /**
+ * Làm mới access token, dùng cho những lời gọi **không đi qua** {@link apiClient}.
+ * <p>
+ * Cần thiết vì luồng SSE của trợ lý học tập phải dùng `fetch` thô (`EventSource` không gửi được
+ * header `Authorization`, xem `chatApi`), nên nó nằm ngoài interceptor và không được hưởng cơ chế làm
+ * mới token. Không có hàm này thì access token hết hạn là chat chết, trong khi mọi API khác vẫn chạy —
+ * đúng kiểu hỏng nửa vời khó hiểu nhất với người dùng.
+ * <p>
+ * Dùng chung {@link refreshAccessToken} nên vẫn gộp về một lượt làm mới duy nhất, không phá cơ chế
+ * chống làm mới song song.
+ *
+ * @returns access token mới
+ * @throws nếu không làm mới được — khi đó phiên đã bị kết thúc và trang đã chuyển về đăng nhập
+ */
+export async function refreshSessionForRawFetch(): Promise<string> {
+  const refreshToken = tokenStorage.getRefresh()
+  if (!refreshToken) {
+    endSession()
+    throw new Error('Phiên đăng nhập đã hết')
+  }
+  try {
+    return await refreshAccessToken(refreshToken)
+  } catch (error) {
+    endSession()
+    throw error
+  }
+}
+
+/**
  * Kết thúc phiên và đưa về trang đăng nhập **kèm lý do**.
  * <p>
  * Không nói gì thì người dùng thấy mình bị ném ra trang đăng nhập không rõ vì sao, và tưởng hệ thống

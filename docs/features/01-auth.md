@@ -176,3 +176,40 @@ cướp mất `?expired=1`. Người dùng lại về đúng tình trạng bị 
 Nên tách hai hàm: `clearStoredSession()` chỉ xoá localStorage (dùng ngay trước điều hướng cứng — trang
 mới nạp lại từ localStorage nên thế là đủ), còn `clearPersistedSession()` xoá cả state, dùng khi
 **không** điều hướng (đã đang ở trang đăng nhập).
+
+## Cache TanStack Query sống qua hai phiên đăng nhập → rò dữ liệu giữa các tài khoản
+
+Phát hiện 13/08/2026 khi đăng nhập lần lượt hai tài khoản trên cùng trình duyệt: **đăng nhập tài khoản
+A nhưng thấy lịch sử chat của tài khoản B**.
+
+Backend không sai — `findByUserIdOrderByUpdatedAtDesc(userId)` và `findOwned(id, userId)` đều lọc theo
+người gọi. Lỗi nằm ở client, và cơ chế của nó là:
+
+```
+đăng xuất  → clearSession() + navigate('/login')      ← điều hướng phía CLIENT
+đăng nhập  → setSession(người mới) + navigate('/')     ← cũng phía client
+```
+
+Không có lần nạp lại trang nào ở giữa, nên `QueryClient` (tạo một lần ở `main.tsx`) **sống nguyên qua
+cả hai phiên** cùng toàn bộ dữ liệu đã tải. Thêm `staleTime: 30_000` thì dữ liệu người trước còn được
+coi là *tươi*, nên các trang hiện nó ra ngay mà **không gọi lại API** — người dùng mới không có cách
+nào biết mình đang xem dữ liệu người khác.
+
+Rò không giới hạn ở lịch sử chat: **mọi** dữ liệu đi qua cache đều rò — lượt làm bài, tiến độ học,
+quiz của tôi, ngân hàng câu hỏi, học liệu.
+
+Nay `queryClient.clear()` chạy ở **cả bốn** lối đổi danh tính: `useLogin`, `useGoogleLogin`,
+`useRegister`, `useLogout`. Xoá ở cả lối vào và lối ra vì hai lối không bao hàm nhau — người dùng có
+thể mở thẳng `/login` mà chưa từng bấm đăng xuất. Ở lối vào, xoá **trước** `setSession()`: không để tồn
+tại khoảnh khắc nào danh tính đã là người mới trong khi cache vẫn là dữ liệu người cũ.
+
+`endSession()` trong interceptor không cần xoá thêm: nhánh chính điều hướng cứng bằng
+`window.location.assign` nên cả cache mất theo, còn nhánh "đang ở /login" thì trang đăng nhập không
+hiển thị dữ liệu người dùng nào, và lượt đăng nhập kế tiếp sẽ xoá.
+
+> Chưa có ca test tự động cho lỗi này: frontend **chưa dựng hạ tầng test** (không vitest/jest). Đây là
+> đúng loại lỗi mà một ca test rẻ tiền bắt được — dựng bộ test frontend đã ghi vào nợ.
+
+> Bài học: **xoá phiên không chỉ là xoá token.** Phải xoá mọi thứ được lưu theo danh tính người dùng,
+> mà trong ứng dụng một trang thì cache dữ liệu là chỗ dễ quên nhất — nó không nằm trong localStorage
+> để lộ ra khi dọn, và nó biến mất mỗi lần F5 nên khi dò lỗi bằng tay rất dễ tưởng là không có vấn đề.

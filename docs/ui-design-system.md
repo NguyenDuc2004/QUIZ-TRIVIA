@@ -72,6 +72,21 @@ Font: `Inter`, dự phòng `system-ui, sans-serif`.
 | `AppLayout` | `shared/components/AppLayout.tsx` | Khung có header sticky + ô tìm kiếm + menu theo vai trò |
 | `QuizCard` | `features/quiz/components/QuizCard.tsx` | Mọi nơi hiển thị quiz theo kiểu browse |
 
+### Góc tài khoản ở header
+
+Avatar + tên + thẻ vai trò gộp thành **một** đích bấm, mở `Dropdown` chứa *Trang cá nhân* và *Đăng
+xuất*. Không để nút Đăng xuất bày sẵn ngoài header: nó là hành động rời khỏi hệ thống, đứng cạnh các
+mục điều hướng thường thì vừa chiếm chỗ vừa dễ bấm nhầm. Trong menu, *Đăng xuất* nằm **dưới một đường
+kẻ** và ở cuối — đó là mục duy nhất không hoàn tác được bằng một lần bấm nữa.
+
+Icon lấy từ `@ant-design/icons` (`UserOutlined`, `LogoutOutlined`, `DownOutlined`) — kiểu nét mảnh,
+không dùng icon nền đặc. `DownOutlined` phải có: bỏ đi thì không còn dấu hiệu nào cho biết bấm vào sẽ
+mở thêm lựa chọn, người dùng sẽ tưởng đó là một đường dẫn.
+
+> `@ant-design/icons` vốn đã nằm trong `node_modules` vì `antd` phụ thuộc nó, nhưng vẫn **khai báo
+> tường minh** trong `package.json`: dùng một package chỉ vì thư viện khác tình cờ kéo về là phụ thuộc
+> ngầm, sẽ đứt lặng lẽ khi `antd` lên phiên bản đổi phụ thuộc.
+
 ## 7. Trung thực dữ liệu
 
 Udemy hiển thị điểm đánh giá và số học viên. Hệ thống này **chưa có** dữ liệu đó, nên:

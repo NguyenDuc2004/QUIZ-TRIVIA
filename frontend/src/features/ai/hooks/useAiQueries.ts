@@ -72,6 +72,23 @@ export function useUploadMaterial() {
   })
 }
 
+export function useSetMaterialShared() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { id: string; shared: boolean }) =>
+      aiApi.setMaterialShared(input.id, input.shared),
+    onSuccess: (material) => {
+      message.success(
+        material.shared
+          ? 'Đã chia sẻ — người học hỏi trợ lý AI sẽ dựa được vào tài liệu này'
+          : 'Đã thu hồi chia sẻ, có hiệu lực ngay lượt hỏi tiếp theo',
+      )
+      queryClient.invalidateQueries({ queryKey: [MATERIAL_KEY] })
+    },
+    onError: (error) => message.error(getApiErrorMessage(error)),
+  })
+}
+
 export function useDeleteMaterial() {
   const queryClient = useQueryClient()
   return useMutation({

@@ -278,13 +278,50 @@ POST   /api/v1/ai/jobs/{jobId}/approve   Duyệt câu hỏi đã chọn → ngâ
 
 (Chấm tự luận & giải thích nằm ở mục 4 vì gắn với một bài làm cụ thể, không phải công cụ soạn nội dung)
 
-POST   /api/v1/ai/chat                   Trợ lý RAG (SSE stream)                     ⏳ features/08
-GET    /api/v1/ai/chat/sessions          Danh sách phiên chat                        ⏳ features/08
+PATCH  /api/v1/ai/materials/{id}/shared  Bật/tắt chia sẻ học liệu cho người học       ✅
 ```
 
-**Quyền:** toàn bộ mục này yêu cầu vai trò **CREATOR/ADMIN** (Learner → 403, Guest → 401). Đây là
+**Quyền:** các endpoint trên yêu cầu vai trò **CREATOR/ADMIN** (Learner → 403, Guest → 401). Đây là
 công cụ soạn nội dung và mỗi lời gọi đều tốn tiền API, nên không mở cho mọi tài khoản.
 Học liệu và job là **dữ liệu riêng**: của người khác trả **404**.
+
+### 6b. Trợ lý học tập (RAG chatbot) — `/ai/chat`
+```
+POST   /api/v1/ai/chat                   Hỏi trợ lý, trả lời theo luồng SSE          ✅
+GET    /api/v1/ai/chat/sessions          Phiên hội thoại của tôi                     ✅
+GET    /api/v1/ai/chat/sessions/{id}     Toàn bộ tin nhắn của một phiên              ✅
+DELETE /api/v1/ai/chat/sessions/{id}     Xoá phiên và toàn bộ tin nhắn               ✅
+```
+
+**Quyền khác hẳn phần trên: mọi tài khoản đã đăng nhập đều dùng được** — người học chính là đối tượng
+trợ lý phục vụ. Vì vậy nó nằm ở `ChatController` riêng chứ không nhồi vào `AiController` (lớp đó gắn
+`@PreAuthorize` cấp lớp cho CREATOR/ADMIN; đục một lỗ ngoại lệ trong đó là cách chắc chắn để sau này
+có người mở rộng quyền quá tay). Guest vẫn bị chặn: hội thoại có ngữ cảnh cần danh tính để lưu phiên,
+và mỗi lượt hỏi tiêu một lượt hạn mức AI.
+
+**Phạm vi học liệu.** Trợ lý truy xuất trong **học liệu của chính người hỏi + học liệu người khác đã
+bật `shared`**. Người học không sở hữu học liệu nào, nên nếu chỉ tìm trong tài liệu của họ thì mọi câu
+hỏi đều truy xuất được con số không — và mô hình sẽ trả lời bằng kiến thức nền, tức là **bịa**, đúng
+thứ RAG sinh ra để chống. Tài liệu **chưa** bật `shared` vẫn tuyệt đối riêng tư.
+
+**Ba loại sự kiện SSE**, mỗi loại một tên riêng:
+
+| `event` | `data` | Ghi chú |
+|---|---|---|
+| `meta` | `{ sessionId, sources[] }` | **Một lần, trước mọi chữ.** Mang id phiên vừa mở (lượt hỏi đầu không cần gọi thêm API) và danh sách học liệu sẽ dựa vào |
+| `token` | `{ "t": "…" }` | Một mảnh văn bản |
+| `error` | `{ message }` | Hết hạn mức / mô hình không phản hồi |
+
+Mảnh chữ **bọc trong JSON** chứ không gửi thô. Chuẩn SSE quy định client bỏ *một* khoảng trắng đứng
+ngay sau `data:`, mà mảnh của Gemini rất thường bắt đầu bằng khoảng trắng — gửi thô thì
+`"Vòng lặp" + " for" + " dùng"` hiện ra thành `"Vòng lặpfordùng"`. Đã đo thật, không phải phòng xa.
+
+Lỗi **giữa luồng** phải là sự kiện `error`, không phải mã HTTP: header đã gửi từ lúc mở luồng nên
+không đổi status được nữa. Ngược lại, lỗi ở **bước chuẩn bị** (phiên không tồn tại, câu hỏi rỗng)
+vẫn trả mã HTTP thường, vì bước đó chạy đồng bộ trước khi mở luồng.
+
+**Mã lỗi riêng:** `400` câu hỏi rỗng hoặc quá 2000 ký tự · `404` phiên không phải của mình ·
+`409` bật chia sẻ cho tài liệu chưa xử lý xong.
 
 **Ví dụ — sinh đề:**
 ```json

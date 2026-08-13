@@ -3,6 +3,7 @@ package com.datn.quizai.ai.repository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -46,27 +47,101 @@ public class MaterialChunkRepository {
     }
 
     /**
-     * Tìm {@code limit} đoạn gần nghĩa nhất với vector truy vấn, bằng cosine distance
-     * (toán tử {@code <=>} của pgvector — càng nhỏ càng giống).
+     * Tìm {@code limit} đoạn gần nghĩa nhất trong học liệu <b>của chính người gọi</b>.
      * <p>
-     * Luôn lọc theo {@code ownerId}: học liệu là tài sản riêng, không được để truy vấn của người
-     * này lôi ra nội dung tài liệu của người khác.
+     * Dùng cho sinh đề (features/05): Creator soạn đề từ tài liệu mình đã tải lên, không có lý do
+     * chạm tới tài liệu người khác.
      *
      * @param materialId giới hạn trong một tài liệu; null = tìm trong mọi tài liệu của người đó
      */
     public List<Chunk> searchSimilar(UUID ownerId, UUID materialId, List<Float> queryEmbedding, int limit) {
-        return jdbc.query("""
-                        select c.id, c.material_id, m.title, c.chunk_index, c.content,
-                               c.embedding <=> cast(? as vector) as distance
-                        from material_chunks c
-                                 join learning_materials m on m.id = c.material_id
-                        where m.owner_id = ?
-                          and m.status = 'READY'
-                          and (cast(? as uuid) is null or m.id = cast(? as uuid))
-                          and c.embedding is not null
+        return search(ownerId, materialId, false, queryEmbedding, limit);
+    }
+
+    /**
+     * Như trên nhưng <b>kèm cả học liệu đã chia sẻ</b> của người khác — dùng cho trợ lý học tập
+     * (features/08).
+     * <p>
+     * Người học không sở hữu học liệu nào, nên nếu chỉ tìm trong tài liệu của chính họ thì mọi câu
+     * hỏi đều truy xuất được con số không, và mô hình sẽ trả lời bằng kiến thức nền của nó — tức là
+     * bịa, đúng thứ RAG sinh ra để chống.
+     * <p>
+     * Chỉ mở tới tài liệu mà chủ của nó <b>đã chủ động bật</b> {@code shared}. Đây là lằn ranh duy
+     * nhất: tài liệu không bật cờ vẫn tuyệt đối riêng tư.
+     */
+    public List<Chunk> searchSimilarIncludingShared(UUID userId, UUID materialId,
+                                                    List<Float> queryEmbedding, int limit) {
+        return search(userId, materialId, true, queryEmbedding, limit);
+    }
+
+    /**
+     * Toán tử {@code <=>} của pgvector là cosine distance — càng nhỏ càng giống.
+     * <p>
+     * {@code includeShared} nằm trong câu SQL thay vì thành hai câu riêng: hai bản gần như y hệt thì
+     * sửa một chỗ mà quên chỗ kia là chuyện của thời gian, mà chỗ dễ quên nhất lại chính là điều kiện
+     * lọc quyền.
+     */
+    private List<Chunk> search(UUID userId, UUID materialId, boolean includeShared,
+                               List<Float> queryEmbedding, int limit) {
+        // Ghép điều kiện giới hạn tài liệu ở Java, KHÔNG viết "(cast(? as uuid) is null or m.id = ?)"
+        // rồi truyền null vào.
+        //
+        // Bản trước làm đúng như vậy và nhánh null LẶNG LẼ KHÔNG TRẢ VỀ GÌ: đo thật trên PostgreSQL,
+        // cùng một câu hỏi với materialId cụ thể ra 1 đoạn (khoảng cách 0.238), còn để null ra 0 đoạn.
+        // Không có lỗi, không có cảnh báo — chỉ là kho vector coi như rỗng. Hậu quả nặng vì cả hai
+        // tính năng RAG đều dựa vào nhánh này: trợ lý học tập trả lời "không có tài liệu" dù kho đầy,
+        // và sinh đề với useMaterials=true nhưng không chọn tài liệu cụ thể thì mô hình sinh câu hỏi
+        // từ kiến thức nền của nó — tức là bịa, đúng thứ RAG sinh ra để chống.
+        //
+        // Chuỗi ghép vào đây là hằng số trong mã nguồn, không phải dữ liệu người dùng, nên không có
+        // đường tiêm SQL; id vẫn đi qua tham số.
+        String materialFilter = materialId == null ? "" : " and m.id = ? ";
+
+        // Thứ tự phải trùng thứ tự dấu ? xuất hiện trong câu SQL bên dưới: điều kiện quyền nằm trong
+        // CTE nên đi trước, vector của câu hỏi nằm ở truy vấn ngoài nên đi sau.
+        List<Object> args = new ArrayList<>();
+        args.add(userId);
+        args.add(includeShared);
+        if (materialId != null) {
+            args.add(materialId);
+        }
+        args.add(toVectorLiteral(queryEmbedding));
+        args.add(limit);
+
+        // LỌC QUYỀN TRƯỚC, xếp theo khoảng cách SAU — thứ tự này là bắt buộc, không phải tuỳ chọn.
+        //
+        // Bản trước viết một câu phẳng "where <điều kiện quyền> order by distance limit ?". PostgreSQL
+        // thấy "order by <toán tử vector> limit n" liền dùng index IVFFlat để lấy đúng n ứng viên gần
+        // nhất TOÀN KHO, rồi mới join lọc quyền lên n dòng đó. Đo thật trên dữ liệu đang có: index trả
+        // về 2 dòng, cả 2 thuộc tài liệu chưa chia sẻ, join loại sạch → trợ lý trả lời "không có tài
+        // liệu" trong khi kho có đúng 9 đoạn hợp lệ nói về chính câu hỏi. Với ivfflat.probes = 1 (mặc
+        // định) ra 0 đoạn, đặt probes = 100 ra 5 — cùng một câu truy vấn.
+        //
+        // Nguy hiểm ở chỗ nó IM LẶNG: không lỗi, không cảnh báo, chỉ là kho vector trông như rỗng.
+        //
+        // `materialized` buộc PostgreSQL dựng xong tập được phép đọc rồi mới tính khoảng cách trên
+        // đúng tập đó — tức tìm chính xác (exact), không phải xấp xỉ. Kho học liệu ở quy mô này chỉ
+        // vài trăm tới vài nghìn đoạn nên quét thẳng còn nhanh hơn dựng cây, và quan trọng hơn: nó
+        // không bao giờ bỏ sót. Khi kho vượt cỡ vài chục nghìn đoạn thì mới cần ANN, và lúc đó phải
+        // bật kèm iterative scan của pgvector 0.8 (`hnsw.iterative_scan`) để index tự quét thêm khi
+        // bộ lọc quyền loại bớt ứng viên — chứ không quay lại cách cũ.
+        String sql = """
+                        with duoc_phep_doc as materialized (
+                            select c.id, c.material_id, m.title, c.chunk_index, c.content, c.embedding
+                            from material_chunks c
+                                     join learning_materials m on m.id = c.material_id
+                            where (m.owner_id = ? or (? and m.shared = true))
+                              and m.status = 'READY'
+                              and c.embedding is not null
+                        """ + materialFilter + """
+                        )
+                        select id, material_id, title, chunk_index, content,
+                               embedding <=> cast(? as vector) as distance
+                        from duoc_phep_doc
                         order by distance
                         limit ?
-                        """,
+                        """;
+        return jdbc.query(sql,
                 (rs, rowNum) -> new Chunk(
                         rs.getObject("id", UUID.class),
                         rs.getObject("material_id", UUID.class),
@@ -74,7 +149,7 @@ public class MaterialChunkRepository {
                         rs.getInt("chunk_index"),
                         rs.getString("content"),
                         rs.getDouble("distance")),
-                toVectorLiteral(queryEmbedding), ownerId, materialId, materialId, limit);
+                args.toArray());
     }
 
     /** pgvector nhận vector dưới dạng chuỗi {@code [0.1,0.2,…]}. */

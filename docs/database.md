@@ -137,9 +137,20 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 **material_chunks** *(V6)* — đoạn học liệu + embedding (pgvector)
 | id | material_id (FK) | chunk_index | content (text) | embedding **vector(768)** | metadata (jsonb) |
 
-> 768 chiều khớp model `text-embedding-004` của Gemini. Có chỉ mục `ivfflat (embedding vector_cosine_ops)`
-> cho similarity search bằng toán tử `<=>`. Truy vấn đi qua `MaterialChunkRepository` dùng JdbcTemplate
-> — Hibernate không có kiểu `vector`.
+> 768 chiều khớp model embedding của Gemini. Similarity search bằng toán tử `<=>` (cosine distance).
+> Truy vấn đi qua `MaterialChunkRepository` dùng JdbcTemplate — Hibernate không có kiểu `vector`.
+>
+> **Không có chỉ mục ANN trên `embedding`.** V6 từng tạo `ivfflat (lists = 100)`, V11 đã bỏ: truy vấn
+> RAG phải lọc quyền đọc trước (tài liệu của tôi **hoặc** tài liệu người khác đã bật `shared`), còn
+> `order by embedding <=> ? limit n` lại khiến PostgreSQL lấy `n` đoạn gần nhất **toàn kho** rồi mới
+> lọc quyền — ứng viên không được phép đọc bị loại mà không có gì bù lại, thường còn rỗng. Đo trên dev:
+> index trả 2 ứng viên đều thuộc tài liệu chưa chia sẻ → 0 đoạn; cùng câu truy vấn với `probes = 100`
+> → 5 đoạn, khoảng cách 0.193–0.319. Sai trong im lặng, không lỗi không cảnh báo.
+>
+> Truy vấn hiện lọc quyền trong CTE `materialized` rồi mới tính khoảng cách, tức **tìm chính xác trên
+> đúng tập được phép đọc**. Ở quy mô vài trăm tới vài nghìn đoạn, quét thẳng nhanh hơn dựng cây và
+> không bỏ sót. Khi vượt cỡ vài chục nghìn đoạn mới cần ANN — dùng HNSW kèm `hnsw.iterative_scan`
+> (pgvector 0.8) để index tự quét thêm khi bộ lọc quyền loại bớt ứng viên.
 
 **ai_jobs** *(V6)* — tác vụ AI chạy nền
 | id | user_id (FK) | type (INGEST_MATERIAL/GENERATE_QUESTIONS) | status (PENDING/RUNNING/SUCCEEDED/FAILED) |
@@ -223,7 +234,8 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
 -- material_chunks.embedding kiểu vector(768)  -- tuỳ model embedding
-CREATE INDEX ON material_chunks USING ivfflat (embedding vector_cosine_ops);
+-- KHÔNG tạo chỉ mục ANN: truy vấn RAG lọc quyền đọc trước rồi mới xếp theo khoảng cách,
+-- mà index ANN thì xếp trước lọc sau nên bỏ sót kết quả (xem material_chunks ở §1.2 và V11).
 ```
 
 > Quản lý migration bằng **Flyway** (`V1__init.sql`, `V2__rag.sql`, ...).
