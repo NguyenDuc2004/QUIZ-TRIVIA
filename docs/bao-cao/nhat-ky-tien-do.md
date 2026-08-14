@@ -1864,10 +1864,48 @@ Kiểm chứng cả hai lệnh cùng lúc: `tsc -b` sạch, `npm run build` thà
 `.docx` (sinh lại được bằng một lệnh, mà mỗi lần build tạo diff binary ~5MB không đọc được để review), và
 `Testcase+TestPlan/` (còn là tài liệu của đồ án khác). Kèm README hướng dẫn dựng lại và quy ước viết.
 
+### Đo lại mục 3.6 — và phép đo tự tìm ra một hạn chế
+
+Số liệu 3.6 trước 13/08 đo trên đường truy xuất đang lỗi nên bỏ hết. Đo lại hôm nay, đầy đủ ở
+`so-lieu-3.6-do-chinh-xac-ai.md`. **21 lượt gọi mô hình, tất cả thành công, không bài nào `AI_FAILED`.**
+
+| Hạng mục | Kết quả |
+|---|---|
+| Chấm tự luận — điểm trong khoảng chuẩn | **7/8**, sai lệch trung bình **0,13/10** |
+| Chống tiêm chỉ thị | **2/2** bài tấn công bị chặn (0 điểm) |
+| Sinh đề — câu đúng chuẩn cấu trúc | **10/10**, không câu nào bị bộ kiểm duyệt loại |
+| Trợ lý — có học liệu | **3/3** trả lời đúng con số, kèm trích dẫn |
+| Trợ lý — ngoài học liệu | **2/2** nói không biết, không suy đoán từ kiến thức nền |
+
+Bài lệch duy nhất: bài nêu đủ ba ý nhưng viết cụt lủn được AI cho 10/10 trong khi rubric chỉ cho 7–9 —
+mô hình **rộng tay với tiêu chí định tính**. Nó nhận diện tốt phần *nội dung* (đủ mấy ý) nhưng dễ bỏ
+qua phần *chất lượng diễn đạt*. Thứ tự chất lượng thì đúng hoàn toàn: 10 → 10 → 7 → 4 → 0 → 0, không có
+bài kém nào được điểm cao hơn bài tốt.
+
+**Hai bài học từ chính phép đo.**
+
+*Thứ nhất, tiêu chí đo sai làm con số vô nghĩa.* Hạng mục "nói không biết" ban đầu in ra **0/2**, và
+nếu tin luôn thì báo cáo sẽ ghi "trợ lý suy đoán bừa" — sai hoàn toàn. Nhìn dữ liệu thô mới thấy mô
+hình **đã** nói không biết ở cả hai câu; điều không thoả là điều kiện thứ hai tôi gộp vào cùng tiêu chí
+("không có nguồn nào"). *"Mô hình có suy đoán bừa không"* và *"hệ thống có hiện nguồn dư không"* là hai
+câu hỏi riêng — trộn vào một tiêu chí thì không trả lời được câu nào.
+
+*Thứ hai, phép đo tìm ra một hạn chế mà đọc code không thấy.* Với câu ngoài học liệu, hệ thống **vẫn
+trả về 2 nguồn**, vì danh sách nguồn gửi ở sự kiện `meta` **trước** khi mô hình kịp trả lời — nó phản
+ánh "có đoạn nào vượt ngưỡng 0,75" chứ không phản ánh "mô hình có dùng đoạn đó". Trên giao diện, người
+dùng thấy câu *"tôi không có thông tin"* mà bên dưới có khối *"Dựa trên: …"* — hai thứ nói ngược nhau.
+
+Hai hướng xử lý (siết ngưỡng, hoặc chuyển danh sách nguồn sang cuối luồng) đều **cần đo thêm trước khi
+chọn**: chọn ngưỡng mới mà không có số liệu khoảng cách thực tế thì chỉ là đổi một con số tuỳ ý bằng
+một con số tuỳ ý khác. Ghi vào nợ.
+
+> Bài học: **một phép đo tốt phải đo được cả mặt "không được làm gì".** Nếu chỉ đo "trả lời đúng khi có
+> tài liệu", một trợ lý luôn luôn trả lời cũng đạt 100% kể cả khi nó bịa.
+
 ### Nợ / chuyển sang ngày sau
 
-- **Chương 3 + Kết luận** của báo cáo — chờ số liệu mục 3.5 và 3.6.
-- **Đo lại mục 3.6:** số grounding trước 13/08 đo trên đường truy xuất đang lỗi.
+- **[!] Nguồn vẫn hiện dù trợ lý nói không biết** — cần đo khoảng cách thực tế rồi mới chọn cách sửa.
+- **Chương 3 + Kết luận** của báo cáo — giờ đã có đủ số liệu 3.5 và 3.6.
 - Số liệu khảo sát biểu mẫu (mục 2.1.4 báo cáo).
 - Thay `Testcase+TestPlan/` bằng tài liệu test của đề tài này (dùng cho mục 3.4).
 - Mở rộng test frontend sang các luồng khác: hạ tầng đã có, giờ thêm ca chỉ là viết file.

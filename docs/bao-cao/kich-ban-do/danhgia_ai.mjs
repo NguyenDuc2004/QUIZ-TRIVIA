@@ -350,10 +350,19 @@ for (const c of matReady ? CAU_HOI_CHAT : []) {
   const coNguon = kq.sources.length > 0
   const dungTuKhoa = c.tuKhoa ? kq.traLoi.includes(c.tuKhoa) : null
 
-  // Đạt = làm đúng thứ phải làm với TỪNG loại câu hỏi, không phải "có trả lời là đạt"
+  // Đạt = làm đúng thứ phải làm với TỪNG loại câu hỏi, không phải "có trả lời là đạt".
+  //
+  // Với câu ngoài học liệu, tiêu chí là **mô hình nói không biết** — KHÔNG đòi thêm `!coNguon`.
+  // Bản đầu đòi cả hai và cho 0/2 dù mô hình đã trả lời đúng, vì hệ thống vẫn trả về `sources`:
+  // truy vấn vector gửi danh sách nguồn ở sự kiện `meta` TRƯỚC khi mô hình kịp trả lời, nên số nguồn
+  // phản ánh "có đoạn nào vượt ngưỡng khoảng cách" chứ không phản ánh "mô hình có dùng đoạn đó".
+  // Trộn hai thứ đó vào một tiêu chí thì con số đo được không nói lên điều gì rõ ràng.
+  //
+  // Việc hệ thống trả nguồn kèm một câu trả lời "không biết" là vấn đề RIÊNG (gây nhầm lẫn trên giao
+  // diện) và được đo tách ra ở cột `nguonKhiKhongBiet` dưới đây.
   const dat = c.trongTaiLieu
     ? coNguon && dungTuKhoa && !noiKhongBiet
-    : !coNguon && noiKhongBiet
+    : noiKhongBiet
 
   console.log(`${dat ? 'ĐẠT ' : 'KHÔNG'} · nguồn ${kq.sources.length}`
     + `${c.tuKhoa ? ` · từ khoá ${dungTuKhoa ? 'có' : 'KHÔNG'}` : ''}`
@@ -397,6 +406,10 @@ if (chatDo.length === 0) {
   console.log(`| Trợ lý — có học liệu | Trả lời đúng và có trích dẫn | **${trongDat}/${chatTrong.length}** |`)
   console.log(`| Trợ lý — có học liệu | Câu trả lời kèm nguồn | **${coTrichDan}/${chatTrong.length}** |`)
   console.log(`| Trợ lý — ngoài học liệu | Nói không biết thay vì suy đoán | **${ngoaiDat}/${chatNgoai.length}** |`)
+  // Đo tách: nguồn hiện ra kèm câu trả lời "không biết" thì giao diện nói ngược với câu trả lời
+  const nguonKhiKhongBiet = chatNgoai.filter((r) => r.noiKhongBiet && r.coNguon).length
+  console.log(`| Trợ lý — ngoài học liệu | Vẫn hiện nguồn dù nói không biết (càng thấp càng tốt) `
+    + `| **${nguonKhiKhongBiet}/${chatNgoai.length}** |`)
   const chatKhongDo = ketQuaChat.length - chatDo.length
   if (chatKhongDo > 0) {
     console.log(`| Trợ lý | Câu KHÔNG đo được (hết hạn mức) | ${chatKhongDo}/${ketQuaChat.length} |`)
