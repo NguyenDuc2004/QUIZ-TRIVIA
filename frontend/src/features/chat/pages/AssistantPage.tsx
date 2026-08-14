@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, Button, Input, Popconfirm, Skeleton, Space, Spin, Tooltip, Typography } from 'antd'
+import {
+  Alert,
+  Button,
+  Input,
+  Popconfirm,
+  Skeleton,
+  Space,
+  Spin,
+  Tag,
+  Tooltip,
+  Typography,
+} from 'antd'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
 import { useAuthStore } from '@/features/auth/store/authStore'
@@ -8,6 +19,7 @@ import type { ChatMessage } from '../api/chatApi'
 import {
   mergeMessages,
   useAskAssistant,
+  useAskableMaterials,
   useChatMessages,
   useChatSessions,
   useDeleteChatSession,
@@ -33,13 +45,20 @@ export default function AssistantPage() {
   const role = useAuthStore((state) => state.user?.role)
   const canCreate = role === 'CREATOR' || role === 'ADMIN'
 
+  // null = hỏi trên mọi tài liệu đọc được; có giá trị = giới hạn trong đúng một tài liệu.
+  // Hữu ích khi ôn đúng một chương và không muốn câu trả lời lẫn tài liệu khác.
+  const [materialId, setMaterialId] = useState<string | null>(null)
+
   const { data: sessions, isPending: sessionsLoading } = useChatSessions()
+  const { data: materials, isPending: materialsLoading } = useAskableMaterials()
   const { data: savedMessages, isPending: messagesLoading } = useChatMessages(sessionId)
   const deleteSession = useDeleteChatSession()
   const { ask, stop, streaming, pendingQuestion, isStreaming } = useAskAssistant(
     sessionId,
     setSessionId,
   )
+
+  const selectedMaterial = materials?.find((m) => m.id === materialId) ?? null
 
   const messages = mergeMessages(savedMessages, pendingQuestion, streaming)
 
@@ -54,7 +73,7 @@ export default function AssistantPage() {
       return
     }
     setDraft('')
-    void ask(question)
+    void ask(question, materialId ?? undefined)
   }
 
   return (
@@ -75,9 +94,10 @@ export default function AssistantPage() {
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
+      {/* Cột trái xếp hai khối (hội thoại, học liệu), khung hội thoại chiếm trọn chiều cao bên phải */}
+      <div className="grid gap-4 lg:grid-cols-[260px_1fr] lg:grid-rows-[auto_1fr]">
         {/* Danh sách phiên */}
-        <aside className="border border-line bg-white">
+        <aside className="border border-line bg-white lg:col-start-1 lg:row-start-1">
           <div className="border-b border-line px-4 py-3">
             <Text className="text-xs font-bold">Hội thoại của bạn</Text>
           </div>
@@ -132,8 +152,66 @@ export default function AssistantPage() {
           )}
         </aside>
 
+        {/* Học liệu hỏi được — trước đây người học không có cách nào biết kho có tài liệu gì, họ chỉ
+            thấy tên một tài liệu SAU KHI tình cờ hỏi trúng nó qua khối trích dẫn */}
+        <aside className="border border-line bg-white lg:col-start-1 lg:row-start-2">
+          <div className="border-b border-line px-4 py-3">
+            <Text className="text-xs font-bold">Học liệu hỏi được</Text>
+          </div>
+          {materialsLoading ? (
+            <div className="p-4">
+              <Skeleton active paragraph={{ rows: 2 }} title={false} />
+            </div>
+          ) : !materials || materials.length === 0 ? (
+            <Text className="text-ink-soft block px-4 py-6 text-center text-xs">
+              {canCreate
+                ? 'Chưa có học liệu nào. Nạp tài liệu ở trang Học liệu để bắt đầu.'
+                : 'Chưa có học liệu nào được chia sẻ. Trợ lý sẽ nói là không biết cho tới khi người tạo nội dung chia sẻ tài liệu.'}
+            </Text>
+          ) : (
+            <ul className="m-0 list-none p-0">
+              <li className="border-b border-line">
+                <button
+                  type="button"
+                  className={`w-full cursor-pointer border-0 px-3 py-2 text-left ${
+                    materialId === null ? 'bg-surface-subtle' : 'bg-transparent'
+                  }`}
+                  onClick={() => setMaterialId(null)}
+                >
+                  <Text className="block text-xs font-bold">Tất cả học liệu</Text>
+                  <Text className="text-ink-soft text-[10px]">
+                    {materials.length} tài liệu · trợ lý tự chọn đoạn liên quan nhất
+                  </Text>
+                </button>
+              </li>
+              {materials.map((material) => (
+                <li key={material.id} className="border-b border-line last:border-b-0">
+                  <button
+                    type="button"
+                    className={`w-full cursor-pointer border-0 px-3 py-2 text-left ${
+                      material.id === materialId ? 'bg-surface-subtle' : 'bg-transparent'
+                    }`}
+                    onClick={() => setMaterialId(material.id)}
+                  >
+                    <Text className="line-clamp-2-title block text-xs font-bold">
+                      {material.title}
+                    </Text>
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      {material.topic ? <Tag className="mr-0!">{material.topic}</Tag> : null}
+                      {/* Nói rõ tài liệu của ai: người học đọc ké tài liệu được chia sẻ, không phải sở hữu */}
+                      <Tag color={material.mine ? 'blue' : 'green'} className="mr-0!">
+                        {material.mine ? 'Của tôi' : 'Được chia sẻ'}
+                      </Tag>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+
         {/* Khung hội thoại */}
-        <section className="flex min-h-[60vh] flex-col border border-line bg-white">
+        <section className="flex min-h-[60vh] flex-col border border-line bg-white lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <div className="flex-1 overflow-y-auto p-4">
             {sessionId && messagesLoading ? (
               <Skeleton active paragraph={{ rows: 5 }} />
@@ -164,11 +242,25 @@ export default function AssistantPage() {
           </div>
 
           <div className="border-t border-line p-3">
+            {/* Nói rõ phạm vi đang hỏi: người dùng cần biết vì sao trợ lý không thấy nội dung ở tài
+                liệu khác, thay vì tưởng trợ lý quên */}
+            {selectedMaterial && (
+              <div className="mb-2 flex items-center gap-2">
+                <Text className="text-ink-soft text-xs">Chỉ hỏi trong:</Text>
+                <Tag closable onClose={() => setMaterialId(null)} className="mr-0!">
+                  {selectedMaterial.title}
+                </Tag>
+              </div>
+            )}
             <div className="flex items-end gap-2">
               <Input.TextArea
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                placeholder="Hỏi về nội dung trong học liệu…"
+                placeholder={
+                  selectedMaterial
+                    ? `Hỏi về "${selectedMaterial.title}"…`
+                    : 'Hỏi về nội dung trong học liệu…'
+                }
                 autoSize={{ minRows: 1, maxRows: 5 }}
                 maxLength={2000}
                 disabled={isStreaming}

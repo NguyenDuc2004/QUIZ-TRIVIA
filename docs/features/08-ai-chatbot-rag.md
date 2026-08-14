@@ -57,27 +57,28 @@ Hai đường truy xuất tách bạch:
 | `searchSimilar` | sinh đề (features/05) | **chỉ tài liệu của chính mình** — soạn đề thì không có lý do lấy nội dung người khác |
 | `searchSimilarIncludingShared` | trợ lý học tập | tài liệu của mình **+** tài liệu người khác đã bật `shared` |
 
-### Còn thiếu: người học không thấy mình được hỏi trên tài liệu nào  🔧 *(nợ, 13/08/2026)*
+### Người học phải thấy mình được hỏi trên tài liệu nào  ✅ *(đã làm 13/08/2026)*
 
-Cột `shared` giải quyết việc *truy xuất ra được gì*, nhưng chưa giải quyết việc *người học biết có gì
-để hỏi*. Hiện không có đường nào cho họ xem danh sách:
+Cột `shared` giải quyết việc *truy xuất ra được gì*, nhưng ban đầu chưa giải quyết việc *người học biết
+có gì để hỏi*. `GET /ai/materials` nằm trong `AiController` (chặn CREATOR/ADMIN cấp lớp) và gọi
+`listMine(ownerId)`, nên kể cả mở quyền thì người học vẫn nhận danh sách rỗng vì họ không sở hữu tài
+liệu nào. Hệ quả: họ chỉ biết một tài liệu tồn tại **sau khi** tình cờ hỏi trúng nó qua khối `sources`
+— trước đó là hỏi mò. Kèm theo, `ChatAskRequest.materialId` (giới hạn câu hỏi trong một tài liệu) đã có
+ở backend nhưng giao diện **không có cách nào chọn** vì không có danh sách để chọn từ.
 
-- `GET /ai/materials` nằm trong `AiController` (chặn CREATOR/ADMIN cấp lớp) và gọi `listMine(ownerId)`
-  — nên kể cả mở quyền thì người học vẫn nhận danh sách rỗng, vì họ không sở hữu tài liệu nào.
-- Không có endpoint nào trả tài liệu đã `shared`.
-- Người học chỉ biết một tài liệu tồn tại **sau khi** đã hỏi trúng nó, qua khối `sources` của câu trả
-  lời. Trước đó là hỏi mò: không biết có tài liệu gì, thuộc chủ đề gì, có đáng hỏi không.
+**`GET /api/v1/ai/chat/materials`** trả danh sách tài liệu người gọi được phép hỏi.
 
-Hệ quả kèm theo: `ChatAskRequest.materialId` (giới hạn câu hỏi trong một tài liệu) đã có ở backend và
-hook `useChat` cũng nhận tham số đó, nhưng **giao diện không có cách nào chọn** vì không có danh sách
-để chọn từ. Nửa tính năng đã xây mà chưa dùng được.
+| Quyết định | Lý do |
+|---|---|
+| Đặt trong `ChatController`, **không** phải `AiController` | Lớp kia gắn `@PreAuthorize` CREATOR/ADMIN cấp lớp, mà danh sách này người học phải xem được. Đục một lỗ ngoại lệ trong luật phân quyền của cả lớp là cách chắc chắn để sau này có người mở quyền quá tay |
+| Chỉ trả **metadata** (`id`, `title`, `topic`, `sourceType`, `chunkCount`, `mine`) | Người học được *hỏi trên* tài liệu, không được *đọc toàn văn* tài liệu của người khác — đúng lằn ranh đặt ra khi thêm cột `shared`. Trả kèm `content` sẽ mở một đường đọc trọn tài liệu mà chủ của nó chưa từng đồng ý |
+| Cùng phạm vi với `searchSimilarIncludingShared` | Hai chỗ lệch nhau thì giao diện liệt kê một danh sách khác với thứ trợ lý thật sự đọc được, người dùng sẽ thấy tài liệu trong danh sách mà hỏi mãi không ra |
+| Chỉ lấy tài liệu `READY` | Tài liệu đang xử lý chưa có vector nên hỏi cũng không truy hồi được gì; liệt kê ra chỉ khiến người học tưởng hỏi được rồi nhận về câu "không biết" |
+| Cờ `mine` phân biệt của mình / được chia sẻ | Để giao diện nói rõ nguồn, không để người học nhầm là mình sở hữu tài liệu |
 
-Hướng làm khi trả nợ: endpoint `GET /ai/chat/materials` đặt trong `ChatController` (mở cho mọi người đã
-đăng nhập, **không** nhồi vào `AiController` — đục lỗ ngoại lệ trong luật phân quyền cấp lớp là cách
-chắc chắn để sau này có người mở quyền quá tay), trả **chỉ metadata** của tài liệu người gọi đọc được:
-`id`, `title`, `topic`, `sourceType`. Không trả `content` và không trả đoạn nào: người học được *hỏi
-trên* tài liệu, không được *đọc toàn văn* tài liệu của người khác — lằn ranh này phải giữ đúng như lúc
-đặt ra cột `shared`.
+Giao diện `/assistant` có thêm khối **"Học liệu hỏi được"** ở cột trái. Bấm một tài liệu là giới hạn câu
+hỏi trong đúng tài liệu đó (truyền `materialId`), ô nhập nói rõ phạm vi đang hỏi — người dùng cần biết
+vì sao trợ lý không thấy nội dung ở tài liệu khác, thay vì tưởng trợ lý quên.
 
 ## Streaming thật, không giả lập
 

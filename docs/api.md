@@ -288,10 +288,22 @@ Học liệu và job là **dữ liệu riêng**: của người khác trả **40
 ### 6b. Trợ lý học tập (RAG chatbot) — `/ai/chat`
 ```
 POST   /api/v1/ai/chat                   Hỏi trợ lý, trả lời theo luồng SSE          ✅
+GET    /api/v1/ai/chat/materials         Học liệu tôi được phép hỏi (chỉ metadata)   ✅
 GET    /api/v1/ai/chat/sessions          Phiên hội thoại của tôi                     ✅
 GET    /api/v1/ai/chat/sessions/{id}     Toàn bộ tin nhắn của một phiên              ✅
 DELETE /api/v1/ai/chat/sessions/{id}     Xoá phiên và toàn bộ tin nhắn               ✅
 ```
+
+`GET /ai/chat/materials` trả tài liệu của chính người gọi **cộng** tài liệu người khác đã bật `shared`,
+chỉ những tài liệu ở trạng thái `READY`. Đây là **cùng phạm vi** mà truy vấn vector của trợ lý dùng —
+lệch nhau thì giao diện liệt kê một danh sách khác với thứ trợ lý thật sự đọc được.
+
+Response chỉ mang metadata (`id`, `title`, `topic`, `sourceType`, `chunkCount`, `mine`), **không có
+`content` và không có đoạn nào**: người học được *hỏi trên* tài liệu, không được *đọc toàn văn* tài liệu
+của người khác. Cờ `mine` để giao diện phân biệt tài liệu của mình với tài liệu đọc ké.
+
+Endpoint này là điều kiện để dùng được `materialId` trong `POST /ai/chat`: có danh sách thì giao diện
+mới cho người dùng chọn giới hạn câu hỏi trong một tài liệu.
 
 **Quyền khác hẳn phần trên: mọi tài khoản đã đăng nhập đều dùng được** — người học chính là đối tượng
 trợ lý phục vụ. Vì vậy nó nằm ở `ChatController` riêng chứ không nhồi vào `AiController` (lớp đó gắn

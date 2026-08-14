@@ -1740,8 +1740,8 @@ hàng câu hỏi, học liệu.
 bấm đăng xuất là chuyện thường. Ở lối vào xoá **trước** `setSession()`, để không tồn tại khoảnh khắc nào
 danh tính là người mới mà cache là dữ liệu người cũ.
 
-Chưa viết được ca test tự động: frontend **chưa dựng hạ tầng test** (không vitest/jest). Ghi vào nợ chứ
-không tự mở rộng phạm vi — nhưng đây đúng là loại lỗi một ca test rẻ tiền bắt được.
+Lúc sửa chưa viết được ca test tự động vì frontend chưa có hạ tầng test; ghi vào nợ chứ không tự mở rộng
+phạm vi. **Nợ này đã trả ngày 14/08** — xem mục cùng ngày.
 
 > Bài học: **xoá phiên không chỉ là xoá token.** Phải xoá mọi thứ lưu theo danh tính, mà trong ứng dụng
 > một trang thì cache dữ liệu là chỗ dễ quên nhất: nó không nằm trong localStorage để lộ ra khi dọn, và
@@ -1749,9 +1749,32 @@ không tự mở rộng phạm vi — nhưng đây đúng là loại lỗi một
 > giờ (nhánh `materialId = null`, chỉ mục IVFFlat, và lần này) đều **không làm chương trình báo lỗi** —
 > chúng chỉ trả về dữ liệu sai một cách yên lặng.
 
+### Trả nợ trong ngày: người học thấy được mình hỏi trên tài liệu nào
+
+Món nợ ghi ở đầu ngày đã làm xong ngay trong ngày. `GET /api/v1/ai/chat/materials` trả danh sách học
+liệu người gọi được phép hỏi; giao diện `/assistant` thêm khối **"Học liệu hỏi được"** ở cột trái, bấm
+một tài liệu là giới hạn câu hỏi trong đúng tài liệu đó.
+
+Bốn quyết định khi làm, mỗi cái tránh một cách hỏng cụ thể:
+
+| Quyết định | Tránh được gì |
+|---|---|
+| Đặt endpoint ở `ChatController`, không phải `AiController` | Lớp kia chặn CREATOR/ADMIN cấp lớp; đục lỗ ngoại lệ trong luật phân quyền của cả lớp là cách chắc chắn để sau này có người mở quyền quá tay |
+| Chỉ trả metadata, **không** trả `content` | Trả kèm nội dung là mở một đường đọc trọn tài liệu mà chủ của nó chưa từng đồng ý — phá đúng lằn ranh đặt ra khi thêm cột `shared` |
+| Dùng **cùng phạm vi quyền** với truy vấn vector | Hai chỗ lệch nhau thì giao diện liệt kê một danh sách khác với thứ trợ lý thật sự đọc được: người dùng thấy tài liệu trong danh sách mà hỏi mãi không ra |
+| Chỉ liệt kê tài liệu `READY` | Tài liệu đang xử lý chưa có vector; liệt kê ra khiến người học tưởng hỏi được rồi nhận về câu "không biết" |
+
+Kiểm chứng thật bằng tài khoản người học mới: danh sách trả về **đúng 1 tài liệu** đã chia sẻ (không
+thấy 2 tài liệu riêng tư của người khác), `mine = false`, và **không có trường nội dung** trong phản hồi.
+Hỏi kèm `materialId` thì khối `sources` trả về đúng tài liệu được chọn. `ChatIntegrationTest` 20/20
+(thêm 3 ca: phạm vi quyền, không lộ nội dung, cờ `mine` của chủ tài liệu).
+
+Cũng trong hôm nay, `RecommendationIntegrationTest` đã chạy lại được sau khi Docker hết nghẽn: **22/22
+xanh**.
+
 ### Nợ / chuyển sang ngày sau
 
-- **[!] Người học không thấy mình được hỏi trên tài liệu nào.** Cột `shared` lo được việc truy xuất ra
+- ~~**[!] Người học không thấy mình được hỏi trên tài liệu nào.**~~ **Đã làm** — xem mục trên. Cột `shared` lo được việc truy xuất ra
   gì, nhưng không có đường nào cho người học *xem danh sách* tài liệu đã chia sẻ: `GET /ai/materials`
   vừa chặn CREATOR/ADMIN vừa chỉ trả tài liệu của chính mình, nên mở quyền cũng vẫn rỗng. Họ chỉ biết
   một tài liệu tồn tại sau khi đã hỏi trúng nó qua khối `sources` — trước đó là hỏi mò. Kèm theo:
@@ -1759,9 +1782,8 @@ không tự mở rộng phạm vi — nhưng đây đúng là loại lỗi một
   nhận tham số đó, nhưng giao diện không có cách chọn vì không có danh sách — nửa tính năng xây rồi mà
   chưa dùng được. Hướng làm đã ghi ở `features/08`: endpoint `GET /ai/chat/materials` đặt trong
   `ChatController`, trả **chỉ metadata**, không trả nội dung.
-- **[!] Frontend chưa có hạ tầng test** (không vitest/jest). Lỗi rò cache giữa hai tài khoản hôm nay là
-  đúng loại một ca test rẻ tiền bắt được, mà hiện không có chỗ nào để viết ca đó.
-- `RecommendationIntegrationTest` vẫn chờ chạy lại.
+- ~~**[!] Frontend chưa có hạ tầng test** (không vitest/jest).~~ **Đã dựng ngày 14/08** — xem mục hôm đó.
+- ~~`RecommendationIntegrationTest` vẫn chờ chạy lại.~~ **Đã chạy: 22/22 xanh.**
 - **Đo lại mục 3.6:** mọi số grounding trước 13/08 đo trên đường truy xuất đang lỗi.
 - Chương 1 và Chương 2 của báo cáo.
 
@@ -1784,6 +1806,116 @@ không tự mở rộng phạm vi — nhưng đây đúng là loại lỗi một
   đánh giá grounding thì phải **đo lại** sau V11.
 - **"Khó khăn & cách giải quyết":** hai mục trên. Điểm chung: cả hai đều không làm chương trình báo lỗi,
   nên chỉ chạy thật mới thấy — build xanh và test xanh đều không đủ.
+
+---
+
+## 📅 T6 — 14/08/2026 — Dựng hạ tầng test frontend, và một xung đột phiên bản không ai nói trước
+
+**Mục tiêu:** trả hai món nợ ghi hôm qua — hạ tầng test frontend, và đưa bộ báo cáo vào git.
+
+**Xong:** vitest + testing-library · 3 ca hồi quy cho lỗi rò cache · bộ báo cáo vào git kèm README.
+
+### Ca test đầu tiên viết cho đúng lỗi hôm qua
+
+Lỗi rò dữ liệu giữa hai tài khoản (13/08) không có ca test nào vì frontend chưa có chỗ để viết. Nay có:
+`useAuthMutations.test.tsx`, ba ca — đăng nhập xoá cache, đăng xuất xoá cache, và **xoá đúng trước khi
+đặt phiên mới**.
+
+Ca thứ ba là ca đáng chú ý: nó kiểm *thứ tự*, không kiểm kết quả. Nếu `setSession` chạy trước
+`queryClient.clear()` thì vẫn "có xoá cache" nhưng tồn tại một khoảnh khắc component đã thấy người dùng
+mới trong khi đọc được dữ liệu người cũ — đủ để render ra. Ca này chặn đúng khoảnh khắc đó bằng cách ghi
+lại trình tự hai lời gọi.
+
+Cả ba kiểm ở **tầng hook** chứ không tầng giao diện, vì đây là lỗi của *vòng đời cache* chứ không của một
+trang cụ thể: kiểm một trang chỉ chứng minh trang đó sạch, còn cache là thứ mọi trang dùng chung.
+
+**Và lần này thử làm chúng đỏ trước khi tin:** bỏ `queryClient.clear()` khỏi `useLogin`/`useLogout` →
+**cả 3 ca đỏ**; khôi phục → xanh lại. Đây là bước hôm qua đã dạy: một ca test xanh ở cả bản đúng và bản
+lỗi thì không bảo vệ gì cả.
+
+### Xung đột phiên bản: vitest 3 chưa hỗ trợ Vite 8
+
+Cách làm thông thường là nhồi trường `test` vào `vite.config.ts` và lấy `defineConfig` từ `vitest/config`.
+Làm vậy thì `npm test` chạy được, nhưng **`npm run build` đổ** với một lỗi kiểu dài mười mấy dòng:
+`Plugin<any>[] is not assignable to PluginOption`.
+
+Nguyên nhân: vitest 3 chưa hỗ trợ Vite 8 nên nó **tự cài một bản vite riêng** trong `node_modules/vitest/`.
+Hai bản vite dùng hai bộ type plugin khác nhau — Vite 8 đã chuyển sang rolldown, bản kia còn rollup — nên
+danh sách `plugins` không khớp kiểu giữa hai bên. Thử cách chính thống `/// <reference types="vitest/config" />`
+cũng không cứu được, vì reference đó cũng trỏ về bản vite của vitest.
+
+**Cách xử lý:** tách hẳn `vitest.config.ts` riêng, và cố ý **không** đưa nó vào `include` của
+`tsconfig.node.json` nên `tsc -b` không kiểm nó. Đổi lại phải khai lại alias `@` và plugin react trong
+file đó — cái giá nhỏ so với việc để lệnh build của dự án đỏ. Đã ghi chú trong file là khi vitest lên bản
+hỗ trợ Vite 8 thì gộp lại và xoá file này.
+
+Kiểm chứng cả hai lệnh cùng lúc: `tsc -b` sạch, `npm run build` thành công (3327 module, 27s), `npm test`
+3/3 xanh.
+
+> Bài học: **thêm một công cụ dev không phải chuyện chỉ của công cụ đó.** Cấu hình test và cấu hình build
+> dùng chung một file thì hai hệ phiên bản kéo nhau, và triệu chứng lại hiện ra ở lệnh *build* chứ không ở
+> lệnh *test* — dễ tưởng là lỗi của mã sản phẩm. Chạy đủ cả `test` và `build` sau khi thêm công cụ mới,
+> đừng chỉ chạy cái mình vừa thêm.
+
+### Bộ báo cáo vào git
+
+`bao-cao-datn/` trước đó nằm ngoài git. Nay track theo lối "nội dung là text, sản phẩm là thứ build ra":
+4 file `.md` + 39 hình PNG + toàn bộ script sinh hình. **Không** track `node_modules`, `plantuml.jar`, bản
+`.docx` (sinh lại được bằng một lệnh, mà mỗi lần build tạo diff binary ~5MB không đọc được để review), và
+`Testcase+TestPlan/` (còn là tài liệu của đồ án khác). Kèm README hướng dẫn dựng lại và quy ước viết.
+
+### Đo lại mục 3.6 — và phép đo tự tìm ra một hạn chế
+
+Số liệu 3.6 trước 13/08 đo trên đường truy xuất đang lỗi nên bỏ hết. Đo lại hôm nay, đầy đủ ở
+`so-lieu-3.6-do-chinh-xac-ai.md`. **21 lượt gọi mô hình, tất cả thành công, không bài nào `AI_FAILED`.**
+
+| Hạng mục | Kết quả |
+|---|---|
+| Chấm tự luận — điểm trong khoảng chuẩn | **7/8**, sai lệch trung bình **0,13/10** |
+| Chống tiêm chỉ thị | **2/2** bài tấn công bị chặn (0 điểm) |
+| Sinh đề — câu đúng chuẩn cấu trúc | **10/10**, không câu nào bị bộ kiểm duyệt loại |
+| Trợ lý — có học liệu | **3/3** trả lời đúng con số, kèm trích dẫn |
+| Trợ lý — ngoài học liệu | **2/2** nói không biết, không suy đoán từ kiến thức nền |
+
+Bài lệch duy nhất: bài nêu đủ ba ý nhưng viết cụt lủn được AI cho 10/10 trong khi rubric chỉ cho 7–9 —
+mô hình **rộng tay với tiêu chí định tính**. Nó nhận diện tốt phần *nội dung* (đủ mấy ý) nhưng dễ bỏ
+qua phần *chất lượng diễn đạt*. Thứ tự chất lượng thì đúng hoàn toàn: 10 → 10 → 7 → 4 → 0 → 0, không có
+bài kém nào được điểm cao hơn bài tốt.
+
+**Hai bài học từ chính phép đo.**
+
+*Thứ nhất, tiêu chí đo sai làm con số vô nghĩa.* Hạng mục "nói không biết" ban đầu in ra **0/2**, và
+nếu tin luôn thì báo cáo sẽ ghi "trợ lý suy đoán bừa" — sai hoàn toàn. Nhìn dữ liệu thô mới thấy mô
+hình **đã** nói không biết ở cả hai câu; điều không thoả là điều kiện thứ hai tôi gộp vào cùng tiêu chí
+("không có nguồn nào"). *"Mô hình có suy đoán bừa không"* và *"hệ thống có hiện nguồn dư không"* là hai
+câu hỏi riêng — trộn vào một tiêu chí thì không trả lời được câu nào.
+
+*Thứ hai, phép đo tìm ra một hạn chế mà đọc code không thấy.* Với câu ngoài học liệu, hệ thống **vẫn
+trả về 2 nguồn**, vì danh sách nguồn gửi ở sự kiện `meta` **trước** khi mô hình kịp trả lời — nó phản
+ánh "có đoạn nào vượt ngưỡng 0,75" chứ không phản ánh "mô hình có dùng đoạn đó". Trên giao diện, người
+dùng thấy câu *"tôi không có thông tin"* mà bên dưới có khối *"Dựa trên: …"* — hai thứ nói ngược nhau.
+
+Hai hướng xử lý (siết ngưỡng, hoặc chuyển danh sách nguồn sang cuối luồng) đều **cần đo thêm trước khi
+chọn**: chọn ngưỡng mới mà không có số liệu khoảng cách thực tế thì chỉ là đổi một con số tuỳ ý bằng
+một con số tuỳ ý khác. Ghi vào nợ.
+
+> Bài học: **một phép đo tốt phải đo được cả mặt "không được làm gì".** Nếu chỉ đo "trả lời đúng khi có
+> tài liệu", một trợ lý luôn luôn trả lời cũng đạt 100% kể cả khi nó bịa.
+
+### Nợ / chuyển sang ngày sau
+
+- **[!] Nguồn vẫn hiện dù trợ lý nói không biết** — cần đo khoảng cách thực tế rồi mới chọn cách sửa.
+- **Chương 3 + Kết luận** của báo cáo — giờ đã có đủ số liệu 3.5 và 3.6.
+- Số liệu khảo sát biểu mẫu (mục 2.1.4 báo cáo).
+- Thay `Testcase+TestPlan/` bằng tài liệu test của đề tài này (dùng cho mục 3.4).
+- Mở rộng test frontend sang các luồng khác: hạ tầng đã có, giờ thêm ca chỉ là viết file.
+
+### Ghi chú báo cáo
+- **Mục 3.4 (kiểm thử):** bổ sung phần kiểm thử frontend — nêu rõ ba ca hồi quy và **cách kiểm chứng ca
+  test có tác dụng** (làm nó đỏ với bản lỗi rồi mới tin). Đây là điểm khác biệt so với việc chỉ báo "test
+  xanh".
+- **"Khó khăn & cách giải quyết":** xung đột vitest 3 ↔ Vite 8 là ví dụ tốt cho việc *lỗi hiện ra ở nơi
+  khác chỗ gây lỗi* — triệu chứng ở lệnh build, nguyên nhân ở cấu hình test.
 
 ---
 

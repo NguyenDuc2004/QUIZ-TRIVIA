@@ -213,6 +213,50 @@ class ChatIntegrationTest {
     }
 
     @Test
+    @DisplayName("Danh sách học liệu hỏi được: người học thấy tài liệu ĐÃ chia sẻ, KHÔNG thấy tài liệu riêng tư")
+    void shouldListOnlyAskableMaterialsForLearner() throws Exception {
+        String shared = createMaterial(creatorToken, "Bài giảng đã chia sẻ", "Nội dung công khai.");
+        setShared(creatorToken, shared, true);
+        createMaterial(otherCreatorToken, "Ghi chú riêng tư", "Nội dung riêng tư.");
+
+        mockMvc.perform(get("/api/v1/ai/chat/materials").header("Authorization", "Bearer " + learnerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.title == 'Bài giảng đã chia sẻ')]").exists())
+                .andExpect(jsonPath("$[?(@.title == 'Ghi chú riêng tư')]").doesNotExist())
+                // Người học không sở hữu tài liệu nào — cờ này để giao diện nói rõ họ đang đọc ké
+                .andExpect(jsonPath("$[?(@.title == 'Bài giảng đã chia sẻ')].mine").value(false));
+    }
+
+    @Test
+    @DisplayName("Danh sách KHÔNG trả nội dung tài liệu — được hỏi trên tài liệu, không được đọc toàn văn")
+    void shouldNotExposeMaterialContentInList() throws Exception {
+        String secret = "NOI DUNG DAY DU KHONG DUOC LO RA DANH SACH 7788";
+        String shared = createMaterial(creatorToken, "Tài liệu có nội dung dài", secret);
+        setShared(creatorToken, shared, true);
+
+        String body = mockMvc.perform(get("/api/v1/ai/chat/materials")
+                        .header("Authorization", "Bearer " + learnerToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body)
+                .as("danh sách chỉ mang metadata; trả kèm nội dung sẽ mở một đường đọc trọn tài liệu "
+                        + "mà chủ của nó chưa từng đồng ý")
+                .doesNotContain("7788");
+    }
+
+    @Test
+    @DisplayName("Chủ tài liệu thấy cả tài liệu CHƯA chia sẻ của mình, kèm cờ mine = true")
+    void shouldListOwnUnsharedMaterialForOwner() throws Exception {
+        createMaterial(creatorToken, "Ghi chú chưa chia sẻ của tôi", "Nội dung nháp.");
+
+        mockMvc.perform(get("/api/v1/ai/chat/materials").header("Authorization", "Bearer " + creatorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.title == 'Ghi chú chưa chia sẻ của tôi')]").exists())
+                .andExpect(jsonPath("$[?(@.title == 'Ghi chú chưa chia sẻ của tôi')].mine").value(true));
+    }
+
+    @Test
     @DisplayName("Chủ tài liệu vẫn hỏi được trên tài liệu CHƯA chia sẻ của mình")
     void shouldLetOwnerUseOwnUnsharedMaterial() throws Exception {
         createMaterial(creatorToken, "Ghi chú riêng của tôi", "Ghi chú riêng ZULU4321.");
