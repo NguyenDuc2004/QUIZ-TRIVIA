@@ -29,6 +29,13 @@
   - Mọi trang mới dùng `PageHeader`; danh sách rỗng dùng `EmptyState`. Không tự dựng lại.
   - **Không bịa dữ liệu để cho đẹp** (điểm đánh giá, số lượt học…) — chỉ hiển thị dữ liệu backend thật sự trả về.
   - Cú pháp Tailwind v4: viết `mb-1!` chứ không phải `!mb-1`.
+- **Test:** vitest + Testing Library, cấu hình ở `vitest.config.ts` (riêng, không gộp vào `vite.config.ts`
+  — xem ghi chú trong file). Đặt file test cạnh thứ nó kiểm: `useAuthMutations.test.tsx` nằm cùng thư mục
+  với `useAuthMutations.ts`. Chạy `npm test`.
+  - **Ưu tiên kiểm ở tầng hook/hàm hơn tầng giao diện** khi lỗi thuộc về logic dùng chung: kiểm một trang
+    chỉ chứng minh trang đó đúng, còn cache và phiên đăng nhập là thứ mọi trang dùng chung.
+  - **Viết xong phải thử làm ca test ĐỎ** bằng cách tạm bỏ đúng dòng code nó bảo vệ. Một ca xanh ở cả bản
+    đúng và bản lỗi thì không bảo vệ gì cả — đây là bài học từ hai lỗi nặng ngày 13/08.
 
 ## 3. Git
 

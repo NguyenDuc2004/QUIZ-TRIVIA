@@ -1740,8 +1740,8 @@ hàng câu hỏi, học liệu.
 bấm đăng xuất là chuyện thường. Ở lối vào xoá **trước** `setSession()`, để không tồn tại khoảnh khắc nào
 danh tính là người mới mà cache là dữ liệu người cũ.
 
-Chưa viết được ca test tự động: frontend **chưa dựng hạ tầng test** (không vitest/jest). Ghi vào nợ chứ
-không tự mở rộng phạm vi — nhưng đây đúng là loại lỗi một ca test rẻ tiền bắt được.
+Lúc sửa chưa viết được ca test tự động vì frontend chưa có hạ tầng test; ghi vào nợ chứ không tự mở rộng
+phạm vi. **Nợ này đã trả ngày 14/08** — xem mục cùng ngày.
 
 > Bài học: **xoá phiên không chỉ là xoá token.** Phải xoá mọi thứ lưu theo danh tính, mà trong ứng dụng
 > một trang thì cache dữ liệu là chỗ dễ quên nhất: nó không nằm trong localStorage để lộ ra khi dọn, và
@@ -1782,8 +1782,7 @@ xanh**.
   nhận tham số đó, nhưng giao diện không có cách chọn vì không có danh sách — nửa tính năng xây rồi mà
   chưa dùng được. Hướng làm đã ghi ở `features/08`: endpoint `GET /ai/chat/materials` đặt trong
   `ChatController`, trả **chỉ metadata**, không trả nội dung.
-- **[!] Frontend chưa có hạ tầng test** (không vitest/jest). Lỗi rò cache giữa hai tài khoản hôm nay là
-  đúng loại một ca test rẻ tiền bắt được, mà hiện không có chỗ nào để viết ca đó.
+- ~~**[!] Frontend chưa có hạ tầng test** (không vitest/jest).~~ **Đã dựng ngày 14/08** — xem mục hôm đó.
 - ~~`RecommendationIntegrationTest` vẫn chờ chạy lại.~~ **Đã chạy: 22/22 xanh.**
 - **Đo lại mục 3.6:** mọi số grounding trước 13/08 đo trên đường truy xuất đang lỗi.
 - Chương 1 và Chương 2 của báo cáo.
@@ -1807,6 +1806,78 @@ xanh**.
   đánh giá grounding thì phải **đo lại** sau V11.
 - **"Khó khăn & cách giải quyết":** hai mục trên. Điểm chung: cả hai đều không làm chương trình báo lỗi,
   nên chỉ chạy thật mới thấy — build xanh và test xanh đều không đủ.
+
+---
+
+## 📅 T6 — 14/08/2026 — Dựng hạ tầng test frontend, và một xung đột phiên bản không ai nói trước
+
+**Mục tiêu:** trả hai món nợ ghi hôm qua — hạ tầng test frontend, và đưa bộ báo cáo vào git.
+
+**Xong:** vitest + testing-library · 3 ca hồi quy cho lỗi rò cache · bộ báo cáo vào git kèm README.
+
+### Ca test đầu tiên viết cho đúng lỗi hôm qua
+
+Lỗi rò dữ liệu giữa hai tài khoản (13/08) không có ca test nào vì frontend chưa có chỗ để viết. Nay có:
+`useAuthMutations.test.tsx`, ba ca — đăng nhập xoá cache, đăng xuất xoá cache, và **xoá đúng trước khi
+đặt phiên mới**.
+
+Ca thứ ba là ca đáng chú ý: nó kiểm *thứ tự*, không kiểm kết quả. Nếu `setSession` chạy trước
+`queryClient.clear()` thì vẫn "có xoá cache" nhưng tồn tại một khoảnh khắc component đã thấy người dùng
+mới trong khi đọc được dữ liệu người cũ — đủ để render ra. Ca này chặn đúng khoảnh khắc đó bằng cách ghi
+lại trình tự hai lời gọi.
+
+Cả ba kiểm ở **tầng hook** chứ không tầng giao diện, vì đây là lỗi của *vòng đời cache* chứ không của một
+trang cụ thể: kiểm một trang chỉ chứng minh trang đó sạch, còn cache là thứ mọi trang dùng chung.
+
+**Và lần này thử làm chúng đỏ trước khi tin:** bỏ `queryClient.clear()` khỏi `useLogin`/`useLogout` →
+**cả 3 ca đỏ**; khôi phục → xanh lại. Đây là bước hôm qua đã dạy: một ca test xanh ở cả bản đúng và bản
+lỗi thì không bảo vệ gì cả.
+
+### Xung đột phiên bản: vitest 3 chưa hỗ trợ Vite 8
+
+Cách làm thông thường là nhồi trường `test` vào `vite.config.ts` và lấy `defineConfig` từ `vitest/config`.
+Làm vậy thì `npm test` chạy được, nhưng **`npm run build` đổ** với một lỗi kiểu dài mười mấy dòng:
+`Plugin<any>[] is not assignable to PluginOption`.
+
+Nguyên nhân: vitest 3 chưa hỗ trợ Vite 8 nên nó **tự cài một bản vite riêng** trong `node_modules/vitest/`.
+Hai bản vite dùng hai bộ type plugin khác nhau — Vite 8 đã chuyển sang rolldown, bản kia còn rollup — nên
+danh sách `plugins` không khớp kiểu giữa hai bên. Thử cách chính thống `/// <reference types="vitest/config" />`
+cũng không cứu được, vì reference đó cũng trỏ về bản vite của vitest.
+
+**Cách xử lý:** tách hẳn `vitest.config.ts` riêng, và cố ý **không** đưa nó vào `include` của
+`tsconfig.node.json` nên `tsc -b` không kiểm nó. Đổi lại phải khai lại alias `@` và plugin react trong
+file đó — cái giá nhỏ so với việc để lệnh build của dự án đỏ. Đã ghi chú trong file là khi vitest lên bản
+hỗ trợ Vite 8 thì gộp lại và xoá file này.
+
+Kiểm chứng cả hai lệnh cùng lúc: `tsc -b` sạch, `npm run build` thành công (3327 module, 27s), `npm test`
+3/3 xanh.
+
+> Bài học: **thêm một công cụ dev không phải chuyện chỉ của công cụ đó.** Cấu hình test và cấu hình build
+> dùng chung một file thì hai hệ phiên bản kéo nhau, và triệu chứng lại hiện ra ở lệnh *build* chứ không ở
+> lệnh *test* — dễ tưởng là lỗi của mã sản phẩm. Chạy đủ cả `test` và `build` sau khi thêm công cụ mới,
+> đừng chỉ chạy cái mình vừa thêm.
+
+### Bộ báo cáo vào git
+
+`bao-cao-datn/` trước đó nằm ngoài git. Nay track theo lối "nội dung là text, sản phẩm là thứ build ra":
+4 file `.md` + 39 hình PNG + toàn bộ script sinh hình. **Không** track `node_modules`, `plantuml.jar`, bản
+`.docx` (sinh lại được bằng một lệnh, mà mỗi lần build tạo diff binary ~5MB không đọc được để review), và
+`Testcase+TestPlan/` (còn là tài liệu của đồ án khác). Kèm README hướng dẫn dựng lại và quy ước viết.
+
+### Nợ / chuyển sang ngày sau
+
+- **Chương 3 + Kết luận** của báo cáo — chờ số liệu mục 3.5 và 3.6.
+- **Đo lại mục 3.6:** số grounding trước 13/08 đo trên đường truy xuất đang lỗi.
+- Số liệu khảo sát biểu mẫu (mục 2.1.4 báo cáo).
+- Thay `Testcase+TestPlan/` bằng tài liệu test của đề tài này (dùng cho mục 3.4).
+- Mở rộng test frontend sang các luồng khác: hạ tầng đã có, giờ thêm ca chỉ là viết file.
+
+### Ghi chú báo cáo
+- **Mục 3.4 (kiểm thử):** bổ sung phần kiểm thử frontend — nêu rõ ba ca hồi quy và **cách kiểm chứng ca
+  test có tác dụng** (làm nó đỏ với bản lỗi rồi mới tin). Đây là điểm khác biệt so với việc chỉ báo "test
+  xanh".
+- **"Khó khăn & cách giải quyết":** xung đột vitest 3 ↔ Vite 8 là ví dụ tốt cho việc *lỗi hiện ra ở nơi
+  khác chỗ gây lỗi* — triệu chứng ở lệnh build, nguyên nhân ở cấu hình test.
 
 ---
 

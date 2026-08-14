@@ -207,8 +207,15 @@ tại khoảnh khắc nào danh tính đã là người mới trong khi cache v�
 `window.location.assign` nên cả cache mất theo, còn nhánh "đang ở /login" thì trang đăng nhập không
 hiển thị dữ liệu người dùng nào, và lượt đăng nhập kế tiếp sẽ xoá.
 
-> Chưa có ca test tự động cho lỗi này: frontend **chưa dựng hạ tầng test** (không vitest/jest). Đây là
-> đúng loại lỗi mà một ca test rẻ tiền bắt được — dựng bộ test frontend đã ghi vào nợ.
+> **Đã có ca test hồi quy** — `src/features/auth/hooks/useAuthMutations.test.tsx`, ba ca: đăng nhập xoá
+> cache, đăng xuất xoá cache, và **xoá đúng trước khi đặt phiên mới** (ca thứ ba kiểm *thứ tự*, vì nếu
+> `setSession` chạy trước thì tồn tại một khoảnh khắc component đã thấy người dùng mới nhưng đọc được
+> dữ liệu người cũ). Ba ca kiểm ở tầng hook chứ không tầng giao diện: đây là lỗi của **vòng đời cache**,
+> không của một trang cụ thể — kiểm một trang chỉ chứng minh trang đó sạch, còn cache là thứ mọi trang
+> dùng chung.
+>
+> Đã thử làm chúng đỏ để chắc chúng có tác dụng: bỏ `queryClient.clear()` khỏi `useLogin`/`useLogout` thì
+> **cả 3 ca đỏ**, khôi phục thì xanh lại.
 
 > Bài học: **xoá phiên không chỉ là xoá token.** Phải xoá mọi thứ được lưu theo danh tính người dùng,
 > mà trong ứng dụng một trang thì cache dữ liệu là chỗ dễ quên nhất — nó không nằm trong localStorage

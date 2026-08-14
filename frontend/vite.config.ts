@@ -1,3 +1,6 @@
+// Cấu hình cho vitest nằm ở `vitest.config.ts` riêng, KHÔNG nhồi trường `test` vào đây: vitest 3 chưa
+// hỗ trợ Vite 8 nên nó tự cài một bản vite riêng trong node_modules của mình, và type plugin của hai
+// bản không tương thích (rolldown vs rollup) — nhồi vào đây thì `tsc -b` đổ ở danh sách plugins.
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'

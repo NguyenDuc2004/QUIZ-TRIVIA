@@ -72,7 +72,14 @@ docker compose up -d                  # bật PostgreSQL + Neo4j + Redis
 cd backend && ./mvnw spring-boot:run  # chạy BE (http://localhost:8080)
 cd backend && ./mvnw test             # chạy test BE
 cd frontend && npm run dev            # chạy FE (http://localhost:5173)
+cd frontend && npm test               # chạy test FE (vitest, chạy một lượt rồi thoát)
+cd frontend && npm run build          # tsc -b + vite build — CHẠY CẢ LỆNH NÀY sau khi đổi cấu hình
 ```
+
+> Cấu hình vitest nằm ở `frontend/vitest.config.ts` **riêng**, không gộp vào `vite.config.ts`: vitest 3
+> chưa hỗ trợ Vite 8 nên nó tự cài một bản vite riêng, hai bộ type plugin không khớp và gộp lại sẽ làm
+> `npm run build` đổ. Vì vậy sau khi đổi cấu hình build hoặc test, phải chạy **cả** `npm test` **và**
+> `npm run build`.
 
 ## 7. Viết báo cáo
 
