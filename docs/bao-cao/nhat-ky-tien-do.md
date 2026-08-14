@@ -1919,6 +1919,99 @@ một con số tuỳ ý khác. Ghi vào nợ.
 
 ---
 
+## 📅 T6 — 14/08/2026 (chiều) — Lát cắt 10: Quản trị, và lặp lại đúng một cái bẫy đã ghi bài học
+
+**Mục tiêu:** tính năng `[S]` đầu tiên sau khi đóng hết mức `[M]`. Chọn Quản trị vì nó là thứ duy nhất
+chặn mục 3.3 báo cáo (*Giao diện phía quản trị*), và Chương 2 đã đặc tả sẵn bốn tác nhân.
+
+**Xong:** migration V12 · 3 API quản lý người dùng + 1 API giám sát AI · 2 trang giao diện · 10 ca test.
+
+### Khoá tài khoản, không xoá người dùng
+
+Không làm endpoint xoá người dùng. Bài đã làm, quiz đã soạn, học liệu đã chia sẻ đều là dữ liệu **người
+khác đang dùng hoặc đang được thống kê**: một quiz công khai có thể đang có người làm, một lượt làm bài
+nằm trong bảng xếp hạng, một tài liệu đã chia sẻ đang là nguồn cho trợ lý trả lời. Xoá tài khoản kéo theo
+xoá hoặc làm mồ côi những thứ đó.
+
+### Điều dễ làm sai nhất: "khoá" mà không có hiệu lực ngay
+
+Đặt cờ `locked = true` là chưa đủ, và đây là chỗ dễ tưởng đã xong:
+
+| Nếu chỉ đặt cờ | Hệ quả |
+|---|---|
+| Access token đang cầm | vẫn dùng được **15 phút** |
+| Refresh token đang cầm | vẫn gia hạn được **tới 14 ngày** |
+
+Tức "khoá" chỉ thực sự có hiệu lực sau vài phút tới vài ngày — đúng lúc quản trị viên tin rằng nó có
+hiệu lực ngay. Nên khoá phải **thu hồi toàn bộ phiên**, và trạng thái khoá kiểm ở **cả** `login` **và**
+`refresh`: chặn một lối mà bỏ lối kia thì bất kỳ đường nào cấp lại token về sau cũng mở lại cửa.
+
+Cùng lý do đó, **đổi vai trò cũng phải thu hồi phiên**: vai trò nằm trong access token, không thu hồi
+thì người vừa bị hạ quyền còn dùng quyền cũ thêm 15 phút.
+
+Kiểm chứng thật, không chỉ qua test: khoá xong thì refresh token cũ trả **401**, đăng nhập lại trả
+**403** kèm câu *"Tài khoản đã bị khoá…"*. Mở khoá thì vào lại được ngay.
+
+### Thông báo: cân giữa "nói rõ cho người dùng" và "không tiết lộ cho kẻ tấn công"
+
+Trả *"tài khoản bị khoá"* thì tiết lộ email đó tồn tại — đúng thứ mà thông báo gộp *"email hoặc mật khẩu
+không đúng"* đang tránh. Nhưng giữ nguyên câu gộp thì người dùng thật sẽ đi đặt lại mật khẩu hết lần này
+lần khác mà vẫn không vào được.
+
+Cách giải: kiểm `locked` **sau** khi đã khớp mật khẩu. Lúc đó người gọi đã chứng minh họ biết mật khẩu,
+nên câu "bị khoá" không cho thêm thông tin gì cho kẻ tấn công.
+
+### Lặp lại đúng một cái bẫy dự án đã ghi bài học
+
+Truy vấn danh sách người dùng đổ **500** với `ERROR: function lower(bytea) does not exist`.
+
+Nguyên nhân: viết `like lower(concat('%', :keyword, '%'))` rồi truyền `null` vào `keyword` — driver
+PostgreSQL không suy được kiểu tham số nên gửi dưới dạng `bytea`. Mất luôn cả nhánh "không lọc theo từ
+khoá", tức nhánh mặc định của trang.
+
+Đây **cùng một cái bẫy** đã ghi ở `MaterialChunkRepository` ngày 11/08: *cẩn thận với tham số null trong
+biểu thức `:x is null`*. Lần đó nhánh null lặng lẽ trả rỗng; lần này nó đổ hẳn 500 — dễ phát hiện hơn,
+nhưng gốc y nguyên.
+
+`QuizRepository` đã làm đúng từ trước và tôi không đọc lại trước khi viết: nó gọi `lower()` lên **cột**,
+còn tham số được bọc `%` sẵn ở tầng service. Đã sửa theo đúng mẫu đó.
+
+> Bài học: **ghi bài học vào tài liệu không đủ — phải đọc lại mã đã có cho cùng loại việc.** Dự án đã có
+> một truy vấn lọc-nhiều-tiêu-chí chạy đúng; mở nó ra xem trước khi viết cái thứ hai thì mất một phút,
+> còn dò lỗi 500 mất nửa giờ.
+
+### Hai việc quản trị viên không làm được
+
+Chặn ở **tầng nghiệp vụ**, không tin vào việc giao diện ẩn nút: không tự khoá và không tự hạ vai trò
+chính mình. Hệ thống chỉ có một cấp quản trị nên một lần bấm sai là mất quyền mà không còn ai mở lại
+được. Giao diện cũng vô hiệu hoá hai thao tác đó với chính hàng của người đang đăng nhập — để nút bấm
+được rồi báo lỗi là bắt người dùng học bằng cách thất bại.
+
+### Giám sát AI: số liệu thật đã có ngay
+
+Trang giám sát đọc `ai_request_logs`, và vì hệ thống đã chạy thật nên nó có số ngay: **306 lượt gọi
+trong 30 ngày, 141 thành công, 165 thất bại, 39 220 token vào / 12 102 token ra, độ trễ trung bình
+2 953 ms và P95 9 051 ms.** Tỉ lệ thất bại 54% là dữ liệu lịch sử của những lần đụng hạn mức hồi 08/08
+khi chưa giãn nhịp — đúng thứ trang này ra đời để cho thấy.
+
+Một chi tiết nhỏ nhưng có ý: độ trễ trả `null` khi chưa có lời gọi nào để tính, **không** trả 0. Chức
+năng `explain-answer` hiện đúng như vậy (11 lượt, không có số độ trễ). 0 ms là một giá trị có nghĩa,
+còn "chưa đo" thì không — gộp hai thứ thành 0 làm giao diện hiển thị một độ trễ không tồn tại.
+
+### Còn nợ trong lát cắt này
+
+- **FR-38** kiểm duyệt quiz/câu hỏi công khai — chưa làm.
+- **FR-39** cấu hình thứ tự nhà cung cấp AI và hạn mức ở runtime — chưa làm. Phần này đòi sửa
+  `AiOrchestrator` đang chạy tốt, nên để sau khi những phần không rủi ro đã xong.
+
+### Ghi chú báo cáo
+- **Mục 3.3 (giao diện quản trị):** giờ có hai màn thật để chụp — Quản lý người dùng và Giám sát AI.
+- **Mục 2.6 (đặc tả UC):** bổ sung UC-14 với luồng thay thế *"tự khoá chính mình → 400"*.
+- **"Khó khăn & cách giải quyết":** lỗi `lower(bytea)` là ví dụ tốt cho việc *bài học đã ghi vẫn lặp lại
+  nếu không đọc lại mã cùng loại việc*. Nêu cả hai lần gặp, không chỉ lần này.
+
+---
+
 ## 🧩 Mẫu ngày (copy để dùng)
 
 ```markdown

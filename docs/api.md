@@ -516,11 +516,43 @@ thì câu tự luận nào cũng thành câu khó nhất đề.
 
 ## 9. Admin — `/admin`
 ```
-GET    /api/v1/admin/users               Quản lý user
-PUT    /api/v1/admin/users/{id}/role     Đổi vai trò
-GET    /api/v1/admin/ai/logs             Log & chi phí AI
-PUT    /api/v1/admin/ai/config           Cấu hình provider/fallback
+GET    /api/v1/admin/users                   Danh sách user, lọc theo từ khoá/vai trò/khoá   ✅
+PUT    /api/v1/admin/users/{id}/role         Đổi vai trò (?role=)                            ✅
+PUT    /api/v1/admin/users/{id}/locked       Khoá / mở khoá tài khoản (?locked=)             ✅
+GET    /api/v1/admin/ai/usage                Tổng hợp chi phí, độ tin cậy, độ trễ (?days=)   ✅
+PUT    /api/v1/admin/ai/config               Cấu hình provider/hạn mức runtime               ⏳ chưa
 ```
+
+`@PreAuthorize("hasRole('ADMIN')")` đặt ở **cấp lớp** `AdminController`: mọi endpoint trong đó chỉ dành
+cho ADMIN, không ngoại lệ. Gắn cấp lớp thì thêm endpoint mới cũng tự được bảo vệ.
+
+**Không có endpoint xoá người dùng — đây là chủ ý.** Bài đã làm, quiz đã soạn, học liệu đã nạp đều là
+dữ liệu người khác đang dùng hoặc đang được thống kê; xoá tài khoản kéo theo xoá hoặc làm mồ côi những
+thứ đó. Biện pháp tương ứng là **khoá**: chặn đường vào, giữ nguyên dữ liệu.
+
+Hai thao tác đều **thu hồi mọi phiên** của người bị tác động:
+
+| Thao tác | Vì sao phải thu hồi phiên |
+|---|---|
+| Khoá tài khoản | Chỉ đặt cờ thì access token đang cầm vẫn dùng được tới khi hết hạn (15 phút) và refresh token vẫn gia hạn được tới 14 ngày — tức "khoá" chỉ có hiệu lực sau vài phút, đúng lúc quản trị viên tin rằng nó có hiệu lực ngay |
+| Đổi vai trò | Vai trò nằm **trong** access token, nên token cũ vẫn mang vai trò cũ; không thu hồi thì người vừa bị hạ quyền còn dùng quyền cũ thêm 15 phút |
+
+Trạng thái khoá được kiểm ở **cả** `login` và `refresh`. Chặn một lối mà bỏ lối kia thì bất kỳ đường nào
+cấp lại token về sau cũng mở lại cửa cho một tài khoản đang bị khoá.
+
+Đăng nhập vào tài khoản bị khoá trả **403** (không phải 401) kèm thông báo nói rõ *"tài khoản đã bị
+khoá"*. Kiểm tra này chạy **sau** khi đã khớp mật khẩu: nói "bị khoá" cho người chưa chứng minh được họ
+là chủ tài khoản chính là tiết lộ email đó tồn tại — đúng thứ mà thông báo gộp *"email hoặc mật khẩu
+không đúng"* đang tránh.
+
+Hai chốt chặn ở tầng nghiệp vụ, không tin vào việc giao diện ẩn nút: quản trị viên **không tự khoá** và
+**không tự hạ vai trò** chính mình. Hệ thống chỉ có một cấp quản trị nên một lần bấm sai là mất quyền mà
+không còn ai mở lại được, trừ khi sửa trực tiếp cơ sở dữ liệu.
+
+`GET /admin/ai/usage` trả ba nhóm số liệu — chi phí (token), độ tin cậy (tỉ lệ lỗi, số lượt phải dùng
+nhà cung cấp dự phòng), độ trễ (trung bình và P95) — tách theo chức năng và theo nhà cung cấp.
+**Không** trả về khoá API hay nội dung prompt. Độ trễ trả `null` khi chưa có lời gọi nào để tính, không
+trả 0: 0 ms là một giá trị có nghĩa, còn "chưa đo" thì không.
 
 ## 10. Quy ước chung
 

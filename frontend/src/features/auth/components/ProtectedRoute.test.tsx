@@ -34,7 +34,8 @@ const NoiDung = () => <div>NỘI DUNG ĐƯỢC BẢO VỆ</div>
 function dangNhapVoiVaiTro(role: 'LEARNER' | 'CREATOR' | 'ADMIN') {
   tokenStorage.save('access', 'refresh')
   useAuthStore.setState({
-    user: { id: 'u1', email: 'a@example.com', displayName: 'A', avatarUrl: null, role },
+    user: { id: 'u1', email: 'a@example.com', displayName: 'A', avatarUrl: null, role,
+            createdAt: '2026-08-14T00:00:00Z' },
     isReady: true,
   })
 }
@@ -109,7 +110,8 @@ describe('ProtectedRoute', () => {
     // kịp làm mới token.
     tokenStorage.save('', 'refresh-con-song')
     useAuthStore.setState({
-      user: { id: 'u1', email: 'a@example.com', displayName: 'A', avatarUrl: null, role: 'LEARNER' },
+      user: { id: 'u1', email: 'a@example.com', displayName: 'A', avatarUrl: null,
+              role: 'LEARNER', createdAt: '2026-08-14T00:00:00Z' },
       isReady: true,
     })
 

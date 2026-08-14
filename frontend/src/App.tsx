@@ -15,6 +15,8 @@ import MyAttemptsPage from '@/features/attempt/pages/MyAttemptsPage'
 import LearningPathPage from '@/features/recommend/pages/LearningPathPage'
 import QuizIntroPage from '@/features/attempt/pages/QuizIntroPage'
 import BrowseQuizzesPage from '@/features/quiz/pages/BrowseQuizzesPage'
+import AdminAiUsagePage from '@/features/admin/pages/AdminAiUsagePage'
+import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
 import GenerateQuestionsPage from '@/features/ai/pages/GenerateQuestionsPage'
 import MaterialsPage from '@/features/ai/pages/MaterialsPage'
 import JoinRoomPage from '@/features/room/pages/JoinRoomPage'
@@ -90,6 +92,23 @@ export default function App() {
           element={
             <ProtectedRoute roles={['CREATOR', 'ADMIN']}>
               <GenerateQuestionsPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Khu vực quản trị — AdminController chặn ADMIN cấp lớp ở BE (features/10) */}
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <AdminUsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/ai"
+          element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <AdminAiUsagePage />
             </ProtectedRoute>
           }
         />

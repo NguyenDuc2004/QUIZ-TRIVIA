@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Avatar, Dropdown, Input, Layout, Space, Tag, Typography } from 'antd'
 import type { MenuProps } from 'antd'
-import { DownOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
+import {
+  DownOutlined,
+  LineChartOutlined,
+  LogoutOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
 import { useAuthStore } from '@/features/auth/store/authStore'
 
@@ -32,11 +38,27 @@ export default function AppLayout() {
   const [keyword, setKeyword] = useState('')
 
   const canCreate = user?.role === 'CREATOR' || user?.role === 'ADMIN'
+  const isAdmin = user?.role === 'ADMIN'
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `text-sm font-bold whitespace-nowrap ${
       isActive ? 'text-brand-strong' : 'text-ink hover:text-brand-strong'
     }`
+
+  const adminMenuItems: MenuProps['items'] = [
+    {
+      key: 'admin-users',
+      icon: <TeamOutlined />,
+      label: 'Quản lý người dùng',
+      onClick: () => navigate('/admin/users'),
+    },
+    {
+      key: 'admin-ai',
+      icon: <LineChartOutlined />,
+      label: 'Giám sát AI',
+      onClick: () => navigate('/admin/ai'),
+    },
+  ]
 
   // Đăng xuất nằm dưới một đường kẻ và là mục cuối: nó là hành động duy nhất trong menu không thể
   // hoàn tác bằng một lần bấm nữa, nên không đặt cạnh mục điều hướng thường.
@@ -112,6 +134,19 @@ export default function AppLayout() {
                 Sinh đề AI
               </NavLink>
             </>
+          )}
+          {/* Gom khu quản trị vào một menu thay vì thêm hai link nữa vào thanh ngang: với vai trò
+              ADMIN, thanh này đã có 10 mục và thêm nữa thì tràn hàng trên màn hình hẹp */}
+          {isAdmin && (
+            <Dropdown menu={{ items: adminMenuItems }} trigger={['click']}>
+              <button
+                type="button"
+                className="flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-sm font-bold whitespace-nowrap text-ink hover:text-brand-strong"
+              >
+                Quản trị
+                <DownOutlined className="text-[10px]" />
+              </button>
+            </Dropdown>
           )}
         </nav>
 
