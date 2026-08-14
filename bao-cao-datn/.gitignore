@@ -1,0 +1,14 @@
+# Bản Word là sản phẩm SINH RA được: `node build/build.js` dựng lại từ các file .md + assets/.
+# Không track vì mỗi lần build tạo một diff binary ~5MB mà không đọc được để review.
+# File vẫn nằm trên đĩa để đem đi in hoặc gửi giảng viên.
+*.docx
+
+# Bản sao lưu khi đổi nội dung mockup
+*.bak-*
+
+# Tài liệu test còn của đồ án khác — sẽ thay khi làm Chương 3 (mục 3.4), chưa thuộc đề tài này
+Testcase+TestPlan/
+
+# Ảnh chụp/thư mục kết quả do script capture và perf sinh ra
+capture/output/
+perf/results/

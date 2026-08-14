@@ -1,0 +1,14 @@
+{
+  "name": "eduexam-capture",
+  "private": true,
+  "type": "module",
+  "description": "Seed + chụp ảnh màn hình sản phẩm cho báo cáo ĐATN",
+  "scripts": {
+    "seed": "node seed.mjs",
+    "capture": "node capture.mjs",
+    "postinstall-browser": "playwright install chromium"
+  },
+  "devDependencies": {
+    "playwright": "^1.60.0"
+  }
+}
