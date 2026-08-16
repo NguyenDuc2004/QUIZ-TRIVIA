@@ -439,13 +439,39 @@ kéo cả trang sập.
 
 ## 7b. Flashcard & SRS — `/decks`, `/flashcards`
 ```
-GET/POST/PUT/DELETE /api/v1/decks         Quản lý bộ thẻ
-GET/POST/PUT/DELETE /api/v1/flashcards     Quản lý thẻ
-POST   /api/v1/ai/generate-flashcards      Sinh thẻ từ học liệu/chủ đề (async → jobId)
-GET    /api/v1/flashcards/due               Thẻ đến hạn ôn hôm nay
-POST   /api/v1/flashcards/{id}/review       Gửi kết quả ôn { quality } → cập nhật SRS
-GET    /api/v1/flashcards/stats             Thống kê ôn tập
+GET    /api/v1/decks                                Bộ thẻ của tôi (?keyword=), kèm số thẻ đến hạn   ✅
+POST   /api/v1/decks                                Tạo bộ thẻ                                       ✅
+PUT    /api/v1/decks/{id}                           Sửa bộ thẻ                                       ✅
+DELETE /api/v1/decks/{id}                           Xoá bộ thẻ (cascade thẻ + tiến độ ôn)            ✅
+GET    /api/v1/decks/{id}/cards                     Thẻ trong bộ, kèm trạng thái ôn của tôi          ✅
+POST   /api/v1/decks/{id}/cards                     Thêm thẻ                                         ✅
+POST   /api/v1/decks/{id}/cards/from-wrong-answers  Sinh thẻ từ câu tôi trả lời sai (KHÔNG gọi AI)   ✅
+PUT    /api/v1/flashcards/{id}                      Sửa thẻ (không đặt lại lịch ôn)                  ✅
+DELETE /api/v1/flashcards/{id}                      Xoá thẻ                                          ✅
+GET    /api/v1/flashcards/due                       Thẻ đến hạn (?deckId=), quá hạn lâu nhất trước   ✅
+POST   /api/v1/flashcards/{id}/review               Gửi mức nhớ (?quality=) → lịch kế tiếp           ✅
+GET    /api/v1/flashcards/stats                     Thống kê + dự báo 7 ngày                         ✅
+POST   /api/v1/ai/generate-flashcards               Sinh thẻ từ học liệu qua RAG (async → jobId)     ⏳
 ```
+
+**Không có tham số `userId` ở bất kỳ đường dẫn nào.** Mọi endpoint làm việc trên dữ liệu của chính người
+gọi, lấy từ token. Nhận id người dùng từ client là mở đường đọc bộ thẻ của người khác chỉ bằng cách đổi một
+tham số.
+
+**Bộ thẻ của người khác trả `404`, không phải `403`.** Trả 403 là xác nhận bộ thẻ đó tồn tại — tiết lộ
+thông tin cho người không có quyền biết. Cùng cách `/quizzes` đang làm.
+
+`GET /flashcards/due` lọc `due_date <= hôm nay` chứ **không** phải `= hôm nay`: thẻ quá hạn từ những ngày
+người học không mở ứng dụng vẫn phải hiện ra. Lọc bằng `=` thì nghỉ một ngày là mất luôn thẻ của ngày đó,
+đúng lúc người ta cần ôn nhất.
+
+`POST /flashcards/{id}/review` **không kiểm thẻ có đang đến hạn hay không**. Ôn sớm là việc hợp lệ và có
+ích; thuật toán tính từ trạng thái hiện tại chứ không từ việc hôm nay là ngày nào.
+
+`from-wrong-answers` **không gọi mô hình AI**: nội dung câu hỏi, đáp án đúng và phần giải thích đã có trong
+cơ sở dữ liệu, ghép thành hai mặt thẻ là việc của một câu SQL. Gọi mô hình ở đây chỉ tốn hạn mức để viết
+lại thứ đã có, và thêm một đường cho nó bịa nội dung khác với đáp án thật. Trả về `{soDaTao, soBoQua}` —
+báo cả số bỏ qua để người dùng hiểu vì sao bấm lần hai ra 0 thẻ mới.
 
 ## 7c. Chống gian lận — `/attempts/{id}/proctoring-events`, `/integrity`
 ```
@@ -492,8 +518,8 @@ WebSocket: subscribe `/user/queue/notifications` (real-time in-app).
 
 ## 8. Thống kê — `/analytics`
 ```
-GET    /api/v1/analytics/me                       Tiến độ của tôi (FR-26)
-GET    /api/v1/analytics/quizzes/{id}             Thống kê 1 quiz — chỉ chủ quiz (FR-27)
+GET    /api/v1/analytics/me                       Tiến độ của tôi (FR-85)
+GET    /api/v1/analytics/quizzes/{id}             Thống kê 1 quiz — chỉ chủ quiz (FR-86)
 GET    /api/v1/analytics/quizzes/{id}/attempts    Bài làm trên quiz của tôi, kèm cờ cần chấm tay
 ```
 
@@ -546,7 +572,7 @@ gì là tên gọi nói sai việc nó làm.
 | Sửa **system prompt** | Prompt là nơi đặt bốn lớp chống tiêm chỉ thị khi chấm bài; mở cho giao diện là mở đường phá hàng rào đó |
 | Admin **đặt lại mật khẩu** người dùng | Admin biết mật khẩu thì đăng nhập thay được, và mọi hành động sau đó không quy trách nhiệm được cho ai. Đã có OTP tự phục vụ |
 
-**`PUT /admin/ai/quota` bị hoãn (FR-49), không phải bỏ.** Thêm một ô nhập "mỗi Creator tối đa N lượt/ngày"
+**`PUT /admin/ai/quota` bị hoãn (FR-84), không phải bỏ.** Thêm một ô nhập "mỗi Creator tối đa N lượt/ngày"
 thì làm được ngay, nhưng `AiOrchestrator` hiện **không đọc con số đó** và cũng chưa đếm lượt gọi theo từng
 người dùng. Một ô nhập lưu được giá trị mà không chặn được gì tệ hơn là không có nó: quản trị viên tin
 rằng chi phí đã được giới hạn, trong khi thực tế không. Làm đúng cần đếm lượt theo user ở Redis và chặn

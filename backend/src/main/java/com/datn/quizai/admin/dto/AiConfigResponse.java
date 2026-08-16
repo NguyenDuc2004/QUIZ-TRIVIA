@@ -3,7 +3,7 @@ package com.datn.quizai.admin.dto;
 import java.util.List;
 
 /**
- * Trạng thái cấu hình các nhà cung cấp AI (features/10, FR-48).
+ * Trạng thái cấu hình các nhà cung cấp AI (features/10, FR-83).
  * <p>
  * <b>Không có trường nào mang giá trị khoá API</b>, và đó là điều kiện tiên quyết của endpoint này —
  * `security.md` quy định không hiển thị khoá API trong UI hay log. Thứ quản trị viên cần để chẩn đoán

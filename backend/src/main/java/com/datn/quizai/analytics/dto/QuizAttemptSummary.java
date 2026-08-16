@@ -4,7 +4,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * Một bài làm trên quiz của tôi — dùng cho danh sách chấm tay (FR-27 + nợ từ features/06).
+ * Một bài làm trên quiz của tôi — dùng cho danh sách chấm tay (FR-86 + nợ từ features/06).
  * <p>
  * <b>Chỉ mang thông tin tổng hợp, không mang nội dung trả lời.</b> Danh sách này để Creator tìm bài
  * cần chấm; muốn xem bài thì mở chi tiết, và chỗ đó đã có kiểm tra quyền riêng. Đưa cả bài làm vào

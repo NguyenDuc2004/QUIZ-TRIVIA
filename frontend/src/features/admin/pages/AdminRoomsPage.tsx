@@ -8,7 +8,7 @@ import type { LiveRoom } from '../api/adminApi'
 const { Text } = Typography
 
 /**
- * Giám sát phòng đấu đang chạy (FR-46, FR-47).
+ * Giám sát phòng đấu đang chạy (FR-81, FR-82).
  *
  * Phòng đấu là phần duy nhất của hệ thống có trạng thái sống ở **hai nơi**: metadata bền ở PostgreSQL,
  * trạng thái đang chơi ở Redis kèm TTL. Khi hai nơi lệch nhau — bản ghi còn mà trạng thái Redis đã hết

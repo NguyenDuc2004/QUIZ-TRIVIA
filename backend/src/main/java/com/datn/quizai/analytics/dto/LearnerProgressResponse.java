@@ -4,7 +4,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
- * Tiến độ học tập của chính người gọi (FR-26).
+ * Tiến độ học tập của chính người gọi (FR-85).
  * <p>
  * <b>Không có phần "điểm mạnh/yếu theo chủ đề" ở đây.</b> Nó đã nằm ở trang Lộ trình học
  * (features/07), tính từ đồ thị Neo4j. Làm lại phép tính đó từ PostgreSQL sẽ có hai màn hình nói về

@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Tổng quan sức khoẻ hệ thống cho trang đầu khu quản trị (features/10, FR-40 đến FR-42).
+ * Tổng quan sức khoẻ hệ thống cho trang đầu khu quản trị (features/10, FR-75 đến FR-77).
  * <p>
  * Mọi con số ở đây <b>đến từ dữ liệu thật</b> trong cơ sở dữ liệu. Không có chỉ số nào được tính ra
  * bằng cách ước lượng hay nhân hệ số — `ui-design-system.md §7` cấm hiển thị dữ liệu không có thật, và

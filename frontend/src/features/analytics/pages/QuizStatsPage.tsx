@@ -11,7 +11,7 @@ import { useQuizAttempts, useQuizStats } from '../hooks/useAnalyticsQueries'
 const { Text } = Typography
 
 /**
- * Thống kê một quiz, dành cho chủ quiz (FR-27).
+ * Thống kê một quiz, dành cho chủ quiz (FR-86).
  * <p>
  * Trang này là **bộ mặt bảng điều khiển** (docs/ui-design-system.md §1): số liệu dày, bảng thay cho
  * lưới card. Nó cũng là đường vào việc chấm tay câu tự luận — thứ mà API đã có từ features/06 nhưng

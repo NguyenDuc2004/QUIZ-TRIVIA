@@ -126,7 +126,7 @@ public class AdminController {
         return adminUserService.setLocked(id, locked, current.id());
     }
 
-    // ----- Nội dung: danh mục và quiz công khai (FR-44, FR-45) -----
+    // ----- Nội dung: danh mục và quiz công khai (FR-79, FR-80) -----
 
     @GetMapping("/categories")
     @Operation(summary = "Danh mục kèm số quiz đang dùng mỗi danh mục")
@@ -176,7 +176,7 @@ public class AdminController {
         adminContentService.hideQuiz(id, current.id());
     }
 
-    // ----- Phòng đấu đang chạy (FR-46, FR-47) -----
+    // ----- Phòng đấu đang chạy (FR-81, FR-82) -----
 
     @GetMapping("/rooms")
     @Operation(summary = "Phòng đang chờ hoặc đang chơi, ghép metadata PostgreSQL với trạng thái Redis. "
@@ -194,7 +194,7 @@ public class AdminController {
         adminRoomService.forceClose(roomCode, current.id());
     }
 
-    // ----- Giám sát AI (FR-48) -----
+    // ----- Giám sát AI (FR-83) -----
 
     @GetMapping("/ai/config")
     @Operation(summary = "Trạng thái cấu hình các nhà cung cấp AI: đã có khoá hay chưa, có nằm trong thứ "

@@ -30,12 +30,31 @@ Ba lý do, xếp theo mức quan trọng:
    đang ở đâu, thay vì tưởng vẫn ở trang cá nhân rồi bấm nhầm. Đây là lý do đầu tiên, không phải thẩm mỹ.
 2. **Ngữ cảnh làm việc khác.** Menu *Khám phá / Phòng đấu / Trợ lý AI / Lộ trình / Tiến độ* không liên
    quan gì khi đang xem chi phí AI. Để lẫn vào nhau thì mỗi lần dùng, người ta phải tự lọc ra mục cần.
-3. **Sidebar mở rộng được.** Thanh ngang của khu học tập đã có 10 mục với vai trò CREATOR và sẽ tràn
-   hàng trên màn hình hẹp; sidebar dọc còn chỗ cho kiểm duyệt nội dung và cấu hình AI sắp thêm.
+3. **Sidebar mở rộng được.** Thanh ngang của khu học tập đã chạm giới hạn một lần (11 mục với vai trò
+   CREATOR, tràn hàng trên màn hình hẹp) và phải gom lại thành menu nhóm; sidebar dọc còn chỗ cho kiểm
+   duyệt nội dung và cấu hình AI.
 
 **Chuyển ngữ cảnh phải đi được cả hai chiều.** Lối vào khu quản trị nằm trong menu tài khoản của
 `AppLayout`; lối ra là mục *"Về khu học tập"* đặt ở **đáy** sidebar — không bắt ai đi tìm trong menu
 tài khoản, và không để ai mắc kẹt một bên.
+
+### Quy tắc thanh điều hướng khu học tập
+
+Thanh ngang giữ **tối đa 5 mục**. Từng có 11 mục phẳng và nó tràn hàng trên màn hình hẹp, nên gom lại:
+
+| Mục | Nội dung |
+|---|---|
+| **Khám phá** · **Phòng đấu** · **Trợ lý AI** | Link đơn — ba việc dùng thường xuyên nhất, không chôn vào menu |
+| **Học tập** ▾ | Thẻ ghi nhớ · Lộ trình học · Tiến độ · Lịch sử làm bài |
+| **Thư viện** ▾ | Quiz của tôi · Ngân hàng câu hỏi · Học liệu — **chỉ CREATOR/ADMIN** |
+
+| Quy tắc | Vì sao |
+|---|---|
+| **Hành động không nằm trong menu điều hướng** | *Sinh đề AI* là việc người dùng **làm**, không phải nơi họ **đi tới**. Là link giữa những link khác thì nó chìm hoàn toàn. Chuyển thành `<Button type="primary">` đặt cạnh avatar |
+| Nút hành động đó **màu đen, không gradient** | §4 cấm gradient (trừ khối ảnh giả lập) và §5 quy định hành động chính màu đen. Làm một nút nổi bằng cách phá quy ước màu thì phần còn lại của giao diện trả giá; icon ✨ đủ để phân biệt nó với các nút đen khác |
+| **Nhãn nhóm phải tự sáng khi một trang con đang mở** | Menu xổ xuống *giấu mất* dấu hiệu "đang ở trang nào" — mở trang Thẻ ghi nhớ mà cả thanh menu không có gì sáng thì người dùng mất phương hướng. Mục con cũng được đánh dấu `selectedKeys` trong menu |
+| **Mỗi mục trong menu có một dòng mô tả** | Gom vào menu làm mất khả năng đọc hết mọi mục bằng một cái nhìn; dòng mô tả bù lại phần đó cho người chưa quen |
+| **Ẩn theo vai trò, không chỉ chặn khi bấm** | LEARNER không thấy nhóm *Thư viện* và không thấy nút *Sinh đề AI*. Hiện rồi báo 403 là bắt người dùng học bằng cách thất bại |
 
 ### Quy tắc của sidebar quản trị
 

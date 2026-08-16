@@ -8,7 +8,7 @@ import type { AdminCategory, CategoryBody } from '../api/adminApi'
 const { Text } = Typography
 
 /**
- * Quản lý danh mục quiz (FR-44).
+ * Quản lý danh mục quiz (FR-79).
  *
  * Xoá danh mục còn quiz đang dùng bị backend trả 409 kèm số lượng. Giao diện không tự chặn trước bằng
  * cách ẩn nút: số quiz hiện trong bảng có thể đã cũ, và nơi duy nhất biết chắc là cơ sở dữ liệu tại thời

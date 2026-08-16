@@ -26,7 +26,7 @@
 | 09/08 (chiều) | **Lọc câu hỏi theo chủ đề** — soạn quiz theo môn không phải lật hết ngân hàng | 6/6 | 🟢 xong |
 | 09/08 (tối) | **Lát cắt 7: gợi ý quiz bằng Neo4j** — trụ cột MVP thứ tư | 7/7 | 🟢 xong |
 | 10/08 | **Đo tải phòng đấu — số liệu mục 3.5** (bắt buộc theo phiếu) | 5/5 | 🟢 xong |
-| 10/08 (chiều) | **Lát cắt 9: thống kê** (FR-26, FR-27) + trả nợ màn chấm tay của lát cắt 6 | 7/7 | 🟢 xong |
+| 10/08 (chiều) | **Lát cắt 9: thống kê** (FR-85, FR-86) + trả nợ màn chấm tay của lát cắt 6 | 7/7 | 🟢 xong |
 | 10/08 (tối) | Vá 3 lỗi lộ ra khi chạy thật, trong đó **bộ test xoá sạch đồ thị máy dev** | 3/3 | 🟢 xong |
 | 11/08 | **Lát cắt 8: Trợ lý học tập RAG** (FR-31) — [M] cuối cùng của phiếu | 7/7 | 🟢 xong |
 | 10/08 (đêm) | Chuẩn bị đo mục 3.6 · chốt: **xAI Grok không có gói miễn phí** | 4/4 | 🟡 chờ hạn mức |
@@ -34,6 +34,7 @@
 | 14/08 | Hạ tầng test frontend (vitest + jsdom) · **đo mục 3.6 độ chính xác AI** | 5/5 | 🟢 xong |
 | 14/08 (chiều) | **Lát cắt 10 phần 1: quản trị người dùng + giám sát AI** (V12) | 6/6 | 🟢 xong |
 | 14/08 (tối) | **Lát cắt 10 phần 2: khu quản trị có khung riêng** — 16 API, 6 trang, 19 test | 7/7 | 🟢 xong |
+| 16/08 | Sửa trùng mã FR (87 mã, 1..87) · **Lát cắt 11: Flashcard + SRS** — 12 API, 3 trang, 17 test | 7/7 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -1244,7 +1245,7 @@ bận rộn — kết nối cuối chờ quá hạn. Nối host trước là ch�
 
 ## 📅 T2 — 10/08/2026 (chiều) — Lát cắt 9: Thống kê, và món nợ hoá ra to hơn ghi chép
 
-**Mục tiêu:** FR-26 (tiến độ người học) + FR-27 (thống kê cho Creator). Chọn lát cắt này vì nó mở
+**Mục tiêu:** FR-85 (tiến độ người học) + FR-86 (thống kê cho Creator). Chọn lát cắt này vì nó mở
 khoá luôn màn chấm tay mà lát cắt 6 đang nợ.
 
 **Xong:** 5 truy vấn gộp · 3 API thống kê + 1 API đọc bài để chấm · 3 trang frontend · 13 ca test mới ·
@@ -1321,9 +1322,9 @@ chứ không tạo khoảng thứ mười một, và quiz người khác trả 4
 
 ### Quyết định phạm vi
 
-- **FR-28 (xuất PDF) bỏ.** Mức [C] Could, và nó chỉ đóng gói lại đúng số liệu đã có trên màn hình.
+- **FR-87 (xuất PDF) bỏ.** Mức [C] Could, và nó chỉ đóng gói lại đúng số liệu đã có trên màn hình.
   Đổi lấy một thư viện sinh PDF kèm bộ font tiếng Việt riêng thì không xứng.
-- **Điểm mạnh/yếu theo chủ đề KHÔNG làm lại ở đây** dù FR-26 có nhắc. Phần đó đã ở trang Lộ trình,
+- **Điểm mạnh/yếu theo chủ đề KHÔNG làm lại ở đây** dù FR-85 có nhắc. Phần đó đã ở trang Lộ trình,
   tính từ Neo4j. Tính lại từ PostgreSQL sẽ có hai màn hình nói cùng một chuyện bằng hai cách trên hai
   kho dữ liệu — khớp nhau hôm nay, lệch nhau vào ngày ai đó sửa một trong hai công thức, và lúc đó
   không có cách nào biết màn nào đúng. Trang Tiến độ dẫn sang trang Lộ trình.
@@ -2004,8 +2005,8 @@ còn "chưa đo" thì không — gộp hai thứ thành 0 làm giao diện hiể
 
 ### Còn nợ trong lát cắt này
 
-- **FR-38** kiểm duyệt quiz/câu hỏi công khai — chưa làm.
-- **FR-39** cấu hình thứ tự nhà cung cấp AI và hạn mức ở runtime — chưa làm. Phần này đòi sửa
+- **FR-80** ẩn quiz công khai vi phạm — chưa làm.
+- **FR-83/FR-84** trạng thái cấu hình nhà cung cấp AI và hạn mức lượt gọi — chưa làm. Phần này đòi sửa
   `AiOrchestrator` đang chạy tốt, nên để sau khi những phần không rủi ro đã xong.
 
 ### Ghi chú báo cáo
@@ -2037,7 +2038,7 @@ Trước đó khu quản trị chỉ là một menu xổ xuống trên thanh đi
 Lối vào chuyển vào menu tài khoản, lối ra là "Về khu học tập" ngay đầu sidebar — chuyển ngữ cảnh phải đi
 được **cả hai chiều**, không để ai mắc kẹt một bên.
 
-### Ô nhập hạn mức AI: cố ý KHÔNG làm (FR-49)
+### Ô nhập hạn mức AI: cố ý KHÔNG làm (FR-84)
 
 Thiết kế ban đầu có `PUT /admin/ai/quota` — "mỗi người tạo nội dung tối đa N lượt gọi AI mỗi ngày". Làm
 được ngay, nhưng `AiOrchestrator` **không đọc con số đó** và cũng chưa đếm lượt gọi theo từng người dùng.
@@ -2077,9 +2078,9 @@ Hai lợi ích: thứ được kiểm duyệt luôn đúng bằng thứ người
 
 ### Còn nợ
 
-- **FR-49** hạn mức lượt gọi AI mỗi ngày — hoãn có chủ đích, cần bộ đếm theo người dùng ở Redis và điểm
+- **FR-84** hạn mức lượt gọi AI mỗi ngày — hoãn có chủ đích, cần bộ đếm theo người dùng ở Redis và điểm
   chặn trong `AiOrchestrator`. `GET /admin/ai/usage` vẫn cho thấy chi phí thật để phát hiện lạm dụng.
-- **FR-38** (duyệt quiz trước khi công khai) và báo cáo vi phạm từ người dùng — đòi đổi nghiệp vụ và
+- **Luồng duyệt quiz** (duyệt trước khi công khai) và báo cáo vi phạm từ người dùng — đòi đổi nghiệp vụ và
   thêm bảng, chưa làm.
 
 ### Sidebar: làm lại lần hai, và một vòng thử bảng màu sáng rồi quay lại
@@ -2133,6 +2134,131 @@ tại) và 9 mục màu mực. Quy tắc + cách kiểm đã ghi vào `ui-design
 - **"Khó khăn & cách giải quyết":** bốn ví dụ dùng được — (1) ô nhập hạn mức cố ý không làm vì không chặn
   được gì; (2) `DELETE` không xoá gì nên đổi thành `POST .../close`; (3) phép kiểm suýt xanh rỗng;
   (4) **cascade layer**: class đúng mà màu vẫn sai, và bài học *nhìn ảnh không thay được phép đo*.
+
+---
+
+## 📅 CN — 16/08/2026 — Lát cắt 11: Flashcard + SRS, và một dãy mã tôi từng lấy trùng
+
+**Mục tiêu:** tính năng `[S]` sau khu quản trị. Chọn Flashcard vì nó tái dùng được dữ liệu đã có — câu trả
+lời sai của người học — thay vì phải dựng nghiệp vụ mới.
+
+**Xong:** V13 (3 bảng) · 12 endpoint · thuật toán SM-2 · 3 trang giao diện · 17 ca test.
+
+### Việc đầu tiên phải làm lại: dãy mã yêu cầu chức năng bị trùng
+
+Trước khi viết dòng code nào, mở `features/11` ra thì thấy nó dùng **FR-37…42** — đúng dãy tôi đã lấy cho
+khu quản trị hôm trước. Quét cả 16 file thì ra ba chỗ chồng nhau:
+
+| Dãy | Ai lấy trùng |
+|---|---|
+| FR-36 | Khu quản trị lấy đè của Gợi ý Neo4j |
+| FR-37…42 | Khu quản trị lấy đè của Flashcard |
+| FR-43…48 | Khu quản trị lấy đè của Chống gian lận |
+| FR-49 | Khu quản trị lấy đè của Gamification |
+| FR-26/27/28 | Thống kê lấy đè của Phòng đấu (**có sẵn từ trước**, không phải tôi) |
+
+Nguyên nhân của phần tôi gây ra: viết docs khu quản trị, tôi lấy dãy tiếp theo sau FR-35 mà không kiểm dãy
+đó có ai dùng chưa. Mã cao nhất đang dùng lúc đó là FR-70. Đã dời khu quản trị sang **FR-71…84** và Thống kê
+sang **FR-85…87**; giờ 87 mã, dãy 1..87, không trùng và không có lỗ hổng.
+
+Bản báo cáo nộp mô tả yêu cầu bằng văn xuôi nên không trích mã FR — tức lỗi này không lọt vào bản nộp. Nhưng
+mã định danh mà trùng thì hết ý nghĩa, và nó là thứ dùng để truy vết giữa docs, code và test.
+
+### Trạng thái ôn phải là bảng riêng
+
+`flashcard_reviews` là bảng riêng chứ không phải mấy cột trên `flashcards`. Một thẻ có thể được nhiều người
+ôn với lịch riêng; nhét `due_date`/`ease_factor` vào thẻ thì hai người ôn cùng bộ sẽ ghi đè lịch của nhau.
+Có một phép kiểm riêng cho đúng điều này: cấp trạng thái ôn của người B lên thẻ của A, A ôn thẻ đó, rồi
+khẳng định lịch của B còn nguyên.
+
+Phần thưởng ngoài dự tính: phần khó nhất của việc chia sẻ bộ thẻ về sau đã giải quyết sẵn, chỉ còn tầng
+quyền là việc chưa làm.
+
+### SM-2 tách thành lớp thuần, và ba cách nó có thể hỏng
+
+Thuật toán nằm ở `Sm2Scheduler` — không Spring, không cơ sở dữ liệu — nên kiểm được trong vài milli-giây.
+Ba cách hỏng mà phép kiểm nhắm vào, chứ không kiểm lại công thức bằng cách viết lại công thức:
+
+1. **Thẻ đứng yên một chỗ.** `1 × 1.3 = 1.3`, làm tròn xuống thành 1 — khoảng ôn không đổi và thẻ ôn mãi
+   không xong. Làm tròn **lên**, và chặn khoảng mới phải lớn hơn khoảng cũ ít nhất một ngày.
+2. **Thẻ biến mất.** Trả lời "Dễ" khoảng hai mươi lần thì khoảng ôn vượt quá tuổi của cả đồ án. Chặn ở
+   một năm.
+3. **Hệ số dễ trôi xuống dưới sàn 1.30.** Dùng `BigDecimal` thay `double`: hệ số này cộng trừ liên tiếp
+   nhiều lần, sai số nhị phân tích lại sẽ trôi qua chính cái sàn lẽ ra phải chặn được.
+
+Một chi tiết dễ hiểu sai: **HARD tính là "chưa nhớ"**. Ranh giới của SM-2 nằm giữa 2 và 3, HARD là 2 nên nó
+đưa thẻ về ôn lại ngày mai. Hiểu thành "nhớ nhưng khó" rồi cho giãn lịch thì thẻ khó nhất lại bị ôn thưa
+nhất. Giao diện ghi rõ hệ quả dưới mỗi nút ("ôn lại ngày mai" / "giãn lịch") thay vì để người dùng đoán.
+
+Đo thật qua API sau khi chạy: **1 → 6 → 13 → 26 → 47 ngày**, rồi "Không nhớ" đưa về 1 ngày và reset chuỗi.
+
+### Sinh thẻ từ câu trả lời sai: cố ý KHÔNG gọi AI
+
+Đây là chức năng có lý do tồn tại rõ nhất của cả tính năng — nó khép vòng lặp *làm bài → sai → ôn lại đúng
+chỗ sai*. Và nó **không gọi mô hình**: nội dung câu hỏi, đáp án đúng, phần giải thích đều đã nằm trong cơ sở
+dữ liệu. Gọi AI ở đây chỉ tốn hạn mức để viết lại thứ có sẵn, và mở thêm một đường cho nó bịa ra nội dung
+khác với đáp án thật.
+
+Chỉ lấy câu có đáp án xác định. `SHORT_ANSWER` bị loại: đáp án lưu kèm nó là một câu trả lời mẫu dài để AI
+đối chiếu, đặt nguyên lên mặt sau thẻ thì thành đoạn văn không học nổi. Lần đầu tôi loại luôn cả
+`FILL_BLANK` — sai, câu điền khuyết có đáp án rất gọn và làm thẻ rất tốt; đọc lại mới sửa.
+
+### Test bắt được hai lỗi, một trong đó ở code sản phẩm
+
+**Lỗi thật:** `WrongAnswerRepository` viết `o.correct = true` trong SQL thuần, nhưng cột thật là `is_correct`
+— entity `QuestionOption` đặt tên trường là `correct` và map sang cột `is_correct`, nên JPQL viết `correct`
+còn SQL thuần bắt buộc dùng tên cột. Cùng họ với cái bẫy `lower(bytea)`: **JPQL và SQL thuần không dùng
+chung tên**, và mỗi lần viết SQL thuần trên một bảng có sẵn thì phải mở migration ra đọc.
+
+**Phép kiểm của tôi pass sai:** ca "sinh thẻ lần hai không tạo trùng" mong đợi 1 nhưng ra 2, vì hai ca dùng
+chung tài khoản và lớp test không dọn cơ sở dữ liệu giữa các ca — số câu sai tích lại. Cách chữa **sai** mà
+tôi suýt làm: truy vấn cơ sở dữ liệu để tính số mong đợi, tức nhân bản chính truy vấn đang kiểm vào test.
+Cách đúng: cho mỗi ca một tài khoản riêng, con số trở lại xác định.
+
+### Ba chỗ tự sửa khi đọc lại
+
+- `demDenHanTrongBo` nạp cả entity chỉ để lấy `size()`, **và** được gọi cho từng bộ thẻ trong danh sách —
+  N+1 lượt đi vòng kèm nạp thừa. Đổi sang một truy vấn gộp theo bộ.
+- `new Question()` rồi `setId()` để lấy khoá ngoại: entity đó ở trạng thái detached và Hibernate có thể coi
+  là bản ghi mới cần insert. Phải dùng `getReferenceById`.
+- `ReviewService.theoThe` viết ra rồi không ai gọi — bỏ, không để lại code chết.
+
+### Còn nợ
+
+- **FR-38** AI sinh thẻ từ học liệu qua RAG — phần lớn nhất còn lại của tính năng này.
+- Chia sẻ bộ thẻ giữa người dùng (cần tầng quyền mới).
+
+### Gom lại thanh điều hướng: 11 mục phẳng còn 5
+
+Thêm *Thẻ ghi nhớ* làm thanh ngang lên 11 mục với vai trò CREATOR và nó tràn hàng. Gom thành hai menu
+nhóm — *Học tập* (thẻ ghi nhớ, lộ trình, tiến độ, lịch sử) và *Thư viện* (quiz của tôi, ngân hàng câu hỏi,
+học liệu) — giữ ba link đơn dùng thường xuyên nhất ở ngoài.
+
+Hai điều đáng ghi:
+
+**Menu xổ xuống giấu mất dấu hiệu "đang ở trang nào".** Mở trang Thẻ ghi nhớ thì mục đó nằm trong menu đã
+đóng, và cả thanh menu không có gì sáng lên. Nên nhãn nhóm phải tự sáng khi một trang con của nó đang mở,
+và mục con được đánh dấu `selectedKeys` bên trong menu. Đây là chi phí của việc gom nhóm, phải trả thì gom
+mới đáng.
+
+**"Sinh đề AI" là hành động, không phải điều hướng.** Nó từng là một link giữa mười link khác và chìm hoàn
+toàn. Chuyển thành nút, đặt cạnh avatar. Có gợi ý dùng nền gradient cho nổi, nhưng `ui-design-system.md §4`
+cấm gradient và §5 quy định nút hành động chính màu đen — làm một nút nổi bằng cách phá quy ước màu thì
+phần còn lại của giao diện trả giá. Icon ✨ đủ để phân biệt nó với các nút đen khác.
+
+Phần phân quyền hiển thị theo vai trò **đã có sẵn** từ trước (`canCreate`), không phải làm mới. Đo lại để
+chắc: LEARNER thấy 4 mục và không có nút *Sinh đề AI*; CREATOR thấy 5 mục và nút có nền `rgb(28,29,31)`,
+đúng token `--color-ink`.
+
+### Ghi chú báo cáo
+- **Mục 2.8 (ERD):** thêm 3 bảng `flashcard_decks`, `flashcards`, `flashcard_reviews`. Nhấn chỗ trạng thái
+  ôn là bảng riêng — đó là một quyết định thiết kế dữ liệu giải thích được.
+- **Mục 3.3:** ba màn mới để chụp — danh sách bộ thẻ, soạn thẻ, phiên ôn (nên chụp cả trước và sau khi lật).
+- **"Khó khăn & cách giải quyết":** hai ví dụ mới — (1) `o.correct` vs `is_correct`, cùng họ với
+  `lower(bytea)`, cho thấy JPQL và SQL thuần không dùng chung tên; (2) phép kiểm pass sai do dùng chung tài
+  khoản, và vì sao cách chữa bằng truy vấn lại là sai.
+- **Mục 3.4 (kiểm thử):** SM-2 là ví dụ tốt cho việc *tách logic thuần ra để test nhanh* — 7 ca chạy trong
+  vài milli-giây, không cần Testcontainers.
 
 ---
 

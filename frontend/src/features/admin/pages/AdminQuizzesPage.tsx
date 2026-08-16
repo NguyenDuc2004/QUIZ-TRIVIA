@@ -9,7 +9,7 @@ import type { QuizSummary } from '@/features/quiz/api/quizApi'
 const { Text } = Typography
 
 /**
- * Kiểm duyệt quiz công khai (FR-45).
+ * Kiểm duyệt quiz công khai (FR-80).
  *
  * Danh sách này là **đúng danh sách người học nhìn thấy** ở trang khám phá — cùng một truy vấn. Quiz riêng
  * tư không có ở đây: không ai ngoài chủ của nó xem được nên chẳng có gì để kiểm duyệt, và đọc nội dung

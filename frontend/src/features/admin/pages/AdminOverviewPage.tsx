@@ -22,7 +22,7 @@ import { useSystemOverview } from '../hooks/useAdmin'
 const { Text } = Typography
 
 /**
- * Trang đầu khu quản trị (FR-40 → FR-42).
+ * Trang đầu khu quản trị (FR-75 → FR-77).
  *
  * Mọi con số trên trang này đến từ dữ liệu thật trong cơ sở dữ liệu. Không có chỉ số nào được nhân hệ số
  * hay ước lượng cho biểu đồ đẹp hơn — `ui-design-system.md §7`. Một trang tổng quan sai số tệ hơn không

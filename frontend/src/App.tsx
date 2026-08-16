@@ -13,6 +13,9 @@ import AssistantPage from '@/features/chat/pages/AssistantPage'
 import AttemptPage from '@/features/attempt/pages/AttemptPage'
 import MyAttemptsPage from '@/features/attempt/pages/MyAttemptsPage'
 import LearningPathPage from '@/features/recommend/pages/LearningPathPage'
+import DeckDetailPage from '@/features/flashcard/pages/DeckDetailPage'
+import DecksPage from '@/features/flashcard/pages/DecksPage'
+import ReviewSessionPage from '@/features/flashcard/pages/ReviewSessionPage'
 import QuizIntroPage from '@/features/attempt/pages/QuizIntroPage'
 import BrowseQuizzesPage from '@/features/quiz/pages/BrowseQuizzesPage'
 import AdminLayout from '@/features/admin/components/AdminLayout'
@@ -77,6 +80,11 @@ export default function App() {
         <Route path="/my-attempts" element={<MyAttemptsPage />} />
         <Route path="/my-progress" element={<MyProgressPage />} />
         <Route path="/learning-path" element={<LearningPathPage />} />
+        {/* Thẻ ghi nhớ (features/11) — chức năng của người học, mọi tài khoản đã đăng nhập đều dùng được.
+            Màn ôn thẻ nhận `?deckId=` để ôn trong một bộ, thiếu tham số thì ôn mọi thẻ đến hạn. */}
+        <Route path="/flashcards" element={<DecksPage />} />
+        <Route path="/flashcards/review" element={<ReviewSessionPage />} />
+        <Route path="/flashcards/decks/:id" element={<DeckDetailPage />} />
         {/* Trợ lý học tập: mở cho MỌI người đã đăng nhập, không riêng CREATOR — người học chính là
             đối tượng nó phục vụ (features/08) */}
         <Route path="/assistant" element={<AssistantPage />} />

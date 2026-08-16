@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * Thêm hoặc sửa một danh mục (features/10, FR-44).
+ * Thêm hoặc sửa một danh mục (features/10, FR-79).
  *
  * @param slug để trống thì server tự sinh từ {@code name}. Cho phép nhập tay vì slug nằm trên đường dẫn
  *             công khai — đổi tên danh mục không nên làm chết đường dẫn cũ, nên hai thứ tách nhau

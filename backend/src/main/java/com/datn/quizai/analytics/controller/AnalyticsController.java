@@ -36,7 +36,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/me")
-    @Operation(summary = "Tiến độ học tập của tôi (FR-26): số lượt, số quiz, điểm trung bình và "
+    @Operation(summary = "Tiến độ học tập của tôi (FR-85): số lượt, số quiz, điểm trung bình và "
             + "đường điểm theo thời gian. Điểm mạnh/yếu theo chủ đề nằm ở /recommendations/path.")
     public LearnerProgressResponse myProgress(
             @AuthenticationPrincipal JwtService.AuthenticatedUser current) {
@@ -44,7 +44,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/quizzes/{quizId}")
-    @Operation(summary = "Thống kê quiz của tôi (FR-27): tỉ lệ nộp kịp giờ, phân bố điểm theo 10 "
+    @Operation(summary = "Thống kê quiz của tôi (FR-86): tỉ lệ nộp kịp giờ, phân bố điểm theo 10 "
             + "khoảng, và câu bị làm sai nhiều nhất. Quiz của người khác trả 404.")
     public QuizStatsResponse quizStats(
             @AuthenticationPrincipal JwtService.AuthenticatedUser current,

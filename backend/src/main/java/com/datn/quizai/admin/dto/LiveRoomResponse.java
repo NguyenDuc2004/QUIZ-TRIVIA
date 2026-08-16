@@ -4,7 +4,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * Một phòng đấu đang chạy, nhìn từ khu quản trị (features/10, FR-46).
+ * Một phòng đấu đang chạy, nhìn từ khu quản trị (features/10, FR-81).
  * <p>
  * Ghép dữ liệu từ <b>hai nguồn</b>: metadata bền (mã phòng, chủ phòng, quiz) lấy từ PostgreSQL, còn số
  * người chơi và câu hiện tại lấy từ trạng thái ở Redis. Đúng cách hai nơi này phân chia trách nhiệm —
