@@ -36,6 +36,7 @@
 | 14/08 (tối) | **Lát cắt 10 phần 2: khu quản trị có khung riêng** — 16 API, 6 trang, 19 test | 7/7 | 🟢 xong |
 | 16/08 | Sửa trùng mã FR (87 mã, 1..87) · **Lát cắt 11: Flashcard + SRS** — 12 API, 3 trang, 17 test | 7/7 | 🟢 xong |
 | 16/08 (tối) | **FR-38: AI sinh thẻ từ học liệu** (V14) — đo thật 6/6 thẻ hợp lệ, 10s | 5/5 | 🟢 xong |
+| 16/08 (đêm) | **Lát cắt 13: Gamification** (V15) — XP/cấp/chuỗi/huy hiệu/thử thách, 21 test | 6/6 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -2351,6 +2352,87 @@ Cần xem lại chỗ tạo phiên khi `sessionId` null.
   học là *đọc lớp cùng loại trước khi viết*, vì `ChatController` đã ghi sẵn lời giải trong javadoc.
 - **Mục 3.4:** phép kiểm tự phản chính nó (`isPositive` với thông điệp "không được tạo") là ví dụ tốt cho
   việc *đọc lại phép kiểm như đọc code sản phẩm*.
+
+---
+
+## 📅 CN — 16/08/2026 (đêm) — Lát cắt 13: Gamification, và ba cái bẫy Spring/JPA
+
+**Mục tiêu:** người dùng dự án nhắc *"cũng phải làm đủ chức năng trong docs chứ"* — đúng, docs liệt kê 16 tính
+năng thì làm đủ 16. Còn 5 tính năng `[S]`, làm nhẹ trước nặng sau: 13 → 15 → 12 → 16 → 14.
+
+**Xong:** V15 (6 bảng + 10 huy hiệu) · 3 endpoint · trang Thành tích · 21 ca test.
+
+### Đặc tả đòi idempotent nhưng không có bảng nào giữ được
+
+Đặc tả ghi *"idempotent: một hành động chỉ cộng XP một lần (chống lặp khi retry)"* và liệt kê 5 bảng — trong đó
+không có bảng nào lưu được "hành động này đã tính chưa". Cộng thẳng vào `user_stats.total_xp` thì một lần retry
+là một lần cộng đôi, và không có cách nào phát hiện.
+
+Nên thêm bảng thứ sáu `xp_events`, mỗi dòng là một lần cộng, kèm ràng buộc
+`UNIQUE (user_id, source_type, source_key)`. Chốt ở **cơ sở dữ liệu** chứ không ở Java: kiểm trong Java thua
+cuộc khi hai luồng chạy song song.
+
+### Ôn thẻ suýt thành máy in XP
+
+API ôn thẻ (features/11) **không chặn ôn sớm** — cố ý, vì ôn sớm là việc hợp lệ. Nhưng ghép với việc cộng XP
+mỗi lần ôn thì bấm một thẻ trăm lần là trăm lần XP, và con số mất hết ý nghĩa.
+
+Cách chặn: khoá chống trùng của ôn thẻ là `cardId:ngày`, không phải `cardId`. Mỗi thẻ mỗi ngày một lần cộng —
+thưởng người ôn đều, không thưởng người bấm liên tục. Có hai phép kiểm cho đúng điều này: bấm ba lần trong
+ngày chỉ cộng một lần, và cùng thẻ nhưng ngày khác thì được cộng lại.
+
+### Ba cái bẫy Spring/JPA, mỗi cái làm vỡ theo một cách khác
+
+**1. `@TransactionalEventListener` + `@Transactional` = Spring không khởi động.** Listener chạy *sau* khi
+transaction nghiệp vụ commit nên không còn transaction nào để tham gia; Spring từ chối và **28 test lỗi
+ApplicationContext**. Phải là `REQUIRES_NEW`. Về nghĩa cũng đúng — phần cộng XP cần transaction riêng.
+
+**2. Ghi `String` vào cột `jsonb` bị PostgreSQL từ chối.** `columnDefinition = "jsonb"` chỉ ảnh hưởng lúc sinh
+schema, không ảnh hưởng cách tham số được gửi. Phải có `@JdbcTypeCode(SqlTypes.JSON)`.
+
+**3. Bắt `DataIntegrityViolationException` rồi tiếp tục là ảo giác — và đây là cái đáng nhớ nhất.** Tôi viết
+ba chỗ `try { save } catch (DataIntegrityViolationException) { /* luồng khác thắng, bỏ qua */ }`, nghĩ rằng
+mình đang xử lý êm cuộc đua. Thực tế Spring **đã đánh dấu transaction là rollback-only** ngay khi ràng buộc
+nổ, nên lần commit sau đó vẫn vỡ với `UnexpectedRollbackException`. Bắt ngoại lệ không cứu được gì, chỉ làm
+lỗi đổi chỗ và khó truy hơn.
+
+Sửa theo hai cách khác nhau tuỳ chỗ:
+- `award` và trao huy hiệu: **bỏ hẳn catch**, để ngoại lệ nổi lên cho listener bắt. Transaction rollback, và
+  đó là kết quả đúng vì luồng kia đã cộng XP rồi.
+- Tạo thử thách ngày: dùng `ON CONFLICT DO NOTHING`. Câu lệnh **không bao giờ ném**, nên transaction sạch và
+  người thứ hai chỉ việc đọc dòng của người thắng.
+
+### Test bắt được một lỗi thiết kế, không phải lỗi code
+
+Phép kiểm "khoảng cách giữa các cấp phải nới ra" **đỏ ở cấp 3**. Truy ra: đọc `100 * level^1.5` theo nghĩa
+*XP tích luỹ* thì lên cấp 2 tốn 283 XP nhưng cấp 3 chỉ tốn thêm 237 — cấp thứ hai **khó hơn** cấp thứ ba, và
+người chơi sẽ thấy ngay. Nguyên nhân là cấp 1 phải bằng 0 XP nên bậc đầu bị kéo dài bất thường.
+
+Đọc theo nghĩa *XP cho từng bậc* thì hết ngược: 100 → 283 → 520 → 800 → 1118. Đây là loại lỗi mà test viết
+theo *tính chất* ("phải nới ra") bắt được, còn test viết theo *giá trị* ("cấp 3 cần 520 XP") thì không.
+
+### Một chỗ lệch bảng màu, sửa ở theme chứ không sửa lẻ
+
+Thanh tiến độ ra màu xanh mặc định của antd. Nguyên nhân: `Progress` lấy màu từ `colorInfo`, **không** phải
+`colorPrimary` — nên đặt `colorPrimary` tím ở theme không đủ. Sửa bằng token `Progress.defaultColor` trong
+theme chứ không truyền `strokeColor` ở từng chỗ dùng: một màu lệch thì lệch ở mọi trang, và sửa lẻ thì trang
+thêm sau lại lệch tiếp. Đo lại bằng `getComputedStyle`: `rgb(164, 53, 240)` — đúng `--color-brand`.
+Class của antd v6 là `ant-progress-track`, không còn `ant-progress-bg`, nên chỉ đo mới thấy.
+
+### Đo thật
+
+Làm bài thường: **+20 XP**. Làm bài đúng 100%: **+35 XP** (20 + 15 thưởng) → tổng 55, tiến độ 55/100 lên cấp 2.
+Huy hiệu tự trao đúng hai cái: `FIRST_STEPS` (≥50 XP) và `PERFECT_1` (đúng 100%). Thử thách ngày *"Hoàn thành
+3 bài quiz"* lên 2/3. Sổ `xp_events` đúng một dòng mỗi bài.
+
+### Ghi chú báo cáo
+- **Mục 2.8 (ERD):** thêm 6 bảng. Nhấn `xp_events` — bảng không có trong thiết kế ban đầu, thêm vào vì
+  yêu cầu idempotent không thể thoả mãn mà không có nó.
+- **Mục 2.7:** gamification là ví dụ tốt nhất trong đồ án về **domain event**: hai service nghiệp vụ không hề
+  biết tính năng này tồn tại, có thể bỏ hẳn nó mà không sửa dòng nào ở chỗ khác.
+- **"Khó khăn & cách giải quyết":** ba cái bẫy Spring/JPA ở trên, đặc biệt cái thứ ba — *bắt ngoại lệ ràng
+  buộc bên trong transaction không cứu được gì*, một hiểu sai rất dễ mắc.
+- **Mục 3.4:** ví dụ về test viết theo **tính chất** thay vì theo **giá trị**, và nó bắt được lỗi thiết kế.
 
 ---
 
