@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Avatar, Dropdown, Input, Layout, Space, Tag, Typography } from 'antd'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Avatar, Button, Dropdown, Input, Layout, Space, Tag, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   DownOutlined,
@@ -113,37 +113,32 @@ export default function AppLayout() {
           <NavLink to="/assistant" className={navLinkClass}>
             Trợ lý AI
           </NavLink>
-          <NavLink to="/flashcards" className={navLinkClass}>
-            Thẻ ghi nhớ
-          </NavLink>
-          <NavLink to="/learning-path" className={navLinkClass}>
-            Lộ trình
-          </NavLink>
-          <NavLink to="/my-progress" className={navLinkClass}>
-            Tiến độ
-          </NavLink>
-          <NavLink to="/my-attempts" className={navLinkClass}>
-            Lịch sử
-          </NavLink>
-          {canCreate && (
-            <>
-              <NavLink to="/my-quizzes" className={navLinkClass}>
-                Quiz của tôi
-              </NavLink>
-              <NavLink to="/question-bank" className={navLinkClass}>
-                Ngân hàng câu hỏi
-              </NavLink>
-              <NavLink to="/ai/materials" className={navLinkClass}>
-                Học liệu
-              </NavLink>
-              <NavLink to="/ai/generate" className={navLinkClass}>
-                Sinh đề AI
-              </NavLink>
-            </>
-          )}
+
+          {/* Gom các mục cá nhân của người học vào một menu. Bảy mục phẳng trước đây tràn hàng trên màn
+              hình hẹp, và chúng vốn thuộc hai việc khác nhau: học và soạn nội dung. */}
+          <NavGroup label="Học tập" items={MUC_HOC_TAP} />
+
+          {/* Nhóm công cụ soạn nội dung, chỉ hiện với CREATOR và ADMIN */}
+          {canCreate && <NavGroup label="Thư viện" items={MUC_THU_VIEN} />}
         </nav>
 
         <Space size={8} className="ml-auto shrink-0">
+          {/*
+            "Sinh đề AI" là HÀNH ĐỘNG, không phải điều hướng — nên nó là nút bấm, không nằm ngang hàng
+            với các mục menu. Trước đây nó là một link giữa bảy link khác và chìm hoàn toàn.
+
+            Màu đen chứ KHÔNG gradient: `ui-design-system.md §5` quy định nút hành động chính màu đen
+            và tím chỉ dùng cho link. Một nút gradient ở đây sẽ là thứ duy nhất trong cả ứng dụng trông
+            như vậy, và làm nó nổi bằng cách phá quy ước màu thì phần còn lại của giao diện trả giá.
+            Icon ✨ đủ để nó khác mọi nút đen khác mà không cần đổi màu.
+          */}
+          {canCreate && (
+            <Link to="/ai/generate" className="hidden sm:block">
+              <Button type="primary" icon={<span aria-hidden>✨</span>}>
+                Sinh đề AI
+              </Button>
+            </Link>
+          )}
           {user && (
             <Dropdown menu={{ items: accountMenuItems }} trigger={['click']} placement="bottomRight">
               {/* Vùng bấm gộp avatar + tên + vai trò: cả khối là một đích bấm, không phải ba đích
@@ -178,5 +173,76 @@ export default function AppLayout() {
         </div>
       </Content>
     </Layout>
+  )
+}
+
+/** Một mục trong menu nhóm. */
+interface MucMenu {
+  to: string
+  label: string
+  moTa: string
+}
+
+const MUC_HOC_TAP: MucMenu[] = [
+  { to: '/flashcards', label: 'Thẻ ghi nhớ', moTa: 'Ôn theo lịch lặp lại ngắt quãng' },
+  { to: '/learning-path', label: 'Lộ trình học', moTa: 'Thứ tự chủ đề nên ôn, gợi ý từ đồ thị hành vi' },
+  { to: '/my-progress', label: 'Tiến độ', moTa: 'Điểm theo thời gian, mạnh yếu theo chủ đề' },
+  { to: '/my-attempts', label: 'Lịch sử làm bài', moTa: 'Các bài đã làm và kết quả' },
+]
+
+const MUC_THU_VIEN: MucMenu[] = [
+  { to: '/my-quizzes', label: 'Quiz của tôi', moTa: 'Đề đã soạn và thống kê từng đề' },
+  { to: '/question-bank', label: 'Ngân hàng câu hỏi', moTa: 'Câu hỏi dùng lại được cho nhiều đề' },
+  { to: '/ai/materials', label: 'Học liệu', moTa: 'Tài liệu nguồn cho trợ lý và sinh đề' },
+]
+
+/**
+ * Một nhóm mục điều hướng dạng menu xổ xuống.
+ *
+ * Điểm phải xử lý: menu xổ xuống **giấu mất dấu hiệu "đang ở trang nào"** — mở trang Thẻ ghi nhớ thì cả
+ * thanh menu không có gì sáng lên, vì mục đó nằm bên trong menu đã đóng. Nên nhãn nhóm tự sáng khi một
+ * trang con của nó đang mở, và mục con đó được đánh dấu trong menu.
+ *
+ * Mỗi mục kèm một dòng mô tả: gom vào menu làm mất khả năng đọc hết mọi mục bằng một cái nhìn, dòng mô tả
+ * bù lại phần đó cho người chưa quen.
+ */
+function NavGroup({ label, items }: { label: string; items: MucMenu[] }) {
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const dangMo = items.some(
+    (m) => location.pathname === m.to || location.pathname.startsWith(m.to + '/'),
+  )
+
+  const menuItems: MenuProps['items'] = items.map((m) => ({
+    key: m.to,
+    label: (
+      <div className="py-0.5">
+        <div className="text-sm font-bold">{m.label}</div>
+        <div className="text-ink-soft text-xs">{m.moTa}</div>
+      </div>
+    ),
+    onClick: () => navigate(m.to),
+  }))
+
+  return (
+    <Dropdown
+      menu={{
+        items: menuItems,
+        // Đánh dấu mục con đang mở để menu cũng nói được vị trí hiện tại, không chỉ nhãn nhóm
+        selectedKeys: items.filter((m) => location.pathname.startsWith(m.to)).map((m) => m.to),
+      }}
+      trigger={['click']}
+    >
+      <button
+        type="button"
+        className={`flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-sm font-bold whitespace-nowrap ${
+          dangMo ? 'text-brand-strong!' : 'text-ink! hover:text-brand-strong!'
+        }`}
+      >
+        {label}
+        <DownOutlined className="text-[10px]" />
+      </button>
+    </Dropdown>
   )
 }

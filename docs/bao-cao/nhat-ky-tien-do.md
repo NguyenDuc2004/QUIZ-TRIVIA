@@ -2228,6 +2228,28 @@ Cách đúng: cho mỗi ca một tài khoản riêng, con số trở lại xác 
 - **FR-38** AI sinh thẻ từ học liệu qua RAG — phần lớn nhất còn lại của tính năng này.
 - Chia sẻ bộ thẻ giữa người dùng (cần tầng quyền mới).
 
+### Gom lại thanh điều hướng: 11 mục phẳng còn 5
+
+Thêm *Thẻ ghi nhớ* làm thanh ngang lên 11 mục với vai trò CREATOR và nó tràn hàng. Gom thành hai menu
+nhóm — *Học tập* (thẻ ghi nhớ, lộ trình, tiến độ, lịch sử) và *Thư viện* (quiz của tôi, ngân hàng câu hỏi,
+học liệu) — giữ ba link đơn dùng thường xuyên nhất ở ngoài.
+
+Hai điều đáng ghi:
+
+**Menu xổ xuống giấu mất dấu hiệu "đang ở trang nào".** Mở trang Thẻ ghi nhớ thì mục đó nằm trong menu đã
+đóng, và cả thanh menu không có gì sáng lên. Nên nhãn nhóm phải tự sáng khi một trang con của nó đang mở,
+và mục con được đánh dấu `selectedKeys` bên trong menu. Đây là chi phí của việc gom nhóm, phải trả thì gom
+mới đáng.
+
+**"Sinh đề AI" là hành động, không phải điều hướng.** Nó từng là một link giữa mười link khác và chìm hoàn
+toàn. Chuyển thành nút, đặt cạnh avatar. Có gợi ý dùng nền gradient cho nổi, nhưng `ui-design-system.md §4`
+cấm gradient và §5 quy định nút hành động chính màu đen — làm một nút nổi bằng cách phá quy ước màu thì
+phần còn lại của giao diện trả giá. Icon ✨ đủ để phân biệt nó với các nút đen khác.
+
+Phần phân quyền hiển thị theo vai trò **đã có sẵn** từ trước (`canCreate`), không phải làm mới. Đo lại để
+chắc: LEARNER thấy 4 mục và không có nút *Sinh đề AI*; CREATOR thấy 5 mục và nút có nền `rgb(28,29,31)`,
+đúng token `--color-ink`.
+
 ### Ghi chú báo cáo
 - **Mục 2.8 (ERD):** thêm 3 bảng `flashcard_decks`, `flashcards`, `flashcard_reviews`. Nhấn chỗ trạng thái
   ôn là bảng riêng — đó là một quyết định thiết kế dữ liệu giải thích được.
