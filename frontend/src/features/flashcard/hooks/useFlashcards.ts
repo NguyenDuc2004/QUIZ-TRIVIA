@@ -5,6 +5,7 @@ import {
   flashcardApi,
   type DeckBody,
   type FlashcardBody,
+  type GenerateCardsBody,
   type ReviewQuality,
 } from '../api/flashcardApi'
 
@@ -92,6 +93,45 @@ export function useGenerateFromWrongAnswers() {
             (result.soBoQua > 0 ? ` · bỏ qua ${result.soBoQua} câu đã có thẻ` : ''),
         )
       }
+      queryClient.invalidateQueries({ queryKey: [KEY] })
+    },
+    onError: (error) => message.error(getApiErrorMessage(error)),
+  })
+}
+
+export function useGenerateCards() {
+  return useMutation({
+    mutationFn: ({ deckId, body }: { deckId: string; body: GenerateCardsBody }) =>
+      flashcardApi.generateCards(deckId, body),
+    onError: (error) => message.error(getApiErrorMessage(error)),
+  })
+}
+
+/**
+ * Hỏi lại trạng thái job sinh thẻ.
+ *
+ * Chỉ hỏi lại khi job còn đang chạy: `refetchInterval` trả về false khi đã xong hoặc đã lỗi. Hỏi mãi thì
+ * mỗi 2 giây lại một lượt gọi vô ích suốt thời gian người dùng còn mở màn duyệt.
+ */
+export function useFlashcardJob(jobId: string | undefined) {
+  return useQuery({
+    queryKey: [KEY, 'job', jobId],
+    queryFn: () => flashcardApi.job(jobId!),
+    enabled: Boolean(jobId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status
+      return status === 'SUCCEEDED' || status === 'FAILED' ? false : 2000
+    },
+  })
+}
+
+export function useApproveGenerated() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ jobId, indexes }: { jobId: string; indexes: number[] }) =>
+      flashcardApi.approveGenerated(jobId, indexes),
+    onSuccess: (result) => {
+      message.success(`Đã lưu ${result.soThe} thẻ vào bộ — tất cả đến hạn ôn ngay hôm nay`)
       queryClient.invalidateQueries({ queryKey: [KEY] })
     },
     onError: (error) => message.error(getApiErrorMessage(error)),

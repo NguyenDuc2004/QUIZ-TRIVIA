@@ -66,6 +66,41 @@ export interface WrongAnswerResult {
   soBoQua: number
 }
 
+/** Một thẻ nháp do AI sinh — chưa lưu, chờ người dùng duyệt. */
+export interface GeneratedFlashcard {
+  front: string
+  back: string
+  hint: string | null
+}
+
+export interface GenerationResult {
+  flashcards: GeneratedFlashcard[]
+  /** Thẻ bị loại kèm lý do — hiện ra để giải thích vì sao yêu cầu 15 mà nhận 11. */
+  rejected: string[]
+  /** Đoạn học liệu đã dùng, để người duyệt đối chiếu từng thẻ với nguồn. */
+  sourceExcerpts: string[]
+  provider: string
+  model: string
+  latencyMs: number
+}
+
+export interface FlashcardJob {
+  id: string
+  status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
+  result: GenerationResult | null
+  errorMessage: string | null
+  createdAt: string
+  /** Số giây còn phải chờ vì nhà cung cấp AI đang chặn hạn mức; 0 = chạy bình thường. */
+  aiThrottledSeconds: number
+}
+
+export interface GenerateCardsBody {
+  /** Bắt buộc: thẻ được ôn lại hàng chục lần nên phải có nguồn để đối chiếu khi duyệt. */
+  materialId: string
+  topic?: string
+  count: number
+}
+
 export const flashcardApi = {
   decks: (params: { keyword?: string; page?: number; size?: number }) =>
     apiClient.get<PageResponse<Deck>>('/decks', { params }).then((res) => res.data),
@@ -91,6 +126,16 @@ export const flashcardApi = {
 
   fromWrongAnswers: (deckId: string) =>
     apiClient.post<WrongAnswerResult>(`/decks/${deckId}/cards/from-wrong-answers`)
+      .then((res) => res.data),
+
+  generateCards: (deckId: string, body: GenerateCardsBody) =>
+    apiClient.post<FlashcardJob>(`/decks/${deckId}/cards/generate`, body).then((res) => res.data),
+
+  job: (jobId: string) =>
+    apiClient.get<FlashcardJob>(`/flashcards/jobs/${jobId}`).then((res) => res.data),
+
+  approveGenerated: (jobId: string, indexes: number[]) =>
+    apiClient.post<{ soThe: number }>(`/flashcards/jobs/${jobId}/approve`, { indexes })
       .then((res) => res.data),
 
   due: (deckId?: string) =>
