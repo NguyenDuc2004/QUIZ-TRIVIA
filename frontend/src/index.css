@@ -24,6 +24,14 @@
   --color-rating: #b4690e;
   --color-badge: #eceb98;
 
+  /*
+   * Khu quản trị (AdminLayout) — nền đen tuyền, chữ trắng. Đây không chỉ là thẩm mỹ: thao tác ở khu này
+   * tác động lên NGƯỜI KHÁC và không có nút hoàn tác, nên nền tối là dấu hiệu để admin luôn biết mình
+   * đang ở đâu (ui-design-system.md §1). Đen tuyền tách rõ nhất khỏi vùng nội dung sáng bên cạnh.
+   */
+  --color-admin-bg: #000000;
+  --color-admin-line: #2b2f37;
+
   --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 

@@ -114,6 +114,22 @@ public class AdminUserService {
         return AdminUserResponse.from(user);
     }
 
+    /**
+     * Thu hồi mọi phiên đăng nhập của một người dùng, <b>không</b> khoá tài khoản họ.
+     * <p>
+     * Tách khỏi việc khoá vì hai thao tác giải quyết hai tình huống khác nhau: thu hồi phiên là biện
+     * pháp <i>kỹ thuật</i> khi nghi tài khoản bị chiếm dụng hoặc người dùng báo mất máy — họ đăng nhập
+     * lại được ngay bằng mật khẩu của mình. Khoá tài khoản là biện pháp <i>kỷ luật</i>. Gộp làm một thì
+     * quản trị viên muốn giúp một người lấy lại quyền kiểm soát tài khoản lại phải chặn họ luôn.
+     */
+    @Transactional(readOnly = true)
+    public int revokeSessions(UUID targetId) {
+        require(targetId);
+        int revoked = refreshTokenService.revokeAll(targetId);
+        log.info("Thu hồi {} phiên của {}", revoked, targetId);
+        return revoked;
+    }
+
     private User require(UUID id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> BusinessException.notFound("Không tìm thấy người dùng"));

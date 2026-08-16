@@ -3,21 +3,73 @@
 **Ưu tiên:** [S] Should
 
 ## Mục tiêu
-Cho phép quản trị viên quản lý người dùng, nội dung, cấu hình AI và giám sát hệ thống.
+Cho phép quản trị viên nắm được tình trạng hệ thống, quản lý người dùng và nội dung công khai, giám sát
+phòng đấu đang diễn ra, và kiểm soát chi phí AI.
 
 ## Use case
-- Admin quản lý user, đổi vai trò, kiểm duyệt nội dung.
-- Admin cấu hình AI provider/fallback và theo dõi chi phí.
+- Admin xem tổng quan sức khoẻ hệ thống ngay khi đăng nhập.
+- Admin quản lý người dùng: đổi vai trò, khoá tài khoản, thu hồi phiên khẩn cấp.
+- Admin quản lý danh mục và ẩn quiz công khai vi phạm.
+- Admin giám sát phòng đấu đang chạy và cưỡng chế đóng phòng khi cần.
+- Admin theo dõi chi phí AI và đặt hạn mức cho người tạo nội dung.
+
+## Năm nhóm chức năng
+
+| # | Nhóm | Đường dẫn | Trạng thái |
+|---|---|---|---|
+| 1 | Tổng quan hệ thống | `/admin` | ⏳ |
+| 2 | Người dùng & phân quyền | `/admin/users` | ✅ |
+| 3 | Nội dung & danh mục | `/admin/content` | ⏳ |
+| 4 | Giám sát phòng đấu | `/admin/rooms` | ⏳ |
+| 5 | Cấu hình & giám sát AI | `/admin/ai` | 🟡 giám sát xong, cấu hình chưa |
 
 ## Yêu cầu chức năng
-- **FR-36** ✅ Quản lý người dùng: danh sách có lọc theo từ khoá / vai trò / trạng thái, khoá và mở khoá, đổi vai trò.
-- **FR-37** ✅ Xem chi phí và độ tin cậy AI (token, nhà cung cấp đã dùng, độ trễ, tỉ lệ lỗi và tỉ lệ dùng dự phòng).
-- **FR-38** ⏳ Kiểm duyệt quiz/câu hỏi công khai — chưa làm.
-- **FR-39** ⏳ Cấu hình thứ tự nhà cung cấp AI và hạn mức ở runtime — chưa làm.
+
+| Mã | Yêu cầu | Trạng thái |
+|---|---|---|
+| FR-36 | Danh sách người dùng có lọc theo từ khoá / vai trò / trạng thái khoá | ✅ |
+| FR-37 | Khoá và mở khoá tài khoản; khoá thì **thu hồi mọi phiên ngay** | ✅ |
+| FR-38 | Đổi vai trò; **thu hồi phiên** vì vai trò nằm trong token | ✅ |
+| FR-39 | Xem chi phí và độ tin cậy AI: token, nhà cung cấp, độ trễ, tỉ lệ lỗi và tỉ lệ dùng dự phòng | ✅ |
+| FR-40 | Tổng quan hệ thống: KPI người dùng / quiz / lượt làm bài / phòng đang chạy / chi phí AI tháng này | ✅ |
+| FR-41 | Biểu đồ tăng trưởng người dùng và lượt làm bài theo ngày | ✅ |
+| FR-42 | Biểu đồ phân bổ quiz theo danh mục, và tỉ lệ hoàn thành bài làm | ✅ |
+| FR-43 | Thu hồi phiên đăng nhập của một người dùng mà **không** khoá tài khoản họ | ✅ |
+| FR-44 | Thêm / sửa / xoá danh mục quiz | ✅ |
+| FR-45 | Xem danh sách quiz công khai và **ẩn** quiz vi phạm (đưa về riêng tư) | ✅ |
+| FR-46 | Giám sát phòng đấu đang chạy: mã PIN, chủ phòng, quiz, số người, trạng thái | ✅ |
+| FR-47 | Cưỡng chế đóng phòng đấu đang treo hoặc vi phạm | ✅ |
+| FR-48 | Xem trạng thái cấu hình nhà cung cấp AI (**đã cấu hình / để trống**, không hiện giá trị khoá) | ✅ |
+| FR-49 | Đặt hạn mức số lượt gọi AI mỗi ngày cho mỗi người tạo nội dung | ⏸ hoãn |
+
+**FR-49 hoãn có lý do, xem như nợ kỹ thuật.** `AiOrchestrator` hiện không đếm lượt gọi theo từng người
+dùng, nên một ô nhập hạn mức chỉ lưu được con số mà không chặn được gì — quản trị viên sẽ tin rằng chi phí
+đã bị giới hạn trong khi thực tế không. Đó là kiểu sai tệ hơn việc thiếu tính năng. Làm đúng cần thêm bộ
+đếm theo user ở Redis và điểm chặn trong `AiOrchestrator`; trong lúc chờ, FR-39 vẫn cho thấy chi phí thật
+theo từng người để phát hiện lạm dụng.
+
+## Ba việc cố ý KHÔNG làm
+
+Đây là phần quan trọng của thiết kế, không phải phần bỏ sót.
+
+| Không làm | Vì sao |
+|---|---|
+| **Hiển thị hoặc sửa khoá API trong giao diện** | `security.md` quy định không hiển thị khoá API trong UI hay log. Giao diện chỉ cho biết khoá **đã được cấu hình hay chưa** — đủ để chẩn đoán "vì sao AI không chạy" mà không bao giờ phơi giá trị. Sửa khoá là việc của biến môi trường và người có quyền truy cập máy chủ |
+| **Sửa system prompt qua giao diện** | Prompt chính là nơi đặt bốn lớp chống tiêm chỉ thị khi chấm bài (features/06). Mở nó cho giao diện là mở đường phá hàng rào, và một lần sửa sai làm hỏng cả chức năng chấm mà không ai biết cho tới khi có người chấm sai điểm |
+| **Admin tự đặt lại mật khẩu người dùng** | Admin biết mật khẩu của người dùng thì đăng nhập thay họ được, và mọi hành động sau đó không còn quy trách nhiệm được cho ai. Hệ thống đã có OTP tự phục vụ; nếu cần hỗ trợ thì gửi email đặt lại, chứ admin không tự đặt |
+
+## Hai việc cần đổi nghiệp vụ nên chưa làm
+
+| Chưa làm | Cần gì |
+|---|---|
+| **Luồng duyệt quiz** (chờ duyệt → phê duyệt / từ chối kèm lý do) | `quizzes` chỉ có `PUBLIC`/`PRIVATE`. Thêm luồng duyệt là **đổi cách Creator xuất bản**: hiện họ tự đặt công khai là xong, sau này phải chờ admin. Đó là thay đổi nghiệp vụ ảnh hưởng tính năng 02, không chỉ thêm một trang quản trị. Bản này làm mức nhỏ hơn giải quyết được vấn đề thực tế: admin **ẩn** quiz vi phạm (FR-45) |
+| **Người dùng báo lỗi câu hỏi** (sai đáp án, câu tối nghĩa) | Chưa có bảng lưu báo cáo, và quan trọng hơn: **chưa có chức năng cho người dùng gửi báo cáo**. Làm trang admin xử lý báo cáo trước khi ai gửi được thì đó là một trang rỗng vĩnh viễn |
 
 ## Luồng xử lý
 - Admin xem tổng hợp từ `ai_request_logs` để theo dõi chi phí và tần suất chuyển dự phòng.
 - Khoá tài khoản → cập nhật `users.locked` **và thu hồi mọi phiên** của người đó.
+- Ẩn quiz vi phạm → đổi `quizzes.visibility` về `PRIVATE`; quiz vẫn thuộc chủ của nó, không bị xoá.
+- Cưỡng chế đóng phòng → xoá trạng thái phòng ở Redis và chuyển `game_rooms.status` sang `FINISHED`.
 
 ---
 
@@ -74,6 +126,31 @@ Chặn ở **tầng nghiệp vụ**, không tin vào việc giao diện ẩn nú
 Hệ thống chỉ có một cấp quản trị, nên một lần bấm sai là mất quyền quản trị mà không còn ai mở lại được
 — trừ khi sửa trực tiếp cơ sở dữ liệu. Giao diện cũng vô hiệu hoá hai thao tác đó với chính hàng của
 người đang đăng nhập: để nút bấm được rồi báo lỗi là bắt người dùng học bằng cách thất bại.
+
+## Giao diện: khung riêng, không phải thêm mục vào menu chung
+
+Khu quản trị dùng `AdminLayout` riêng thay vì `AppLayout` của khu học tập — xem
+[ui-design-system.md §1](../ui-design-system.md) cho quy ước đầy đủ. Tóm lại ba lý do:
+
+1. **Trông khác là một lớp an toàn** — thao tác ở đây tác động lên *người khác* và không có nút hoàn
+   tác; nền tối cùng sidebar khiến quản trị viên luôn biết mình đang ở đâu.
+2. **Ngữ cảnh làm việc khác** — menu *Khám phá / Phòng đấu / Trợ lý AI / Lộ trình* không liên quan gì
+   khi đang khoá tài khoản.
+3. **Sidebar mở rộng được** — thanh ngang khu học tập đã 10 mục với vai trò CREATOR.
+
+| Thành phần | Thiết kế |
+|---|---|
+| Sidebar | Rộng 232px, nền `--color-ink`, thu gọn dưới breakpoint `lg`. Mục đang mở có viền trái trắng + nền mờ |
+| Thương hiệu | "Quiz AI" + dòng phụ *"Khu quản trị"* — nói rõ đang ở khu nào ngay từ góc trên |
+| Header | Trắng, gọn: tiêu đề khu + góc tài khoản có thẻ *Quản trị viên* màu `volcano` |
+| Lối ra | Mục *"Về khu học tập"* dưới đường kẻ trong sidebar, **và** trong menu tài khoản |
+| Nội dung | Bảng dày thông tin như bộ mặt bảng điều khiển — dùng lại `PageHeader`, `EmptyState` |
+
+**Lối vào** nằm trong menu tài khoản của `AppLayout` (mục *"Khu quản trị"*), chỉ hiện với vai trò ADMIN.
+Không thêm link vào thanh điều hướng ngang: vào khu quản trị là **chuyển ngữ cảnh**, không phải điều
+hướng trong cùng ngữ cảnh, nên nó thuộc menu tài khoản chứ không thuộc thanh menu nội dung.
+
+Wireframe: `Hình 2.38` (Quản lý người dùng) và `Hình 2.39` (Giám sát AI) trong báo cáo.
 
 ## Giám sát AI: ba nhóm số liệu, ba câu hỏi khác nhau
 

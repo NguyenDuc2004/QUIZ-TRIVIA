@@ -15,7 +15,12 @@ import MyAttemptsPage from '@/features/attempt/pages/MyAttemptsPage'
 import LearningPathPage from '@/features/recommend/pages/LearningPathPage'
 import QuizIntroPage from '@/features/attempt/pages/QuizIntroPage'
 import BrowseQuizzesPage from '@/features/quiz/pages/BrowseQuizzesPage'
+import AdminLayout from '@/features/admin/components/AdminLayout'
 import AdminAiUsagePage from '@/features/admin/pages/AdminAiUsagePage'
+import AdminCategoriesPage from '@/features/admin/pages/AdminCategoriesPage'
+import AdminOverviewPage from '@/features/admin/pages/AdminOverviewPage'
+import AdminQuizzesPage from '@/features/admin/pages/AdminQuizzesPage'
+import AdminRoomsPage from '@/features/admin/pages/AdminRoomsPage'
 import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
 import GenerateQuestionsPage from '@/features/ai/pages/GenerateQuestionsPage'
 import MaterialsPage from '@/features/ai/pages/MaterialsPage'
@@ -95,23 +100,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        {/* Khu vực quản trị — AdminController chặn ADMIN cấp lớp ở BE (features/10) */}
-        <Route
-          path="/admin/users"
-          element={
-            <ProtectedRoute roles={['ADMIN']}>
-              <AdminUsersPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/ai"
-          element={
-            <ProtectedRoute roles={['ADMIN']}>
-              <AdminAiUsagePage />
-            </ProtectedRoute>
-          }
-        />
         {/* Bộ mặt "bảng điều khiển": bảng quản lý */}
         <Route path="/my-quizzes" element={<MyQuizzesPage />} />
         <Route path="/my-quizzes/:id" element={<QuizEditorPage />} />
@@ -121,6 +109,29 @@ export default function App() {
         <Route path="/my-quizzes/:id/attempts/:attemptId" element={<GradeAttemptPage />} />
         <Route path="/question-bank" element={<QuestionBankPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+      </Route>
+
+      {/*
+        Khu quản trị: layout RIÊNG, không nằm trong AppLayout (docs/ui-design-system.md §1).
+        Menu khu học tập không liên quan gì khi đang khoá tài khoản hay xem chi phí AI, và nền tối cùng
+        bố cục sidebar là dấu hiệu để admin luôn biết mình đang ở khu có những thao tác tác động lên
+        người khác. `roles` chặn ở FE cho người gõ tay đường dẫn; AdminController vẫn chặn ADMIN ở cấp
+        lớp nên đây chỉ là lớp thứ hai, không phải lớp duy nhất.
+      */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute roles={['ADMIN']}>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<AdminOverviewPage />} />
+        <Route path="users" element={<AdminUsersPage />} />
+        <Route path="categories" element={<AdminCategoriesPage />} />
+        <Route path="quizzes" element={<AdminQuizzesPage />} />
+        <Route path="rooms" element={<AdminRoomsPage />} />
+        <Route path="ai" element={<AdminAiUsagePage />} />
       </Route>
 
       {/*

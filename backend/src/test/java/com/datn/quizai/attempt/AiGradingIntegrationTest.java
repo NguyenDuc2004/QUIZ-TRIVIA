@@ -173,16 +173,29 @@ class AiGradingIntegrationTest {
     @DisplayName("Câu bỏ trống được 0 điểm mà KHÔNG tốn một lời gọi mô hình")
     void shouldNotCallModelForBlankAnswer() throws Exception {
         Fixture f = fixtureWithShortAnswer("Quiz bỏ trống", 10);
+
+        // Đếm số lời gọi ngay TRƯỚC khi nộp rồi so lại sau, thay vì đòi "mock chưa từng bị gọi".
+        // `aiOrchestrator` là mock dùng chung cả lớp, và luồng chấm nền của một phép kiểm trước có thể
+        // gọi mô hình muộn hơn cả lúc `reset` — khi đó `verifyNoInteractions` đỏ vì việc của phép kiểm
+        // khác, không phải vì câu bỏ trống bị đẩy sang AI. Số chênh mới là thứ phép kiểm này muốn nói.
+        int truocKhiNop = org.mockito.Mockito.mockingDetails(aiOrchestrator).getInvocations().size();
+
         submit(f.attemptId);   // không trả lời câu tự luận
 
-        // Câu bỏ trống kết luận được ngay bằng logic: 0 điểm, AUTO. Không đẩy sang AI nên không có
-        // câu nào ở PENDING_AI, và cũng không có sự kiện chấm nào được phát.
-        org.mockito.Mockito.verifyNoInteractions(aiOrchestrator);
+        // Câu bỏ trống kết luận được ngay bằng logic: 0 điểm, AUTO. Không đẩy sang AI nên không có câu
+        // nào ở PENDING_AI — và đây là chốt chính, vì nó đọc trạng thái ngay sau khi nộp: nếu câu này
+        // bị đẩy sang chấm nền thì `gradingPending` phải là 1 ở thời điểm này.
         mockMvc.perform(get("/api/v1/attempts/{id}", f.attemptId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken))
                 .andExpect(jsonPath("$.gradingPending").value(0))
                 .andExpect(jsonPath("$.questions[1].gradedBy").value("AUTO"))
                 .andExpect(jsonPath("$.questions[1].score").value(0));
+
+        // Kiểm số lời gọi SAU chốt trên, không phải ngay sau `submit`: nếu đặt trước thì lời gọi của
+        // luồng chấm nền chưa kịp xảy ra và phép kiểm xanh cả khi câu bỏ trống thật sự bị đẩy sang AI.
+        assertThat(org.mockito.Mockito.mockingDetails(aiOrchestrator).getInvocations().size())
+                .as("câu bỏ trống không được tốn một lời gọi mô hình nào")
+                .isEqualTo(truocKhiNop);
     }
 
     @Test

@@ -516,12 +516,53 @@ thì câu tự luận nào cũng thành câu khó nhất đề.
 
 ## 9. Admin — `/admin`
 ```
+GET    /api/v1/admin/overview                Tổng quan: KPI + dữ liệu 3 biểu đồ (?days=)     ✅
 GET    /api/v1/admin/users                   Danh sách user, lọc theo từ khoá/vai trò/khoá   ✅
 PUT    /api/v1/admin/users/{id}/role         Đổi vai trò (?role=)                            ✅
 PUT    /api/v1/admin/users/{id}/locked       Khoá / mở khoá tài khoản (?locked=)             ✅
+POST   /api/v1/admin/users/{id}/revoke       Thu hồi mọi phiên, KHÔNG khoá tài khoản         ✅
+GET    /api/v1/admin/categories              Danh mục kèm số quiz đang dùng                  ✅
+POST   /api/v1/admin/categories              Thêm danh mục                                   ✅
+PUT    /api/v1/admin/categories/{id}         Sửa danh mục                                    ✅
+DELETE /api/v1/admin/categories/{id}         Xoá danh mục (chặn nếu còn quiz dùng)           ✅
+GET    /api/v1/admin/quizzes                 Quiz công khai, lọc theo từ khoá/danh mục       ✅
+PUT    /api/v1/admin/quizzes/{id}/hide       Ẩn quiz vi phạm (đưa về PRIVATE)                ✅
+GET    /api/v1/admin/rooms                   Phòng đấu đang chạy, kèm số người từ Redis      ✅
+POST   /api/v1/admin/rooms/{code}/close      Cưỡng chế đóng phòng                            ✅
 GET    /api/v1/admin/ai/usage                Tổng hợp chi phí, độ tin cậy, độ trễ (?days=)   ✅
-PUT    /api/v1/admin/ai/config               Cấu hình provider/hạn mức runtime               ⏳ chưa
+GET    /api/v1/admin/ai/config               Trạng thái provider — KHÔNG trả giá trị khoá    ✅
 ```
+
+Đóng phòng dùng `POST .../close` chứ **không phải `DELETE /rooms/{code}`** như bản thiết kế đầu: thao tác
+này không xoá bản ghi phòng mà chuyển nó sang `FINISHED` và xoá trạng thái Redis. Bản ghi phải còn vì
+điểm cuối ván của những người đã chơi nằm ở `game_room_players` tham chiếu tới nó. Một `DELETE` không xoá
+gì là tên gọi nói sai việc nó làm.
+
+**Ba thứ cố ý không có endpoint**, và đây là phần thiết kế chứ không phải bỏ sót:
+
+| Không có | Vì sao |
+|---|---|
+| Đọc hoặc ghi **giá trị khoá API** | `security.md`: không hiển thị khoá API trong UI hay log. `GET /admin/ai/config` chỉ trả `configured: true/false` cho từng nhà cung cấp — đủ để chẩn đoán "vì sao AI không chạy" mà không phơi giá trị. Đổi khoá là việc của biến môi trường |
+| Sửa **system prompt** | Prompt là nơi đặt bốn lớp chống tiêm chỉ thị khi chấm bài; mở cho giao diện là mở đường phá hàng rào đó |
+| Admin **đặt lại mật khẩu** người dùng | Admin biết mật khẩu thì đăng nhập thay được, và mọi hành động sau đó không quy trách nhiệm được cho ai. Đã có OTP tự phục vụ |
+
+**`PUT /admin/ai/quota` bị hoãn (FR-49), không phải bỏ.** Thêm một ô nhập "mỗi Creator tối đa N lượt/ngày"
+thì làm được ngay, nhưng `AiOrchestrator` hiện **không đọc con số đó** và cũng chưa đếm lượt gọi theo từng
+người dùng. Một ô nhập lưu được giá trị mà không chặn được gì tệ hơn là không có nó: quản trị viên tin
+rằng chi phí đã được giới hạn, trong khi thực tế không. Làm đúng cần đếm lượt theo user ở Redis và chặn
+trong `AiOrchestrator` — một lát cắt riêng. Trong lúc chờ, `GET /admin/ai/usage` vẫn cho thấy chi phí thật
+để phát hiện lạm dụng.
+
+`POST /admin/users/{id}/revoke` khác `PUT .../locked` ở chỗ nó **chỉ đăng xuất** người dùng khỏi mọi
+thiết bị mà không chặn họ đăng nhập lại — dùng khi nghi ngờ tài khoản bị chiếm dụng, hoặc khi người dùng
+báo mất máy. Khoá tài khoản là biện pháp mạnh hơn và có tính kỷ luật; hai việc không nên gộp làm một.
+
+`PUT /admin/quizzes/{id}/hide` đưa quiz về `PRIVATE` chứ **không xoá**: quiz vẫn thuộc chủ của nó, họ sửa
+lại rồi công khai lại được. Xoá nội dung người khác là biện pháp không đảo lại được, và với một quiz đã
+có người làm thì kéo theo cả lượt làm bài của họ.
+
+`DELETE /admin/categories/{id}` **trả 409** nếu còn quiz đang dùng danh mục đó, kèm số lượng — thay vì
+xoá kèm hoặc để quiz mồ côi. Quản trị viên cần biết mình đang định làm gì với những quiz đó trước.
 
 `@PreAuthorize("hasRole('ADMIN')")` đặt ở **cấp lớp** `AdminController`: mọi endpoint trong đó chỉ dành
 cho ADMIN, không ngoại lệ. Gắn cấp lớp thì thêm endpoint mới cũng tự được bảo vệ.

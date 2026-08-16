@@ -4,9 +4,8 @@ import { Avatar, Dropdown, Input, Layout, Space, Tag, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   DownOutlined,
-  LineChartOutlined,
   LogoutOutlined,
-  TeamOutlined,
+  SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
@@ -40,28 +39,21 @@ export default function AppLayout() {
   const canCreate = user?.role === 'CREATOR' || user?.role === 'ADMIN'
   const isAdmin = user?.role === 'ADMIN'
 
+  // Màu chữ phải có hậu tố `!`. Đây là thẻ <a>, và Ant Design chèn CSS `a { color }` lúc chạy ở NGOÀI
+  // cascade layer, còn utility Tailwind v4 nằm TRONG @layer — luật ngoài layer thắng luật trong layer.
+  // Thiếu `!` thì cả mục đang mở lẫn mục chưa mở đều ra màu link của antd, tức mất luôn dấu hiệu
+  // "đang ở trang nào".
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `text-sm font-bold whitespace-nowrap ${
-      isActive ? 'text-brand-strong' : 'text-ink hover:text-brand-strong'
+      isActive ? 'text-brand-strong!' : 'text-ink! hover:text-brand-strong!'
     }`
-
-  const adminMenuItems: MenuProps['items'] = [
-    {
-      key: 'admin-users',
-      icon: <TeamOutlined />,
-      label: 'Quản lý người dùng',
-      onClick: () => navigate('/admin/users'),
-    },
-    {
-      key: 'admin-ai',
-      icon: <LineChartOutlined />,
-      label: 'Giám sát AI',
-      onClick: () => navigate('/admin/ai'),
-    },
-  ]
 
   // Đăng xuất nằm dưới một đường kẻ và là mục cuối: nó là hành động duy nhất trong menu không thể
   // hoàn tác bằng một lần bấm nữa, nên không đặt cạnh mục điều hướng thường.
+  //
+  // Lối vào khu quản trị nằm ở đây chứ KHÔNG phải một mục trên thanh điều hướng: nó không phải nơi
+  // người ta ghé qua khi đang học, mà là chuyển sang một ngữ cảnh làm việc khác có layout riêng
+  // (docs/ui-design-system.md §1). Thanh ngang cũng đã có nhiều mục và sẽ tràn hàng.
   const accountMenuItems: MenuProps['items'] = [
     {
       key: 'profile',
@@ -69,6 +61,17 @@ export default function AppLayout() {
       label: 'Trang cá nhân',
       onClick: () => navigate('/profile'),
     },
+    ...(isAdmin
+      ? [
+          { type: 'divider' as const },
+          {
+            key: 'admin',
+            icon: <SettingOutlined />,
+            label: 'Khu quản trị',
+            onClick: () => navigate('/admin'),
+          },
+        ]
+      : []),
     { type: 'divider' },
     {
       key: 'logout',
@@ -134,19 +137,6 @@ export default function AppLayout() {
                 Sinh đề AI
               </NavLink>
             </>
-          )}
-          {/* Gom khu quản trị vào một menu thay vì thêm hai link nữa vào thanh ngang: với vai trò
-              ADMIN, thanh này đã có 10 mục và thêm nữa thì tràn hàng trên màn hình hẹp */}
-          {isAdmin && (
-            <Dropdown menu={{ items: adminMenuItems }} trigger={['click']}>
-              <button
-                type="button"
-                className="flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-sm font-bold whitespace-nowrap text-ink hover:text-brand-strong"
-              >
-                Quản trị
-                <DownOutlined className="text-[10px]" />
-              </button>
-            </Dropdown>
           )}
         </nav>
 

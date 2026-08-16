@@ -19,6 +19,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -86,11 +87,23 @@ class AdminIntegrationTest {
     @Test
     @DisplayName("Người học và người tạo nội dung KHÔNG chạm được endpoint quản trị nào")
     void shouldRejectNonAdmin() throws Exception {
+        // Liệt đủ MỌI endpoint GET của lớp này, không chỉ vài cái tiêu biểu: `@PreAuthorize` đặt ở cấp
+        // lớp nên phép kiểm này chính là thứ phát hiện được nếu có ai chuyển nó xuống từng phương thức
+        // rồi bỏ sót một chỗ.
+        String[] endpoints = {
+                "/api/v1/admin/overview",
+                "/api/v1/admin/users",
+                "/api/v1/admin/categories",
+                "/api/v1/admin/quizzes",
+                "/api/v1/admin/rooms",
+                "/api/v1/admin/ai/config",
+                "/api/v1/admin/ai/usage",
+        };
         for (String token : new String[]{learnerToken, creatorToken}) {
-            mockMvc.perform(get("/api/v1/admin/users").header("Authorization", "Bearer " + token))
-                    .andExpect(status().isForbidden());
-            mockMvc.perform(get("/api/v1/admin/ai/usage").header("Authorization", "Bearer " + token))
-                    .andExpect(status().isForbidden());
+            for (String endpoint : endpoints) {
+                mockMvc.perform(get(endpoint).header("Authorization", "Bearer " + token))
+                        .andExpect(status().isForbidden());
+            }
         }
     }
 
@@ -273,7 +286,208 @@ class AdminIntegrationTest {
                 .doesNotContain("apikey", "api_key", "x-goog-api-key", "prompt");
     }
 
+    @Test
+    @DisplayName("Thu hồi phiên KHÔNG khoá tài khoản: người đó vẫn đăng nhập lại được")
+    void revokeSessionsDoesNotLockAccount() throws Exception {
+        String email = "admin-test-revoke@example.com";
+        String refreshToken = registerAndGetRefresh(email);
+        String id = idOf(email);
+
+        mockMvc.perform(post("/api/v1/admin/users/{id}/revoke", id)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.soPhienDaThuHoi").exists());
+
+        // Phiên cũ chết...
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"%s"}
+                                """.formatted(refreshToken)))
+                .andExpect(status().is4xxClientError());
+
+        // ...nhưng đăng nhập lại được. Đây là điểm phân biệt duy nhất với khoá tài khoản; gộp hai việc
+        // làm một thì quản trị viên mất cách xử lý "nghi bị chiếm dụng" mà không kỷ luật người dùng.
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"%s","password":"MatKhau@123"}
+                                """.formatted(email)))
+                .andExpect(status().isOk());
+
+        assertThat(jdbc.queryForObject("select locked from users where id = ?::uuid", Boolean.class, id))
+                .isFalse();
+    }
+
+    // ============================================================ 5. Nội dung
+
+    @Test
+    @DisplayName("Xoá danh mục còn quiz đang dùng bị chặn 409, và danh mục vẫn còn nguyên")
+    void deletingUsedCategoryIsBlocked() throws Exception {
+        String categoryId = createCategory("Danh mục có quiz");
+        createPublicQuiz("Quiz thuộc danh mục", categoryId);
+
+        String body = mockMvc.perform(delete("/api/v1/admin/categories/{id}", categoryId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isConflict())
+                .andReturn().getResponse().getContentAsString();
+        // Thông báo phải kèm số lượng: quản trị viên cần biết mình đang định làm gì với bao nhiêu quiz
+        assertThat(body).contains("1");
+
+        // Chặn thật, không phải báo lỗi rồi vẫn xoá
+        assertThat(jdbc.queryForObject("select count(*) from categories where id = ?::uuid",
+                Long.class, categoryId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Xoá danh mục chưa có quiz thì được")
+    void deletingEmptyCategoryWorks() throws Exception {
+        String categoryId = createCategory("Danh mục rỗng");
+
+        mockMvc.perform(delete("/api/v1/admin/categories/{id}", categoryId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isNoContent());
+
+        assertThat(jdbc.queryForObject("select count(*) from categories where id = ?::uuid",
+                Long.class, categoryId)).isZero();
+    }
+
+    @Test
+    @DisplayName("Đường dẫn danh mục tự sinh từ tên tiếng Việt: bỏ dấu, giữ chữ đ")
+    void categorySlugIsGeneratedFromVietnameseName() throws Exception {
+        // "đ" không phải chữ có dấu tách rời được nên nếu chỉ chuẩn hoá NFD rồi xoá dấu thì nó bị mất
+        // luôn, và "Đại số" thành "ai-so"
+        mockMvc.perform(post("/api/v1/admin/categories")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Đại số tuyến tính"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.slug").value("dai-so-tuyen-tinh"));
+    }
+
+    @Test
+    @DisplayName("Ẩn quiz đưa về PRIVATE và biến khỏi danh sách công khai, KHÔNG xoá")
+    void hidingQuizMakesItPrivateWithoutDeleting() throws Exception {
+        String quizId = createPublicQuiz("Quiz sẽ bị ẩn", null);
+
+        // Chốt rằng quiz CÓ trong danh sách trước khi ẩn. Thiếu bước này thì phép kiểm "sau khi ẩn thì
+        // danh sách rỗng" ở dưới vẫn xanh cả khi từ khoá vốn không khớp gì — tức nó không kiểm gì cả.
+        mockMvc.perform(get("/api/v1/admin/quizzes")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("keyword", "Quiz sẽ bị ẩn"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(quizId));
+
+        mockMvc.perform(put("/api/v1/admin/quizzes/{id}/hide", quizId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isNoContent());
+
+        assertThat(jdbc.queryForObject("select visibility from quizzes where id = ?::uuid",
+                String.class, quizId)).isEqualTo("PRIVATE");
+
+        // Bản ghi phải còn: quiz vẫn thuộc chủ của nó, và lượt làm bài cũ tham chiếu tới nó
+        assertThat(jdbc.queryForObject("select count(*) from quizzes where id = ?::uuid",
+                Long.class, quizId)).isEqualTo(1);
+
+        // Và thật sự biến khỏi danh sách kiểm duyệt — cùng truy vấn mà người học thấy
+        mockMvc.perform(get("/api/v1/admin/quizzes")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("keyword", "Quiz sẽ bị ẩn"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty());
+    }
+
+    // ============================================================ 6. Cấu hình AI
+
+    @Test
+    @DisplayName("Trạng thái cấu hình AI chỉ có true/false, KHÔNG có trường nào mang giá trị khoá")
+    void aiConfigNeverExposesKeyValues() throws Exception {
+        String body = mockMvc.perform(get("/api/v1/admin/ai/config")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nhaCungCap").isArray())
+                .andExpect(jsonPath("$.thuTuUuTien").isArray())
+                .andReturn().getResponse().getContentAsString();
+
+        // Chốt danh sách trường của từng nhà cung cấp: thêm bất kỳ trường nào ngoài năm trường này —
+        // kể cả "khoá đã che một phần" — làm phép kiểm đỏ. Đó chính là mục đích, vì `security.md` cấm
+        // hiển thị khoá API trong UI hay log, và một trường mới lọt vào thì không ai nhận ra.
+        var providers = objectMapper.readTree(body).get("nhaCungCap");
+        for (var provider : providers) {
+            var fields = new java.util.ArrayList<String>();
+            provider.fieldNames().forEachRemaining(fields::add);
+            assertThat(fields).containsExactlyInAnyOrder(
+                    "ten", "daCauHinh", "sanSang", "hoTroEmbedding", "hoTroStreaming");
+        }
+
+        assertThat(body.toLowerCase())
+                .as("cấu hình AI không được mang theo khoá hay prompt hệ thống")
+                .doesNotContain("apikey", "api_key", "x-goog-api-key", "secret", "prompt");
+    }
+
+    // ============================================================ 7. Phòng đấu
+
+    @Test
+    @DisplayName("Đóng phòng không tồn tại trả 404 — không im lặng coi như đã đóng")
+    void closingUnknownRoomReturns404() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/rooms/{code}/close", "000000")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Danh sách phòng đang chạy trả về mảng, không lỗi khi chưa có phòng nào")
+    void liveRoomsWorksWhenEmpty() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/rooms").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    // ============================================================ 8. Tổng quan
+
+    @Test
+    @DisplayName("Tổng quan: chuỗi ngày liền mạch, ngày không hoạt động vẫn là một điểm giá trị 0")
+    void overviewFillsGapDays() throws Exception {
+        String body = mockMvc.perform(get("/api/v1/admin/overview")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("days", "7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tongNguoiDung").exists())
+                .andReturn().getResponse().getContentAsString();
+
+        // Thiếu ngày trống thì biểu đồ đường nối thẳng qua khoảng trống và trông như hoạt động liên tục.
+        // Đúng 7 điểm cho 7 ngày là cách duy nhất kiểm được `generate_series` còn nguyên trong truy vấn.
+        assertThat(objectMapper.readTree(body).get("tangTruong")).hasSize(7);
+    }
+
     // ================================================================ helper
+
+    private String createCategory(String name) throws Exception {
+        String body = mockMvc.perform(post("/api/v1/admin/categories")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"%s"}
+                                """.formatted(name)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(body).get("id").asText();
+    }
+
+    private String createPublicQuiz(String title, String categoryId) throws Exception {
+        String categoryField = categoryId == null ? "" : ",\"categoryId\":\"%s\"".formatted(categoryId);
+        String body = mockMvc.perform(post("/api/v1/quizzes")
+                        .header("Authorization", "Bearer " + creatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"%s","visibility":"PUBLIC"%s}
+                                """.formatted(title, categoryField)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(body).get("id").asText();
+    }
 
     private String register(String email, String role) throws Exception {
         String body = mockMvc.perform(post("/api/v1/auth/register")

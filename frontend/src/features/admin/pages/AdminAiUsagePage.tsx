@@ -3,6 +3,7 @@ import { Alert, Segmented, Skeleton, Space, Statistic, Table, Tag, Typography } 
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
+import AiProviderStatusCard from '../components/AiProviderStatusCard'
 import type { AiUsageByFeature, AiUsageByProvider } from '../api/adminApi'
 import { useAiUsage } from '../hooks/useAdmin'
 
@@ -14,6 +15,7 @@ const FEATURE_LABEL: Record<string, string> = {
   grading: 'Chấm tự luận',
   'grade-answer': 'Chấm tự luận',
   chat: 'Trợ lý học tập',
+  'explain-answer': 'Giải thích đáp án',
 }
 
 /** Hiện "—" thay vì 0 khi chưa có số: 0 ms là một giá trị có nghĩa, "chưa đo" thì không. */
@@ -79,6 +81,9 @@ export default function AdminAiUsagePage() {
     return (
       <Space direction="vertical" size="large" className="w-full">
         <PageHeader title="Giám sát AI" description="Chi phí, độ tin cậy và độ trễ của các lời gọi mô hình" />
+        {/* Trạng thái cấu hình hiện cả ở nhánh rỗng — chưa có lượt gọi nào chính là lúc cần biết
+            "AI có cấu hình được chưa", và câu trả lời có thể là chưa hề có khoá nào */}
+        <AiProviderStatusCard />
         <EmptyState
           title="Chưa có lời gọi mô hình nào trong khoảng thời gian này"
           hint="Số liệu xuất hiện sau khi có người dùng sinh đề, chấm tự luận hoặc hỏi trợ lý học tập"
@@ -147,6 +152,8 @@ export default function AdminAiUsagePage() {
           description="Nhà cung cấp chính đang lỗi tạm thời hoặc hạn mức bị đụng trần. Hệ thống vẫn trả lời được, nhưng nên kiểm tra hạn mức và trạng thái dịch vụ."
         />
       )}
+
+      <AiProviderStatusCard />
 
       <div>
         <Text className="mb-2 block text-sm font-bold">Theo chức năng</Text>

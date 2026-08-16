@@ -331,6 +331,42 @@ Màn hình gợi ý và lộ trình học (Hình 2.37) hiển thị danh sách q
 
 [HÌNH 2.37: Thiết kế giao diện gợi ý và lộ trình học — cần chèn]
 
+### Khu quản trị dùng khung giao diện riêng
+
+Bảy màn trên thuộc khu học tập và dùng chung một khung: thanh điều hướng ngang cố định trên đầu. Khu
+quản trị **không** dùng khung đó mà có bố cục riêng với thanh điều hướng dọc (sidebar) nền tối. Đây là
+quyết định thiết kế, không phải khác biệt thẩm mỹ, dựa trên ba lý do xếp theo mức quan trọng:
+
+**Thứ nhất, trông khác là một lớp an toàn.** Mọi thao tác ở khu học tập chỉ tác động lên dữ liệu của
+chính người đang dùng. Ở khu quản trị thì khác: khoá tài khoản và đổi vai trò tác động lên **người
+khác**, và không có nút hoàn tác. Một bố cục khác hẳn khiến quản trị viên luôn nhận biết mình đang ở
+khu nào, thay vì tưởng vẫn ở trang cá nhân rồi thực hiện một thao tác không lấy lại được.
+
+**Thứ hai, đây là hai ngữ cảnh làm việc khác nhau.** Các mục *Khám phá, Phòng đấu, Trợ lý AI, Lộ trình,
+Tiến độ* không liên quan gì tới việc xem chi phí gọi mô hình hay xử lý một tài khoản vi phạm. Trộn hai
+nhóm chức năng vào cùng một thanh menu buộc người dùng tự lọc ra mục mình cần ở mỗi lần dùng.
+
+**Thứ ba, thanh dọc mở rộng được.** Với vai trò người tạo nội dung, thanh ngang của khu học tập đã có
+mười mục và sẽ tràn hàng trên màn hình hẹp; trong khi khu quản trị còn hai nhóm chức năng dự kiến bổ
+sung là kiểm duyệt nội dung và cấu hình nhà cung cấp AI.
+
+Việc chuyển giữa hai khu đi được **cả hai chiều**: lối vào là mục *"Khu quản trị"* trong menu tài khoản
+(chỉ hiện với vai trò quản trị viên), lối ra là mục *"Về khu học tập"* đặt ngay trong sidebar. Đặt lối
+vào ở menu tài khoản chứ không ở thanh menu nội dung, vì vào khu quản trị là **chuyển ngữ cảnh** chứ
+không phải điều hướng trong cùng một ngữ cảnh.
+
+Màn hình quản lý người dùng (Hình 2.38) gồm sidebar điều hướng, bộ lọc theo từ khoá, vai trò và trạng
+thái, cùng bảng danh sách người dùng với thao tác đổi vai trò và khoá tài khoản. **Không có thao tác xoá
+người dùng** — lý do đã trình bày ở mục 2.2.1.
+
+[HÌNH 2.38: Thiết kế giao diện quản lý người dùng (khu quản trị) — cần chèn]
+
+Màn hình giám sát AI (Hình 2.39) gồm bốn thẻ số liệu tổng quan (tổng lượt gọi, tỉ lệ thất bại, tổng
+token, độ trễ), cảnh báo khi có lượt phải dùng nhà cung cấp dự phòng, và hai bảng tách theo chức năng và
+theo nhà cung cấp.
+
+[HÌNH 2.39: Thiết kế giao diện giám sát chi phí AI (khu quản trị) — cần chèn]
+
 ## 2.3. Kết luận chương 2
 
 Chương 2 đã phân tích bài toán và xác định bốn tác nhân cùng quan hệ tổng quát hóa giữa chúng, xây dựng biểu đồ use case và đặc tả bảy use case tiêu biểu bao quát bốn trụ cột của đề tài (mỗi đặc tả kèm biểu đồ use case tương ứng); hiện thực hóa cả bảy use case đó bằng biểu đồ trình tự và biểu đồ lớp VOPC theo chuẩn UML; đồng thời thiết kế biểu đồ lớp tổng thể, cơ sở dữ liệu trên ba hệ quản trị, kiến trúc mô-đun và giao diện. Trong quá trình đặc tả, các luồng thay thế đã được nêu rõ cho những tình huống mà hệ thống buộc phải xử lý đúng: chuyển nhà cung cấp AI khi lỗi tạm thời, giữ điểm khi người chơi mất kết nối giữa ván, trả lời "không biết" khi không có học liệu liên quan, và không gợi ý bừa khi chưa có dữ liệu hành vi. Các thiết kế này là cơ sở trực tiếp cho việc xây dựng, thử nghiệm và đánh giá hệ thống ở Chương 3.
