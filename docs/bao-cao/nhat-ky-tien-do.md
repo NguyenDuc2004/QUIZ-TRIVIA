@@ -34,6 +34,7 @@
 | 14/08 | Hạ tầng test frontend (vitest + jsdom) · **đo mục 3.6 độ chính xác AI** | 5/5 | 🟢 xong |
 | 14/08 (chiều) | **Lát cắt 10 phần 1: quản trị người dùng + giám sát AI** (V12) | 6/6 | 🟢 xong |
 | 14/08 (tối) | **Lát cắt 10 phần 2: khu quản trị có khung riêng** — 16 API, 6 trang, 19 test | 7/7 | 🟢 xong |
+| 16/08 | Sửa trùng mã FR (87 mã, 1..87) · **Lát cắt 11: Flashcard + SRS** — 12 API, 3 trang, 17 test | 7/7 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -2133,6 +2134,109 @@ tại) và 9 mục màu mực. Quy tắc + cách kiểm đã ghi vào `ui-design
 - **"Khó khăn & cách giải quyết":** bốn ví dụ dùng được — (1) ô nhập hạn mức cố ý không làm vì không chặn
   được gì; (2) `DELETE` không xoá gì nên đổi thành `POST .../close`; (3) phép kiểm suýt xanh rỗng;
   (4) **cascade layer**: class đúng mà màu vẫn sai, và bài học *nhìn ảnh không thay được phép đo*.
+
+---
+
+## 📅 CN — 16/08/2026 — Lát cắt 11: Flashcard + SRS, và một dãy mã tôi từng lấy trùng
+
+**Mục tiêu:** tính năng `[S]` sau khu quản trị. Chọn Flashcard vì nó tái dùng được dữ liệu đã có — câu trả
+lời sai của người học — thay vì phải dựng nghiệp vụ mới.
+
+**Xong:** V13 (3 bảng) · 12 endpoint · thuật toán SM-2 · 3 trang giao diện · 17 ca test.
+
+### Việc đầu tiên phải làm lại: dãy mã yêu cầu chức năng bị trùng
+
+Trước khi viết dòng code nào, mở `features/11` ra thì thấy nó dùng **FR-37…42** — đúng dãy tôi đã lấy cho
+khu quản trị hôm trước. Quét cả 16 file thì ra ba chỗ chồng nhau:
+
+| Dãy | Ai lấy trùng |
+|---|---|
+| FR-36 | Khu quản trị lấy đè của Gợi ý Neo4j |
+| FR-37…42 | Khu quản trị lấy đè của Flashcard |
+| FR-43…48 | Khu quản trị lấy đè của Chống gian lận |
+| FR-49 | Khu quản trị lấy đè của Gamification |
+| FR-26/27/28 | Thống kê lấy đè của Phòng đấu (**có sẵn từ trước**, không phải tôi) |
+
+Nguyên nhân của phần tôi gây ra: viết docs khu quản trị, tôi lấy dãy tiếp theo sau FR-35 mà không kiểm dãy
+đó có ai dùng chưa. Mã cao nhất đang dùng lúc đó là FR-70. Đã dời khu quản trị sang **FR-71…84** và Thống kê
+sang **FR-85…87**; giờ 87 mã, dãy 1..87, không trùng và không có lỗ hổng.
+
+Bản báo cáo nộp mô tả yêu cầu bằng văn xuôi nên không trích mã FR — tức lỗi này không lọt vào bản nộp. Nhưng
+mã định danh mà trùng thì hết ý nghĩa, và nó là thứ dùng để truy vết giữa docs, code và test.
+
+### Trạng thái ôn phải là bảng riêng
+
+`flashcard_reviews` là bảng riêng chứ không phải mấy cột trên `flashcards`. Một thẻ có thể được nhiều người
+ôn với lịch riêng; nhét `due_date`/`ease_factor` vào thẻ thì hai người ôn cùng bộ sẽ ghi đè lịch của nhau.
+Có một phép kiểm riêng cho đúng điều này: cấp trạng thái ôn của người B lên thẻ của A, A ôn thẻ đó, rồi
+khẳng định lịch của B còn nguyên.
+
+Phần thưởng ngoài dự tính: phần khó nhất của việc chia sẻ bộ thẻ về sau đã giải quyết sẵn, chỉ còn tầng
+quyền là việc chưa làm.
+
+### SM-2 tách thành lớp thuần, và ba cách nó có thể hỏng
+
+Thuật toán nằm ở `Sm2Scheduler` — không Spring, không cơ sở dữ liệu — nên kiểm được trong vài milli-giây.
+Ba cách hỏng mà phép kiểm nhắm vào, chứ không kiểm lại công thức bằng cách viết lại công thức:
+
+1. **Thẻ đứng yên một chỗ.** `1 × 1.3 = 1.3`, làm tròn xuống thành 1 — khoảng ôn không đổi và thẻ ôn mãi
+   không xong. Làm tròn **lên**, và chặn khoảng mới phải lớn hơn khoảng cũ ít nhất một ngày.
+2. **Thẻ biến mất.** Trả lời "Dễ" khoảng hai mươi lần thì khoảng ôn vượt quá tuổi của cả đồ án. Chặn ở
+   một năm.
+3. **Hệ số dễ trôi xuống dưới sàn 1.30.** Dùng `BigDecimal` thay `double`: hệ số này cộng trừ liên tiếp
+   nhiều lần, sai số nhị phân tích lại sẽ trôi qua chính cái sàn lẽ ra phải chặn được.
+
+Một chi tiết dễ hiểu sai: **HARD tính là "chưa nhớ"**. Ranh giới của SM-2 nằm giữa 2 và 3, HARD là 2 nên nó
+đưa thẻ về ôn lại ngày mai. Hiểu thành "nhớ nhưng khó" rồi cho giãn lịch thì thẻ khó nhất lại bị ôn thưa
+nhất. Giao diện ghi rõ hệ quả dưới mỗi nút ("ôn lại ngày mai" / "giãn lịch") thay vì để người dùng đoán.
+
+Đo thật qua API sau khi chạy: **1 → 6 → 13 → 26 → 47 ngày**, rồi "Không nhớ" đưa về 1 ngày và reset chuỗi.
+
+### Sinh thẻ từ câu trả lời sai: cố ý KHÔNG gọi AI
+
+Đây là chức năng có lý do tồn tại rõ nhất của cả tính năng — nó khép vòng lặp *làm bài → sai → ôn lại đúng
+chỗ sai*. Và nó **không gọi mô hình**: nội dung câu hỏi, đáp án đúng, phần giải thích đều đã nằm trong cơ sở
+dữ liệu. Gọi AI ở đây chỉ tốn hạn mức để viết lại thứ có sẵn, và mở thêm một đường cho nó bịa ra nội dung
+khác với đáp án thật.
+
+Chỉ lấy câu có đáp án xác định. `SHORT_ANSWER` bị loại: đáp án lưu kèm nó là một câu trả lời mẫu dài để AI
+đối chiếu, đặt nguyên lên mặt sau thẻ thì thành đoạn văn không học nổi. Lần đầu tôi loại luôn cả
+`FILL_BLANK` — sai, câu điền khuyết có đáp án rất gọn và làm thẻ rất tốt; đọc lại mới sửa.
+
+### Test bắt được hai lỗi, một trong đó ở code sản phẩm
+
+**Lỗi thật:** `WrongAnswerRepository` viết `o.correct = true` trong SQL thuần, nhưng cột thật là `is_correct`
+— entity `QuestionOption` đặt tên trường là `correct` và map sang cột `is_correct`, nên JPQL viết `correct`
+còn SQL thuần bắt buộc dùng tên cột. Cùng họ với cái bẫy `lower(bytea)`: **JPQL và SQL thuần không dùng
+chung tên**, và mỗi lần viết SQL thuần trên một bảng có sẵn thì phải mở migration ra đọc.
+
+**Phép kiểm của tôi pass sai:** ca "sinh thẻ lần hai không tạo trùng" mong đợi 1 nhưng ra 2, vì hai ca dùng
+chung tài khoản và lớp test không dọn cơ sở dữ liệu giữa các ca — số câu sai tích lại. Cách chữa **sai** mà
+tôi suýt làm: truy vấn cơ sở dữ liệu để tính số mong đợi, tức nhân bản chính truy vấn đang kiểm vào test.
+Cách đúng: cho mỗi ca một tài khoản riêng, con số trở lại xác định.
+
+### Ba chỗ tự sửa khi đọc lại
+
+- `demDenHanTrongBo` nạp cả entity chỉ để lấy `size()`, **và** được gọi cho từng bộ thẻ trong danh sách —
+  N+1 lượt đi vòng kèm nạp thừa. Đổi sang một truy vấn gộp theo bộ.
+- `new Question()` rồi `setId()` để lấy khoá ngoại: entity đó ở trạng thái detached và Hibernate có thể coi
+  là bản ghi mới cần insert. Phải dùng `getReferenceById`.
+- `ReviewService.theoThe` viết ra rồi không ai gọi — bỏ, không để lại code chết.
+
+### Còn nợ
+
+- **FR-38** AI sinh thẻ từ học liệu qua RAG — phần lớn nhất còn lại của tính năng này.
+- Chia sẻ bộ thẻ giữa người dùng (cần tầng quyền mới).
+
+### Ghi chú báo cáo
+- **Mục 2.8 (ERD):** thêm 3 bảng `flashcard_decks`, `flashcards`, `flashcard_reviews`. Nhấn chỗ trạng thái
+  ôn là bảng riêng — đó là một quyết định thiết kế dữ liệu giải thích được.
+- **Mục 3.3:** ba màn mới để chụp — danh sách bộ thẻ, soạn thẻ, phiên ôn (nên chụp cả trước và sau khi lật).
+- **"Khó khăn & cách giải quyết":** hai ví dụ mới — (1) `o.correct` vs `is_correct`, cùng họ với
+  `lower(bytea)`, cho thấy JPQL và SQL thuần không dùng chung tên; (2) phép kiểm pass sai do dùng chung tài
+  khoản, và vì sao cách chữa bằng truy vấn lại là sai.
+- **Mục 3.4 (kiểm thử):** SM-2 là ví dụ tốt cho việc *tách logic thuần ra để test nhanh* — 7 ca chạy trong
+  vài milli-giây, không cần Testcontainers.
 
 ---
 

@@ -13,8 +13,8 @@ Mỗi tính năng có file đặc tả riêng. Mức ưu tiên: **[M]** Must · 
 | 07 | Gợi ý cá nhân hóa (Neo4j) | [07-recommendation-neo4j.md](07-recommendation-neo4j.md) | [M] | ✅ Neo4j | ✅ xong |
 | 08 | Trợ lý học tập RAG chatbot | [08-ai-chatbot-rag.md](08-ai-chatbot-rag.md) | [M] | ✅ AI/RAG | ✅ xong |
 | 09 | Thống kê & báo cáo | [09-analytics.md](09-analytics.md) | [S] | | ✅ xong |
-| 10 | Quản trị (Admin) | [10-admin.md](10-admin.md) | [S] | | 🟡 một phần (user + giám sát AI) |
-| 11 | Flashcard & lặp lại ngắt quãng (SRS) | [11-flashcard-srs.md](11-flashcard-srs.md) | [S] | ➕ AI/RAG | 🔴 chưa |
+| 10 | Quản trị (Admin) | [10-admin.md](10-admin.md) | [S] | | ✅ xong (trừ FR-84 hạn mức AI) |
+| 11 | Flashcard & lặp lại ngắt quãng (SRS) | [11-flashcard-srs.md](11-flashcard-srs.md) | [S] | ➕ AI/RAG | 🟡 một phần (trừ FR-38 AI sinh thẻ) |
 | 12 | Chống gian lận thi (Anti-Cheat) | [12-anti-cheat.md](12-anti-cheat.md) | [S] | ➕ AI + Real-time | 🔴 chưa |
 | 13 | Gamification (XP, badge, streak, daily) | [13-gamification.md](13-gamification.md) | [S] | ➕ Gắn kết | 🔴 chưa |
 | 14 | Lớp học & giao bài (Classroom) | [14-classroom.md](14-classroom.md) | [S] | ➕ Giáo dục | 🔴 chưa |

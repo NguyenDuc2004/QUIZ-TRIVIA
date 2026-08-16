@@ -113,6 +113,9 @@ export default function AppLayout() {
           <NavLink to="/assistant" className={navLinkClass}>
             Trợ lý AI
           </NavLink>
+          <NavLink to="/flashcards" className={navLinkClass}>
+            Thẻ ghi nhớ
+          </NavLink>
           <NavLink to="/learning-path" className={navLinkClass}>
             Lộ trình
           </NavLink>
