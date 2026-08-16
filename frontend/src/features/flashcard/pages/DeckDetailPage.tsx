@@ -22,6 +22,7 @@ import {
 } from '@ant-design/icons'
 import PageHeader from '@/shared/components/PageHeader'
 import EmptyState from '@/shared/components/EmptyState'
+import AiGenerateCardsModal from '../components/AiGenerateCardsModal'
 import {
   useCards,
   useDeleteCard,
@@ -47,6 +48,7 @@ export default function DeckDetailPage() {
 
   const [dangSua, setDangSua] = useState<Flashcard | null>(null)
   const [moForm, setMoForm] = useState(false)
+  const [moSinhAi, setMoSinhAi] = useState(false)
   const [form] = Form.useForm<FlashcardBody>()
 
   const soDenHan = (cards ?? []).filter(
@@ -96,6 +98,11 @@ export default function DeckDetailPage() {
                 onClick={() => deckId && sinhTuCauSai.mutate(deckId)}
               >
                 Tạo từ câu trả lời sai
+              </Button>
+            </Tooltip>
+            <Tooltip title="AI đọc học liệu và đề xuất thẻ; bạn duyệt trước khi lưu">
+              <Button icon={<span aria-hidden>✨</span>} onClick={() => setMoSinhAi(true)}>
+                Sinh bằng AI
               </Button>
             </Tooltip>
             <Button icon={<PlusOutlined />} onClick={moThem}>
@@ -200,6 +207,14 @@ export default function DeckDetailPage() {
               ),
             },
           ]}
+        />
+      )}
+
+      {deckId && (
+        <AiGenerateCardsModal
+          deckId={deckId}
+          open={moSinhAi}
+          onClose={() => setMoSinhAi(false)}
         />
       )}
 

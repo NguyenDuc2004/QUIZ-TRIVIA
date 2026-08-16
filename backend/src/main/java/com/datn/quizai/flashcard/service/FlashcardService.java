@@ -151,6 +151,39 @@ public class FlashcardService {
         return FlashcardResponse.from(card, null);
     }
 
+    /**
+     * Lưu một lô thẻ vào bộ, đánh dấu nguồn gốc (dùng bởi luồng duyệt thẻ AI sinh — features/11 FR-38).
+     * <p>
+     * Nhận {@link FlashcardRequest} chứ không nhận một kiểu riêng của package {@code ai}: nhờ vậy chiều phụ
+     * thuộc chỉ đi một hướng {@code ai → flashcard}, không thành vòng. Tầng gọi tự map kết quả mô hình sang
+     * DTO này.
+     *
+     * @return số thẻ đã lưu
+     */
+    @Transactional
+    public int addCards(UUID deckId, UUID ownerId, List<FlashcardRequest> requests,
+                        FlashcardSource source) {
+        FlashcardDeck deck = requireOwnedDeck(deckId, ownerId);
+
+        int daLuu = 0;
+        for (FlashcardRequest request : requests) {
+            Flashcard card = new Flashcard();
+            card.setDeck(deck);
+            card.setFront(request.front().trim());
+            card.setBack(request.back().trim());
+            card.setHint(blankToNull(request.hint()));
+            card.setSource(source);
+            cardRepository.save(card);
+
+            // Cùng lý do như addCard: thiếu trạng thái ôn thì thẻ không bao giờ vào phiên ôn
+            taoTrangThaiOn(card, ownerId);
+            daLuu++;
+        }
+
+        log.info("Người dùng {} lưu {} thẻ nguồn {} vào bộ {}", ownerId, daLuu, source, deckId);
+        return daLuu;
+    }
+
     @Transactional
     public FlashcardResponse updateCard(UUID cardId, UUID ownerId, FlashcardRequest request) {
         Flashcard card = requireOwnedCard(cardId, ownerId);
@@ -185,7 +218,11 @@ public class FlashcardService {
         return true;
     }
 
-    FlashcardDeck requireOwnedDeck(UUID deckId, UUID ownerId) {
+    /**
+     * Lấy bộ thẻ và chốt nó thuộc người gọi. Công khai vì luồng sinh thẻ bằng AI (package {@code ai}) cần
+     * kiểm quyền <b>trước</b> khi tốn một lời gọi mô hình.
+     */
+    public FlashcardDeck requireOwnedDeck(UUID deckId, UUID ownerId) {
         FlashcardDeck deck = deckRepository.findByIdWithOwner(deckId)
                 .orElseThrow(() -> BusinessException.notFound("Không tìm thấy bộ thẻ"));
         // 404 chứ không 403 với bộ thẻ của người khác: trả 403 là xác nhận bộ thẻ đó tồn tại, tức tiết lộ

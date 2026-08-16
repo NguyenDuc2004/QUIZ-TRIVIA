@@ -1,5 +1,10 @@
 package com.datn.quizai.flashcard.controller;
 
+import com.datn.quizai.ai.dto.AiJobResponse;
+import com.datn.quizai.ai.dto.ApproveFlashcardsRequest;
+import com.datn.quizai.ai.dto.GenerateFlashcardsRequest;
+import com.datn.quizai.ai.service.AiFlashcardJobService;
+import com.datn.quizai.ai.service.AiJobService;
 import com.datn.quizai.auth.service.JwtService;
 import com.datn.quizai.common.dto.PageResponse;
 import com.datn.quizai.flashcard.domain.ReviewQuality;
@@ -33,6 +38,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -54,13 +60,19 @@ public class FlashcardController {
     private final FlashcardService flashcardService;
     private final ReviewService reviewService;
     private final WrongAnswerCardService wrongAnswerCardService;
+    private final AiFlashcardJobService flashcardJobService;
+    private final AiJobService aiJobService;
 
     public FlashcardController(FlashcardService flashcardService,
                                ReviewService reviewService,
-                               WrongAnswerCardService wrongAnswerCardService) {
+                               WrongAnswerCardService wrongAnswerCardService,
+                               AiFlashcardJobService flashcardJobService,
+                               AiJobService aiJobService) {
         this.flashcardService = flashcardService;
         this.reviewService = reviewService;
         this.wrongAnswerCardService = wrongAnswerCardService;
+        this.flashcardJobService = flashcardJobService;
+        this.aiJobService = aiJobService;
     }
 
     // ----- Bộ thẻ (FR-37) -----
@@ -143,6 +155,49 @@ public class FlashcardController {
             @AuthenticationPrincipal JwtService.AuthenticatedUser current,
             @PathVariable UUID deckId) {
         return wrongAnswerCardService.sinhVaoBo(deckId, current.id());
+    }
+
+    // ----- Sinh thẻ bằng AI từ học liệu (FR-38) -----
+
+    /*
+     * Ba endpoint dưới đây nằm ở ĐÂY, không ở `AiController`, dù chúng gọi mô hình.
+     *
+     * `AiController` có `@PreAuthorize("hasAnyRole('CREATOR','ADMIN')")` ở cấp lớp — đặt endpoint sinh thẻ
+     * vào đó thì LEARNER không gọi được, mà người học chính là đối tượng của cả tính năng thẻ ghi nhớ.
+     * Tiền lệ đã có ở trợ lý học tập (features/08): chức năng AI phục vụ người học thì mở cho mọi tài
+     * khoản đã đăng nhập.
+     *
+     * Kể cả endpoint tra trạng thái job cũng phải ở đây: để nó bên `AiController` thì LEARNER gửi được
+     * yêu cầu nhưng không hỏi được kết quả — tệ hơn là không cho gửi.
+     */
+
+    @PostMapping("/decks/{deckId}/cards/generate")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @Operation(summary = "Sinh thẻ từ một học liệu qua RAG — trả jobId, hỏi lại ở /flashcards/jobs/{id}. "
+            + "BẮT BUỘC chọn học liệu: thẻ được ôn lại hàng chục lần theo lịch SRS nên một thẻ sai sẽ được "
+            + "học thuộc, và người duyệt cần tài liệu gốc để đối chiếu.")
+    public AiJobResponse generate(@AuthenticationPrincipal JwtService.AuthenticatedUser current,
+                                  @PathVariable UUID deckId,
+                                  @Valid @RequestBody GenerateFlashcardsRequest request) {
+        // Bộ thẻ lấy từ đường dẫn, không từ thân yêu cầu: hai nơi cùng nói một thứ thì sớm muộn chúng lệch
+        return flashcardJobService.submit(request.withDeckId(deckId), current);
+    }
+
+    @GetMapping("/flashcards/jobs/{id}")
+    @Operation(summary = "Trạng thái và kết quả job sinh thẻ, kèm các đoạn học liệu đã dùng để đối chiếu")
+    public AiJobResponse job(@AuthenticationPrincipal JwtService.AuthenticatedUser current,
+                             @PathVariable UUID id) {
+        return aiJobService.get(id, current);
+    }
+
+    @PostMapping("/flashcards/jobs/{id}/approve")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Duyệt các thẻ đã chọn và lưu vào bộ thẻ đã chỉ định lúc gửi yêu cầu. Trả về số "
+            + "thẻ đã lưu. Bộ thẻ đích lấy từ job, KHÔNG nhận lại từ client.")
+    public Map<String, Integer> approve(@AuthenticationPrincipal JwtService.AuthenticatedUser current,
+                                        @PathVariable UUID id,
+                                        @Valid @RequestBody ApproveFlashcardsRequest request) {
+        return Map.of("soThe", flashcardJobService.approve(id, request, current));
     }
 
     // ----- Phiên ôn tập (FR-40, FR-41, FR-42) -----

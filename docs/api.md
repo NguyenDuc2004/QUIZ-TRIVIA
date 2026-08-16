@@ -451,7 +451,9 @@ DELETE /api/v1/flashcards/{id}                      Xoá thẻ                  
 GET    /api/v1/flashcards/due                       Thẻ đến hạn (?deckId=), quá hạn lâu nhất trước   ✅
 POST   /api/v1/flashcards/{id}/review               Gửi mức nhớ (?quality=) → lịch kế tiếp           ✅
 GET    /api/v1/flashcards/stats                     Thống kê + dự báo 7 ngày                         ✅
-POST   /api/v1/ai/generate-flashcards               Sinh thẻ từ học liệu qua RAG (async → jobId)     ⏳
+POST   /api/v1/decks/{id}/cards/generate            Sinh thẻ từ học liệu qua RAG (async → jobId)     ✅
+GET    /api/v1/flashcards/jobs/{id}                 Trạng thái + kết quả job sinh thẻ                ✅
+POST   /api/v1/flashcards/jobs/{id}/approve         Duyệt thẻ đã chọn, lưu vào bộ từ job              ✅
 ```
 
 **Không có tham số `userId` ở bất kỳ đường dẫn nào.** Mọi endpoint làm việc trên dữ liệu của chính người
@@ -472,6 +474,26 @@ người học không mở ứng dụng vẫn phải hiện ra. Lọc bằng `=`
 cơ sở dữ liệu, ghép thành hai mặt thẻ là việc của một câu SQL. Gọi mô hình ở đây chỉ tốn hạn mức để viết
 lại thứ đã có, và thêm một đường cho nó bịa nội dung khác với đáp án thật. Trả về `{soDaTao, soBoQua}` —
 báo cả số bỏ qua để người dùng hiểu vì sao bấm lần hai ra 0 thẻ mới.
+
+**Ba endpoint sinh thẻ nằm ở `FlashcardController`, KHÔNG ở `AiController`** — dù chúng gọi mô hình.
+`AiController` gắn `@PreAuthorize("hasAnyRole('CREATOR','ADMIN')")` ở cấp lớp, mà người học chính là đối
+tượng của cả tính năng thẻ ghi nhớ. Đây là cùng lý do `ChatController` đã tách ra trước đó. Kể cả endpoint
+tra trạng thái job cũng phải ở đây: để nó bên `AiController` thì người học gửi được yêu cầu nhưng không lấy
+được kết quả — tệ hơn là không cho gửi.
+
+`materialId` **bắt buộc**. Khác sinh đề — nơi bỏ chọn học liệu thì sinh theo kiến thức chung — sinh thẻ luôn
+cần nguồn: thẻ được ôn đi ôn lại hàng chục lần theo lịch SRS nên một thẻ sai sẽ được *học thuộc*, và người
+duyệt cần tài liệu để đối chiếu. Danh sách học liệu chọn được lấy từ `GET /ai/chat/materials` (của mình +
+đã chia sẻ), dùng lại của trợ lý học tập vì cùng một câu hỏi "tài liệu nào tôi được dùng".
+
+**Thẻ không tự vào bộ khi job xong.** Phải qua `POST /flashcards/jobs/{id}/approve` với danh sách chỉ số đã
+chọn. Bộ thẻ đích lấy từ **yêu cầu đã lưu trong job**, không nhận lại từ client lúc duyệt — nhận lại là mở
+đường ghi thẻ vào một bộ khác với bộ đã được kiểm quyền lúc gửi. Quyền trên bộ thẻ kiểm **trước** khi gọi mô
+hình, để không tốn tiền API cho một kết quả không lưu được.
+
+Kết quả job kèm `rejected` (thẻ bị loại tự động, kèm lý do) và `sourceExcerpts` (đoạn học liệu đã dùng).
+Cả hai đều hiện lên giao diện: cái đầu giải thích vì sao yêu cầu 15 mà nhận 11, cái sau để người duyệt đối
+chiếu thẻ đáng ngờ với nguồn.
 
 ## 7c. Chống gian lận — `/attempts/{id}/proctoring-events`, `/integrity`
 ```

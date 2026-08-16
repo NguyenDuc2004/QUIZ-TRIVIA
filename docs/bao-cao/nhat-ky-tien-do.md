@@ -35,6 +35,7 @@
 | 14/08 (chiều) | **Lát cắt 10 phần 1: quản trị người dùng + giám sát AI** (V12) | 6/6 | 🟢 xong |
 | 14/08 (tối) | **Lát cắt 10 phần 2: khu quản trị có khung riêng** — 16 API, 6 trang, 19 test | 7/7 | 🟢 xong |
 | 16/08 | Sửa trùng mã FR (87 mã, 1..87) · **Lát cắt 11: Flashcard + SRS** — 12 API, 3 trang, 17 test | 7/7 | 🟢 xong |
+| 16/08 (tối) | **FR-38: AI sinh thẻ từ học liệu** (V14) — đo thật 6/6 thẻ hợp lệ, 10s | 5/5 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -2259,6 +2260,97 @@ chắc: LEARNER thấy 4 mục và không có nút *Sinh đề AI*; CREATOR th�
   khoản, và vì sao cách chữa bằng truy vấn lại là sai.
 - **Mục 3.4 (kiểm thử):** SM-2 là ví dụ tốt cho việc *tách logic thuần ra để test nhanh* — 7 ca chạy trong
   vài milli-giây, không cần Testcontainers.
+
+---
+
+## 📅 CN — 16/08/2026 (tối) — FR-38: AI sinh thẻ từ học liệu, và một chốt phân quyền đặt sai chỗ
+
+**Mục tiêu:** phần còn lại duy nhất của tính năng 11. Tái dùng pipeline RAG đã có, không dựng gì mới ở tầng AI.
+
+**Xong:** V14 · prompt + parser riêng · service sinh thẻ · 3 endpoint · modal duyệt thẻ · 16 ca test.
+
+### Chốt phân quyền đặt sai chỗ, phát hiện lúc viết controller
+
+Đặc tả ghi endpoint là `POST /ai/generate-flashcards`. Viết xong mới thấy `AiController` gắn
+`@PreAuthorize("hasAnyRole('CREATOR','ADMIN')")` ở **cấp lớp** — tức người học không gọi được, mà người học
+chính là đối tượng của cả tính năng thẻ ghi nhớ.
+
+Mở `ChatController` ra thì thấy nó đã gặp đúng vấn đề này và javadoc của nó nói thẳng:
+*"Không nằm trong AiController: lớp đó gắn @PreAuthorize CREATOR/ADMIN cấp lớp"*. Vậy tiền lệ đã có, chỉ là
+tôi không đọc trước khi viết. Chuyển ba endpoint sang `FlashcardController` (`authenticated()`), đường dẫn
+thành `/decks/{id}/cards/generate` cho khớp `from-wrong-answers` đã có.
+
+Một chi tiết dễ bỏ sót: **endpoint tra trạng thái job cũng phải chuyển**. Để nó bên `AiController` thì người
+học gửi được yêu cầu nhưng không lấy được kết quả — tệ hơn là không cho gửi. Có một phép kiểm riêng cho
+đúng điều đó.
+
+Cũng nhờ đọc `ChatController` mà thấy `askableMaterials` — danh sách học liệu người học được dùng (của mình
++ đã chia sẻ). Dùng lại nguyên thay vì thêm endpoint mới: cùng một câu hỏi thì cùng một câu trả lời.
+
+### Bắt buộc có học liệu, khác với sinh đề
+
+Sinh đề cho phép bỏ chọn học liệu để sinh theo kiến thức chung. Sinh thẻ **không**. Lý do nằm ở cách hai thứ
+được dùng: một câu hỏi trong đề được đọc qua một lần, còn một thẻ ghi nhớ được ôn đi ôn lại hàng chục lần
+trong nhiều tháng theo lịch SRS — tức một thẻ sai sẽ được **học thuộc**. Và người duyệt cần tài liệu gốc để
+đối chiếu, nên kết quả job trả kèm cả các đoạn học liệu đã dùng.
+
+Vì vậy thẻ cũng **không tự vào bộ** khi job xong. Phép kiểm quan trọng nhất của lát cắt này là chốt số thẻ
+trong bộ bằng 0 ngay sau khi job SUCCEEDED.
+
+### Parser là nơi nghiêm khắc nhất
+
+Mô hình trả JSON đúng cú pháp vẫn có thể trả thẻ vô dụng. Ba loại bị loại, mỗi loại là một cách hỏng thật:
+
+| Loại bỏ | Vì sao |
+|---|---|
+| Thiếu một mặt | Thẻ một mặt không ôn được |
+| Mặt sau > 400 ký tự | Mô hình có xu hướng chuyển sang giảng bài. Thẻ mà mặt sau là một đoạn văn thì mất đúng cái làm nên flashcard: đọc vài giây rồi tự đối chiếu |
+| Trùng mặt trước (đã chuẩn hoá hoa thường + khoảng trắng) | Lịch SRS sẽ nhân đôi công ôn cho cùng một kiến thức |
+
+Cắt ngắn mặt sau thay vì loại bỏ là lựa chọn tệ hơn — câu bị cắt giữa dòng làm mặt sau sai nghĩa.
+
+### Đo thật với Gemini
+
+Chạy trên học liệu "Slide 3 - Views Thymeleaf" (9 đoạn, đã chia sẻ), yêu cầu 6 thẻ:
+**gemini-3.6-flash, 10 038 ms, 6 thẻ hợp lệ, 0 bị loại, 8 đoạn nguồn.** Chất lượng đúng như prompt yêu cầu —
+mỗi thẻ một ý, mặt sau 1 câu, gợi ý không lộ đáp án. Ví dụ: *"Trong vòng lặp th:each, chỉ số index và count
+khác nhau như thế nào?" → "index bắt đầu từ 0, trong khi count bắt đầu từ 1."*
+
+Duyệt 4/6 thẻ: đúng 4 thẻ vào bộ, nguồn `AI_GENERATED`, đến hạn ôn ngay hôm nay. Trước khi duyệt: 0 thẻ.
+
+### Một phép kiểm của tôi tự phản chính nó
+
+Ca "không sinh được vào bộ thẻ của người khác" tôi viết:
+
+```java
+assertThat(...count(*) from ai_jobs where type = 'GENERATE_FLASHCARDS'...)
+        .as("không được tạo job cho bộ thẻ của người khác").isPositive();
+```
+
+Thông điệp nói "không được tạo job" mà phép kiểm lại đòi `isPositive()` — **assert ngược hẳn với ý định**,
+và còn đếm toàn bảng nên các ca khác trong lớp cũng tính vào. Sửa thành đếm theo đúng người vừa gửi yêu cầu
+và `isZero()`, thêm `verify(never())` trên mô hình. Đây là lần thứ hai trong hai ngày tôi viết một phép kiểm
+xanh mà không kiểm gì — cả hai lần đều do dùng dữ liệu chung giữa các ca.
+
+### Một flake có sẵn, KHÔNG phải do lát cắt này
+
+Lần chạy suite đầu tiên có `ChatIntegrationTest.shouldListSessionsByRecentActivity` đỏ: mong 2 phiên, ra 3,
+trong đó **"Phiên mới hơn" xuất hiện hai lần**. Chạy riêng lớp đó: 20/20 xanh. Chạy lại toàn bộ suite:
+337/337 xanh. Tức là flake phụ thuộc thứ tự/thời điểm, không tái hiện.
+
+Chưa sửa và **chưa kết luận nguyên nhân**. Bằng chứng đáng lưu: hai phiên cùng tiêu đề gợi ý một lời gọi
+`ask` có thể tạo hai phiên khi có retry — nếu đúng thì đó là lỗi thật của tính năng chat, không chỉ lỗi test.
+Cần xem lại chỗ tạo phiên khi `sessionId` null.
+
+### Ghi chú báo cáo
+- **Mục 2.7 (luồng xử lý):** FR-38 là ví dụ thứ hai của pipeline RAG sau sinh đề, và là ví dụ có
+  **human-in-the-loop** rõ nhất — vẽ được sơ đồ *truy xuất → sinh → lọc tự động → người duyệt → lưu*.
+- **Mục 3.6 (độ chính xác AI):** có thêm một phép đo thật: 6/6 thẻ hợp lệ, 0 bị loại, 10 038 ms trên tài
+  liệu 9 đoạn. Ghi rõ đây là một lần chạy, không phải trung bình nhiều lần.
+- **"Khó khăn & cách giải quyết":** chốt `@PreAuthorize` cấp lớp ở `AiController` chặn sai đối tượng — bài
+  học là *đọc lớp cùng loại trước khi viết*, vì `ChatController` đã ghi sẵn lời giải trong javadoc.
+- **Mục 3.4:** phép kiểm tự phản chính nó (`isPositive` với thông điệp "không được tạo") là ví dụ tốt cho
+  việc *đọc lại phép kiểm như đọc code sản phẩm*.
 
 ---
 

@@ -13,7 +13,7 @@ Cho phép người học ôn tập bằng **flashcard** (thẻ ghi nhớ) với 
 
 ## Yêu cầu chức năng
 - **FR-37** [S] ✅ CRUD bộ thẻ (deck) và flashcard (mặt trước/mặt sau, gợi ý, chủ đề).
-- **FR-38** [S] ⏳ **AI sinh flashcard** từ học liệu (dùng pipeline RAG) hoặc từ một quiz/chủ đề.
+- **FR-38** [S] ✅ **AI sinh flashcard** từ học liệu qua pipeline RAG, có bước người dùng duyệt.
 - **FR-39** [S] ✅ Tự động tạo flashcard từ câu trả lời sai (`attempt_answers.is_correct = false`).
 - **FR-40** [S] ✅ **Lặp lại ngắt quãng (SRS):** lên lịch ôn theo thuật toán SM-2 rút gọn.
 - **FR-41** [S] ✅ Phiên ôn tập: hiển thị thẻ đến hạn, người học tự đánh giá mức nhớ (Again/Hard/Good/Easy).
