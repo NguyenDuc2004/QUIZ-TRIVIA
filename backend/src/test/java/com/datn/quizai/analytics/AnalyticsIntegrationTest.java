@@ -36,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Test thống kê (docs/features/09 — FR-26, FR-27) trên PostgreSQL + Redis thật.
+ * Test thống kê (docs/features/09 — FR-85, FR-86) trên PostgreSQL + Redis thật.
  * <p>
  * PostgreSQL thật là điều kiện bắt buộc chứ không phải cho chắc: cả lát cắt này <i>là</i> mấy câu
  * truy vấn gộp. Một câu {@code group by} sai, một phép chia khoảng lệch một đơn vị, hay
@@ -92,7 +92,7 @@ class AnalyticsIntegrationTest {
         peerToken = register("peer-thongke@example.com", "LEARNER");
     }
 
-    // ================================================================ FR-26 — tiến độ người học
+    // ================================================================ FR-85 — tiến độ người học
 
     @Test
     @DisplayName("Chưa làm bài nào: điểm trung bình là null, KHÔNG phải 0")
@@ -163,7 +163,7 @@ class AnalyticsIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    // ================================================================ FR-27 — thống kê quiz
+    // ================================================================ FR-86 — thống kê quiz
 
     @Test
     @DisplayName("Thống kê quiz: đếm đúng lượt/người, và phân bố điểm luôn đủ 10 khoảng")

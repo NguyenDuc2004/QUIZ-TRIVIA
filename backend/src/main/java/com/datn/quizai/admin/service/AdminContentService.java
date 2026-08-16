@@ -24,7 +24,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 /**
- * Quản lý nội dung công khai cho quản trị viên (features/10, FR-44 và FR-45).
+ * Quản lý nội dung công khai cho quản trị viên (features/10, FR-79 và FR-80).
  * <p>
  * <b>Ẩn quiz, không xoá quiz.</b> Cùng lý do như khoá tài khoản thay vì xoá người dùng: một quiz công
  * khai có thể đang có người làm, và lượt làm bài của họ nằm trong lịch sử cùng bảng xếp hạng. Đưa quiz
@@ -52,7 +52,7 @@ public class AdminContentService {
     }
 
     /**
-     * Quiz công khai để kiểm duyệt (FR-44).
+     * Quiz công khai để kiểm duyệt (FR-79).
      * <p>
      * Gọi lại đúng {@code QuizService.listPublic} mà trang khám phá của người học dùng, và đó là chủ ý:
      * thứ cần kiểm duyệt chính là thứ người học nhìn thấy, nên hai danh sách phải không bao giờ lệch nhau.

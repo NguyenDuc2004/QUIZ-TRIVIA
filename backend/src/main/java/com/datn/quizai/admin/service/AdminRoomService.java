@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Giám sát và can thiệp vào phòng đấu đang chạy (features/10, FR-46 và FR-47).
+ * Giám sát và can thiệp vào phòng đấu đang chạy (features/10, FR-81 và FR-82).
  * <p>
  * Chức năng này tồn tại vì phòng đấu là phần duy nhất của hệ thống có <b>trạng thái sống ở hai nơi</b>:
  * metadata bền ở PostgreSQL, còn trạng thái đang chơi ở Redis kèm TTL. Khi hai nơi lệch nhau — bản ghi

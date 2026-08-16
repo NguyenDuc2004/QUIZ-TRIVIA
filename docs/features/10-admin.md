@@ -27,25 +27,25 @@ phòng đấu đang diễn ra, và kiểm soát chi phí AI.
 
 | Mã | Yêu cầu | Trạng thái |
 |---|---|---|
-| FR-36 | Danh sách người dùng có lọc theo từ khoá / vai trò / trạng thái khoá | ✅ |
-| FR-37 | Khoá và mở khoá tài khoản; khoá thì **thu hồi mọi phiên ngay** | ✅ |
-| FR-38 | Đổi vai trò; **thu hồi phiên** vì vai trò nằm trong token | ✅ |
-| FR-39 | Xem chi phí và độ tin cậy AI: token, nhà cung cấp, độ trễ, tỉ lệ lỗi và tỉ lệ dùng dự phòng | ✅ |
-| FR-40 | Tổng quan hệ thống: KPI người dùng / quiz / lượt làm bài / phòng đang chạy / chi phí AI tháng này | ✅ |
-| FR-41 | Biểu đồ tăng trưởng người dùng và lượt làm bài theo ngày | ✅ |
-| FR-42 | Biểu đồ phân bổ quiz theo danh mục, và tỉ lệ hoàn thành bài làm | ✅ |
-| FR-43 | Thu hồi phiên đăng nhập của một người dùng mà **không** khoá tài khoản họ | ✅ |
-| FR-44 | Thêm / sửa / xoá danh mục quiz | ✅ |
-| FR-45 | Xem danh sách quiz công khai và **ẩn** quiz vi phạm (đưa về riêng tư) | ✅ |
-| FR-46 | Giám sát phòng đấu đang chạy: mã PIN, chủ phòng, quiz, số người, trạng thái | ✅ |
-| FR-47 | Cưỡng chế đóng phòng đấu đang treo hoặc vi phạm | ✅ |
-| FR-48 | Xem trạng thái cấu hình nhà cung cấp AI (**đã cấu hình / để trống**, không hiện giá trị khoá) | ✅ |
-| FR-49 | Đặt hạn mức số lượt gọi AI mỗi ngày cho mỗi người tạo nội dung | ⏸ hoãn |
+| FR-71 | Danh sách người dùng có lọc theo từ khoá / vai trò / trạng thái khoá | ✅ |
+| FR-72 | Khoá và mở khoá tài khoản; khoá thì **thu hồi mọi phiên ngay** | ✅ |
+| FR-73 | Đổi vai trò; **thu hồi phiên** vì vai trò nằm trong token | ✅ |
+| FR-74 | Xem chi phí và độ tin cậy AI: token, nhà cung cấp, độ trễ, tỉ lệ lỗi và tỉ lệ dùng dự phòng | ✅ |
+| FR-75 | Tổng quan hệ thống: KPI người dùng / quiz / lượt làm bài / phòng đang chạy / chi phí AI tháng này | ✅ |
+| FR-76 | Biểu đồ tăng trưởng người dùng và lượt làm bài theo ngày | ✅ |
+| FR-77 | Biểu đồ phân bổ quiz theo danh mục, và tỉ lệ hoàn thành bài làm | ✅ |
+| FR-78 | Thu hồi phiên đăng nhập của một người dùng mà **không** khoá tài khoản họ | ✅ |
+| FR-79 | Thêm / sửa / xoá danh mục quiz | ✅ |
+| FR-80 | Xem danh sách quiz công khai và **ẩn** quiz vi phạm (đưa về riêng tư) | ✅ |
+| FR-81 | Giám sát phòng đấu đang chạy: mã PIN, chủ phòng, quiz, số người, trạng thái | ✅ |
+| FR-82 | Cưỡng chế đóng phòng đấu đang treo hoặc vi phạm | ✅ |
+| FR-83 | Xem trạng thái cấu hình nhà cung cấp AI (**đã cấu hình / để trống**, không hiện giá trị khoá) | ✅ |
+| FR-84 | Đặt hạn mức số lượt gọi AI mỗi ngày cho mỗi người tạo nội dung | ⏸ hoãn |
 
-**FR-49 hoãn có lý do, xem như nợ kỹ thuật.** `AiOrchestrator` hiện không đếm lượt gọi theo từng người
+**FR-84 hoãn có lý do, xem như nợ kỹ thuật.** `AiOrchestrator` hiện không đếm lượt gọi theo từng người
 dùng, nên một ô nhập hạn mức chỉ lưu được con số mà không chặn được gì — quản trị viên sẽ tin rằng chi phí
 đã bị giới hạn trong khi thực tế không. Đó là kiểu sai tệ hơn việc thiếu tính năng. Làm đúng cần thêm bộ
-đếm theo user ở Redis và điểm chặn trong `AiOrchestrator`; trong lúc chờ, FR-39 vẫn cho thấy chi phí thật
+đếm theo user ở Redis và điểm chặn trong `AiOrchestrator`; trong lúc chờ, FR-74 vẫn cho thấy chi phí thật
 theo từng người để phát hiện lạm dụng.
 
 ## Ba việc cố ý KHÔNG làm
@@ -62,7 +62,7 @@ theo từng người để phát hiện lạm dụng.
 
 | Chưa làm | Cần gì |
 |---|---|
-| **Luồng duyệt quiz** (chờ duyệt → phê duyệt / từ chối kèm lý do) | `quizzes` chỉ có `PUBLIC`/`PRIVATE`. Thêm luồng duyệt là **đổi cách Creator xuất bản**: hiện họ tự đặt công khai là xong, sau này phải chờ admin. Đó là thay đổi nghiệp vụ ảnh hưởng tính năng 02, không chỉ thêm một trang quản trị. Bản này làm mức nhỏ hơn giải quyết được vấn đề thực tế: admin **ẩn** quiz vi phạm (FR-45) |
+| **Luồng duyệt quiz** (chờ duyệt → phê duyệt / từ chối kèm lý do) | `quizzes` chỉ có `PUBLIC`/`PRIVATE`. Thêm luồng duyệt là **đổi cách Creator xuất bản**: hiện họ tự đặt công khai là xong, sau này phải chờ admin. Đó là thay đổi nghiệp vụ ảnh hưởng tính năng 02, không chỉ thêm một trang quản trị. Bản này làm mức nhỏ hơn giải quyết được vấn đề thực tế: admin **ẩn** quiz vi phạm (FR-80) |
 | **Người dùng báo lỗi câu hỏi** (sai đáp án, câu tối nghĩa) | Chưa có bảng lưu báo cáo, và quan trọng hơn: **chưa có chức năng cho người dùng gửi báo cáo**. Làm trang admin xử lý báo cáo trước khi ai gửi được thì đó là một trang rỗng vĩnh viễn |
 
 ## Luồng xử lý

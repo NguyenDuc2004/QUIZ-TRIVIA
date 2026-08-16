@@ -19,7 +19,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Thống kê học tập và thống kê quiz (docs/features/09, FR-26 & FR-27).
+ * Thống kê học tập và thống kê quiz (docs/features/09, FR-85 & FR-86).
  * <p>
  * <b>Hai phạm vi truy cập khác nhau, đừng lẫn:</b>
  * <ul>
@@ -52,7 +52,7 @@ public class AnalyticsService {
         this.quizRepository = quizRepository;
     }
 
-    /** Tiến độ của chính người gọi (FR-26). */
+    /** Tiến độ của chính người gọi (FR-85). */
     @Transactional(readOnly = true)
     public LearnerProgressResponse myProgress(UUID userId) {
         AnalyticsRepository.LearnerOverviewRow overview = repository.findLearnerOverview(userId);
@@ -71,7 +71,7 @@ public class AnalyticsService {
                 trend);
     }
 
-    /** Thống kê một quiz mình sở hữu (FR-27). */
+    /** Thống kê một quiz mình sở hữu (FR-86). */
     @Transactional(readOnly = true)
     public QuizStatsResponse quizStats(UUID quizId, JwtService.AuthenticatedUser current) {
         requireOwnedQuiz(quizId, current);
@@ -89,7 +89,7 @@ public class AnalyticsService {
     }
 
     /**
-     * Bài làm trên quiz mình sở hữu, kèm cờ cần chấm tay (FR-27 + nợ từ features/06).
+     * Bài làm trên quiz mình sở hữu, kèm cờ cần chấm tay (FR-86 + nợ từ features/06).
      * <p>
      * API ghi đè điểm đã có từ lát cắt 6, nhưng Creator không có cách nào <i>tìm ra</i> bài nào cần
      * chấm — nên tính năng đó trên thực tế không dùng được. Danh sách này là cửa vào còn thiếu.

@@ -6,7 +6,7 @@ import { useAiConfig } from '../hooks/useAdmin'
 const { Text } = Typography
 
 /**
- * Trạng thái cấu hình các nhà cung cấp AI (FR-48).
+ * Trạng thái cấu hình các nhà cung cấp AI (FR-83).
  *
  * **Không có ô nào hiện giá trị khoá API** — `security.md` cấm hiển thị khoá trong UI hay log, và backend
  * cũng không trả về giá trị để có mà hiện. Thứ cần khi chẩn đoán "vì sao AI không chạy" là *đã cấu hình

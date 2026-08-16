@@ -26,7 +26,7 @@
 | 09/08 (chiều) | **Lọc câu hỏi theo chủ đề** — soạn quiz theo môn không phải lật hết ngân hàng | 6/6 | 🟢 xong |
 | 09/08 (tối) | **Lát cắt 7: gợi ý quiz bằng Neo4j** — trụ cột MVP thứ tư | 7/7 | 🟢 xong |
 | 10/08 | **Đo tải phòng đấu — số liệu mục 3.5** (bắt buộc theo phiếu) | 5/5 | 🟢 xong |
-| 10/08 (chiều) | **Lát cắt 9: thống kê** (FR-26, FR-27) + trả nợ màn chấm tay của lát cắt 6 | 7/7 | 🟢 xong |
+| 10/08 (chiều) | **Lát cắt 9: thống kê** (FR-85, FR-86) + trả nợ màn chấm tay của lát cắt 6 | 7/7 | 🟢 xong |
 | 10/08 (tối) | Vá 3 lỗi lộ ra khi chạy thật, trong đó **bộ test xoá sạch đồ thị máy dev** | 3/3 | 🟢 xong |
 | 11/08 | **Lát cắt 8: Trợ lý học tập RAG** (FR-31) — [M] cuối cùng của phiếu | 7/7 | 🟢 xong |
 | 10/08 (đêm) | Chuẩn bị đo mục 3.6 · chốt: **xAI Grok không có gói miễn phí** | 4/4 | 🟡 chờ hạn mức |
@@ -1244,7 +1244,7 @@ bận rộn — kết nối cuối chờ quá hạn. Nối host trước là ch�
 
 ## 📅 T2 — 10/08/2026 (chiều) — Lát cắt 9: Thống kê, và món nợ hoá ra to hơn ghi chép
 
-**Mục tiêu:** FR-26 (tiến độ người học) + FR-27 (thống kê cho Creator). Chọn lát cắt này vì nó mở
+**Mục tiêu:** FR-85 (tiến độ người học) + FR-86 (thống kê cho Creator). Chọn lát cắt này vì nó mở
 khoá luôn màn chấm tay mà lát cắt 6 đang nợ.
 
 **Xong:** 5 truy vấn gộp · 3 API thống kê + 1 API đọc bài để chấm · 3 trang frontend · 13 ca test mới ·
@@ -1321,9 +1321,9 @@ chứ không tạo khoảng thứ mười một, và quiz người khác trả 4
 
 ### Quyết định phạm vi
 
-- **FR-28 (xuất PDF) bỏ.** Mức [C] Could, và nó chỉ đóng gói lại đúng số liệu đã có trên màn hình.
+- **FR-87 (xuất PDF) bỏ.** Mức [C] Could, và nó chỉ đóng gói lại đúng số liệu đã có trên màn hình.
   Đổi lấy một thư viện sinh PDF kèm bộ font tiếng Việt riêng thì không xứng.
-- **Điểm mạnh/yếu theo chủ đề KHÔNG làm lại ở đây** dù FR-26 có nhắc. Phần đó đã ở trang Lộ trình,
+- **Điểm mạnh/yếu theo chủ đề KHÔNG làm lại ở đây** dù FR-85 có nhắc. Phần đó đã ở trang Lộ trình,
   tính từ Neo4j. Tính lại từ PostgreSQL sẽ có hai màn hình nói cùng một chuyện bằng hai cách trên hai
   kho dữ liệu — khớp nhau hôm nay, lệch nhau vào ngày ai đó sửa một trong hai công thức, và lúc đó
   không có cách nào biết màn nào đúng. Trang Tiến độ dẫn sang trang Lộ trình.
@@ -2004,8 +2004,8 @@ còn "chưa đo" thì không — gộp hai thứ thành 0 làm giao diện hiể
 
 ### Còn nợ trong lát cắt này
 
-- **FR-38** kiểm duyệt quiz/câu hỏi công khai — chưa làm.
-- **FR-39** cấu hình thứ tự nhà cung cấp AI và hạn mức ở runtime — chưa làm. Phần này đòi sửa
+- **FR-80** ẩn quiz công khai vi phạm — chưa làm.
+- **FR-83/FR-84** trạng thái cấu hình nhà cung cấp AI và hạn mức lượt gọi — chưa làm. Phần này đòi sửa
   `AiOrchestrator` đang chạy tốt, nên để sau khi những phần không rủi ro đã xong.
 
 ### Ghi chú báo cáo
@@ -2037,7 +2037,7 @@ Trước đó khu quản trị chỉ là một menu xổ xuống trên thanh đi
 Lối vào chuyển vào menu tài khoản, lối ra là "Về khu học tập" ngay đầu sidebar — chuyển ngữ cảnh phải đi
 được **cả hai chiều**, không để ai mắc kẹt một bên.
 
-### Ô nhập hạn mức AI: cố ý KHÔNG làm (FR-49)
+### Ô nhập hạn mức AI: cố ý KHÔNG làm (FR-84)
 
 Thiết kế ban đầu có `PUT /admin/ai/quota` — "mỗi người tạo nội dung tối đa N lượt gọi AI mỗi ngày". Làm
 được ngay, nhưng `AiOrchestrator` **không đọc con số đó** và cũng chưa đếm lượt gọi theo từng người dùng.
@@ -2077,9 +2077,9 @@ Hai lợi ích: thứ được kiểm duyệt luôn đúng bằng thứ người
 
 ### Còn nợ
 
-- **FR-49** hạn mức lượt gọi AI mỗi ngày — hoãn có chủ đích, cần bộ đếm theo người dùng ở Redis và điểm
+- **FR-84** hạn mức lượt gọi AI mỗi ngày — hoãn có chủ đích, cần bộ đếm theo người dùng ở Redis và điểm
   chặn trong `AiOrchestrator`. `GET /admin/ai/usage` vẫn cho thấy chi phí thật để phát hiện lạm dụng.
-- **FR-38** (duyệt quiz trước khi công khai) và báo cáo vi phạm từ người dùng — đòi đổi nghiệp vụ và
+- **Luồng duyệt quiz** (duyệt trước khi công khai) và báo cáo vi phạm từ người dùng — đòi đổi nghiệp vụ và
   thêm bảng, chưa làm.
 
 ### Sidebar: làm lại lần hai, và một vòng thử bảng màu sáng rồi quay lại

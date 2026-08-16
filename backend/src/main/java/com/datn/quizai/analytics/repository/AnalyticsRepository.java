@@ -20,7 +20,7 @@ import java.util.UUID;
  */
 public interface AnalyticsRepository extends JpaRepository<QuizAttempt, UUID> {
 
-    // ================================================================ Learner (FR-26)
+    // ================================================================ Learner (FR-85)
 
     /**
      * Tổng quan của một người học.
@@ -59,13 +59,13 @@ public interface AnalyticsRepository extends JpaRepository<QuizAttempt, UUID> {
             """)
     List<AttemptScoreRow> findLearnerScoreTrend(@Param("userId") UUID userId);
 
-    // ================================================================ Creator (FR-27)
+    // ================================================================ Creator (FR-86)
 
     /**
      * Tổng quan một quiz: bao nhiêu lượt, bao nhiêu người, điểm trung bình, và bao nhiêu lượt
      * <b>nộp kịp giờ</b>.
      * <p>
-     * "Tỉ lệ hoàn thành" mà FR-27 yêu cầu ở đây là tỉ lệ nộp kịp so với bị hết giờ (`EXPIRED`) —
+     * "Tỉ lệ hoàn thành" mà FR-86 yêu cầu ở đây là tỉ lệ nộp kịp so với bị hết giờ (`EXPIRED`) —
      * con số nói lên đề có quá dài hay thời gian đặt quá ngắn. Không tính bài đang làm dở, vì bài
      * dở chưa nói được gì.
      */

@@ -1,6 +1,6 @@
 # 09 — Thống kê & Báo cáo
 
-**Ưu tiên:** [S] Should · **Trạng thái:** ✅ đã hiện thực (FR-26, FR-27) · FR-28 ngoài phạm vi
+**Ưu tiên:** [S] Should · **Trạng thái:** ✅ đã hiện thực (FR-85, FR-86) · FR-87 ngoài phạm vi
 
 ## Mục tiêu
 Cung cấp cái nhìn về tiến độ học tập cho Learner và hiệu quả bài giao cho Creator.
@@ -10,16 +10,16 @@ Cung cấp cái nhìn về tiến độ học tập cho Learner và hiệu quả
 - Creator xem thống kê quiz đã giao, và **tìm ra bài cần chấm tay**.
 
 ## Yêu cầu chức năng
-- **FR-26** [M] ✅ Learner xem tiến độ: số quiz đã làm, điểm trung bình, đường điểm theo thời gian.
-- **FR-27** [S] ✅ Creator xem thống kê bài giao: tỉ lệ nộp kịp giờ, phân bố điểm, câu sai nhiều nhất,
+- **FR-85** [M] ✅ Learner xem tiến độ: số quiz đã làm, điểm trung bình, đường điểm theo thời gian.
+- **FR-86** [S] ✅ Creator xem thống kê bài giao: tỉ lệ nộp kịp giờ, phân bố điểm, câu sai nhiều nhất,
   danh sách bài làm kèm cờ cần chấm tay.
-- **FR-28** [C] ❌ Xuất báo cáo PDF — **ngoài phạm vi đồ án**. Mức [C] Could, và nó chỉ là một cách
+- **FR-87** [C] ❌ Xuất báo cáo PDF — **ngoài phạm vi đồ án**. Mức [C] Could, và nó chỉ là một cách
   đóng gói lại đúng những số liệu đã hiện trên màn hình; đổi lấy một thư viện sinh PDF cùng bộ font
   tiếng Việt riêng thì không xứng với thứ nó thêm vào.
 
 ## Điểm mạnh/yếu theo chủ đề nằm ở đâu
 
-FR-26 nhắc tới "điểm mạnh/yếu theo chủ đề", nhưng **API `/analytics/me` không trả phần đó**. Nó nằm
+FR-85 nhắc tới "điểm mạnh/yếu theo chủ đề", nhưng **API `/analytics/me` không trả phần đó**. Nó nằm
 ở `/recommendations/path` ([features/07](07-recommendation-neo4j.md)), tính từ đồ thị Neo4j.
 
 Lý do: tính lại cùng một kết luận ở đây sẽ cho **hai màn hình nói về cùng một chuyện, bằng hai cách,

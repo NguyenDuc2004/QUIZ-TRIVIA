@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * Đọc trạng thái cấu hình AI cho khu quản trị (features/10, FR-48).
+ * Đọc trạng thái cấu hình AI cho khu quản trị (features/10, FR-83).
  * <p>
  * <b>Chỉ đọc, không có thao tác ghi</b> — và đó là thiết kế, không phải thiếu sót:
  * <ul>
@@ -21,7 +21,7 @@ import java.util.List;
  *   <li><b>Hạn mức mỗi người dùng</b> chưa làm — xem ghi chú ở dưới.</li>
  * </ul>
  *
- * <h3>Vì sao chưa có đặt hạn mức (FR-49)</h3>
+ * <h3>Vì sao chưa có đặt hạn mức (FR-84)</h3>
  * Thêm một ô nhập "mỗi Creator tối đa N lượt/ngày" thì làm được ngay, nhưng {@code AiOrchestrator} hiện
  * <b>không đọc con số đó</b> và cũng chưa đếm lượt gọi theo từng người dùng. Một ô nhập lưu được giá trị
  * mà không chặn được gì là thứ tệ hơn cả việc không có nó: quản trị viên tin rằng chi phí đã được

@@ -492,8 +492,8 @@ WebSocket: subscribe `/user/queue/notifications` (real-time in-app).
 
 ## 8. Thống kê — `/analytics`
 ```
-GET    /api/v1/analytics/me                       Tiến độ của tôi (FR-26)
-GET    /api/v1/analytics/quizzes/{id}             Thống kê 1 quiz — chỉ chủ quiz (FR-27)
+GET    /api/v1/analytics/me                       Tiến độ của tôi (FR-85)
+GET    /api/v1/analytics/quizzes/{id}             Thống kê 1 quiz — chỉ chủ quiz (FR-86)
 GET    /api/v1/analytics/quizzes/{id}/attempts    Bài làm trên quiz của tôi, kèm cờ cần chấm tay
 ```
 
@@ -546,7 +546,7 @@ gì là tên gọi nói sai việc nó làm.
 | Sửa **system prompt** | Prompt là nơi đặt bốn lớp chống tiêm chỉ thị khi chấm bài; mở cho giao diện là mở đường phá hàng rào đó |
 | Admin **đặt lại mật khẩu** người dùng | Admin biết mật khẩu thì đăng nhập thay được, và mọi hành động sau đó không quy trách nhiệm được cho ai. Đã có OTP tự phục vụ |
 
-**`PUT /admin/ai/quota` bị hoãn (FR-49), không phải bỏ.** Thêm một ô nhập "mỗi Creator tối đa N lượt/ngày"
+**`PUT /admin/ai/quota` bị hoãn (FR-84), không phải bỏ.** Thêm một ô nhập "mỗi Creator tối đa N lượt/ngày"
 thì làm được ngay, nhưng `AiOrchestrator` hiện **không đọc con số đó** và cũng chưa đếm lượt gọi theo từng
 người dùng. Một ô nhập lưu được giá trị mà không chặn được gì tệ hơn là không có nó: quản trị viên tin
 rằng chi phí đã được giới hạn, trong khi thực tế không. Làm đúng cần đếm lượt theo user ở Redis và chặn

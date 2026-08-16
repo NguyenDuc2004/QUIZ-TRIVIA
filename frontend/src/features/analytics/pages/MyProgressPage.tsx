@@ -9,7 +9,7 @@ import { useMyProgress } from '../hooks/useAnalyticsQueries'
 const { Text } = Typography
 
 /**
- * Tiến độ học tập của tôi (FR-26).
+ * Tiến độ học tập của tôi (FR-85).
  * <p>
  * **Trang này không nói về điểm mạnh/yếu theo chủ đề** dù nghe rất hợp chỗ. Phần đó nằm ở trang Lộ
  * trình học, tính từ đồ thị Neo4j. Tính lại cùng một kết luận từ PostgreSQL sẽ cho hai màn hình nói

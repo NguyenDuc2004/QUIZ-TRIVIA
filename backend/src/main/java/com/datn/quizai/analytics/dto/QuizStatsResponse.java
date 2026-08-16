@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Thống kê một quiz, dành cho chủ quiz (FR-27).
+ * Thống kê một quiz, dành cho chủ quiz (FR-86).
  *
  * @param completionPercent tỉ lệ lượt nộp kịp giờ; phần còn lại là lượt bị hết giờ. Con số này nói
  *                          lên đề có quá dài hay thời gian đặt quá ngắn
