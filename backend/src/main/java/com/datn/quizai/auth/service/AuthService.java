@@ -82,7 +82,26 @@ public class AuthService {
             throw BusinessException.unauthorized("Email hoặc mật khẩu không đúng");
         }
 
+        requireNotLocked(user);
         return issueTokens(user);
+    }
+
+    /**
+     * Chặn tài khoản đã bị quản trị viên khoá (features/10).
+     * <p>
+     * Gọi <b>sau</b> khi đã khớp mật khẩu, không phải trước. Nói "tài khoản bị khoá" cho một người
+     * chưa chứng minh được họ là chủ tài khoản chính là tiết lộ email đó có tồn tại — đúng thứ mà
+     * thông báo gộp "email hoặc mật khẩu không đúng" đang tránh. Khớp mật khẩu rồi thì họ đã biết
+     * mật khẩu, nên câu này không cho thêm thông tin gì cho kẻ tấn công.
+     * <p>
+     * Ngược lại, với người dùng thật thì phải nói rõ: giữ nguyên thông báo "email hoặc mật khẩu không
+     * đúng" sẽ khiến họ đi đặt lại mật khẩu hết lần này lần khác mà vẫn không vào được.
+     */
+    private void requireNotLocked(User user) {
+        if (user.isLocked()) {
+            throw BusinessException.forbidden(
+                    "Tài khoản đã bị khoá. Vui lòng liên hệ quản trị viên để được mở lại.");
+        }
     }
 
     /** Rotation: refresh token cũ bị thu hồi, chỉ dùng được một lần. */
@@ -91,6 +110,12 @@ public class AuthService {
         UUID userId = refreshTokenService.resolve(refreshToken);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> BusinessException.unauthorized("Tài khoản không còn tồn tại"));
+
+        // Phải kiểm ở đây nữa, không chỉ ở login: khoá tài khoản có thu hồi mọi phiên, nhưng nếu
+        // chặn duy nhất ở login thì bất kỳ đường nào cấp lại refresh token về sau cũng mở lại cửa cho
+        // một tài khoản đang bị khoá. Chốt ở cả hai lối vào để trạng thái khoá không phụ thuộc thứ tự
+        // xảy ra của các thao tác.
+        requireNotLocked(user);
 
         String newRefreshToken = refreshTokenService.rotate(refreshToken);
         return AuthResponse.of(
@@ -151,6 +176,10 @@ public class AuthService {
 
         User user = userRepository.findByGoogleId(account.subject())
                 .orElseGet(() -> linkOrCreate(account));
+
+        // Google đã xác minh xong danh tính nên người gọi chắc chắn là chủ tài khoản — nói rõ lý do
+        // bị chặn ở đây không tiết lộ gì thêm
+        requireNotLocked(user);
 
         // Ảnh đại diện có thể đổi bên Google, đồng bộ lại mỗi lần đăng nhập
         if (account.pictureUrl() != null && !account.pictureUrl().equals(user.getAvatarUrl())) {

@@ -5,17 +5,47 @@
 >
 > Chỉ mô phỏng **phong cách**; không dùng logo, tên thương hiệu, hình ảnh hay nội dung của Udemy. Font Udemy Sans có bản quyền → dùng **Inter** (tự host qua `@fontsource-variable/inter`).
 
-## 1. Hai bộ mặt — dùng đúng chỗ
+## 1. Ba bộ mặt — dùng đúng chỗ
 
-Udemy có hai kiểu bố cục rất khác nhau. Chọn sai kiểu là lỗi giao diện, không phải chuyện thẩm mỹ.
+Udemy có hai kiểu bố cục rất khác nhau. Chọn sai kiểu là lỗi giao diện, không phải chuyện thẩm mỹ. Dự án
+này có thêm bộ mặt thứ ba vì nó có một khu vực mà **đối tượng bị tác động không phải người đang dùng**.
 
-| Kiểu | Khi nào dùng | Trang của dự án |
-|---|---|---|
-| **Học viên** (browse) | Người dùng đi *tìm* nội dung | Khám phá quiz, giới thiệu quiz, làm bài, phòng đấu, gợi ý |
-| **Bảng điều khiển** (dashboard) | Người dùng đi *quản lý* nội dung của mình | Quiz của tôi, Ngân hàng câu hỏi, Soạn quiz, Thống kê, Admin |
+| Kiểu | Khi nào dùng | Trang của dự án | Khung |
+|---|---|---|---|
+| **Học viên** (browse) | Người dùng đi *tìm* nội dung | Khám phá quiz, giới thiệu quiz, làm bài, phòng đấu, gợi ý | `AppLayout` |
+| **Bảng điều khiển** (dashboard) | Người dùng đi *quản lý* nội dung **của mình** | Quiz của tôi, Ngân hàng câu hỏi, Soạn quiz, Học liệu, Thống kê | `AppLayout` |
+| **Khu quản trị** (admin) | Quản trị viên tác động lên **người khác** hoặc lên cả hệ thống | Quản lý người dùng, Giám sát AI | `AdminLayout` |
 
 - **Browse** → lưới card, ảnh/khối màu 16:9, tiêu đề đậm cắt 2 dòng, nhiều khoảng trắng.
 - **Dashboard** → bảng dày thông tin, nút viền mảnh, hầu như không màu rực, không card lồng card.
+- **Admin** → cũng là bảng dày thông tin như dashboard, nhưng **khung khác hẳn**: sidebar dọc nền tối
+  thay cho thanh điều hướng ngang.
+
+### Vì sao khu quản trị có khung riêng, không phải thêm mục vào menu chung
+
+Ba lý do, xếp theo mức quan trọng:
+
+1. **Trông khác là một lớp an toàn.** Thao tác ở khu này tác động lên *người khác* — khoá tài khoản, đổi
+   vai trò — và không có nút hoàn tác. Nền tối cùng bố cục sidebar khiến quản trị viên luôn biết mình
+   đang ở đâu, thay vì tưởng vẫn ở trang cá nhân rồi bấm nhầm. Đây là lý do đầu tiên, không phải thẩm mỹ.
+2. **Ngữ cảnh làm việc khác.** Menu *Khám phá / Phòng đấu / Trợ lý AI / Lộ trình / Tiến độ* không liên
+   quan gì khi đang xem chi phí AI. Để lẫn vào nhau thì mỗi lần dùng, người ta phải tự lọc ra mục cần.
+3. **Sidebar mở rộng được.** Thanh ngang của khu học tập đã có 10 mục với vai trò CREATOR và sẽ tràn
+   hàng trên màn hình hẹp; sidebar dọc còn chỗ cho kiểm duyệt nội dung và cấu hình AI sắp thêm.
+
+**Chuyển ngữ cảnh phải đi được cả hai chiều.** Lối vào khu quản trị nằm trong menu tài khoản của
+`AppLayout`; lối ra là mục *"Về khu học tập"* đặt ở **đáy** sidebar — không bắt ai đi tìm trong menu
+tài khoản, và không để ai mắc kẹt một bên.
+
+### Quy tắc của sidebar quản trị
+
+| Quy tắc | Vì sao |
+|---|---|
+| **Gom nhóm có nhãn nhỏ** (*Người dùng & nội dung* · *Giám sát*) | Sáu mục phẳng đọc thành một dãy đều nhau; nhóm theo đối tượng bị tác động giúp tìm bằng mắt. Nhóm đầu (*Tổng quan*) **không có nhãn** — nhãn trùng tên mục thì chiếm dòng mà không thêm thông tin |
+| **Thu gọn phải có nút bấm** | Chỉ đặt `breakpoint` + `collapsedWidth={0}` mà không bật `collapsible` thì trên màn hình hẹp sidebar biến mất và **không còn cách nào mở lại** — admin mất hết đường điều hướng. Thu gọn về dải 72px chỉ còn icon, kèm tooltip, và nút gập nằm ở header |
+| **Mục đang chọn: nền sáng nhẹ + viền tím mảnh + icon tím + chữ đậm** | Tím dành cho điều hướng theo quy ước màu ở §2, nút hành động vẫn màu đen. Đổi cả nền mục sang màu đặc làm nó trông như một nút bấm. Viền vẽ bằng `ring` **chứ không phải `border`**: `border` cộng 1px vào hộp, làm mục đang chọn cao hơn các mục khác 2px và cả danh sách nhấp lên xuống mỗi lần đổi trang |
+| **Chữ trắng đều cho mọi mục**, không làm mờ mục chưa chọn | Mục đang chọn đã có bốn dấu hiệu khác (nền, viền, icon tím, chữ đậm) nên không cần dựa vào độ sáng chữ. Riêng **nhãn nhóm** vẫn mờ hơn — nó là chú thích, không phải thứ bấm được, để trắng đều thì nó cạnh tranh với chính các mục nó giới thiệu |
+| **Nền đen tuyền lấy từ token riêng** (`--color-admin-bg` = `#000000`) | Tách rõ nhất khỏi vùng nội dung sáng bên cạnh. Dùng `--color-ink` thì hai khối cạnh nhau trông như cùng một mặt phẳng. Vẫn là token, **không** hardcode mã màu trong component |
 
 ## 2. Token màu
 
@@ -29,8 +59,29 @@ Udemy có hai kiểu bố cục rất khác nhau. Chọn sai kiểu là lỗi gi
 | `--color-surface-subtle` | `#f7f9fa` | Nền khối phụ, header bảng |
 | `--color-star` / `--color-rating` | `#e59819` / `#b4690e` | Sao và số điểm (chỉ khi có dữ liệu thật) |
 | `--color-badge` | `#eceb98` | Nhãn nổi bật kiểu "Bestseller" |
+| `--color-admin-bg` | `#000000` | Nền sidebar khu quản trị (`AdminLayout`) |
+| `--color-admin-line` | `#2b2f37` | Đường viền trên nền tối của khu quản trị |
 
 **Quy tắc:** không hardcode mã màu trong file component. Chỉ dùng token Ant Design (`ConfigProvider`) hoặc class Tailwind sinh từ `@theme` (`bg-ink`, `text-ink-soft`, `border-line`…).
+
+### Đặt màu chữ cho thẻ `<a>`: bắt buộc thêm hậu tố `!`
+
+Ant Design chèn CSS lúc chạy, **ngoài** cascade layer; utility của Tailwind v4 nằm **trong** `@layer`. Theo
+luật cascade, luật ngoài layer **thắng** luật trong layer — nên `text-ink` đặt trên một `<a>` bị `a { color }`
+của antd đè, dù class có specificity cao hơn.
+
+```tsx
+// SAI — cả mục đang mở lẫn mục chưa mở đều ra màu link của antd, mất dấu hiệu "đang ở trang nào"
+isActive ? 'text-brand-strong' : 'text-ink'
+// ĐÚNG
+isActive ? 'text-brand-strong!' : 'text-ink!'
+```
+
+Icon bên trong `<a>` cũng phải đặt màu **tường minh**: nó chỉ thừa hưởng màu từ thẻ `a`, nên khi thẻ `a` bị
+đè thì icon đổi màu theo mà không có class nào của mình bị sai.
+
+**Cách kiểm:** không tin vào class đã viết — đọc màu đã render (`getComputedStyle(el).color`). Lỗi này từng
+làm toàn bộ 10 mục trên thanh điều hướng khu học tập ra màu tím trong khi code ghi `text-ink`.
 
 ## 3. Kiểu chữ
 

@@ -43,6 +43,15 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 20)
     private Role role = Role.LEARNER;
 
+    /**
+     * Quản trị viên đã khoá tài khoản này hay chưa (V12).
+     * <p>
+     * Khoá là <b>chặn đường vào</b>, không phải xoá người dùng: bài đã làm, quiz đã soạn và học liệu
+     * đã nạp đều là dữ liệu người khác đang dùng hoặc đang được thống kê.
+     */
+    @Column(nullable = false)
+    private boolean locked = false;
+
     public User(String email, String passwordHash, String displayName, Role role) {
         this.email = email;
         this.passwordHash = passwordHash;

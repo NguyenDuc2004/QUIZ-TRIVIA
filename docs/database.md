@@ -38,6 +38,7 @@ ai_request_logs (audit các lần gọi AI)
 | display_name | varchar | |
 | avatar_url | varchar | nullable |
 | role | enum | LEARNER / CREATOR / ADMIN |
+| locked | boolean | *(V12)* true = quản trị viên đã khoá; không đăng nhập được và mọi phiên bị thu hồi. **Khoá là chặn truy cập, không phải xoá người dùng** — dữ liệu của họ (bài đã làm, quiz đã soạn, học liệu đã chia sẻ) là thứ người khác đang dùng. Chỉ mục một phần `WHERE locked = true` vì phần lớn bản ghi có giá trị false |
 | created_at, updated_at | timestamptz | |
 
 > `CHECK (password_hash IS NOT NULL OR google_id IS NOT NULL)` — mỗi tài khoản phải có ít nhất một

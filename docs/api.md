@@ -516,11 +516,84 @@ thì câu tự luận nào cũng thành câu khó nhất đề.
 
 ## 9. Admin — `/admin`
 ```
-GET    /api/v1/admin/users               Quản lý user
-PUT    /api/v1/admin/users/{id}/role     Đổi vai trò
-GET    /api/v1/admin/ai/logs             Log & chi phí AI
-PUT    /api/v1/admin/ai/config           Cấu hình provider/fallback
+GET    /api/v1/admin/overview                Tổng quan: KPI + dữ liệu 3 biểu đồ (?days=)     ✅
+GET    /api/v1/admin/users                   Danh sách user, lọc theo từ khoá/vai trò/khoá   ✅
+PUT    /api/v1/admin/users/{id}/role         Đổi vai trò (?role=)                            ✅
+PUT    /api/v1/admin/users/{id}/locked       Khoá / mở khoá tài khoản (?locked=)             ✅
+POST   /api/v1/admin/users/{id}/revoke       Thu hồi mọi phiên, KHÔNG khoá tài khoản         ✅
+GET    /api/v1/admin/categories              Danh mục kèm số quiz đang dùng                  ✅
+POST   /api/v1/admin/categories              Thêm danh mục                                   ✅
+PUT    /api/v1/admin/categories/{id}         Sửa danh mục                                    ✅
+DELETE /api/v1/admin/categories/{id}         Xoá danh mục (chặn nếu còn quiz dùng)           ✅
+GET    /api/v1/admin/quizzes                 Quiz công khai, lọc theo từ khoá/danh mục       ✅
+PUT    /api/v1/admin/quizzes/{id}/hide       Ẩn quiz vi phạm (đưa về PRIVATE)                ✅
+GET    /api/v1/admin/rooms                   Phòng đấu đang chạy, kèm số người từ Redis      ✅
+POST   /api/v1/admin/rooms/{code}/close      Cưỡng chế đóng phòng                            ✅
+GET    /api/v1/admin/ai/usage                Tổng hợp chi phí, độ tin cậy, độ trễ (?days=)   ✅
+GET    /api/v1/admin/ai/config               Trạng thái provider — KHÔNG trả giá trị khoá    ✅
 ```
+
+Đóng phòng dùng `POST .../close` chứ **không phải `DELETE /rooms/{code}`** như bản thiết kế đầu: thao tác
+này không xoá bản ghi phòng mà chuyển nó sang `FINISHED` và xoá trạng thái Redis. Bản ghi phải còn vì
+điểm cuối ván của những người đã chơi nằm ở `game_room_players` tham chiếu tới nó. Một `DELETE` không xoá
+gì là tên gọi nói sai việc nó làm.
+
+**Ba thứ cố ý không có endpoint**, và đây là phần thiết kế chứ không phải bỏ sót:
+
+| Không có | Vì sao |
+|---|---|
+| Đọc hoặc ghi **giá trị khoá API** | `security.md`: không hiển thị khoá API trong UI hay log. `GET /admin/ai/config` chỉ trả `configured: true/false` cho từng nhà cung cấp — đủ để chẩn đoán "vì sao AI không chạy" mà không phơi giá trị. Đổi khoá là việc của biến môi trường |
+| Sửa **system prompt** | Prompt là nơi đặt bốn lớp chống tiêm chỉ thị khi chấm bài; mở cho giao diện là mở đường phá hàng rào đó |
+| Admin **đặt lại mật khẩu** người dùng | Admin biết mật khẩu thì đăng nhập thay được, và mọi hành động sau đó không quy trách nhiệm được cho ai. Đã có OTP tự phục vụ |
+
+**`PUT /admin/ai/quota` bị hoãn (FR-49), không phải bỏ.** Thêm một ô nhập "mỗi Creator tối đa N lượt/ngày"
+thì làm được ngay, nhưng `AiOrchestrator` hiện **không đọc con số đó** và cũng chưa đếm lượt gọi theo từng
+người dùng. Một ô nhập lưu được giá trị mà không chặn được gì tệ hơn là không có nó: quản trị viên tin
+rằng chi phí đã được giới hạn, trong khi thực tế không. Làm đúng cần đếm lượt theo user ở Redis và chặn
+trong `AiOrchestrator` — một lát cắt riêng. Trong lúc chờ, `GET /admin/ai/usage` vẫn cho thấy chi phí thật
+để phát hiện lạm dụng.
+
+`POST /admin/users/{id}/revoke` khác `PUT .../locked` ở chỗ nó **chỉ đăng xuất** người dùng khỏi mọi
+thiết bị mà không chặn họ đăng nhập lại — dùng khi nghi ngờ tài khoản bị chiếm dụng, hoặc khi người dùng
+báo mất máy. Khoá tài khoản là biện pháp mạnh hơn và có tính kỷ luật; hai việc không nên gộp làm một.
+
+`PUT /admin/quizzes/{id}/hide` đưa quiz về `PRIVATE` chứ **không xoá**: quiz vẫn thuộc chủ của nó, họ sửa
+lại rồi công khai lại được. Xoá nội dung người khác là biện pháp không đảo lại được, và với một quiz đã
+có người làm thì kéo theo cả lượt làm bài của họ.
+
+`DELETE /admin/categories/{id}` **trả 409** nếu còn quiz đang dùng danh mục đó, kèm số lượng — thay vì
+xoá kèm hoặc để quiz mồ côi. Quản trị viên cần biết mình đang định làm gì với những quiz đó trước.
+
+`@PreAuthorize("hasRole('ADMIN')")` đặt ở **cấp lớp** `AdminController`: mọi endpoint trong đó chỉ dành
+cho ADMIN, không ngoại lệ. Gắn cấp lớp thì thêm endpoint mới cũng tự được bảo vệ.
+
+**Không có endpoint xoá người dùng — đây là chủ ý.** Bài đã làm, quiz đã soạn, học liệu đã nạp đều là
+dữ liệu người khác đang dùng hoặc đang được thống kê; xoá tài khoản kéo theo xoá hoặc làm mồ côi những
+thứ đó. Biện pháp tương ứng là **khoá**: chặn đường vào, giữ nguyên dữ liệu.
+
+Hai thao tác đều **thu hồi mọi phiên** của người bị tác động:
+
+| Thao tác | Vì sao phải thu hồi phiên |
+|---|---|
+| Khoá tài khoản | Chỉ đặt cờ thì access token đang cầm vẫn dùng được tới khi hết hạn (15 phút) và refresh token vẫn gia hạn được tới 14 ngày — tức "khoá" chỉ có hiệu lực sau vài phút, đúng lúc quản trị viên tin rằng nó có hiệu lực ngay |
+| Đổi vai trò | Vai trò nằm **trong** access token, nên token cũ vẫn mang vai trò cũ; không thu hồi thì người vừa bị hạ quyền còn dùng quyền cũ thêm 15 phút |
+
+Trạng thái khoá được kiểm ở **cả** `login` và `refresh`. Chặn một lối mà bỏ lối kia thì bất kỳ đường nào
+cấp lại token về sau cũng mở lại cửa cho một tài khoản đang bị khoá.
+
+Đăng nhập vào tài khoản bị khoá trả **403** (không phải 401) kèm thông báo nói rõ *"tài khoản đã bị
+khoá"*. Kiểm tra này chạy **sau** khi đã khớp mật khẩu: nói "bị khoá" cho người chưa chứng minh được họ
+là chủ tài khoản chính là tiết lộ email đó tồn tại — đúng thứ mà thông báo gộp *"email hoặc mật khẩu
+không đúng"* đang tránh.
+
+Hai chốt chặn ở tầng nghiệp vụ, không tin vào việc giao diện ẩn nút: quản trị viên **không tự khoá** và
+**không tự hạ vai trò** chính mình. Hệ thống chỉ có một cấp quản trị nên một lần bấm sai là mất quyền mà
+không còn ai mở lại được, trừ khi sửa trực tiếp cơ sở dữ liệu.
+
+`GET /admin/ai/usage` trả ba nhóm số liệu — chi phí (token), độ tin cậy (tỉ lệ lỗi, số lượt phải dùng
+nhà cung cấp dự phòng), độ trễ (trung bình và P95) — tách theo chức năng và theo nhà cung cấp.
+**Không** trả về khoá API hay nội dung prompt. Độ trễ trả `null` khi chưa có lời gọi nào để tính, không
+trả 0: 0 ms là một giá trị có nghĩa, còn "chưa đo" thì không.
 
 ## 10. Quy ước chung
 

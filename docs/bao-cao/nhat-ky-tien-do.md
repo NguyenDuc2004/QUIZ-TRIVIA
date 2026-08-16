@@ -30,6 +30,10 @@
 | 10/08 (tối) | Vá 3 lỗi lộ ra khi chạy thật, trong đó **bộ test xoá sạch đồ thị máy dev** | 3/3 | 🟢 xong |
 | 11/08 | **Lát cắt 8: Trợ lý học tập RAG** (FR-31) — [M] cuối cùng của phiếu | 7/7 | 🟢 xong |
 | 10/08 (đêm) | Chuẩn bị đo mục 3.6 · chốt: **xAI Grok không có gói miễn phí** | 4/4 | 🟡 chờ hạn mức |
+| 13/08 | **Chỉ mục IVFFlat làm sai kết quả RAG** (V11 bỏ chỉ mục) + 4 chỗ giao diện hứa quá tay | 6/6 | 🟢 xong |
+| 14/08 | Hạ tầng test frontend (vitest + jsdom) · **đo mục 3.6 độ chính xác AI** | 5/5 | 🟢 xong |
+| 14/08 (chiều) | **Lát cắt 10 phần 1: quản trị người dùng + giám sát AI** (V12) | 6/6 | 🟢 xong |
+| 14/08 (tối) | **Lát cắt 10 phần 2: khu quản trị có khung riêng** — 16 API, 6 trang, 19 test | 7/7 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -1916,6 +1920,219 @@ một con số tuỳ ý khác. Ghi vào nợ.
   xanh".
 - **"Khó khăn & cách giải quyết":** xung đột vitest 3 ↔ Vite 8 là ví dụ tốt cho việc *lỗi hiện ra ở nơi
   khác chỗ gây lỗi* — triệu chứng ở lệnh build, nguyên nhân ở cấu hình test.
+
+---
+
+## 📅 T6 — 14/08/2026 (chiều) — Lát cắt 10: Quản trị, và lặp lại đúng một cái bẫy đã ghi bài học
+
+**Mục tiêu:** tính năng `[S]` đầu tiên sau khi đóng hết mức `[M]`. Chọn Quản trị vì nó là thứ duy nhất
+chặn mục 3.3 báo cáo (*Giao diện phía quản trị*), và Chương 2 đã đặc tả sẵn bốn tác nhân.
+
+**Xong:** migration V12 · 3 API quản lý người dùng + 1 API giám sát AI · 2 trang giao diện · 10 ca test.
+
+### Khoá tài khoản, không xoá người dùng
+
+Không làm endpoint xoá người dùng. Bài đã làm, quiz đã soạn, học liệu đã chia sẻ đều là dữ liệu **người
+khác đang dùng hoặc đang được thống kê**: một quiz công khai có thể đang có người làm, một lượt làm bài
+nằm trong bảng xếp hạng, một tài liệu đã chia sẻ đang là nguồn cho trợ lý trả lời. Xoá tài khoản kéo theo
+xoá hoặc làm mồ côi những thứ đó.
+
+### Điều dễ làm sai nhất: "khoá" mà không có hiệu lực ngay
+
+Đặt cờ `locked = true` là chưa đủ, và đây là chỗ dễ tưởng đã xong:
+
+| Nếu chỉ đặt cờ | Hệ quả |
+|---|---|
+| Access token đang cầm | vẫn dùng được **15 phút** |
+| Refresh token đang cầm | vẫn gia hạn được **tới 14 ngày** |
+
+Tức "khoá" chỉ thực sự có hiệu lực sau vài phút tới vài ngày — đúng lúc quản trị viên tin rằng nó có
+hiệu lực ngay. Nên khoá phải **thu hồi toàn bộ phiên**, và trạng thái khoá kiểm ở **cả** `login` **và**
+`refresh`: chặn một lối mà bỏ lối kia thì bất kỳ đường nào cấp lại token về sau cũng mở lại cửa.
+
+Cùng lý do đó, **đổi vai trò cũng phải thu hồi phiên**: vai trò nằm trong access token, không thu hồi
+thì người vừa bị hạ quyền còn dùng quyền cũ thêm 15 phút.
+
+Kiểm chứng thật, không chỉ qua test: khoá xong thì refresh token cũ trả **401**, đăng nhập lại trả
+**403** kèm câu *"Tài khoản đã bị khoá…"*. Mở khoá thì vào lại được ngay.
+
+### Thông báo: cân giữa "nói rõ cho người dùng" và "không tiết lộ cho kẻ tấn công"
+
+Trả *"tài khoản bị khoá"* thì tiết lộ email đó tồn tại — đúng thứ mà thông báo gộp *"email hoặc mật khẩu
+không đúng"* đang tránh. Nhưng giữ nguyên câu gộp thì người dùng thật sẽ đi đặt lại mật khẩu hết lần này
+lần khác mà vẫn không vào được.
+
+Cách giải: kiểm `locked` **sau** khi đã khớp mật khẩu. Lúc đó người gọi đã chứng minh họ biết mật khẩu,
+nên câu "bị khoá" không cho thêm thông tin gì cho kẻ tấn công.
+
+### Lặp lại đúng một cái bẫy dự án đã ghi bài học
+
+Truy vấn danh sách người dùng đổ **500** với `ERROR: function lower(bytea) does not exist`.
+
+Nguyên nhân: viết `like lower(concat('%', :keyword, '%'))` rồi truyền `null` vào `keyword` — driver
+PostgreSQL không suy được kiểu tham số nên gửi dưới dạng `bytea`. Mất luôn cả nhánh "không lọc theo từ
+khoá", tức nhánh mặc định của trang.
+
+Đây **cùng một cái bẫy** đã ghi ở `MaterialChunkRepository` ngày 11/08: *cẩn thận với tham số null trong
+biểu thức `:x is null`*. Lần đó nhánh null lặng lẽ trả rỗng; lần này nó đổ hẳn 500 — dễ phát hiện hơn,
+nhưng gốc y nguyên.
+
+`QuizRepository` đã làm đúng từ trước và tôi không đọc lại trước khi viết: nó gọi `lower()` lên **cột**,
+còn tham số được bọc `%` sẵn ở tầng service. Đã sửa theo đúng mẫu đó.
+
+> Bài học: **ghi bài học vào tài liệu không đủ — phải đọc lại mã đã có cho cùng loại việc.** Dự án đã có
+> một truy vấn lọc-nhiều-tiêu-chí chạy đúng; mở nó ra xem trước khi viết cái thứ hai thì mất một phút,
+> còn dò lỗi 500 mất nửa giờ.
+
+### Hai việc quản trị viên không làm được
+
+Chặn ở **tầng nghiệp vụ**, không tin vào việc giao diện ẩn nút: không tự khoá và không tự hạ vai trò
+chính mình. Hệ thống chỉ có một cấp quản trị nên một lần bấm sai là mất quyền mà không còn ai mở lại
+được. Giao diện cũng vô hiệu hoá hai thao tác đó với chính hàng của người đang đăng nhập — để nút bấm
+được rồi báo lỗi là bắt người dùng học bằng cách thất bại.
+
+### Giám sát AI: số liệu thật đã có ngay
+
+Trang giám sát đọc `ai_request_logs`, và vì hệ thống đã chạy thật nên nó có số ngay: **306 lượt gọi
+trong 30 ngày, 141 thành công, 165 thất bại, 39 220 token vào / 12 102 token ra, độ trễ trung bình
+2 953 ms và P95 9 051 ms.** Tỉ lệ thất bại 54% là dữ liệu lịch sử của những lần đụng hạn mức hồi 08/08
+khi chưa giãn nhịp — đúng thứ trang này ra đời để cho thấy.
+
+Một chi tiết nhỏ nhưng có ý: độ trễ trả `null` khi chưa có lời gọi nào để tính, **không** trả 0. Chức
+năng `explain-answer` hiện đúng như vậy (11 lượt, không có số độ trễ). 0 ms là một giá trị có nghĩa,
+còn "chưa đo" thì không — gộp hai thứ thành 0 làm giao diện hiển thị một độ trễ không tồn tại.
+
+### Còn nợ trong lát cắt này
+
+- **FR-38** kiểm duyệt quiz/câu hỏi công khai — chưa làm.
+- **FR-39** cấu hình thứ tự nhà cung cấp AI và hạn mức ở runtime — chưa làm. Phần này đòi sửa
+  `AiOrchestrator` đang chạy tốt, nên để sau khi những phần không rủi ro đã xong.
+
+### Ghi chú báo cáo
+- **Mục 3.3 (giao diện quản trị):** giờ có hai màn thật để chụp — Quản lý người dùng và Giám sát AI.
+- **Mục 2.6 (đặc tả UC):** bổ sung UC-14 với luồng thay thế *"tự khoá chính mình → 400"*.
+- **"Khó khăn & cách giải quyết":** lỗi `lower(bytea)` là ví dụ tốt cho việc *bài học đã ghi vẫn lặp lại
+  nếu không đọc lại mã cùng loại việc*. Nêu cả hai lần gặp, không chỉ lần này.
+
+---
+
+## 📅 T6 — 14/08/2026 (tối) — Khu quản trị thành một khu riêng, và một ô nhập cố ý không làm
+
+**Mục tiêu:** hoàn thiện lát cắt 10. Điểm khởi đầu là nhận xét của chính người dùng dự án: *"trang admin
+phải làm với 1 giao diện khác thay vì thêm trên menu chứ"* — và nhận xét đó đúng.
+
+**Xong:** 16 endpoint · 6 mục sidebar · 4 trang mới · biểu đồ Recharts · 19 ca test pass · 2 wireframe
+báo cáo (Hình 2.38, 2.39).
+
+### Vì sao khu quản trị cần khung giao diện riêng
+
+Trước đó khu quản trị chỉ là một menu xổ xuống trên thanh điều hướng của khu học tập. Ba lý do để tách:
+
+| Lý do | Cụ thể |
+|---|---|
+| **Ngữ cảnh làm việc khác** | Menu "Khám phá / Phòng đấu / Trợ lý AI / Lộ trình / Tiến độ" không liên quan gì khi đang khoá tài khoản hay đọc chi phí AI |
+| **Trông khác là một lớp an toàn** | Thao tác ở đây tác động lên **người khác** và không có nút hoàn tác. Nền tối + sidebar khiến admin luôn biết mình đang ở đâu, thay vì tưởng vẫn ở trang cá nhân rồi bấm nhầm |
+| **Mở rộng được** | Sidebar dọc chứa 6 mục vẫn gọn; thanh ngang của khu học tập đã có 10 mục và sẽ tràn hàng |
+
+Lối vào chuyển vào menu tài khoản, lối ra là "Về khu học tập" ngay đầu sidebar — chuyển ngữ cảnh phải đi
+được **cả hai chiều**, không để ai mắc kẹt một bên.
+
+### Ô nhập hạn mức AI: cố ý KHÔNG làm (FR-49)
+
+Thiết kế ban đầu có `PUT /admin/ai/quota` — "mỗi người tạo nội dung tối đa N lượt gọi AI mỗi ngày". Làm
+được ngay, nhưng `AiOrchestrator` **không đọc con số đó** và cũng chưa đếm lượt gọi theo từng người dùng.
+Một ô nhập lưu được giá trị mà không chặn được gì **tệ hơn là không có nó**: quản trị viên tin rằng chi
+phí đã bị giới hạn, trong khi thực tế không. Đây cùng một loại lỗi với việc bịa số liệu cho giao diện đẹp,
+chỉ là ở dạng khó thấy hơn.
+
+Nên endpoint cấu hình AI **chỉ đọc**: trả `daCauHinh: true/false` cho từng nhà cung cấp, không bao giờ trả
+giá trị khoá, và không đọc cũng không ghi system prompt (prompt là nơi đặt bốn lớp chống tiêm chỉ thị khi
+chấm bài — đọc được là bước đầu để sửa được). Phép kiểm chốt **đúng năm trường** của mỗi nhà cung cấp, nên
+thêm bất kỳ trường nào — kể cả "khoá đã che một phần" — làm test đỏ.
+
+### Đóng phòng là `POST .../close`, không phải `DELETE`
+
+Thiết kế đầu ghi `DELETE /admin/rooms/{code}`. Nhưng thao tác này **không xoá** bản ghi phòng: nó chuyển
+phòng sang `FINISHED` và xoá trạng thái Redis. Bản ghi phải còn vì điểm cuối ván của những người đã chơi
+nằm ở `game_room_players` tham chiếu tới nó. Một `DELETE` không xoá gì là tên gọi nói sai việc nó làm, nên
+đổi thành `POST .../close` và ghi rõ lý do vào `api.md`.
+
+Phòng đấu là phần duy nhất của hệ thống có trạng thái sống ở **hai nơi** — metadata ở PostgreSQL, trạng
+thái đang chơi ở Redis kèm TTL. Khi hai nơi lệch nhau thì phòng "treo": hiện trong danh sách nhưng không
+ai chơi được. Trang giám sát tính thành một cờ `treo` riêng, và `soNguoiChoi` trả `null` thay vì 0 khi
+không đọc được Redis — "không rõ" khác "phòng trống", và gộp lại thì mất đúng thông tin cần tìm.
+
+### Một phép kiểm suýt nữa vô nghĩa
+
+Test "ẩn quiz thì nó biến khỏi danh sách" ban đầu chỉ kiểm danh sách **sau khi** ẩn là rỗng. Nhưng nếu từ
+khoá tìm kiếm vốn không khớp gì thì nó rỗng sẵn, và phép kiểm xanh mà không kiểm gì cả — đúng cái bẫy đã
+mắc hôm 13/08 với hai test hồi quy chỉ mục vector. Lần này phát hiện trước khi commit: thêm một chốt
+"quiz **có** trong danh sách trước khi ẩn" ở đầu, khiến phần sau không thể xanh rỗng.
+
+### Dùng lại truy vấn thay vì chép nó
+
+Danh sách quiz để kiểm duyệt gọi lại đúng `QuizService.listPublic` mà trang khám phá của người học dùng.
+Hai lợi ích: thứ được kiểm duyệt luôn đúng bằng thứ người học thấy, và không chép lại phần ghép mẫu
+`like` — nơi đã sinh ra lỗi `lower(bytea)` hai lần. Chép logic đó lần thứ ba là chép lại cả rủi ro.
+
+### Còn nợ
+
+- **FR-49** hạn mức lượt gọi AI mỗi ngày — hoãn có chủ đích, cần bộ đếm theo người dùng ở Redis và điểm
+  chặn trong `AiOrchestrator`. `GET /admin/ai/usage` vẫn cho thấy chi phí thật để phát hiện lạm dụng.
+- **FR-38** (duyệt quiz trước khi công khai) và báo cáo vi phạm từ người dùng — đòi đổi nghiệp vụ và
+  thêm bảng, chưa làm.
+
+### Sidebar: làm lại lần hai, và một vòng thử bảng màu sáng rồi quay lại
+
+Bản đầu là danh sách phẳng sáu mục. Làm lại lần hai: gom nhóm có nhãn nhỏ (*Người dùng & nội dung* ·
+*Giám sát*), khối chữ **Q** làm dấu nhận diện, mục đang chọn dùng nền sáng nhẹ + viền tím mảnh, lối ra
+ghim đáy. Nhãn của nhóm đầu bỏ đi vì nó trùng đúng tên mục bên dưới — chiếm một dòng mà không thêm gì.
+
+**Một lỗi thật lộ ra khi làm lại:** bản trước đặt `breakpoint="lg"` kèm `collapsedWidth={0}` mà **không**
+bật `collapsible`. Trên màn hình hẹp sidebar tự ẩn, và vì không có nút gập nào thì cũng **không còn cách
+nào mở lại** — admin mất sạch đường điều hướng. Giờ thu về dải 72px chỉ còn icon kèm tooltip, nút gập đặt
+ở header.
+
+Có thử một vòng đổi sang bảng màu sáng (nền trắng, mục chọn nền tím nhạt). Nhìn thì sạch hơn, nhưng
+**đổi cả lý do tồn tại của khung riêng**: `ui-design-system.md §1` ghi nền tối là *lớp an toàn* — dấu hiệu
+để admin biết mình đang ở khu mà mọi thao tác tác động lên người khác và không có nút hoàn tác. Sidebar
+sáng thì dấu hiệu đó chỉ còn là bố cục dọc. Đã quay lại nền đen; bảng màu sáng bị bỏ, nhưng phần cấu trúc
+làm trong vòng đó (gom nhóm, thu gọn, viền `ring`) thì giữ.
+
+Viền mục đang chọn vẽ bằng `ring` chứ không phải `border`: `border` cộng 1px vào hộp, làm mục đang chọn
+cao hơn các mục khác 2px, đủ để cả danh sách nhấp lên xuống mỗi lần đổi trang.
+
+### Class đúng nhưng màu sai: cascade layer của Tailwind v4 thua CSS của Ant Design
+
+Đổi sidebar sang nền đen chữ trắng xong, người dùng báo *"chưa thấy thay đổi"* kèm ảnh chụp: **toàn bộ
+nhãn và icon đều màu tím**, dù code ghi `text-white`.
+
+Nguyên nhân: các mục là thẻ `<a>`. Ant Design chèn CSS `a { color }` lúc chạy ở **ngoài** cascade layer,
+còn utility của Tailwind v4 nằm **trong** `@layer`. Theo luật cascade, **luật ngoài layer thắng luật trong
+layer** — bất kể specificity. Nên `.text-white` (specificity cao hơn) vẫn thua `a` (specificity thấp hơn).
+Chữ "Quiz AI" trắng đúng vì nó là `<span>` có class màu riêng; nhãn mục và icon chỉ *thừa hưởng* màu từ
+thẻ `a` nên tím theo.
+
+Cách sửa: hậu tố `!` (`text-white!`), và icon trong `<a>` phải đặt màu **tường minh**.
+
+**Bài học đắt hơn phần sửa:** em đã chụp ảnh khu quản trị bốn lần và nhìn qua mà không thấy, vì chỉ *liếc*
+xem bố cục chứ không kiểm màu. Kiểm đúng là đọc màu đã render:
+`getComputedStyle(el).color` → `rgb(0,0,0)` cho nền, `rgb(255,255,255)` cho chữ. Nhìn ảnh bằng mắt không
+thay được phép đo.
+
+**Lỗi này còn ở chỗ khác, có sẵn từ trước.** Đo thanh điều hướng khu học tập: cả **10/10** link ra
+`rgb(86,36,208)` trong khi code ghi `text-ink`. Tức mục đang mở và mục chưa mở **trông y hệt nhau** —
+người dùng không có cách nào biết mình đang ở trang nào. Đã sửa; đo lại thì đúng 1 mục tím (trang hiện
+tại) và 9 mục màu mực. Quy tắc + cách kiểm đã ghi vào `ui-design-system.md §2`.
+
+### Ghi chú báo cáo
+- **Mục 2.5 (thiết kế giao diện):** thêm Hình 2.38 (quản lý người dùng) và Hình 2.39 (giám sát AI), cả
+  hai vẽ sidebar nền tối để thấy rõ khu quản trị dùng khung riêng. Bỏ ba dòng caption viết tay bị trùng
+  với caption do `build.js` tự sinh — bản Word trước đó có caption đôi ở Hình 2.37–2.39.
+- **Mục 3.3:** có thêm bốn màn để chụp — Tổng quan (3 biểu đồ), Danh mục, Kiểm duyệt quiz, Phòng đấu.
+- **"Khó khăn & cách giải quyết":** bốn ví dụ dùng được — (1) ô nhập hạn mức cố ý không làm vì không chặn
+  được gì; (2) `DELETE` không xoá gì nên đổi thành `POST .../close`; (3) phép kiểm suýt xanh rỗng;
+  (4) **cascade layer**: class đúng mà màu vẫn sai, và bài học *nhìn ảnh không thay được phép đo*.
 
 ---
 

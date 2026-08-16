@@ -2,7 +2,12 @@ import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Avatar, Dropdown, Input, Layout, Space, Tag, Typography } from 'antd'
 import type { MenuProps } from 'antd'
-import { DownOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
+import {
+  DownOutlined,
+  LogoutOutlined,
+  SettingOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
 import { useAuthStore } from '@/features/auth/store/authStore'
 
@@ -32,14 +37,23 @@ export default function AppLayout() {
   const [keyword, setKeyword] = useState('')
 
   const canCreate = user?.role === 'CREATOR' || user?.role === 'ADMIN'
+  const isAdmin = user?.role === 'ADMIN'
 
+  // Màu chữ phải có hậu tố `!`. Đây là thẻ <a>, và Ant Design chèn CSS `a { color }` lúc chạy ở NGOÀI
+  // cascade layer, còn utility Tailwind v4 nằm TRONG @layer — luật ngoài layer thắng luật trong layer.
+  // Thiếu `!` thì cả mục đang mở lẫn mục chưa mở đều ra màu link của antd, tức mất luôn dấu hiệu
+  // "đang ở trang nào".
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `text-sm font-bold whitespace-nowrap ${
-      isActive ? 'text-brand-strong' : 'text-ink hover:text-brand-strong'
+      isActive ? 'text-brand-strong!' : 'text-ink! hover:text-brand-strong!'
     }`
 
   // Đăng xuất nằm dưới một đường kẻ và là mục cuối: nó là hành động duy nhất trong menu không thể
   // hoàn tác bằng một lần bấm nữa, nên không đặt cạnh mục điều hướng thường.
+  //
+  // Lối vào khu quản trị nằm ở đây chứ KHÔNG phải một mục trên thanh điều hướng: nó không phải nơi
+  // người ta ghé qua khi đang học, mà là chuyển sang một ngữ cảnh làm việc khác có layout riêng
+  // (docs/ui-design-system.md §1). Thanh ngang cũng đã có nhiều mục và sẽ tràn hàng.
   const accountMenuItems: MenuProps['items'] = [
     {
       key: 'profile',
@@ -47,6 +61,17 @@ export default function AppLayout() {
       label: 'Trang cá nhân',
       onClick: () => navigate('/profile'),
     },
+    ...(isAdmin
+      ? [
+          { type: 'divider' as const },
+          {
+            key: 'admin',
+            icon: <SettingOutlined />,
+            label: 'Khu quản trị',
+            onClick: () => navigate('/admin'),
+          },
+        ]
+      : []),
     { type: 'divider' },
     {
       key: 'logout',
