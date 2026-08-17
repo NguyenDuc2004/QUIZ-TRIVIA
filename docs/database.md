@@ -233,9 +233,20 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 | seasons: id, name, start_at, end_at, status (active/ended) |
 | season_rankings: id, season_id (FK), user_id (FK), final_score, final_rank, reward_badge_id |
 
-**Notifications** ([features/16](features/16-notifications.md))
-| notifications: id, user_id (FK), type, title, body, data (jsonb), is_read, created_at |
-| notification_settings: user_id (PK), srs_reminder, assignment_due, achievement, email_enabled, quiet_hours (jsonb) |
+**Notifications** *(V18)* — Thông báo & nhắc ôn tập ([features/16](features/16-notifications.md))
+| notifications: id, user_id (FK), type, title, body, data (jsonb), is_read, **dedupe_key**, created_at |
+| notification_settings: user_id (PK), **disabled_types (jsonb)**, created_at, updated_at |
+
+> **`dedupe_key` + `UNIQUE (user_id, dedupe_key)`** là chốt chống gửi trùng, thay cho khoá phân tán Redis mà
+> đặc tả gợi ý: khoá phân tán chỉ chặn *hai instance cùng lúc*, còn ràng buộc duy nhất chặn **mọi** đường —
+> deploy lại giữa trưa, gọi tay để thử, tính lại XP. Khoá là `srs:{ngày}`, `badge:{mã}`, `level:{cấp}`. NULL
+> khi không cần chống trùng, và PostgreSQL coi mỗi NULL là một giá trị khác nhau nên nhiều dòng NULL cùng tồn
+> tại được. Chèn bằng `ON CONFLICT DO NOTHING`, **không** bắt ngoại lệ — trùng khoá là đường chạy bình thường
+> của một job hằng ngày.
+>
+> **`disabled_types`** là mảng jsonb tên các loại **bị tắt**, thay cho một cột boolean mỗi loại: thêm loại
+> thông báo mới thì không phải đụng schema. Mặc định `[]` = bật tất cả — người chưa từng vào trang cài đặt vẫn
+> nên nhận nhắc ôn, đó là lý do tính năng này tồn tại.
 
 ### 1.3. pgvector (RAG)
 

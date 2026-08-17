@@ -112,4 +112,26 @@ public interface FlashcardReviewRepository extends JpaRepository<FlashcardReview
 
         long getSoThe();
     }
+
+    /**
+     * <b>Ai</b> có thẻ đến hạn, gộp theo người dùng — nguồn của job nhắc ôn tập (features/16, FR-66).
+     * <p>
+     * Đi từ phía "cả hệ thống" xuống, ngược với mọi truy vấn khác trong repository này vốn đi từ một người.
+     * Cách hiển nhiên hơn là lấy danh sách người dùng rồi đếm cho từng người, nhưng đó là một truy vấn cho
+     * <i>mỗi</i> tài khoản trong hệ thống mỗi ngày — kể cả người chưa từng tạo một thẻ nào. Một câu
+     * {@code group by} chỉ trả về đúng những người thật sự có thẻ đến hạn.
+     */
+    @Query("""
+            select r.user.id as userId, count(r) as soThe
+            from FlashcardReview r
+            where r.dueDate <= :homNay
+            group by r.user.id
+            """)
+    List<NguoiDenHanRow> demDenHanTheoNguoi(@Param("homNay") LocalDate homNay);
+
+    interface NguoiDenHanRow {
+        UUID getUserId();
+
+        long getSoThe();
+    }
 }

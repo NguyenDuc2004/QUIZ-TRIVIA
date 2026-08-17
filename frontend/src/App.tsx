@@ -16,6 +16,8 @@ import LearningPathPage from '@/features/recommend/pages/LearningPathPage'
 import DeckDetailPage from '@/features/flashcard/pages/DeckDetailPage'
 import DecksPage from '@/features/flashcard/pages/DecksPage'
 import AchievementsPage from '@/features/gamification/pages/AchievementsPage'
+import NotificationsPage from '@/features/notification/pages/NotificationsPage'
+import NotificationSettingsPage from '@/features/notification/pages/NotificationSettingsPage'
 import ReviewSessionPage from '@/features/flashcard/pages/ReviewSessionPage'
 import QuizIntroPage from '@/features/attempt/pages/QuizIntroPage'
 import BrowseQuizzesPage from '@/features/quiz/pages/BrowseQuizzesPage'
@@ -87,6 +89,10 @@ export default function App() {
         <Route path="/flashcards" element={<DecksPage />} />
         {/* Thành tích (features/13) — XP, cấp độ, chuỗi ngày, huy hiệu */}
         <Route path="/achievements" element={<AchievementsPage />} />
+        {/* Thông báo (features/16). Không có mục trên thanh điều hướng: lối vào là chuông ở góc phải,
+            và thêm một mục thứ sáu vào thanh vừa gom xuống 5 mục là đi ngược việc vừa làm. */}
+        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/notifications/settings" element={<NotificationSettingsPage />} />
         <Route path="/flashcards/review" element={<ReviewSessionPage />} />
         <Route path="/flashcards/decks/:id" element={<DeckDetailPage />} />
         {/* Trợ lý học tập: mở cho MỌI người đã đăng nhập, không riêng CREATOR — người học chính là
