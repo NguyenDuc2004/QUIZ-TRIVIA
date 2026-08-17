@@ -24,6 +24,42 @@ Phát hiện và cảnh báo hành vi gian lận trong chế độ thi (bài thi
   - **Chủ quiz** — cột *Rủi ro* + dòng cảnh báo ở trang thống kê quiz, dẫn sang màn chấm bài. Không có cột này thì chủ quiz *có quyền* xem báo cáo nhưng phải mở từng bài mới tìm ra, nên với hàng trăm bài nộp thì trên thực tế chỉ Admin phát hiện được — còn người hiểu hoàn cảnh lớp mình nhất thì không thấy gì.
 - **FR-48** [C] ⏳ Chế độ thi nghiêm ngặt: bắt buộc fullscreen, khóa chuột phải, cảnh báo khi vi phạm.
 
+## Cảnh báo live trong phòng đấu — thiết kế đã chốt, làm sau tính năng 16
+
+Phần chống gian lận này **chỉ áp cho bài thi cá nhân chế độ EXAM**. Phòng đấu (tính năng 04) hiện không có
+tín hiệu nào. Đây là lỗ thật, đã chốt hướng làm nhưng **hoãn tới sau tính năng 16 (Thông báo)** vì hạ tầng gửi
+thông báo tới một người là thứ phần này cần và tính năng 16 chính là nó.
+
+### Host được làm gì, và không được làm gì
+
+| Trong ván | Sau ván |
+|---|---|
+| Host thấy cờ, bấm **"Nhắc riêng"** → thí sinh đó nhận thông báo *"hệ thống ghi nhận bạn rời trang làm bài"*. Mọi tín hiệu vào log | Kết luận và xử lý điểm ở màn báo cáo, dùng lại cơ chế `PENDING → VALID/INVALID` kèm ghi chú đã có |
+
+**Không có trừ điểm, không buộc nút Kick vào tín hiệu hành vi.** Lý do là lý do trung tâm của cả tính năng:
+ở màn rà soát sau bài thi, giáo viên có *thời gian* — đọc chuỗi tín hiệu, cân nhắc hoàn cảnh, hỏi lại học sinh,
+rồi mới kết luận, và quyết định lùi lại được. Giữa phòng đấu thì host có ba giây, giữa lúc đang điều hành, trên
+một tín hiệu vẫn giả mạo được và vẫn có cách giải thích vô hại. Một thông báo hệ thống bật lên → cờ đỏ → học
+sinh bị đuổi khỏi cuộc thi tính điểm, không hoàn tác được, không được nói gì. Nhắc thì đủ để người định gian
+lận biết mình đang bị thấy, mà không phạt oan ai.
+
+Kick vẫn nên có, nhưng cho việc khác (phá phòng, biệt danh bậy) — đó là việc của tính năng 04.
+
+### Ba việc phải làm trước, không phải chi tiết
+
+1. **Thêm kênh riêng cho host.** Hiện chỉ có **một** kênh phát `/topic/room/{code}` và *mọi người chơi đều
+   subscribe nó*. Đẩy cảnh báo lên đó là công bố tên người bị nghi cho cả phòng — làm nhục công khai dựa trên
+   tín hiệu giả mạo được. Phải dùng `convertAndSendToUser` tới đúng host.
+2. **Ngưỡng phải khác ngưỡng bài thi.** Phòng đấu nhiễu hơn nhiều: người chơi trên điện thoại, một tin nhắn
+   đến là một `visibilitychange`. Phòng 10 người × 10 câu thì gần như chắc chắn có người đạt 3 lần mà không
+   gian lận gì. Nên báo theo **khuôn lặp** (rời trang rồi quay lại đúng trước khi hết giờ câu, lặp ở nhiều câu)
+   chứ không đếm số lần — cùng bài học với trọng số giảm dần ở đây.
+3. **Khách vãng lai.** Phòng đấu cho khách vào bằng mã PIN, họ không có tài khoản nên log gắn với *khoá phiên*
+   chứ không phải `user_id`. Thông báo minh bạch vẫn phải hiện cho họ.
+
+FR-44 vẫn không làm được (phòng đấu không lưu lựa chọn từng câu) nhưng cảnh báo live không cần dữ liệu đó, nên
+không đụng tới quyết định dưới đây.
+
 ## Vì sao bỏ FR-44
 
 Phòng đấu real-time (tính năng 04) giữ toàn bộ diễn biến ván trong Redis và **chỉ ghi xuống PostgreSQL bảng
