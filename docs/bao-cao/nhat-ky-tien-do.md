@@ -37,6 +37,7 @@
 | 16/08 | Sửa trùng mã FR (87 mã, 1..87) · **Lát cắt 11: Flashcard + SRS** — 12 API, 3 trang, 17 test | 7/7 | 🟢 xong |
 | 16/08 (tối) | **FR-38: AI sinh thẻ từ học liệu** (V14) — đo thật 6/6 thẻ hợp lệ, 10s | 5/5 | 🟢 xong |
 | 16/08 (đêm) | **Lát cắt 13: Gamification** (V15) — XP/cấp/chuỗi/huy hiệu/thử thách, 21 test | 6/6 | 🟢 xong |
+| 17/08 (tối) | **Lát cắt 12: Chống gian lận** (V17) — 6 tín hiệu, điểm rủi ro, AI nhận định, 35 test · bỏ FR-44 có lý do | 7/7 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -2433,6 +2434,81 @@ Huy hiệu tự trao đúng hai cái: `FIRST_STEPS` (≥50 XP) và `PERFECT_1` (
 - **"Khó khăn & cách giải quyết":** ba cái bẫy Spring/JPA ở trên, đặc biệt cái thứ ba — *bắt ngoại lệ ràng
   buộc bên trong transaction không cứu được gì*, một hiểu sai rất dễ mắc.
 - **Mục 3.4:** ví dụ về test viết theo **tính chất** thay vì theo **giá trị**, và nó bắt được lỗi thiết kế.
+
+---
+
+## 📅 T2 — 17/08/2026 (tối) — Lát cắt 12: Chống gian lận, và một yêu cầu tôi quyết định bỏ
+
+**Mục tiêu:** làm nốt tính năng 12 trong 5 tính năng `[S]` còn lại (13 → 15 → **12** → 16 → 14).
+
+**Xong:** V17 (2 bảng) · 4 endpoint · hook thu tín hiệu + 3 màn hình · 20 test backend + 15 test frontend ·
+chạy thật 9/9 phép kiểm toàn tuyến trên server đang chạy.
+
+### Một yêu cầu chức năng tôi bỏ, và vì sao đó không phải cắt bớt cho nhanh
+
+FR-44 đòi *phát hiện đáp án trùng bất thường giữa các người chơi trong cùng phòng real-time*. Đọc lại tính năng
+04 mới thấy nó **không lưu ai chọn phương án nào ở câu nào** — diễn biến ván nằm trong Redis, xuống PostgreSQL
+chỉ còn bảng xếp hạng cuối ván. Muốn đối chiếu thì phải đổi mô hình dữ liệu của một tính năng đã xong.
+
+Đã hỏi lại người hướng dẫn dự án và chọn **phương án 1: bỏ FR-44, ghi rõ lý do**. Lý do không chỉ là chi phí:
+trong phòng đấu mọi người làm **cùng một bộ câu 4 phương án**, nên hai người trùng đáp án là chuyện thường —
+kể cả trùng ở câu sai, vì phương án gây nhiễu được thiết kế để hấp dẫn. Với phòng 5–10 người, tín hiệu này
+sinh báo động sai liên tục. Đổi mô hình dữ liệu của tính năng 04 để lấy một tín hiệu nhiễu là lỗ vốn.
+
+Điều cần rút ra: **khi bỏ một yêu cầu, chỗ ghi lý do phải là đặc tả, không phải commit message.** Người đọc
+`docs/features/12-anti-cheat.md` sáu tháng sau sẽ hỏi "sao thiếu FR-44", và câu trả lời phải nằm ngay đó.
+
+### Trọng số tuyến tính làm cờ mất nghĩa
+
+Bản đầu cộng thẳng: mỗi lần mất focus +8 điểm. Thử với một bài thi 60 phút thì hỏng ngay — máy có thông báo,
+người thi bị gọi, mất focus mươi lần là bình thường, và bài nào cũng vượt ngưỡng 60. **Khi mọi bài đều bị gắn
+cờ thì cờ không còn nói gì cả**, và người rà soát sẽ bỏ qua cả trang.
+
+Sửa thành trọng số giảm dần: 3 lần đầu tính đủ, từ lần thứ 4 nhân 0.3. Ba lần chuyển tab vẫn đáng để ý, lần thứ
+mười hai thì không đáng gấp bốn lần thứ ba.
+
+### Hai lớp cho một lời hứa về quyền riêng tư
+
+Màn làm bài nói với người thi: *"hệ thống không đọc nội dung bạn dán"*. Hook client đã chỉ lấy `.length` rồi bỏ
+chuỗi đi. Nhưng nếu chỉ có một lớp thì **một bản client bị sửa là đủ** để nội dung chảy vào cơ sở dữ liệu. Nên
+server không lưu gói tin của client mà **dựng lại `detail` từ đúng hai trường số** (`length`, `seconds`). Kiểm
+lại trên server đang chạy: `detail` của PASTE là `{"length": 400}` — chỉ một con số.
+
+Test frontend cũng kiểm theo cách đó: đưa vào một chuỗi thật rồi khẳng định `JSON.stringify(lô)` **không chứa**
+chuỗi đó. Kiểm `length` đúng thì không đủ — nếu ai đó thêm trường `text` vào sau này, `length` vẫn đúng.
+
+### Ba chỗ giao diện cố ý không làm cho "đẹp"
+
+| Chỗ | Làm gì | Vì sao |
+|---|---|---|
+| Thanh điểm rủi ro | **Cam, không đỏ** | Đỏ đọc thành "đã kết luận có tội", còn trạng thái thật chỉ là "đáng xem" |
+| Câu nhắc "không phải bằng chứng" | Đặt **cạnh con số**, không xuống cuối trang | Người đọc phải thấy hai thứ cùng lúc; nhắc sau khi đã kết luận thì vô ích |
+| Người thi xem điểm của mình | **404**, không phải 403 | 403 đã là một xác nhận rằng bài đó có báo cáo và đang bị gắn cờ |
+
+`review_status` mặc định PENDING và API **từ chối nhận PENDING như một kết luận** (400): nó là trạng thái ban
+đầu của hệ thống, không phải một lựa chọn của người rà soát. Đặc tả ghi *"không tự động phạt"* — chốt bằng mã
+chứ không bằng ý định.
+
+### Đo thật
+
+Ba bài thi mẫu với kịch bản khác nhau: dán 1500 ký tự + 3 lần chuyển tab → **98/100**; chuyển tab 4 lần + mất
+focus 2 lần → **69/100**; dán 2000 ký tự + thoát toàn màn hình → **66/100**. Cả ba đều vào hàng chờ, sắp theo
+rủi ro giảm dần, và Gemini trả nhận định thật cho cả ba. Lượt luyện tập bị từ chối `400`. Người thi bị `404`
+cả khi đọc lẫn khi kết luận. Chủ quiz bị `403` ở hàng chờ toàn hệ thống.
+
+### Nợ / chuyển sang sau
+- **FR-48** (bắt buộc toàn màn hình, khoá chuột phải) — mức `[C]`, hoãn.
+- Cảnh báo `Alert message` / `Space direction` đã bị antd v6 đánh dấu cũ, hiện ở **27 file** khắp dự án. Sửa là
+  một lượt riêng cho cả dự án, không sửa lẻ ở tính năng này để tránh hai quy ước cùng tồn tại.
+
+### Ghi chú báo cáo
+- **Mục 2.8 (ERD):** thêm 2 bảng `proctoring_events`, `attempt_integrity`. Nhấn ràng buộc `detail` chỉ chứa số.
+- **Mục 2.3 (yêu cầu phi chức năng):** đây là chỗ tốt nhất trong đồ án để nói về **quyền riêng tư** — thu dữ
+  liệu hành vi mà vẫn nói rõ thu gì, không thu gì, và không tự kết luận.
+- **"Khó khăn & cách giải quyết":** bỏ FR-44 là ví dụ về *đọc lại thiết kế của tính năng khác trước khi hứa*;
+  trọng số giảm dần là ví dụ về *ngưỡng cảnh báo phải chịu được dữ liệu thật*.
+- **Mục 3.6 (độ chính xác AI):** ba nhận định của Gemini ở trên có thể dùng làm mẫu định tính, nhưng **chưa
+  phải số đo** — muốn có tỉ lệ phát hiện đúng/nhầm thì cần bộ bài thi có nhãn, chưa làm.
 
 ---
 

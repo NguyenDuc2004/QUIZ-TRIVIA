@@ -14,6 +14,8 @@ import {
 } from 'antd'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
+import IntegrityCard from '@/features/integrity/components/IntegrityCard'
+import { useIntegrityReport } from '@/features/integrity/hooks/useIntegrity'
 import type { EssayAnswer, GradedBy } from '../api/analyticsApi'
 import { useGradingView, useOverrideGrade } from '../hooks/useAnalyticsQueries'
 
@@ -42,6 +44,10 @@ const GRADED_BY: Record<GradedBy, { label: string; color?: string }> = {
 export default function GradeAttemptPage() {
   const { id: quizId, attemptId } = useParams<{ id: string; attemptId: string }>()
   const { data, isPending, isError } = useGradingView(attemptId)
+  // Lượt luyện tập không có báo cáo và endpoint trả 404 — hook đã tắt retry, ở đây chỉ cần không hiện gì.
+  // Không dựng chỗ trống "chưa có dữ liệu giám sát": nói vậy nghe như đang thiếu, trong khi luyện tập
+  // KHÔNG được giám sát là chủ ý.
+  const { data: toanVen } = useIntegrityReport(attemptId)
 
   if (isPending) {
     return <Skeleton active paragraph={{ rows: 8 }} />
@@ -89,6 +95,10 @@ export default function GradeAttemptPage() {
           description="Điểm tổng ở trên chưa tính những câu này, nên nó chưa phải điểm cuối của bài."
         />
       )}
+
+      {/* Đặt TRƯỚC phần bài làm, sau thông tin bài: người chấm cần biết bài này có gì đáng lưu ý trước
+          khi đọc và cho điểm, chứ không phải sau khi đã chấm xong (features/12, FR-47) */}
+      {toanVen && <IntegrityCard report={toanVen} />}
 
       {data.answers.length === 0 ? (
         <EmptyState

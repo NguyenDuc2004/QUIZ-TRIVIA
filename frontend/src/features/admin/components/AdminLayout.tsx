@@ -12,6 +12,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   PlayCircleOutlined,
+  SafetyOutlined,
   TagsOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
@@ -30,7 +31,7 @@ const { Text } = Typography
  *   ở khu quản trị, thay vì tưởng vẫn ở trang cá nhân rồi bấm nhầm. Đây là lý do đầu, không phải thẩm mỹ.
  * - **Ngữ cảnh làm việc khác.** Menu "Khám phá / Phòng đấu / Trợ lý AI / Lộ trình / Tiến độ" không liên
  *   quan gì khi đang đọc chi phí AI.
- * - **Sidebar mở rộng được** — sáu mục vẫn gọn, còn thanh ngang khu học tập đã có 10 mục.
+ * - **Sidebar mở rộng được** — bảy mục vẫn gọn, còn thanh ngang khu học tập đã phải gom nhóm ở 10 mục.
  *
  * Lối vào nằm trong menu tài khoản ở {@code AppLayout}, lối ra là "Về khu học tập" ở đáy sidebar —
  * chuyển ngữ cảnh phải đi được cả hai chiều, không để ai mắc kẹt một bên.
@@ -112,6 +113,12 @@ export default function AdminLayout() {
                 label="Kiểm duyệt quiz"
                 thuGon={thuGon}
               />
+              <NavItem
+                to="/admin/integrity"
+                icon={<SafetyOutlined />}
+                label="Rà soát bài thi"
+                thuGon={thuGon}
+              />
             </NavGroup>
 
             <NavGroup label="Giám sát" thuGon={thuGon}>
@@ -190,7 +197,7 @@ export default function AdminLayout() {
  * Nhóm mục điều hướng kèm nhãn nhỏ.
  *
  * Khi thu gọn thì nhãn nhóm biến mất và chỉ còn một đường kẻ mảnh: giữ chữ ở bề rộng 72px thì nó bị cắt
- * thành mấy ký tự vô nghĩa, còn bỏ hẳn ranh giới nhóm thì sáu icon xếp liền nhau thành một dãy khó đọc.
+ * thành mấy ký tự vô nghĩa, còn bỏ hẳn ranh giới nhóm thì bảy icon xếp liền nhau thành một dãy khó đọc.
  */
 function NavGroup({
   label,

@@ -26,6 +26,7 @@ import AdminOverviewPage from '@/features/admin/pages/AdminOverviewPage'
 import AdminQuizzesPage from '@/features/admin/pages/AdminQuizzesPage'
 import AdminRoomsPage from '@/features/admin/pages/AdminRoomsPage'
 import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
+import AdminIntegrityPage from '@/features/integrity/pages/AdminIntegrityPage'
 import GenerateQuestionsPage from '@/features/ai/pages/GenerateQuestionsPage'
 import MaterialsPage from '@/features/ai/pages/MaterialsPage'
 import JoinRoomPage from '@/features/room/pages/JoinRoomPage'
@@ -142,6 +143,8 @@ export default function App() {
         <Route path="categories" element={<AdminCategoriesPage />} />
         <Route path="quizzes" element={<AdminQuizzesPage />} />
         <Route path="rooms" element={<AdminRoomsPage />} />
+        {/* Rà soát tính toàn vẹn bài thi (features/12) */}
+        <Route path="integrity" element={<AdminIntegrityPage />} />
         <Route path="ai" element={<AdminAiUsagePage />} />
       </Route>
 

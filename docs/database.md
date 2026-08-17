@@ -205,9 +205,16 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 | flashcards: id, deck_id (FK), front, back, hint, tag, source (manual/ai/from_wrong_answer), created_at |
 | flashcard_reviews: id, flashcard_id (FK), user_id (FK), ease_factor, interval_days, repetitions, due_date, last_reviewed_at | *(trạng thái SRS theo từng user)* |
 
-**proctoring_events / attempt_integrity** (Chống gian lận — [features/12](features/12-anti-cheat.md))
+**proctoring_events / attempt_integrity** *(V17)* — Chống gian lận ([features/12](features/12-anti-cheat.md))
 | proctoring_events: id, attempt_id (FK), user_id (FK), event_type, detail (jsonb), occurred_at |
-| attempt_integrity: id, attempt_id (FK), risk_score, flags (jsonb), ai_note (text), review_status (pending/valid/invalid), reviewed_by |
+| attempt_integrity: id, attempt_id (FK, unique), risk_score, flags (jsonb), ai_note (text), review_status (PENDING/VALID/INVALID), reviewed_by, reviewed_at, review_note |
+
+> `detail` **chỉ chứa số** — `{"length": 400}`, `{"seconds": 3}`. Không bao giờ chứa nội dung người dùng: server
+> dựng lại trường này từ danh sách trường vô hại thay vì lưu nguyên gói tin của client, nên kể cả một bản client
+> bị sửa cũng không đưa được nội dung vào đây.
+>
+> `review_status` mặc định **PENDING** và không có đường nào để hệ thống tự đổi nó — kết luận chỉ đến từ chủ quiz
+> hoặc Admin. Chỉ ghi cho lượt **EXAM**; lượt PRACTICE không có dòng nào ở cả hai bảng.
 
 **Gamification** ([features/13](features/13-gamification.md))
 | user_stats: user_id (PK), total_xp, level, current_streak, longest_streak, last_active_date |

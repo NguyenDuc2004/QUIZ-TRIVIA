@@ -10,6 +10,8 @@ import AttemptTimer from '../components/AttemptTimer'
 import QuestionReview from '../components/QuestionReview'
 import { MODE_LABEL, STATUS_COLOR, STATUS_LABEL, formatDuration } from '../constants'
 import { useAnswerQuestion, useAttempt, useSubmitAttempt } from '../hooks/useAttemptQueries'
+import { useProctoring } from '@/features/integrity/hooks/useProctoring'
+import ProctoringNotice from '@/features/integrity/components/ProctoringNotice'
 
 const { Text, Paragraph, Title } = Typography
 
@@ -64,6 +66,11 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
   const isPractice = attempt.mode === 'PRACTICE'
   const locked = isPractice && Boolean(feedback[question.questionId])
 
+  // Thu tín hiệu hành vi CHỈ ở chế độ thi (features/12). Luyện tập không bị theo dõi — và người dùng được
+  // nói rõ điều đó ngay trên màn hình, xem khối thông báo bên dưới. Server cũng từ chối lượt PRACTICE, nên
+  // đây là lớp thứ hai chứ không phải lớp duy nhất.
+  useProctoring(attempt.id, !isPractice)
+
   const commit = (payload: AnswerPayload) => {
     answerMutation.mutate(
       {
@@ -102,6 +109,10 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
           </Space>
         }
       />
+
+      {/* Minh bạch là ràng buộc của features/12, không phải chi tiết trang trí: thu tín hiệu hành vi mà
+          không nói với người bị thu là làm sau lưng họ. Chỉ hiện ở chế độ thi vì luyện tập không thu gì. */}
+      {!isPractice && <ProctoringNotice />}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
         <div className="flex flex-col gap-4">

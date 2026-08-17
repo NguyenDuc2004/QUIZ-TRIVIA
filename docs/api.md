@@ -497,12 +497,26 @@ chiếu thẻ đáng ngờ với nguồn.
 
 ## 7c. Chống gian lận — `/attempts/{id}/proctoring-events`, `/integrity`
 ```
-POST   /api/v1/attempts/{id}/proctoring-events   Gửi sự kiện hành vi (batch)
-GET    /api/v1/attempts/{id}/integrity           Báo cáo tính toàn vẹn (Creator/Admin)
-GET    /api/v1/admin/integrity/flagged           Danh sách bài thi bị gắn cờ
-PUT    /api/v1/admin/integrity/{id}/review       Đánh dấu hợp lệ/không hợp lệ
+POST   /api/v1/attempts/{id}/proctoring-events   Gửi lô tín hiệu hành vi (≤ 50/lô)                 ✅
+GET    /api/v1/attempts/{id}/integrity           Báo cáo tính toàn vẹn (chủ quiz hoặc Admin)       ✅
+PUT    /api/v1/attempts/{id}/integrity/review    Kết luận hợp lệ / không hợp lệ                    ✅
+GET    /api/v1/admin/integrity/flagged           Hàng chờ bài bị gắn cờ (Admin), `?status=`        ✅
 ```
-Real-time: sự kiện có thể gửi qua WebSocket `/app/room/{code}/proctoring`.
+- `POST proctoring-events` chỉ nhận **lượt EXAM của chính mình**; lượt PRACTICE trả `400`. Thân request là
+  `{ events: [{ type, occurredAt, length?, seconds? }] }` — **không có trường nội dung**, và server dựng lại
+  `detail` từ đúng hai trường số đó thay vì lưu nguyên gói tin.
+- `GET integrity` trả `404` cho **người làm bài** (kể cả bài của chính họ) — xem
+  [features/12](features/12-anti-cheat.md). Trả `404` chứ không `403` vì `403` đã là một xác nhận rằng lượt đó
+  có báo cáo.
+- `PUT review` **không** nằm dưới `/admin/`: FR-47 cho phép chủ quiz kết luận bài của quiz mình mà không cần
+  quyền quản trị. Chỉ hàng chờ toàn hệ thống là việc riêng của Admin. Gửi `status: PENDING` trả `400` —
+  PENDING là trạng thái ban đầu, không phải một kết luận.
+- Mọi báo cáo đều kèm trường `canhBao`: tín hiệu giả mạo được, điểm rủi ro **không phải bằng chứng**.
+- Hàng chờ sắp theo điểm rủi ro giảm dần, mặc định lọc `PENDING`, và **không kèm từng sự kiện** (`suKien: []`)
+  — trang đó chỉ để chọn bài cần mở.
+
+Kênh WebSocket `/app/room/{code}/proctoring` **không hiện thực**: nó chỉ cần cho FR-44 (đối chiếu đáp án trong
+phòng đấu), mà FR-44 đã bỏ — lý do ở [features/12](features/12-anti-cheat.md).
 
 ## 7d. Gamification — `/gamification`
 ```
