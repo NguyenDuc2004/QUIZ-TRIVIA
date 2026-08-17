@@ -506,10 +506,24 @@ Real-time: sự kiện có thể gửi qua WebSocket `/app/room/{code}/proctorin
 
 ## 7d. Gamification — `/gamification`
 ```
-GET    /api/v1/gamification/me            XP, level, streak, huy hiệu
-GET    /api/v1/gamification/badges        Danh sách huy hiệu (đã/chưa mở khóa)
-GET    /api/v1/gamification/daily         Daily challenge hôm nay + tiến độ
+GET    /api/v1/gamification/me         Tổng quan: XP, cấp độ + tiến độ, chuỗi ngày, số huy hiệu   ✅
+GET    /api/v1/gamification/badges     Toàn bộ huy hiệu, earnedAt = null nếu chưa mở khoá          ✅
+GET    /api/v1/gamification/daily      Thử thách hôm nay + tiến độ của tôi                        ✅
 ```
+
+**Chỉ có endpoint ĐỌC — đây là quyết định bảo mật, không phải thiếu sót.** XP chỉ đến từ hành động học thật,
+cộng qua domain event ở backend (`AttemptSubmittedEvent`, `FlashcardReviewedEvent`). Mở một đường ghi qua API
+là mở đường tự cộng điểm cho mình, và khi đó cả huy hiệu lẫn bảng xếp hạng theo mùa đều mất ý nghĩa.
+
+**Idempotent qua bảng `xp_events`.** Mỗi lần cộng ghi một dòng với khoá tự nhiên của hành động, và ràng buộc
+`UNIQUE (user_id, source_type, source_key)` là chốt cuối. Khoá của ôn thẻ gồm cả ngày (`cardId:ngày`) vì API
+ôn không chặn ôn sớm — không giới hạn thì bấm một thẻ trăm lần là trăm lần XP.
+
+`GET /badges` trả **cả huy hiệu chưa đạt** (`earnedAt: null`): danh sách chỉ có cái đã đạt thì không tạo được
+động lực nào, người học không thấy còn gì để hướng tới.
+
+`GET /me` có cờ `streakConHomNay` riêng bên cạnh `currentStreak`: chuỗi 5 ngày có thể là "đã học hôm nay" hoặc
+"học đến hôm qua, hôm nay chưa" — hai trạng thái khác nhau hoàn toàn với người dùng, mà con số không nói được.
 
 ## 7e. Lớp học — `/classrooms`, `/assignments`
 ```

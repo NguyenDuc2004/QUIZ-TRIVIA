@@ -62,6 +62,14 @@ export const appTheme: ThemeConfig = {
       defaultShadow: 'none',
       dangerShadow: 'none',
     },
+    /**
+     * Thanh tiến độ lấy màu từ `colorInfo` (xanh mặc định của antd), KHÔNG phải `colorPrimary` — nên đặt
+     * `colorPrimary` tím ở trên không đủ. Đặt ở đây thay vì truyền `strokeColor` ở từng chỗ dùng: một màu
+     * lệch bảng màu thì lệch ở mọi trang, và sửa lẻ thì trang thêm sau lại lệch tiếp.
+     */
+    Progress: {
+      defaultColor: colors.brand,
+    },
     Layout: {
       headerBg: '#ffffff',
       headerHeight: 72,

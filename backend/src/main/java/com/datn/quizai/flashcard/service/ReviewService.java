@@ -9,6 +9,7 @@ import com.datn.quizai.flashcard.dto.ReviewStats;
 import com.datn.quizai.flashcard.repository.FlashcardReviewRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,9 +37,12 @@ public class ReviewService {
     private static final int SO_NGAY_DU_BAO = 7;
 
     private final FlashcardReviewRepository reviewRepository;
+    private final ApplicationEventPublisher events;
 
-    public ReviewService(FlashcardReviewRepository reviewRepository) {
+    public ReviewService(FlashcardReviewRepository reviewRepository,
+                         ApplicationEventPublisher events) {
         this.reviewRepository = reviewRepository;
+        this.events = events;
     }
 
     /**
@@ -86,6 +90,11 @@ public class ReviewService {
 
         log.debug("Người dùng {} ôn thẻ {} mức {} → cách {} ngày", userId, cardId, quality,
                 lich.intervalDays());
+
+        // Phát sự kiện để gamification cộng XP. KHÔNG gọi thẳng GamificationService: một lỗi ở phần trò
+        // chơi hoá không được làm vỡ luồng ôn thẻ, và ôn thẻ không cần biết gamification tồn tại.
+        events.publishEvent(new FlashcardReviewedEvent(userId, cardId, LocalDate.now()));
+
         return new ReviewResult(review.getDueDate(), lich.intervalDays(), lich.repetitions(), conLai);
     }
 
