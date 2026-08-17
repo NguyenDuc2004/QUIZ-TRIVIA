@@ -37,7 +37,7 @@
 | 16/08 | Sửa trùng mã FR (87 mã, 1..87) · **Lát cắt 11: Flashcard + SRS** — 12 API, 3 trang, 17 test | 7/7 | 🟢 xong |
 | 16/08 (tối) | **FR-38: AI sinh thẻ từ học liệu** (V14) — đo thật 6/6 thẻ hợp lệ, 10s | 5/5 | 🟢 xong |
 | 16/08 (đêm) | **Lát cắt 13: Gamification** (V15) — XP/cấp/chuỗi/huy hiệu/thử thách, 21 test | 6/6 | 🟢 xong |
-| 17/08 (tối) | **Lát cắt 12: Chống gian lận** (V17) — 6 tín hiệu, điểm rủi ro, AI nhận định, 35 test · bỏ FR-44 có lý do | 7/7 | 🟢 xong |
+| 17/08 (tối) | **Lát cắt 12: Chống gian lận** (V17) — 6 tín hiệu, điểm rủi ro, AI nhận định, 44 test · bỏ FR-44 có lý do · trả lời một câu hỏi làm lộ lỗ trong FR-47 | 8/8 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -2496,8 +2496,33 @@ focus 2 lần → **69/100**; dán 2000 ký tự + thoát toàn màn hình → *
 rủi ro giảm dần, và Gemini trả nhận định thật cho cả ba. Lượt luyện tập bị từ chối `400`. Người thi bị `404`
 cả khi đọc lẫn khi kết luận. Chủ quiz bị `403` ở hàng chờ toàn hệ thống.
 
+### Một câu hỏi làm lộ ra lỗ trong chính thiết kế của mình
+
+Người hướng dẫn dự án hỏi *"ai là người thấy người làm bài gian lận"*. Trả lời xong mới thấy vấn đề: quyền thì
+đúng — chủ quiz và Admin — nhưng **chủ quiz không có hàng chờ**. Bảng *Bài làm* ở trang thống kê quiz không có
+cột nào cho biết bài nào bị gắn cờ, nên một giáo viên 200 bài nộp phải mở từng bài mới biết. Trên thực tế người
+duy nhất phát hiện được là Admin, còn người hiểu hoàn cảnh lớp mình nhất thì không thấy gì.
+
+Đó là mâu thuẫn với chính FR-47 (*"báo cáo cho Creator/Admin"*): **quyền có, nhưng đường đi tới thì không.**
+Đã bổ sung `riskScore` + `reviewStatus` vào danh sách bài làm, một cột *Rủi ro* và một dòng cảnh báo đầu trang.
+
+Chỗ đáng ghi lại là **quyết định chỉ gửi điểm của bài vượt ngưỡng**, dưới ngưỡng trả `null`. Không phải để tiết
+kiệm băng thông: gắn một con số "mức đáng ngờ" vào *từng* người học là mời người ta xếp hạng học sinh theo độ
+nghi — đúng cái tác hại mà cả tính năng này cố tránh. Và điểm 45 không kèm cờ nào thì danh sách lý do rỗng,
+người chấm không làm gì được với nó. Quyết định đặt ở **máy chủ** chứ không để giao diện tự lọc, cùng lý do với
+404 thay vì 403: một lát nữa có ai thêm một cột vào bảng thì con số không được phép đã nằm sẵn ở đó.
+
+Test của việc này ban đầu **pass rỗng**: nó khẳng định `riskScore == null` cho bài dưới ngưỡng, mà nếu hệ thống
+chẳng tính gì cho bài đó thì `null` cũng đúng. Đã thêm một phép kiểm *trước* phép kiểm chính — gọi endpoint báo
+cáo và khẳng định bản ghi tồn tại với điểm trong khoảng 1–59. Bài học lặp lại lần thứ ba trong đồ án: **test
+khẳng định một thứ vắng mặt thì phải chứng minh trước rằng thứ đó lẽ ra có mặt.**
+
 ### Nợ / chuyển sang sau
 - **FR-48** (bắt buộc toàn màn hình, khoá chuột phải) — mức `[C]`, hoãn.
+- **AI chỉ nhận số đếm theo loại tín hiệu, không nhận chuỗi thời gian.** Cố ý, để prompt không mang dữ liệu
+  định danh — nhưng hệ quả là AI không nhận ra mẫu quan trọng nhất: *rời trang rồi 3 giây sau dán một đoạn dài,
+  lặp lại đều ở từng câu*. Mắt người xem nhật ký thì thấy. Cải tiến đáng làm nhất của tính năng: gửi khoảng
+  cách thời gian giữa các tín hiệu (chỉ số giây, không nội dung).
 - Cảnh báo `Alert message` / `Space direction` đã bị antd v6 đánh dấu cũ, hiện ở **27 file** khắp dự án. Sửa là
   một lượt riêng cho cả dự án, không sửa lẻ ở tính năng này để tránh hai quy ước cùng tồn tại.
 

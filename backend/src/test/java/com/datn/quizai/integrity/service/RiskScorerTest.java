@@ -53,7 +53,7 @@ class RiskScorerTest {
         var kq = RiskScorer.tinh(List.of(th(ProctoringEventType.WINDOW_BLUR)));
 
         // WINDOW_BLUR nổ cả khi người dùng chỉ bấm vào thanh tác vụ. Tính nặng thì mọi bài đều bị gắn cờ.
-        assertThat(kq.bịGanCo()).isFalse();
+        assertThat(kq.biGanCo()).isFalse();
         assertThat(kq.co()).isEmpty();
     }
 
@@ -100,7 +100,7 @@ class RiskScorerTest {
         // Có cờ để người rà soát thấy, nhưng chưa vượt ngưỡng nên bài không bị đưa vào hàng chờ. Hai mức khác
         // nhau: "có tín hiệu" và "đáng rà soát".
         assertThat(kq.co()).isNotEmpty();
-        assertThat(kq.bịGanCo()).isFalse();
+        assertThat(kq.biGanCo()).isFalse();
     }
 
     @Test
@@ -113,7 +113,7 @@ class RiskScorerTest {
 
         var kq = RiskScorer.tinh(ds);
 
-        assertThat(kq.bịGanCo()).isTrue();
+        assertThat(kq.biGanCo()).isTrue();
         // Mỗi loại phải sinh một cờ riêng: người rà soát cần biết chuyện gì đã xảy ra, không chỉ điểm số
         assertThat(kq.co()).hasSize(3);
         assertThat(String.join(" | ", kq.co()))

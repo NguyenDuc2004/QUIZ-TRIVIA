@@ -74,7 +74,7 @@ public class IntegrityService {
 
         // Chỉ xin nhận định cho bài bị gắn cờ, và chỉ khi chưa có: gọi lại cho một bài đã có nhận định là tốn
         // hạn mức để nhận về gần đúng một đoạn văn cũ.
-        if (ketQua.bịGanCo() && integrity.getAiNote() == null) {
+        if (ketQua.biGanCo() && integrity.getAiNote() == null) {
             integrity.setAiNote(xinNhanDinh(ketQua, events));
         }
 

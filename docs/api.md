@@ -571,10 +571,16 @@ WebSocket: subscribe `/user/queue/notifications` (real-time in-app).
 GET    /api/v1/analytics/me                       Tiến độ của tôi (FR-85)
 GET    /api/v1/analytics/quizzes/{id}             Thống kê 1 quiz — chỉ chủ quiz (FR-86)
 GET    /api/v1/analytics/quizzes/{id}/attempts    Bài làm trên quiz của tôi, kèm cờ cần chấm tay
+                                                 và cờ đáng rà soát (FR-47)
 ```
 
 Cả ba đều **yêu cầu đăng nhập**. Hai endpoint `/quizzes/{id}` trả **404** khi quiz không thuộc
 người gọi — không phải 403, để không tiết lộ quiz đó có tồn tại (§10).
+
+`/quizzes/{id}/attempts` trả thêm `riskScore` và `reviewStatus`. Cả hai **chỉ khác `null` khi bài vượt ngưỡng
+gắn cờ (60)** — bài dưới ngưỡng vẫn có bản ghi trong `attempt_integrity` nhưng máy chủ cố ý không gửi con số
+ra: lý do ở [features/12](features/12-anti-cheat.md). Vì vậy `null` ở đây nghĩa là *không có gì đáng nói*,
+không phải *thiếu dữ liệu*.
 
 `/analytics/me` **không** trả điểm mạnh/yếu theo chủ đề. Phần đó ở `/recommendations/path` (§7),
 tính từ đồ thị Neo4j. Tính lại cùng kết luận từ PostgreSQL sẽ cho hai API nói về một chuyện bằng hai

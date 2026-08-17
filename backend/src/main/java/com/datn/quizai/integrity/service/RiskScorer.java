@@ -49,7 +49,7 @@ public final class RiskScorer {
      *              do thì người rà soát không làm gì được với nó
      */
     public record KetQua(int diem, List<String> co) {
-        public boolean bịGanCo() {
+        public boolean biGanCo() {
             return diem >= NGUONG_GAN_CO;
         }
     }

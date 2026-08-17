@@ -1,4 +1,5 @@
 import { apiClient } from '@/shared/api/client'
+import type { ReviewStatus } from '@/features/integrity/api/integrityApi'
 
 /** Một lượt làm bài trên đường tiến bộ. */
 export interface AttemptScore {
@@ -57,6 +58,16 @@ export interface QuizAttemptSummary {
   pendingAiCount: number
   failedAiCount: number
   needsManualGrading: boolean
+  /**
+   * Điểm rủi ro, **null khi bài không vượt ngưỡng gắn cờ** (features/12).
+   *
+   * Máy chủ cố ý không gửi điểm của bài dưới ngưỡng: gắn một con số "mức đáng ngờ" vào từng người học là mời
+   * người ta xếp hạng học sinh theo độ nghi, và một điểm thấp không kèm lý do nào thì cũng không dùng được
+   * vào việc gì. Nên `null` ở đây nghĩa là *không có gì đáng nói*, không phải *thiếu dữ liệu*.
+   */
+  riskScore: number | null
+  /** Chỉ khác null khi `riskScore` khác null. */
+  reviewStatus: ReviewStatus | null
 }
 
 /** Trạng thái chấm của một câu — quyết định con số `score` có nghĩa hay không. */

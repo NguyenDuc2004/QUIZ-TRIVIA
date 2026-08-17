@@ -38,6 +38,9 @@ export default function QuizStatsPage() {
   }
 
   const needGrading = (attempts ?? []).filter((row) => row.needsManualGrading)
+  // Chỉ đếm bài CHƯA ai xem: bài đã kết luận không còn là việc phải làm, và để lẫn vào thì con số ở dòng cảnh
+  // báo không bao giờ giảm dù chủ quiz đã rà soát hết.
+  const canRaSoat = (attempts ?? []).filter((row) => row.reviewStatus === 'PENDING')
 
   const hardColumns: ColumnsType<HardQuestion> = [
     {
@@ -95,6 +98,33 @@ export default function QuizStatsPage() {
         value ? new Date(value).toLocaleString('vi-VN') : <Text className="text-ink-soft">—</Text>,
     },
     {
+      // Cột này chỉ có nội dung ở bài vượt ngưỡng. Máy chủ không gửi điểm của bài dưới ngưỡng, nên đây không
+      // phải "ẩn cho gọn" mà là không có gì để hiện — xem javadoc của `riskScore` trong analyticsApi.
+      title: 'Rủi ro',
+      key: 'risk',
+      width: 130,
+      render: (_, row) => {
+        if (row.riskScore === null) {
+          return <Text className="text-ink-soft">—</Text>
+        }
+        return (
+          <Tooltip title="Điểm rủi ro không phải bằng chứng gian lận. Mở bài để đọc lý do cụ thể.">
+            <div className="flex flex-col items-start gap-0.5">
+              {/* Cam chứ không đỏ: đỏ đọc thành "đã kết luận có tội", còn trạng thái thật là "đáng xem" */}
+              <Tag color="orange" className="mr-0!">
+                {row.riskScore}/100
+              </Tag>
+              {row.reviewStatus !== 'PENDING' && (
+                <Text className="text-ink-soft text-xs">
+                  {row.reviewStatus === 'VALID' ? 'đã xác nhận hợp lệ' : 'đã đánh dấu không hợp lệ'}
+                </Text>
+              )}
+            </div>
+          </Tooltip>
+        )
+      },
+    },
+    {
       title: 'Trạng thái chấm',
       key: 'grading',
       width: 200,
@@ -138,6 +168,17 @@ export default function QuizStatsPage() {
           showIcon
           message={`${needGrading.length} bài đang chờ bạn chấm câu tự luận`}
           description="AI không chấm được những câu này (thường vì hết hạn mức). Điểm hiện tại của các bài đó chưa phải điểm cuối."
+        />
+      )}
+
+      {/* Không có dòng này thì FR-47 chỉ đúng một nửa: chủ quiz CÓ quyền xem báo cáo tính toàn vẹn, nhưng
+          đường vào duy nhất là mở từng bài một — với 200 bài nộp thì trên thực tế họ không bao giờ biết */}
+      {canRaSoat.length > 0 && (
+        <Alert
+          type="warning"
+          showIcon
+          message={`${canRaSoat.length} bài có nhiều tín hiệu hành vi đáng xem`}
+          description="Mở bài để đọc lý do cụ thể rồi tự kết luận. Tín hiệu thu từ trình duyệt có thể bị chặn hoặc giả mạo và mỗi tín hiệu đều có cách giải thích vô hại, nên đây không phải bằng chứng gian lận — hệ thống không tự xử lý bài nào."
         />
       )}
 

@@ -7,6 +7,10 @@ import com.datn.quizai.analytics.repository.AnalyticsRepository;
 import com.datn.quizai.auth.service.JwtService;
 import com.datn.quizai.common.OwnershipGuard;
 import com.datn.quizai.common.exception.BusinessException;
+import com.datn.quizai.integrity.domain.AttemptIntegrity;
+import com.datn.quizai.integrity.domain.ReviewStatus;
+import com.datn.quizai.integrity.repository.AttemptIntegrityRepository;
+import com.datn.quizai.integrity.service.RiskScorer;
 import com.datn.quizai.quiz.domain.Quiz;
 import com.datn.quizai.quiz.repository.QuizRepository;
 import org.springframework.stereotype.Service;
@@ -46,10 +50,14 @@ public class AnalyticsService {
 
     private final AnalyticsRepository repository;
     private final QuizRepository quizRepository;
+    private final AttemptIntegrityRepository integrityRepository;
 
-    public AnalyticsService(AnalyticsRepository repository, QuizRepository quizRepository) {
+    public AnalyticsService(AnalyticsRepository repository,
+                            QuizRepository quizRepository,
+                            AttemptIntegrityRepository integrityRepository) {
         this.repository = repository;
         this.quizRepository = quizRepository;
+        this.integrityRepository = integrityRepository;
     }
 
     /** Tiến độ của chính người gọi (FR-85). */
@@ -89,21 +97,64 @@ public class AnalyticsService {
     }
 
     /**
-     * Bài làm trên quiz mình sở hữu, kèm cờ cần chấm tay (FR-86 + nợ từ features/06).
+     * Bài làm trên quiz mình sở hữu, kèm cờ cần chấm tay và cờ đáng rà soát (FR-86, FR-47 + nợ từ
+     * features/06).
      * <p>
      * API ghi đè điểm đã có từ lát cắt 6, nhưng Creator không có cách nào <i>tìm ra</i> bài nào cần
      * chấm — nên tính năng đó trên thực tế không dùng được. Danh sách này là cửa vào còn thiếu.
+     * <p>
+     * <b>Điểm rủi ro cũng vào đây vì đúng lý do đó.</b> FR-47 cho chủ quiz quyền xem báo cáo tính toàn
+     * vẹn, nhưng đường vào duy nhất là màn chấm từng bài — một giáo viên có 200 bài nộp sẽ không bao giờ
+     * biết bài nào đáng xem trừ khi bấm vào cả 200. Quyền có mà đường đi thì không, nên trên thực tế chỉ
+     * Admin phát hiện được, còn người hiểu hoàn cảnh lớp mình nhất thì không thấy gì.
+     *
+     * <h3>Chỉ gửi điểm khi bài VƯỢT NGƯỠNG, dưới ngưỡng thì gửi null</h3>
+     * Không phải để tiết kiệm băng thông. Gắn một con số "mức đáng ngờ" vào <i>từng</i> người học là mời
+     * người ta xếp hạng học sinh theo độ nghi — đúng cái tác hại mà cả tính năng này cố tránh. Và một điểm
+     * 45 không kèm cờ nào thì không nói gì cả: danh sách lý do rỗng, người chấm không làm gì được với nó.
+     * Quyết định này đặt ở <b>máy chủ</b> chứ không để giao diện tự lọc, cùng lý do với việc trả 404 thay
+     * vì 403: một lát nữa có ai thêm một cột vào bảng thì con số không được phép đã nằm sẵn ở đó.
      */
     @Transactional(readOnly = true)
     public List<QuizAttemptSummary> quizAttempts(UUID quizId, JwtService.AuthenticatedUser current) {
         requireOwnedQuiz(quizId, current);
 
-        return repository.findQuizAttempts(quizId).stream()
-                .map(row -> new QuizAttemptSummary(
-                        row.getAttemptId(), row.getLearnerName(), row.getScore(), row.getMaxScore(),
-                        row.getSubmittedAt(), row.getPendingAiCount(), row.getFailedAiCount(),
-                        row.getPendingAiCount() + row.getFailedAiCount() > 0))
+        List<AnalyticsRepository.QuizAttemptRow> rows = repository.findQuizAttempts(quizId);
+        Map<UUID, AttemptIntegrity> toanVen = napToanVen(rows);
+
+        return rows.stream()
+                .map(row -> {
+                    AttemptIntegrity tv = toanVen.get(row.getAttemptId());
+                    // Hai biến rời thay vì hai biểu thức ba ngôi: chúng phải cùng có hoặc cùng không, và
+                    // viết thành một khối if thì không có cách nào lệch nhau về sau
+                    Integer diemRuiRo = null;
+                    ReviewStatus trangThaiRaSoat = null;
+                    if (tv != null && tv.getRiskScore() >= RiskScorer.NGUONG_GAN_CO) {
+                        diemRuiRo = tv.getRiskScore();
+                        trangThaiRaSoat = tv.getReviewStatus();
+                    }
+                    return new QuizAttemptSummary(
+                            row.getAttemptId(), row.getLearnerName(), row.getScore(), row.getMaxScore(),
+                            row.getSubmittedAt(), row.getPendingAiCount(), row.getFailedAiCount(),
+                            row.getPendingAiCount() + row.getFailedAiCount() > 0,
+                            diemRuiRo, trangThaiRaSoat);
+                })
                 .toList();
+    }
+
+    /**
+     * Nạp bản tổng hợp tính toàn vẹn cho cả danh sách trong <b>một</b> truy vấn.
+     * <p>
+     * Gọi {@code findByAttemptId} trong vòng lặp thì một quiz 200 bài nộp thành 200 truy vấn cho một cột
+     * hiển thị — và nó sẽ không lộ ra khi thử với ba bài trên máy mình.
+     */
+    private Map<UUID, AttemptIntegrity> napToanVen(List<AnalyticsRepository.QuizAttemptRow> rows) {
+        if (rows.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> ids = rows.stream().map(AnalyticsRepository.QuizAttemptRow::getAttemptId).toList();
+        return integrityRepository.findByAttemptIdIn(ids).stream()
+                .collect(Collectors.toMap(AttemptIntegrity::getAttemptId, tv -> tv));
     }
 
     // ------------------------------------------------------------------ nội bộ

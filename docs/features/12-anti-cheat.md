@@ -19,7 +19,9 @@ Phát hiện và cảnh báo hành vi gian lận trong chế độ thi (bài thi
 - **FR-44** [S] ⛔ Phát hiện **đáp án trùng bất thường** giữa các người chơi trong cùng phòng real-time — **bỏ**, xem "Vì sao bỏ FR-44" bên dưới.
 - **FR-45** [S] ✅ Tính **risk score** & gắn cờ (flags) cho mỗi lần làm bài; lưu nhật ký sự kiện.
 - **FR-46** [S] ✅ **AI phân tích hành vi:** LLM tổng hợp chuỗi sự kiện + số liệu thành nhận định mức độ nghi ngờ + giải thích.
-- **FR-47** [S] ✅ Báo cáo tính toàn vẹn cho Creator/Admin; cho phép đánh dấu hợp lệ/không hợp lệ.
+- **FR-47** [S] ✅ Báo cáo tính toàn vẹn cho Creator/Admin; cho phép đánh dấu hợp lệ/không hợp lệ. Có **hai** đường vào, và thiếu một trong hai thì yêu cầu này chỉ đúng nửa vời:
+  - **Admin** — hàng chờ toàn hệ thống `/admin/integrity`, lọc theo trạng thái rà soát.
+  - **Chủ quiz** — cột *Rủi ro* + dòng cảnh báo ở trang thống kê quiz, dẫn sang màn chấm bài. Không có cột này thì chủ quiz *có quyền* xem báo cáo nhưng phải mở từng bài mới tìm ra, nên với hàng trăm bài nộp thì trên thực tế chỉ Admin phát hiện được — còn người hiểu hoàn cảnh lớp mình nhất thì không thấy gì.
 - **FR-48** [C] ⏳ Chế độ thi nghiêm ngặt: bắt buộc fullscreen, khóa chuột phải, cảnh báo khi vi phạm.
 
 ## Vì sao bỏ FR-44
@@ -46,6 +48,7 @@ phòng đấu) thì FR-44 làm được gần như miễn phí trên dữ liệu
 | **Server dựng lại `detail` từ danh sách trường vô hại**, không tin gói tin của client | Client đã chỉ gửi độ dài đoạn dán, nhưng nếu chỉ có một lớp thì một bản client bị sửa là đủ để nội dung người dùng chảy vào cơ sở dữ liệu. Hai lớp cùng bảo đảm một điều |
 | **Trọng số giảm dần theo số lần** (hệ số 0.3 từ lần thứ 4) | Bài thi 60 phút trên máy có thông báo hệ thống thì mất focus mươi lần là bình thường. Cộng tuyến tính thì mọi bài thi dài đều bị gắn cờ, và khi mọi bài đều bị gắn cờ thì cờ không còn nghĩa gì |
 | **`review_status` mặc định PENDING, hệ thống không bao giờ tự kết luận** | Đặc tả ghi rõ "không tự động phạt". API còn từ chối nhận `PENDING` như một kết luận — nó là trạng thái ban đầu, không phải một lựa chọn của người rà soát |
+| **Danh sách bài làm của chủ quiz chỉ nhận điểm rủi ro của bài VƯỢT NGƯỠNG; dưới ngưỡng thì máy chủ trả `null`** | Gắn một con số "mức đáng ngờ" vào *từng* người học là mời người ta xếp hạng học sinh theo độ nghi — đúng tác hại cả tính năng này cố tránh. Một điểm 45 không kèm cờ nào cũng không dùng được vào việc gì: danh sách lý do rỗng. Quyết định đặt ở **máy chủ**, không để giao diện tự lọc, cùng lý do với 404 thay vì 403 |
 
 **Điểm rủi ro luôn được trả kèm một câu nhắc** (`canhBao`) rằng tín hiệu giả mạo được và đây không phải bằng
 chứng. Giao diện hiện câu đó **cạnh con số**, không giấu xuống cuối trang: người đọc phải thấy hai thứ cùng
