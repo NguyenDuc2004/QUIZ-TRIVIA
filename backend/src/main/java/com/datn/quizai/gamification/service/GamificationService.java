@@ -47,19 +47,22 @@ public class GamificationService {
     private final UserBadgeRepository userBadgeRepository;
     private final AchievementCounters counters;
     private final ObjectMapper objectMapper;
+    private final com.datn.quizai.season.service.SeasonLeaderboardService leaderboardService;
 
     public GamificationService(UserStatsRepository statsRepository,
                               XpEventRepository xpEventRepository,
                               BadgeRepository badgeRepository,
                               UserBadgeRepository userBadgeRepository,
                               AchievementCounters counters,
-                              ObjectMapper objectMapper) {
+                              ObjectMapper objectMapper,
+                              com.datn.quizai.season.service.SeasonLeaderboardService leaderboardService) {
         this.statsRepository = statsRepository;
         this.xpEventRepository = xpEventRepository;
         this.badgeRepository = badgeRepository;
         this.userBadgeRepository = userBadgeRepository;
         this.counters = counters;
         this.objectMapper = objectMapper;
+        this.leaderboardService = leaderboardService;
     }
 
     /**
@@ -94,6 +97,10 @@ public class GamificationService {
         stats.setCurrentStreak(streak.currentStreak());
         stats.setLongestStreak(streak.longestStreak());
         stats.setLastActiveDate(LocalDate.now());
+
+        // Đồng bộ điểm mùa (features/15). Gọi sau khi đã ghi xp_events nên đã được chặn trùng ở trên; lỗi
+        // Redis bên trong hàm này được nuốt và ghi log, vì XP đã vào cơ sở dữ liệu và ZSET dựng lại được.
+        leaderboardService.congDiem(userId, xp);
 
         traoHuyHieuDatDuoc(userId, stats);
         return true;
@@ -162,6 +169,10 @@ public class GamificationService {
                 case "STREAK" -> stats.getCurrentStreak() >= nguong;
                 case "PERFECT_ATTEMPTS" -> counters.soBaiHoanHao(userId) >= nguong;
                 case "FLASHCARDS_MASTERED" -> counters.soTheDaThuoc(userId) >= nguong;
+                // Huy hiệu mùa KHÔNG tự xét được từ số liệu hiện tại — nó chỉ do việc chốt mùa trao
+                // (features/15). Trả false im lặng, không ghi log cảnh báo: hàm này chạy mỗi lần có người
+                // nộp bài, và một cảnh báo vô nghĩa mỗi lần thì log thành rác.
+                case "SEASON_RANK" -> false;
                 default -> {
                     log.warn("Huy hiệu {} có điều kiện không hỗ trợ: {}", badge.getCode(), loai);
                     yield false;

@@ -490,8 +490,7 @@ class ChatIntegrationTest {
             body.put("materialId", materialId);
         }
 
-        String raw = org.springframework.web.reactive.function.client.WebClient.create(
-                        "http://localhost:" + port)
+        String raw = sseClient()
                 .post().uri("/api/v1/ai/chat")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -499,14 +498,34 @@ class ChatIntegrationTest {
                 .bodyValue(objectMapper.writeValueAsString(body))
                 .retrieve()
                 .bodyToMono(String.class)
-                // Thử lại MỘT lần khi lỗi ở tầng kết nối. Luồng SSE kết thúc là server đóng kết nối,
-                // nhưng WebClient vẫn giữ nó trong pool và lượt sau có thể bốc đúng kết nối đã chết:
-                // "Connection prematurely closed BEFORE response". Đây là chuyện của pool phía client,
-                // không phải của server — thử lại là đủ, và giới hạn một lần để lỗi thật vẫn đỏ.
-                .retry(1)
                 .block(java.time.Duration.ofSeconds(20));
 
         return parseSse(raw == null ? "" : raw);
+    }
+
+    /**
+     * WebClient dùng kết nối MỚI cho mỗi lượt, không qua pool.
+     * <p>
+     * Trước đây chỗ này dùng {@code WebClient.create()} (pool dùng chung) kèm {@code .retry(1)}, và nó sinh ra
+     * hai lỗi chập chờn khác nhau trong lần chạy toàn bộ suite:
+     * <ol>
+     *   <li>Luồng SSE kết thúc là server đóng kết nối, nhưng pool vẫn giữ nó; lượt sau bốc đúng kết nối đã
+     *       chết → {@code Connection prematurely closed BEFORE response}.</li>
+     *   <li>Tệ hơn: {@code .retry(1)} <b>gửi lại một request có tác dụng phụ</b>. Request đầu đã tạo phiên
+     *       chat ở phía server trước khi kết nối chết, nên lượt thử lại tạo phiên thứ HAI — và phép kiểm
+     *       "danh sách phiên" mong 2 phiên lại thấy 3.</li>
+     * </ol>
+     * Tắt pool thì không còn kết nối chết để bốc, nên không cần thử lại, nên không có tác dụng phụ nhân đôi.
+     * Xử lý nguyên nhân thay vì che triệu chứng.
+     */
+    private org.springframework.web.reactive.function.client.WebClient sseClient() {
+        var httpClient = reactor.netty.http.client.HttpClient.create(
+                reactor.netty.resources.ConnectionProvider.newConnection());
+        return org.springframework.web.reactive.function.client.WebClient.builder()
+                .baseUrl("http://localhost:" + port)
+                .clientConnector(
+                        new org.springframework.http.client.reactive.ReactorClientHttpConnector(httpClient))
+                .build();
     }
 
     /** Bóc từng khối {@code event: … / data: …} của định dạng SSE. */

@@ -538,10 +538,25 @@ GET    /api/v1/me/assignments                          Bài được giao cho t�
 
 ## 7f. Bảng xếp hạng theo mùa — `/leaderboard/season`
 ```
-GET    /api/v1/leaderboard/season/current       BXH mùa hiện tại (scope: global/class/friends)
-GET    /api/v1/leaderboard/season/current/me     Thứ hạng của tôi
-GET    /api/v1/leaderboard/season/history        Lịch sử các mùa
+GET /api/v1/leaderboard/season/current      BXH mùa hiện tại (?limit=) + thứ hạng của tôi     ✅
+GET /api/v1/leaderboard/season/current/me   Chỉ thứ hạng của tôi; 204 nếu chưa có điểm        ✅
+GET /api/v1/leaderboard/season/history      Các mùa đã kết thúc kèm thành tích của tôi        ✅
 ```
+
+**Redis là chỉ mục, PostgreSQL là nguồn sự thật.** Đặc tả gợi ý giữ điểm mùa trong ZSET, nhưng Redis ở dự án
+này chạy không bật AOF — mất dữ liệu là mất sạch bảng xếp hạng, không dựng lại được. Điểm mùa thật là
+`sum(xp_events.xp)` trong khoảng thời gian mùa; ZSET chỉ là bản sao để đọc nhanh và **tự dựng lại khi rỗng**.
+Đã kiểm chứng bằng cách xoá ZSET rồi đọc lại: kết quả không đổi, ZSET được dựng lại.
+
+**Chỉ có phạm vi toàn hệ thống.** FR-62 nêu thêm *theo lớp* và *theo bạn bè*: lớp học là features/14 (chưa
+làm), còn *bạn bè* không tồn tại ở bất kỳ đâu trong docs — không bảng, không API, không yêu cầu chức năng.
+Không thêm hai tuỳ chọn luôn trả cùng một danh sách chỉ để đủ ba mục.
+
+`GET /current/me` trả **204** khi người gọi chưa có điểm nào trong mùa — khác hẳn với hạng cuối. Trong
+`/current`, cùng trạng thái đó là `thuHangCuaToi: null`. Trả một con số hạng cho người không có điểm là nói sai.
+
+**Không có endpoint ghi.** Điểm mùa đến từ XP, XP đến từ hành động học thật (features/13). Việc chốt mùa do
+job nền chạy mỗi giờ (`@Scheduled`), idempotent qua bốn chốt ở cơ sở dữ liệu — xem `features/15`.
 
 ## 7g. Thông báo — `/notifications`
 ```
