@@ -18,7 +18,7 @@ Mỗi tính năng có file đặc tả riêng. Mức ưu tiên: **[M]** Must · 
 | 12 | Chống gian lận thi (Anti-Cheat) | [12-anti-cheat.md](12-anti-cheat.md) | [S] | ➕ AI | ✅ xong (bỏ FR-44, hoãn FR-48) |
 | 13 | Gamification (XP, badge, streak, daily) | [13-gamification.md](13-gamification.md) | [S] | ➕ Gắn kết | ✅ xong (FR-53 trả ở tính năng 16) |
 | 14 | Lớp học & giao bài (Classroom) | [14-classroom.md](14-classroom.md) | [S] | ➕ Giáo dục | 🔴 chưa |
-| 15 | Bảng xếp hạng theo mùa | [15-seasonal-leaderboard.md](15-seasonal-leaderboard.md) | [S] | ➕ Redis | 🔴 chưa |
+| 15 | Bảng xếp hạng theo mùa | [15-seasonal-leaderboard.md](15-seasonal-leaderboard.md) | [S] | ➕ Redis | ✅ xong (phạm vi toàn hệ thống) |
 | 16 | Thông báo & nhắc ôn tập | [16-notifications.md](16-notifications.md) | [S] | ➕ SRS + Real-time | ✅ xong (hoãn email, bỏ quiet hours) |
 
 ## Mẫu cấu trúc mỗi file feature

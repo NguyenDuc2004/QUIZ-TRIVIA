@@ -37,6 +37,7 @@
 | 16/08 | Sửa trùng mã FR (87 mã, 1..87) · **Lát cắt 11: Flashcard + SRS** — 12 API, 3 trang, 17 test | 7/7 | 🟢 xong |
 | 16/08 (tối) | **FR-38: AI sinh thẻ từ học liệu** (V14) — đo thật 6/6 thẻ hợp lệ, 10s | 5/5 | 🟢 xong |
 | 16/08 (đêm) | **Lát cắt 13: Gamification** (V15) — XP/cấp/chuỗi/huy hiệu/thử thách, 21 test | 6/6 | 🟢 xong |
+| 17/08 | **Lát cắt 15: Xếp hạng theo mùa** (V16) — Redis ZSET dựng lại được, 9 test · sửa 2 flake chat | 6/6 | 🟢 xong |
 | 17/08 (tối) | **Lát cắt 12: Chống gian lận** (V17) — 6 tín hiệu, điểm rủi ro, AI nhận định, 44 test · bỏ FR-44 có lý do · trả lời một câu hỏi làm lộ lỗ trong FR-47 | 8/8 | 🟢 xong |
 | 18/08 | **Lát cắt 16: Thông báo** (V18) — job nhắc ôn 7:00, real-time qua Redis→STOMP, chuông + cài đặt, 29 test · trả nốt FR-53 của tính năng 13 | 7/7 | 🟢 xong |
 
@@ -2438,6 +2439,82 @@ Huy hiệu tự trao đúng hai cái: `FIRST_STEPS` (≥50 XP) và `PERFECT_1` (
 
 ---
 
+## 📅 T2 — 17/08/2026 — Lát cắt 15: Xếp hạng theo mùa, và giải được cái flake để ngỏ hôm trước
+
+**Xong:** V16 (2 bảng + 3 huy hiệu mùa + mùa đầu tiên) · 3 endpoint · trang Xếp hạng · 9 ca test.
+
+### Không làm theo đặc tả ở chỗ quan trọng nhất: Redis không giữ điểm
+
+Đặc tả ghi *"Redis: `leaderboard:season:{seasonId}` — Sorted Set (member=userId, score=điểm mùa)"*, tức Redis
+là nơi giữ điểm. Nhưng Redis ở dự án này chạy **không bật AOF** — một lần restart mất dữ liệu là mất sạch
+bảng xếp hạng, và không có gì để dựng lại.
+
+Nên đảo lại trách nhiệm: điểm mùa thật là `sum(xp_events.xp)` trong khoảng thời gian mùa, còn ZSET chỉ là
+**chỉ mục để đọc nhanh** và tự dựng lại khi rỗng. Đây là chỗ bảng `xp_events` thêm ở V15 trả cổ tức lần hai —
+lúc thêm nó tôi chỉ nghĩ tới việc chống cộng XP trùng.
+
+Kiểm chứng bằng cách làm đúng điều đáng sợ nhất: `DEL` cái ZSET rồi đọc lại bảng xếp hạng.
+
+```
+ZSET truoc khi xoa: 2
+ZSET sau khi XOA:   0
+doc lai:            2 nguoi, 20 diem — dung nguyen
+ZSET sau khi doc:   2   (tu dung lai)
+```
+
+Có một phép kiểm tích hợp làm đúng việc này, và nó là phép kiểm quan trọng nhất của lát cắt: nếu sai thì mất
+Redis là mất dữ liệu.
+
+### Hai phạm vi trong đặc tả không có gì để dựa vào
+
+FR-62 yêu cầu ba phạm vi: toàn hệ thống, theo lớp, theo bạn bè. Lớp học là tính năng 14 — chưa làm. Còn
+**"bạn bè" không tồn tại ở bất kỳ đâu trong toàn bộ docs**: không bảng, không API, không yêu cầu chức năng
+nào. Làm hai bộ lọc luôn trả về cùng một danh sách chỉ để đủ ba tuỳ chọn là hứa với người dùng một thứ không
+có. Ghi rõ vào `features/15` là làm phạm vi toàn hệ thống, hai phạm vi kia phụ thuộc thứ chưa tồn tại.
+
+### `@EnableScheduling` chưa bật — job sẽ không bao giờ chạy
+
+Viết `@Scheduled` cho job chốt mùa xong mới kiểm: dự án **chưa bật `@EnableScheduling`** ở đâu cả. Thiếu
+annotation đó thì `@Scheduled` bị bỏ qua **hoàn toàn, không có cảnh báo nào** — job không chạy, mùa không bao
+giờ được chốt, và không có lỗi nào để lần ra. Đúng loại lỗi tệ nhất: mọi thứ trông như đang hoạt động.
+
+### Test bắt được lỗi thật: Hibernate xếp INSERT trước UPDATE
+
+Ca chốt mùa đỏ với `duplicate key value violates unique constraint "uk_seasons_one_active"`. Code có vẻ đúng:
+đặt mùa cũ thành `ENDED` **rồi mới** tạo mùa mới. Nhưng Hibernate flush cuối transaction theo thứ tự
+**mọi INSERT trước mọi UPDATE**, nên mùa mới được chèn khi mùa cũ vẫn còn `ACTIVE`.
+
+Sửa bằng `saveAndFlush` để ép ghi trạng thái xuống trước. Đáng chú ý: chính cái ràng buộc tôi thêm để chặn
+"hai mùa ACTIVE" đã bắt được lỗi này — nếu không có nó thì hệ thống lặng lẽ có hai mùa đang chạy.
+
+### Giải được cái flake để ngỏ hôm trước
+
+Hôm 16/08 tôi ghi: *"hai phiên cùng tiêu đề gợi ý một lời gọi `ask` có thể tạo hai phiên khi có retry — nếu
+đúng thì đó là lỗi thật của tính năng chat"*. Hôm nay suite đỏ thêm hai ca chat nữa với
+`Connection prematurely closed BEFORE response`, và đọc kỹ thì ra **cả hai flake cùng một nguyên nhân**:
+
+Test dùng `WebClient.create()` — pool kết nối dùng chung. Luồng SSE kết thúc thì server đóng kết nối nhưng
+pool vẫn giữ, lượt sau bốc đúng kết nối đã chết. Test đã có `.retry(1)` để chữa, và **chính cái retry là thủ
+phạm của flake thứ hai**: nó gửi lại một request **có tác dụng phụ** — request đầu đã tạo phiên chat ở server
+trước khi kết nối chết, nên lượt thử lại tạo phiên thứ hai.
+
+Sửa tận gốc: dùng `ConnectionProvider.newConnection()` để mỗi lượt một kết nối mới, và **bỏ `.retry(1)`**.
+Không còn kết nối chết để bốc → không cần thử lại → không có tác dụng phụ nhân đôi. Suite 367/367 xanh.
+
+**Kết luận quan trọng cho báo cáo:** đây **không** phải lỗi của tính năng chat. Nghi vấn hôm trước sai, và
+tôi đã đúng khi không tuyên bố đã sửa lúc chưa tìm ra nguyên nhân. Bài học thật là: *`retry` trên một request
+có tác dụng phụ không phải cách chữa lỗi kết nối — nó tạo ra lỗi mới, khó lần hơn.*
+
+### Ghi chú báo cáo
+- **Mục 2.8 (ERD):** thêm `seasons`, `season_rankings`. Nhấn chỉ mục một phần `uk_seasons_one_active` — nó
+  bắt được lỗi thứ tự flush của Hibernate.
+- **Mục 1.x (công nghệ):** đây là chỗ Redis Sorted Set được dùng đúng use case, và cũng là ví dụ tốt cho
+  **phân chia nguồn sự thật vs chỉ mục** — Redis nhanh nhưng không bền, nên không giữ dữ liệu duy nhất.
+- **"Khó khăn & cách giải quyết":** ba ví dụ mới — (1) `@EnableScheduling` thiếu thì job im lặng không chạy;
+  (2) Hibernate xếp INSERT trước UPDATE làm vỡ ràng buộc duy nhất; (3) `retry` trên request có tác dụng phụ
+  tạo dữ liệu trùng — kèm việc nó giải được một flake để ngỏ từ hôm trước.
+- **Mục 3.4:** phép kiểm "xoá sạch Redis rồi đọc lại" là ví dụ về **kiểm giả thiết kiến trúc**, không chỉ
+  kiểm hàm.
 ## 📅 T2 — 17/08/2026 (tối) — Lát cắt 12: Chống gian lận, và một yêu cầu tôi quyết định bỏ
 
 **Mục tiêu:** làm nốt tính năng 12 trong 5 tính năng `[S]` còn lại (13 → 15 → **12** → 16 → 14).
@@ -2616,7 +2693,41 @@ Riêng phần *hiệu ứng* của FR-53 (confetti khi lên cấp) thì không l
 đang làm bài là thứ gây phân tán, còn ở trang Thành tích thì huy hiệu đã hiện sẵn. Cùng lý do với việc **không
 hiện toast** khi có thông báo mới — chuông đã có chấm đỏ.
 
+### Gộp ba nhánh song song, và chỗ duy nhất thật sự đáng lo
+
+Ba tính năng 15, 12, 16 làm trên ba nhánh tách ra từ cùng một điểm, nên khi merge nhánh 15 vào `main` thì hai
+nhánh kia báo xung đột. Bốn trong năm chỗ là **"hai bên cùng thêm"** — hai dòng bảng theo dõi, hai mục nhật ký,
+hai dòng README, hai import và hai route ở `App.tsx`. Loại này chỉ cần giữ cả hai, xếp đúng thứ tự.
+
+Chỗ thứ năm mới đáng đọc kỹ: cả nhánh 15 và nhánh 16 đều **sửa cùng một hàm** `GamificationService.award` —
+nhánh 15 thêm `leaderboardService.congDiem(...)`, nhánh 16 thêm hai lời `publishEvent(...)`. Git không thể tự
+biết nên giữ cái nào, và **chọn một bên là mất lặng lẽ nửa tính năng kia**: giữ bên 15 thì không còn thông báo
+thành tích, giữ bên 16 thì điểm mùa không bao giờ được cộng — và cả hai đều *biên dịch được*, cả hai đều không
+có test nào đỏ ở nhánh còn lại vì nhánh đó không có mặt.
+
+Điều rút ra: **xung đột nguy hiểm không phải chỗ hai bên viết đè lên nhau, mà chỗ hai bên cùng thêm việc vào
+một hàm.** Chỗ đè lên nhau thì Git bắt phải đọc; chỗ cùng thêm thì rất dễ "chọn bên mình" cho nhanh.
+
+Sau khi gộp, `award` làm đủ ba việc theo thứ tự có nghĩa: đồng bộ điểm mùa → trao huy hiệu → phát sự kiện
+(phải sau cùng vì nó cần biết huy hiệu vừa trao và cấp mới). Chạy lại toàn bộ test để chắc.
+
+### Một flake thứ ba của test chat, chưa sửa
+
+Chạy toàn bộ suite sau khi gộp thì `ChatIntegrationTest` đỏ với `WebClientRequestException: empty headers are
+not allowed []`. Đã xác định **không phải hồi quy do gộp**: mã nguồn chat và file test ở nhánh này giống hệt
+`main` từng dòng, và chạy riêng lớp đó hai lượt thì lượt 1 xanh, lượt 2 đỏ ở một *test method khác*
+(`shouldRespectUnsharing` thay vì `shouldStreamMetaBeforeTokens`). Đổi chỗ đỏ mỗi lượt = không xác định.
+
+Đây là flake **thứ ba**, khác hai cái đã sửa ở lát cắt 15 (kết nối chết trong pool, và `.retry(1)` nhân đôi
+phiên). Bản sửa hôm đó — bỏ pool bằng `ConnectionProvider.newConnection()` — vẫn còn nguyên và vẫn đúng, nhưng
+chưa đủ. Chưa truy ra nguyên nhân nên **không sửa vội**: cái sai lớn hơn là thêm một `retry` để nó hết đỏ, vì
+đó đúng là thứ đã tạo ra flake số hai.
+
+Ghi lại đây làm nợ. Một suite đỏ ngẫu nhiên là vấn đề thật với đồ án — lúc bảo vệ mà `mvn test` đỏ thì không
+kịp giải thích rằng nó chỉ chập chờn.
+
 ### Nợ / chuyển sang sau
+- **Flake `ChatIntegrationTest`** (`empty headers are not allowed`) — chưa truy ra nguyên nhân, xem trên.
 - **Tính năng 14 (Lớp học)** — mục cuối cùng để đủ 16.
 - **Cảnh báo live trong phòng đấu** — giờ đã có hạ tầng gửi thông báo tới một người, nên nút *"Nhắc riêng"* làm
   được. Vẫn cần kênh STOMP riêng cho host trước (xem [features/12](../features/12-anti-cheat.md)).
