@@ -186,6 +186,7 @@ interface MucMenu {
 const MUC_HOC_TAP: MucMenu[] = [
   { to: '/flashcards', label: 'Thẻ ghi nhớ', moTa: 'Ôn theo lịch lặp lại ngắt quãng' },
   { to: '/achievements', label: 'Thành tích', moTa: 'XP, cấp độ, chuỗi ngày học và huy hiệu' },
+  { to: '/leaderboard', label: 'Xếp hạng mùa', moTa: 'So điểm với người học khác trong mùa này' },
   { to: '/learning-path', label: 'Lộ trình học', moTa: 'Thứ tự chủ đề nên ôn, gợi ý từ đồ thị hành vi' },
   { to: '/my-progress', label: 'Tiến độ', moTa: 'Điểm theo thời gian, mạnh yếu theo chủ đề' },
   { to: '/my-attempts', label: 'Lịch sử làm bài', moTa: 'Các bài đã làm và kết quả' },

@@ -16,6 +16,7 @@ import LearningPathPage from '@/features/recommend/pages/LearningPathPage'
 import DeckDetailPage from '@/features/flashcard/pages/DeckDetailPage'
 import DecksPage from '@/features/flashcard/pages/DecksPage'
 import AchievementsPage from '@/features/gamification/pages/AchievementsPage'
+import LeaderboardPage from '@/features/season/pages/LeaderboardPage'
 import ReviewSessionPage from '@/features/flashcard/pages/ReviewSessionPage'
 import QuizIntroPage from '@/features/attempt/pages/QuizIntroPage'
 import BrowseQuizzesPage from '@/features/quiz/pages/BrowseQuizzesPage'
@@ -87,6 +88,8 @@ export default function App() {
         <Route path="/flashcards" element={<DecksPage />} />
         {/* Thành tích (features/13) — XP, cấp độ, chuỗi ngày, huy hiệu */}
         <Route path="/achievements" element={<AchievementsPage />} />
+        {/* Bảng xếp hạng theo mùa (features/15) — đọc từ Redis ZSET, dựng lại được từ xp_events */}
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/flashcards/review" element={<ReviewSessionPage />} />
         <Route path="/flashcards/decks/:id" element={<DeckDetailPage />} />
         {/* Trợ lý học tập: mở cho MỌI người đã đăng nhập, không riêng CREATOR — người học chính là
