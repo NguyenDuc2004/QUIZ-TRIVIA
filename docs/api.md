@@ -541,14 +541,34 @@ là mở đường tự cộng điểm cho mình, và khi đó cả huy hiệu l
 
 ## 7e. Lớp học — `/classrooms`, `/assignments`
 ```
-GET/POST/PUT/DELETE /api/v1/classrooms                Quản lý lớp
-POST   /api/v1/classrooms/{code}/join                 Tham gia lớp
-GET    /api/v1/classrooms/{id}/members                Thành viên
-POST   /api/v1/classrooms/{id}/assignments            Giao bài
-GET    /api/v1/classrooms/{id}/assignments            Danh sách bài giao
-GET    /api/v1/assignments/{id}/results               Kết quả toàn lớp (giáo viên)
-GET    /api/v1/me/assignments                          Bài được giao cho tôi
+GET    /api/v1/classrooms                          Lớp của tôi — cả lớp tôi dạy lẫn lớp tôi học   ✅
+POST   /api/v1/classrooms                          Tạo lớp (CREATOR/ADMIN)                        ✅
+GET    /api/v1/classrooms/{id}                     Chi tiết lớp                                   ✅
+PUT    /api/v1/classrooms/{id}                     Sửa tên/mô tả (giáo viên)                      ✅
+DELETE /api/v1/classrooms/{id}                     Xoá lớp (CHỈ chủ nhiệm)                        ✅
+POST   /api/v1/classrooms/join/{code}              Tham gia bằng mã lớp 6 ký tự                   ✅
+GET    /api/v1/classrooms/{id}/members             Thành viên (giáo viên)                         ✅
+PUT    /api/v1/classrooms/{id}/members/{u}/role    Đổi vai trò STUDENT/CO_TEACHER (chủ nhiệm)     ✅
+DELETE /api/v1/classrooms/{id}/members/{u}         Xoá thành viên (chủ nhiệm)                     ✅
+GET    /api/v1/classrooms/{id}/assignments         Bài đã giao cho lớp                            ✅
+POST   /api/v1/classrooms/{id}/assignments         Giao bài (quiz của chính mình)                 ✅
+DELETE /api/v1/assignments/{id}                    Gỡ bài tập khỏi lớp                            ✅
+GET    /api/v1/me/assignments                      Bài được giao cho tôi, kèm trạng thái của tôi  ✅
+POST   /api/v1/assignments/{id}/attempts           Bắt đầu / làm tiếp → { attemptId }             ✅
+GET    /api/v1/assignments/{id}/results            Bảng theo dõi lớp (giáo viên)                  ✅
 ```
+- **Tạo lớp** cần CREATOR/ADMIN; **tham gia** thì mọi tài khoản đã đăng nhập đều làm được — học sinh là người
+  *học*, không phải người soạn nội dung.
+- Người ngoài lớp nhận **404** ở mọi endpoint của lớp đó, không phải 403 (§10).
+- `classCode` **chỉ trả cho chủ nhiệm và trợ giảng**; học sinh nhận `null`. Mã là thứ để mời người vào, không
+  phải thông tin mọi thành viên cần cầm.
+- `POST /assignments/{id}/attempts` là **đường duy nhất** làm bài tập. Nó bỏ qua kiểm `visibility` (quiz của
+  giáo viên thường PRIVATE) vì quyền đã được xác nhận ở tầng lớp học, và luôn tạo lượt **`EXAM`** — nên
+  [features/12](features/12-anti-cheat.md) thu tín hiệu hành vi cho bài tập mà không phải cấu hình gì.
+  Đã nộp rồi thì trả **400**: mỗi học sinh một lượt cho mỗi bài tập.
+- **Quá hạn vẫn nộp được**; bài được đánh dấu `NOP_TRE`. Trừ điểm hay không là quyết định của giáo viên.
+- `GET /me/assignments` **không trả bài chưa tới giờ mở** — hiện ra thì học sinh bấm vào và nhận lỗi, hoặc
+  tưởng mình đã bỏ lỡ.
 
 ## 7f. Bảng xếp hạng theo mùa — `/leaderboard/season`
 ```

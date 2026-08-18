@@ -127,4 +127,24 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, UUID> 
 
         Instant getSubmittedAt();
     }
+    // ==================================================== features/14 — bài tập được giao
+
+    /** Mọi lượt của một bài tập, kèm sẵn người làm — nguồn của bảng theo dõi lớp (FR-57). */
+    @Query("""
+            select a from QuizAttempt a
+              join fetch a.user u
+            where a.assignmentId = :assignmentId
+            """)
+    List<QuizAttempt> findByAssignmentId(@Param("assignmentId") UUID assignmentId);
+
+    Optional<QuizAttempt> findByAssignmentIdAndUserId(UUID assignmentId, UUID userId);
+
+    /**
+     * Mọi lượt bài-tập của một người.
+     * <p>
+     * Một truy vấn cho cả màn "Bài tập của tôi", thay vì hỏi riêng cho từng bài tập. Học sinh học năm lớp
+     * thì màn đó có vài chục bài, và hỏi từng cái là vài chục lượt đi vòng tới cơ sở dữ liệu.
+     */
+    @Query("select a from QuizAttempt a where a.user.id = :userId and a.assignmentId is not null")
+    List<QuizAttempt> findByUserWithAssignment(@Param("userId") UUID userId);
 }

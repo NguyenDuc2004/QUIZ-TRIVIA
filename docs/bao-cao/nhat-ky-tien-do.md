@@ -40,6 +40,7 @@
 | 17/08 | **Lát cắt 15: Xếp hạng theo mùa** (V16) — Redis ZSET dựng lại được, 9 test · sửa 2 flake chat | 6/6 | 🟢 xong |
 | 17/08 (tối) | **Lát cắt 12: Chống gian lận** (V17) — 6 tín hiệu, điểm rủi ro, AI nhận định, 44 test · bỏ FR-44 có lý do · trả lời một câu hỏi làm lộ lỗ trong FR-47 | 8/8 | 🟢 xong |
 | 18/08 | **Lát cắt 16: Thông báo** (V18) — job nhắc ôn 7:00, real-time qua Redis→STOMP, chuông + cài đặt, 29 test · trả nốt FR-53 của tính năng 13 | 7/7 | 🟢 xong |
+| 18/08 (chiều) | **Lát cắt 14: Lớp học** (V19) — mã lớp, giao bài, bảng theo dõi, 32 test · **ĐỦ 16/16 chức năng** · chặn Admin khỏi khu học tập · sửa flake chat lần cuối | 9/9 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -2759,7 +2760,7 @@ lượt, nên 6 lượt sạch là bằng chứng khá tốt — nhưng **chưa 
 đã hết hẳn.
 
 ### Nợ / chuyển sang sau
-- **Tính năng 14 (Lớp học)** — mục cuối cùng để đủ 16.
+- (đã làm nốt tính năng 14 trong cùng ngày — xem mục dưới)
 - **Cảnh báo live trong phòng đấu** — giờ đã có hạ tầng gửi thông báo tới một người, nên nút *"Nhắc riêng"* làm
   được. Vẫn cần kênh STOMP riêng cho host trước (xem [features/12](../features/12-anti-cheat.md)).
 - `ASSIGNMENT_DUE` và `ROOM_INVITE` khai sẵn trong ràng buộc `CHECK` nhưng **chưa có nguồn phát**; cố ý không
@@ -2775,6 +2776,105 @@ lượt, nên 6 lượt sạch là bằng chứng khá tốt — nhưng **chưa 
   cùng cái bẫy `@JsonRawValue` một chiều.
 - **Mục 3.4:** hai lỗi thật do test frontend bắt được — cả hai đều không lộ ra khi thử tay. Đây là lập luận
   cụ thể cho việc viết test giao diện, không chỉ test backend.
+
+---
+
+## 📅 T3 — 18/08/2026 (chiều) — Lát cắt 14: Lớp học, và đủ 16/16 chức năng
+
+**Mục tiêu:** làm nốt mục cuối cùng trong danh sách 16 chức năng của `docs/features/`.
+
+**Xong:** V19 (3 bảng + 1 cột) · 15 endpoint · 4 trang · 24 test backend + 8 test đơn vị · chạy thật 20/20
+phép kiểm toàn tuyến. Cùng ngày còn hai việc nhỏ: chặn quản trị viên khỏi khu học tập, và sửa dứt điểm flake
+của test chat.
+
+### Lớp học khác phòng đấu ở chỗ nào — câu hỏi đáng trả lời trước khi code
+
+Người hướng dẫn dự án hỏi *"chức năng lớp học khác gì với phòng đấu"*. Trả lời được câu đó mới thấy rõ nên
+làm gì: **phòng đấu là một SỰ KIỆN, lớp học là một QUAN HỆ.**
+
+| | Phòng đấu (04) | Lớp học (14) |
+|---|---|---|
+| Thời gian | Đồng bộ — cùng lúc, cùng câu, chung đồng hồ | Bất đồng bộ — mỗi người làm lúc nào cũng được |
+| Nhóm người | Tạm, tan khi hết ván | Bền, có vai trò |
+| Danh tính | Khách vãng lai vào được | Bắt buộc tài khoản |
+| Tính điểm | Theo tốc độ + độ chính xác | Chỉ theo đáp án đúng |
+| Công nghệ | WebSocket + Redis Pub/Sub | **REST thuần, không real-time** |
+
+Dòng cuối là điều quan trọng nhất: lớp học **không dùng một dòng nào** của hạ tầng real-time. Nó không phải
+"phòng đấu bản chậm" mà là một trục khác hẳn. Và nó cũng không dựng cơ chế làm bài mới — học sinh làm bài tập
+bằng đúng luồng `quiz_attempts` của lát cắt 3, còn bảng theo dõi lớp là truy vấn của lát cắt 9 thêm một bộ lọc.
+Phần thật sự mới chỉ là *"ai thuộc lớp nào"* và *"bài nào giao cho lớp nào"*.
+
+### Quiz PRIVATE — chỗ mà nếu bỏ sót thì cả tính năng vô dụng
+
+Giáo viên gần như luôn để quiz ở chế độ PRIVATE, mà `AttemptService.start` chặn quiz PRIVATE của người khác.
+Nếu chỉ thêm một tham số `assignmentId` vào endpoint làm bài cũ thì học sinh vẫn nhận 404 — tính năng chạy
+được trên quiz mẫu PUBLIC và hỏng với mọi quiz thật.
+
+Cách xử lý: **một endpoint bắt đầu riêng** `POST /assignments/{id}/attempts`. Nó bỏ qua kiểm `visibility` vì
+quyền đã được xác nhận ở tầng trên — người gọi là thành viên của lớp được giao bài đó. Nới `start` để nó tự
+biết về lớp học thì hai tính năng lẽ ra độc lập dính vào nhau, và tầng làm bài phải mang theo kiến thức không
+thuộc về nó. Có test riêng cho đúng tình huống này: *tự vào làm thì 404, được giao thì làm được*.
+
+### Ba thứ chạy sẵn nhờ những lát cắt trước
+
+Điều dễ chịu nhất của lát cắt này là **bao nhiêu thứ không phải viết**:
+
+| Có sẵn | Nhờ đâu |
+|---|---|
+| Chống gian lận cho bài tập | Lượt bài tập luôn là `EXAM`, nên [features/12](../features/12-anti-cheat.md) thu tín hiệu mà không cần cấu hình gì |
+| Nhắc hạn nộp | [features/16](../features/16-notifications.md) đã có hạ tầng; loại `ASSIGNMENT_DUE` cũng đã khai sẵn trong `CHECK` của V18 nên **không cần migration** để thêm |
+| Chấm điểm, thống kê | Luồng `quiz_attempts` của lát cắt 3 và 9 |
+
+Loại `ASSIGNMENT_DUE` là ví dụ rõ nhất: hôm trước khai sẵn giá trị nhưng **cố ý không đưa lên trang cài đặt**
+vì chưa có ai gửi. Hôm nay có nguồn phát thì chỉ cần đổi một hàm `daCoNguonPhat()` — và công tắc tự xuất hiện.
+Đó đúng là hình dạng mong muốn của một chỗ nối để dành.
+
+### Cái bẫy về thời gian, và test bắt được nó
+
+Trạng thái *nộp muộn* tính bằng cách so **thời điểm nộp** với hạn — không phải so `now` với hạn. Viết theo cách
+thứ hai thì test ngay sau khi nộp vẫn xanh, nhưng một tuần sau giáo viên mở bảng ra xem thì **cả lớp bỗng thành
+nộp muộn** và điểm bị trừ oan. Đã có một test riêng đúng cho tình huống *"nộp đúng hạn, xem sau một tuần"*.
+
+Cùng nhóm: `dueAt` để trống là hợp lệ (giáo viên không muốn đặt hạn). Coi `null` là "hạn đã qua" thì mọi bài
+không hạn đều đỏ lòm *quá hạn* ngay từ lúc giao. Cũng có test.
+
+### Quá hạn vẫn cho nộp
+
+Đây là quyết định về con người hơn là về kỹ thuật. Khoá cứng lúc hết hạn thì một em mất mạng mười phút là mất
+trắng bài, và giáo viên không còn cách nào biết em ấy có làm hay không. Nên: vẫn nhận bài, đánh dấu rõ là nộp
+muộn, và để giáo viên quyết định trừ điểm hay không — **cùng nguyên tắc với chống gian lận: hệ thống đưa dữ
+kiện, người thật quyết định.**
+
+### Đo thật
+
+Chạy toàn tuyến trên server đang chạy, 20/20: tạo lớp → mã `SWTCKA` (không có 0/O/1/I/L) → hai học sinh vào
+bằng mã → vào lại lần hai không sinh dòng thừa → mã lớp trả `null` cho học sinh nhưng có với giáo viên →
+người ngoài lớp nhận 404 → **quiz PRIVATE: tự vào làm bị 404, được giao thì làm được** → nộp 3/3 điểm → nộp
+rồi thì không làm lại được → bảng theo dõi có dòng cho em chưa làm với `diem = null` → trợ giảng xem được
+thành viên nhưng bị 403 khi xoá lớp → lượt bài tập ở chế độ `EXAM`.
+
+### Đủ 16/16
+
+| Nhóm | Trạng thái |
+|---|---|
+| 01–09 (`[M]` + thống kê) | ✅ |
+| 10–16 (`[S]`) | ✅ |
+
+Còn lại là những mục `[C]` đã hoãn **có lý do ghi trong đặc tả**: FR-48 (thi nghiêm ngặt), FR-58 (xuất bảng
+điểm), FR-69 (email), FR-84 (hạn mức AI), quiet hours. Và hai mục **bỏ hẳn** có lý do: FR-44 (đối chiếu đáp án
+trong phòng đấu) và cảnh báo live trong phòng đấu — cái sau đã chốt thiết kế, chỉ chưa làm.
+
+### Ghi chú báo cáo
+- **Mục 2.8 (ERD):** thêm 3 bảng + 1 cột. Nhấn `ON DELETE RESTRICT` của `assignments.quiz_id` — khoá ngoại
+  **duy nhất** trong lược đồ dùng RESTRICT, và lý do là mất dữ liệu trong im lặng.
+- **Mục 2.2 (phân tích yêu cầu):** lớp học là chỗ tốt nhất để nói *ai dùng hệ thống và dùng thế nào* — ba trụ
+  cột kia là điểm kỹ thuật, cái này là điểm bối cảnh sử dụng.
+- **"Khó khăn & cách giải quyết":** bẫy quiz PRIVATE (nếu bỏ sót thì tính năng chạy được trên dữ liệu mẫu và
+  hỏng với dữ liệu thật), và bẫy so `now` thay vì so `submittedAt`.
+- **Mục 3.4:** lát cắt này là ví dụ tốt về **test đơn vị cho phần có nhánh logic** (8 ca cho hàm tính trạng
+  thái) tách khỏi **test tích hợp cho phần phân quyền** (16 ca) — hai loại câu hỏi khác nhau, hai loại test
+  khác nhau.
 
 ---
 

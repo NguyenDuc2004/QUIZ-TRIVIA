@@ -183,6 +183,8 @@ interface MucMenu {
 }
 
 const MUC_HOC_TAP: MucMenu[] = [
+  { to: '/classrooms', label: 'Lớp học', moTa: 'Lớp bạn dạy và lớp bạn tham gia' },
+  { to: '/my-assignments', label: 'Bài tập của tôi', moTa: 'Bài giáo viên giao, kèm hạn nộp' },
   { to: '/flashcards', label: 'Thẻ ghi nhớ', moTa: 'Ôn theo lịch lặp lại ngắt quãng' },
   { to: '/achievements', label: 'Thành tích', moTa: 'XP, cấp độ, chuỗi ngày học và huy hiệu' },
   { to: '/leaderboard', label: 'Xếp hạng mùa', moTa: 'So điểm với người học khác trong mùa này' },

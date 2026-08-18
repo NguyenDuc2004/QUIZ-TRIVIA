@@ -18,6 +18,10 @@ import DeckDetailPage from '@/features/flashcard/pages/DeckDetailPage'
 import DecksPage from '@/features/flashcard/pages/DecksPage'
 import AchievementsPage from '@/features/gamification/pages/AchievementsPage'
 import LeaderboardPage from '@/features/season/pages/LeaderboardPage'
+import ClassroomsPage from '@/features/classroom/pages/ClassroomsPage'
+import ClassroomDetailPage from '@/features/classroom/pages/ClassroomDetailPage'
+import MyAssignmentsPage from '@/features/classroom/pages/MyAssignmentsPage'
+import AssignmentResultsPage from '@/features/classroom/pages/AssignmentResultsPage'
 import NotificationsPage from '@/features/notification/pages/NotificationsPage'
 import NotificationSettingsPage from '@/features/notification/pages/NotificationSettingsPage'
 import ReviewSessionPage from '@/features/flashcard/pages/ReviewSessionPage'
@@ -106,6 +110,13 @@ export default function App() {
         <Route path="/achievements" element={<AchievementsPage />} />
         {/* Bảng xếp hạng theo mùa (features/15) — đọc từ Redis ZSET, dựng lại được từ xp_events */}
         <Route path="/leaderboard" element={<LeaderboardPage />} />
+        {/* Lớp học & giao bài (features/14). Mọi tài khoản đã đăng nhập đều vào được: học sinh là
+            người HỌC, không phải người soạn nội dung, nên bắt có vai trò CREATOR chỉ để vào lớp là sai
+            hẳn mô hình. Backend chặn riêng việc TẠO lớp ở CREATOR/ADMIN. */}
+        <Route path="/classrooms" element={<ClassroomsPage />} />
+        <Route path="/classrooms/:id" element={<ClassroomDetailPage />} />
+        <Route path="/my-assignments" element={<MyAssignmentsPage />} />
+        <Route path="/assignments/:id/results" element={<AssignmentResultsPage />} />
         {/* Thông báo (features/16). Không có mục trên thanh điều hướng: lối vào là chuông ở góc phải,
             và thêm một mục thứ sáu vào thanh vừa gom xuống 5 mục là đi ngược việc vừa làm. */}
         <Route path="/notifications" element={<NotificationsPage />} />

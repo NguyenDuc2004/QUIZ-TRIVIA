@@ -215,15 +215,17 @@ class NotificationIntegrationTest {
     @DisplayName("Trang cài đặt chỉ liệt kê loại ĐÃ CÓ nguồn phát")
     void shouldOnlyOfferTypesWithProducers() throws Exception {
         // Công tắc cho loại chưa ai gửi là công tắc không làm gì — đúng cái đã hoãn ở FR-84 (hạn mức AI).
-        // ASSIGNMENT_DUE chờ tính năng 14, ROOM_INVITE chờ cơ chế mời của tính năng 04.
+        // ASSIGNMENT_DUE đã có nguồn phát từ tính năng 14 (job nhắc hạn nộp). ROOM_INVITE thì chưa: phòng
+        // đấu vào bằng mã PIN, không có cơ chế mời.
         JsonNode caiDat = json(get("/api/v1/notifications/settings")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
 
         var ten = new java.util.ArrayList<String>();
         caiDat.get("dieuChinhDuoc").forEach(n -> ten.add(n.get("type").asText()));
 
-        assertThat(ten).containsExactlyInAnyOrder("SRS_REMINDER", "ACHIEVEMENT");
+        assertThat(ten).containsExactlyInAnyOrder("SRS_REMINDER", "ACHIEVEMENT", "ASSIGNMENT_DUE");
         assertThat(ten).as("SYSTEM không tắt được nên không hiện công tắc").doesNotContain("SYSTEM");
+        assertThat(ten).as("ROOM_INVITE chưa có nguồn phát").doesNotContain("ROOM_INVITE");
     }
 
     // ======================================================== 3. Thông báo là của riêng một người

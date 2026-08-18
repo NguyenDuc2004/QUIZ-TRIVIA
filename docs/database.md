@@ -223,11 +223,22 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 | daily_challenges: id, date, description, rule (jsonb), xp_reward |
 | user_daily_progress: id, user_id, challenge_id, progress, completed_at |
 
-**Classroom** ([features/14](features/14-classroom.md))
-| classrooms: id, owner_id, name, class_code (unique), description, created_at |
-| classroom_members: id, classroom_id (FK), user_id (FK), role (student/co_teacher), joined_at |
-| assignments: id, classroom_id (FK), quiz_id (FK), title, open_at, due_at, created_at |
-| *(quiz_attempts bổ sung cột `assignment_id` FK nullable)* |
+**Classroom** *(V19)* — Lớp học & giao bài ([features/14](features/14-classroom.md))
+| classrooms: id, owner_id (FK), name, description, class_code (unique), created_at, updated_at |
+| classroom_members: id, classroom_id (FK), user_id (FK), role (STUDENT/CO_TEACHER), joined_at — UNIQUE (classroom_id, user_id) |
+| assignments: id, classroom_id (FK), quiz_id (FK **RESTRICT**), title, instruction, open_at, due_at, created_at, updated_at |
+| *(quiz_attempts bổ sung cột `assignment_id` FK nullable, ON DELETE SET NULL)* |
+
+> **`UNIQUE INDEX (assignment_id, user_id) WHERE assignment_id IS NOT NULL`** — mỗi học sinh một lượt cho mỗi
+> bài tập. Đặc tả không nói, nhưng làm lại không giới hạn thì điểm bài tập mất hết ý nghĩa. Chốt ở CSDL vì
+> kiểm trong Java thua cuộc khi học sinh mở hai tab.
+>
+> **`assignments.quiz_id` dùng `ON DELETE RESTRICT`**, khác mọi khoá ngoại còn lại trong lược đồ: CASCADE ở
+> đây nghĩa là xoá một quiz sẽ xoá luôn bài tập và mọi điểm gắn với nó. Chặn để giáo viên nhận lỗi rõ ràng
+> thay vì mất dữ liệu trong im lặng.
+>
+> **`class_code`** là 6 ký tự `[A-Z2-9]` — bỏ 0, O, 1, I, L vì mã này được đọc to trong lớp và chép tay lên
+> bảng. Cùng lý do với mã PIN phòng đấu, nhưng dùng cả chữ vì lớp học sống lâu nên cần không gian mã lớn hơn.
 
 **Seasonal leaderboard** ([features/15](features/15-seasonal-leaderboard.md)) — *bảng xếp hạng live nằm ở Redis ZSET*
 | seasons: id, name, start_at, end_at, status (active/ended) |
