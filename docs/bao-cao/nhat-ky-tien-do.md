@@ -2711,7 +2711,7 @@ một hàm.** Chỗ đè lên nhau thì Git bắt phải đọc; chỗ cùng th�
 Sau khi gộp, `award` làm đủ ba việc theo thứ tự có nghĩa: đồng bộ điểm mùa → trao huy hiệu → phát sự kiện
 (phải sau cùng vì nó cần biết huy hiệu vừa trao và cấp mới). Chạy lại toàn bộ test để chắc.
 
-### Một flake thứ ba của test chat, chưa sửa
+### Một flake thứ ba của test chat — đã sửa, ở mục dưới
 
 Chạy toàn bộ suite sau khi gộp thì `ChatIntegrationTest` đỏ với `WebClientRequestException: empty headers are
 not allowed []`. Đã xác định **không phải hồi quy do gộp**: mã nguồn chat và file test ở nhánh này giống hệt
@@ -2726,8 +2726,39 @@ chưa đủ. Chưa truy ra nguyên nhân nên **không sửa vội**: cái sai l
 Ghi lại đây làm nợ. Một suite đỏ ngẫu nhiên là vấn đề thật với đồ án — lúc bảo vệ mà `mvn test` đỏ thì không
 kịp giải thích rằng nó chỉ chập chờn.
 
+### Sửa flake chat: lần thứ tư thì bỏ hẳn thư viện thay vì vá tiếp
+
+Truy được nguyên nhân **gần**: `IllegalArgumentException: empty headers are not allowed` ném từ
+`HttpObjectDecoder.readHeaders` của Netty — tức **bộ giải mã phản hồi ở phía client** đọc phải một dòng có tên
+header rỗng, nghĩa là nó mất đồng bộ với dòng byte. Không phải lỗi ở server: trình duyệt đọc đúng luồng này
+bằng `EventSource` vẫn chạy bình thường.
+
+Nguyên nhân **sâu** bên trong Netty thì **không truy được**, và tôi ghi rõ điều đó thay vì đoán. Bật `wiretap`
+để xem byte thật thì *không tái hiện được nữa* — thêm một handler vào pipeline là đủ đổi nhịp và che mất tình
+huống. Chạy bốn lượt có wiretap đều xanh.
+
+Nhìn lại thì chỗ này đã sửa **ba lần**, mỗi lần đổi một lỗi lấy một lỗi khác:
+
+| Lần | Làm gì | Hỏng ra sao |
+|---|---|---|
+| 1 | `WebClient.create()` — pool dùng chung | Pool giữ kết nối server đã đóng → `Connection prematurely closed` |
+| 2 | Thêm `.retry(1)` | **Tệ hơn**: gửi lại một request *có tác dụng phụ* → phiên chat nhân đôi |
+| 3 | `ConnectionProvider.newConnection()` | Hết hai lỗi trên, còn lỗi thứ ba trong bộ giải mã của Netty |
+
+Lần thứ tư không vá nữa mà **bỏ hẳn thành phần hay vỡ**: dùng `java.net.http.HttpClient` của JDK. Test này
+không cần gì của WebClient — nó chỉ cần POST một request rồi đọc toàn bộ phản hồi. JDK client làm đúng ngần đó
+bằng bộ giải mã HTTP của chính JDK, **không có tầng reactive, không có pool để bốc nhầm, không có cơ chế thử
+lại ẩn**. Ba nguồn lỗi của ba lần trước biến mất cùng lúc vì thành phần sinh ra chúng không còn nữa.
+
+Điều rút ra: **vá lần thứ ba trên cùng một chỗ là tín hiệu chọn sai công cụ, không phải chọn sai tham số.**
+Mỗi bản vá trước đều đúng về mặt lý luận và đều thật sự sửa được lỗi nó nhắm tới — nhưng cứ mỗi lần lại lộ ra
+một tầng phức tạp mới của thư viện mà test không hề cần tới.
+
+Đo: chạy riêng lớp đó **6 lượt liên tiếp đều xanh**, rồi chạy toàn bộ suite. Trước đó tỉ lệ đỏ khoảng 1 trên 3
+lượt, nên 6 lượt sạch là bằng chứng khá tốt — nhưng **chưa phải chứng minh**, và tôi ghi vậy chứ không tuyên bố
+đã hết hẳn.
+
 ### Nợ / chuyển sang sau
-- **Flake `ChatIntegrationTest`** (`empty headers are not allowed`) — chưa truy ra nguyên nhân, xem trên.
 - **Tính năng 14 (Lớp học)** — mục cuối cùng để đủ 16.
 - **Cảnh báo live trong phòng đấu** — giờ đã có hạ tầng gửi thông báo tới một người, nên nút *"Nhắc riêng"* làm
   được. Vẫn cần kênh STOMP riêng cho host trước (xem [features/12](../features/12-anti-cheat.md)).
