@@ -16,7 +16,7 @@ Tăng gắn kết và động lực học tập bằng cơ chế trò chơi hóa
 - **FR-50** [S] ✅ **Huy hiệu (badge):** định nghĩa điều kiện; tự trao khi người dùng đạt.
 - **FR-51** [S] ✅ **Streak:** đếm chuỗi ngày liên tiếp có hoạt động học; reset khi bỏ lỡ; hiển thị streak hiện tại/dài nhất.
 - **FR-52** [S] ✅ **Daily challenge:** mỗi ngày một nhiệm vụ (ví dụ "làm 3 quiz chủ đề X") + thưởng XP khi hoàn thành.
-- **FR-53** [C] ⏳ Hiệu ứng/thông báo khi lên level, mở khóa huy hiệu — cần tính năng 16 (thông báo).
+- **FR-53** [C] ✅ Thông báo khi lên cấp và mở khoá huy hiệu — trả ở [tính năng 16](16-notifications.md) qua hai sự kiện miền `LevelUpEvent` / `BadgeEarnedEvent`. *Hiệu ứng* trên giao diện (confetti…) không làm: một hiệu ứng bật lên giữa lúc người học đang làm bài là thứ gây phân tán, còn ở trang Thành tích thì huy hiệu đã hiện sẵn.
 
 ## Ba quyết định của bản này
 

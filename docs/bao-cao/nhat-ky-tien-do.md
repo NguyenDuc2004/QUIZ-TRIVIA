@@ -39,6 +39,7 @@
 | 16/08 (đêm) | **Lát cắt 13: Gamification** (V15) — XP/cấp/chuỗi/huy hiệu/thử thách, 21 test | 6/6 | 🟢 xong |
 | 17/08 | **Lát cắt 15: Xếp hạng theo mùa** (V16) — Redis ZSET dựng lại được, 9 test · sửa 2 flake chat | 6/6 | 🟢 xong |
 | 17/08 (tối) | **Lát cắt 12: Chống gian lận** (V17) — 6 tín hiệu, điểm rủi ro, AI nhận định, 44 test · bỏ FR-44 có lý do · trả lời một câu hỏi làm lộ lỗ trong FR-47 | 8/8 | 🟢 xong |
+| 18/08 | **Lát cắt 16: Thông báo** (V18) — job nhắc ôn 7:00, real-time qua Redis→STOMP, chuông + cài đặt, 29 test · trả nốt FR-53 của tính năng 13 | 7/7 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -2611,6 +2612,138 @@ khẳng định một thứ vắng mặt thì phải chứng minh trước rằn
   trọng số giảm dần là ví dụ về *ngưỡng cảnh báo phải chịu được dữ liệu thật*.
 - **Mục 3.6 (độ chính xác AI):** ba nhận định của Gemini ở trên có thể dùng làm mẫu định tính, nhưng **chưa
   phải số đo** — muốn có tỉ lệ phát hiện đúng/nhầm thì cần bộ bài thi có nhãn, chưa làm.
+
+---
+
+## 📅 T3 — 18/08/2026 — Lát cắt 16: Thông báo, và hai thứ trong đặc tả tôi quyết định không làm
+
+**Mục tiêu:** làm tính năng 16 để danh sách 16 chức năng chỉ còn thiếu tính năng 14 (lớp học). Tính năng này
+cũng là hạ tầng mà hai món nợ khác đang chờ: FR-53 (thông báo thành tích) và nút *"Nhắc riêng"* của cảnh báo
+live trong phòng đấu.
+
+**Xong:** V18 (2 bảng) · 6 endpoint · job hằng ngày · chuông + 2 trang · 19 test backend + 10 test frontend.
+
+### Cùng một cặp bẫy Spring/JPA, lần thứ hai — và lần này nó vỡ ngay ở test đầu
+
+Chống gửi trùng ban đầu viết theo cách hiển nhiên: `save()` trong `try`, bắt
+`DataIntegrityViolationException`. **Bốn test đỏ ngay lượt chạy đầu** với `duplicate key value violates unique
+constraint`. Nguyên nhân: `save()` của JPA *chưa gửi câu lệnh xuống cơ sở dữ liệu*, nên vi phạm ràng buộc nổ
+lúc commit — **sau khi** thân phương thức đã ra khỏi khối `catch`.
+
+Chữa bằng `saveAndFlush` để ngoại lệ nổ trong `try` thì rơi vào bẫy thứ hai, đúng cái đã gặp ở tính năng 13:
+Spring đã đánh dấu transaction là rollback-only nên bắt rồi trả về bình thường vẫn vỡ ở lần commit với
+`UnexpectedRollbackException`.
+
+Cách ra: `INSERT ... ON CONFLICT DO NOTHING`. **Không có ngoại lệ nào** để bắt, transaction không bị đánh dấu
+gì, và hàm trả về số dòng đã chèn nên vẫn biết được là vừa tạo hay đã có. Điều rút ra rộng hơn cả cái bẫy:
+**trùng khoá là đường chạy bình thường của một job hằng ngày, nên nó không nên đi qua cơ chế ngoại lệ ngay từ
+đầu.** Lần trước tôi coi đây là mẹo chữa lỗi; lần này thấy nó là quyết định thiết kế.
+
+### Đặc tả gợi ý khoá phân tán Redis, tôi chọn ràng buộc duy nhất
+
+Ghi chú kỹ thuật của tính năng 16 viết *"cân nhắc khóa phân tán (Redis) nếu chạy nhiều instance để không gửi
+trùng"*. Khoá phân tán chỉ chặn **hai instance cùng lúc**. Còn `UNIQUE (user_id, dedupe_key)` chặn *mọi* đường
+dẫn tới việc gửi trùng: hai instance cùng lúc, deploy lại giữa trưa, ai đó gọi tay để thử, hay tính lại XP làm
+phát lại sự kiện. Và nó không thêm một thành phần nữa có thể chết.
+
+Cái giá là job có thể chạy trùng và làm việc vô ích một lát — với vài trăm người dùng thì đó là một câu
+`group by` chạy hai lần. Đổi lấy một bảo đảm mạnh hơn thì rẻ.
+
+### Hai thứ trong đặc tả tôi không làm
+
+| Bỏ / hoãn | Vì sao |
+|---|---|
+| **FR-69 email** (hoãn) | Cần SMTP thật + khoá trong `.env`, cả hai không có trong tech-stack. Và không kiểm chứng được: email vào hộp thư rác là chuyện thường với người gửi mới, nên "gửi thành công" ở phía mình không nói gì về việc thư có tới |
+| **Khung giờ nhắc — quiet hours** (bỏ) | Một cột **sẽ không làm gì cả**. Job chạy đúng một lần mỗi ngày lúc 7:00, nên khung im lặng 22:00–07:00 không chặn được gì. Thông báo in-app cũng không đánh thức ai — quiet hours chỉ có nghĩa với đẩy về điện thoại hoặc email, mà email đã hoãn. Nó còn cần **múi giờ người dùng**, thứ hệ thống không lưu |
+
+Đây là lần thứ ba trong đồ án gặp cùng một dạng quyết định (sau FR-84 hạn mức AI và FR-48): **thêm một ô nhập
+hoặc một cột mà không có gì đọc nó thì tệ hơn là không có** — nó trông như một tính năng và cư xử như không có.
+
+### Một cái bẫy Jackson chỉ vỡ ở chỗ không ai thấy
+
+DTO thông báo đi **hai chiều**: ra REST/STOMP, và *vào lại* khi listener đọc gói tin từ Redis. Cột `data` là
+`jsonb` trong CSDL nhưng `String` trong Java, nên phải có `@JsonRawValue` để client nhận một *đối tượng* thay vì
+một chuỗi bị escape.
+
+`@JsonRawValue` chỉ tác dụng khi **ghi**. Thiếu deserializer cho chiều đọc thì Jackson gặp một đối tượng JSON ở
+chỗ chờ `String` và ném lỗi — mà chỗ ném là **trong listener Redis**. Hậu quả: thông báo real-time lặng lẽ
+không tới ai, người dùng chỉ thấy nó ở lần tải trang sau, và **không có lỗi nào ở đường request để lần ra**.
+Đây là loại lỗi không thể bắt bằng cách thử tay, nên có `NotificationResponseJsonTest` riêng cho vòng ra-vào của
+một record ba dòng.
+
+### Test frontend bắt được hai lỗi thật
+
+1. **Chuông gọi API danh sách khi hộp còn đóng.** Tôi định "chỉ gọi khi mở" bằng cách đổi tham số
+   (`moHop ? {size:8} : {}`) — nhưng đổi tham số vẫn là một request. Phải thêm `enabled` thật vào hook. Chuông
+   hiện ở *mọi* trang, nên đây là 8 thông báo kéo về mỗi lần tải trang chỉ để vẽ một chấm đỏ.
+2. **`mutationFn: notificationApi.danhDauDaDoc` truyền thẳng.** TanStack Query gọi `mutationFn(variables,
+   context)`, nên hàm API nhận thêm một object context ở tham số thứ hai. Hôm nay vô hại vì hàm chỉ đọc tham số
+   đầu — nhưng ngày nào đó nó có tham số thứ hai tuỳ chọn thì context của TanStack lặng lẽ chảy vào đúng chỗ đó.
+   Đã bọc trong arrow ở mọi mutation.
+
+Cả hai đều là lỗi *thật* chứ không phải test viết sai — và cả hai đều thuộc loại không bao giờ lộ ra khi thử tay.
+
+### Trả nốt FR-53
+
+Tính năng 13 để lại FR-53 với ghi chú *"cần tính năng 16"*. Nay trả bằng hai sự kiện miền `LevelUpEvent` /
+`BadgeEarnedEvent` phát từ `GamificationService.award` — cửa duy nhất mà XP đi qua. `GamificationService` không
+cần biết tính năng 16 tồn tại, và bỏ hẳn tính năng 16 cũng không phải sửa một dòng nào ở đó.
+
+Riêng phần *hiệu ứng* của FR-53 (confetti khi lên cấp) thì không làm: một hiệu ứng bật lên giữa lúc người học
+đang làm bài là thứ gây phân tán, còn ở trang Thành tích thì huy hiệu đã hiện sẵn. Cùng lý do với việc **không
+hiện toast** khi có thông báo mới — chuông đã có chấm đỏ.
+
+### Gộp ba nhánh song song, và chỗ duy nhất thật sự đáng lo
+
+Ba tính năng 15, 12, 16 làm trên ba nhánh tách ra từ cùng một điểm, nên khi merge nhánh 15 vào `main` thì hai
+nhánh kia báo xung đột. Bốn trong năm chỗ là **"hai bên cùng thêm"** — hai dòng bảng theo dõi, hai mục nhật ký,
+hai dòng README, hai import và hai route ở `App.tsx`. Loại này chỉ cần giữ cả hai, xếp đúng thứ tự.
+
+Chỗ thứ năm mới đáng đọc kỹ: cả nhánh 15 và nhánh 16 đều **sửa cùng một hàm** `GamificationService.award` —
+nhánh 15 thêm `leaderboardService.congDiem(...)`, nhánh 16 thêm hai lời `publishEvent(...)`. Git không thể tự
+biết nên giữ cái nào, và **chọn một bên là mất lặng lẽ nửa tính năng kia**: giữ bên 15 thì không còn thông báo
+thành tích, giữ bên 16 thì điểm mùa không bao giờ được cộng — và cả hai đều *biên dịch được*, cả hai đều không
+có test nào đỏ ở nhánh còn lại vì nhánh đó không có mặt.
+
+Điều rút ra: **xung đột nguy hiểm không phải chỗ hai bên viết đè lên nhau, mà chỗ hai bên cùng thêm việc vào
+một hàm.** Chỗ đè lên nhau thì Git bắt phải đọc; chỗ cùng thêm thì rất dễ "chọn bên mình" cho nhanh.
+
+Sau khi gộp, `award` làm đủ ba việc theo thứ tự có nghĩa: đồng bộ điểm mùa → trao huy hiệu → phát sự kiện
+(phải sau cùng vì nó cần biết huy hiệu vừa trao và cấp mới). Chạy lại toàn bộ test để chắc.
+
+### Một flake thứ ba của test chat, chưa sửa
+
+Chạy toàn bộ suite sau khi gộp thì `ChatIntegrationTest` đỏ với `WebClientRequestException: empty headers are
+not allowed []`. Đã xác định **không phải hồi quy do gộp**: mã nguồn chat và file test ở nhánh này giống hệt
+`main` từng dòng, và chạy riêng lớp đó hai lượt thì lượt 1 xanh, lượt 2 đỏ ở một *test method khác*
+(`shouldRespectUnsharing` thay vì `shouldStreamMetaBeforeTokens`). Đổi chỗ đỏ mỗi lượt = không xác định.
+
+Đây là flake **thứ ba**, khác hai cái đã sửa ở lát cắt 15 (kết nối chết trong pool, và `.retry(1)` nhân đôi
+phiên). Bản sửa hôm đó — bỏ pool bằng `ConnectionProvider.newConnection()` — vẫn còn nguyên và vẫn đúng, nhưng
+chưa đủ. Chưa truy ra nguyên nhân nên **không sửa vội**: cái sai lớn hơn là thêm một `retry` để nó hết đỏ, vì
+đó đúng là thứ đã tạo ra flake số hai.
+
+Ghi lại đây làm nợ. Một suite đỏ ngẫu nhiên là vấn đề thật với đồ án — lúc bảo vệ mà `mvn test` đỏ thì không
+kịp giải thích rằng nó chỉ chập chờn.
+
+### Nợ / chuyển sang sau
+- **Flake `ChatIntegrationTest`** (`empty headers are not allowed`) — chưa truy ra nguyên nhân, xem trên.
+- **Tính năng 14 (Lớp học)** — mục cuối cùng để đủ 16.
+- **Cảnh báo live trong phòng đấu** — giờ đã có hạ tầng gửi thông báo tới một người, nên nút *"Nhắc riêng"* làm
+  được. Vẫn cần kênh STOMP riêng cho host trước (xem [features/12](../features/12-anti-cheat.md)).
+- `ASSIGNMENT_DUE` và `ROOM_INVITE` khai sẵn trong ràng buộc `CHECK` nhưng **chưa có nguồn phát**; cố ý không
+  đưa lên trang cài đặt để không có công tắc rỗng.
+
+### Ghi chú báo cáo
+- **Mục 2.8 (ERD):** thêm 2 bảng. Nhấn `dedupe_key` — chọn ràng buộc duy nhất thay vì khoá phân tán Redis, và
+  vì sao lựa chọn đó *mạnh hơn* chứ không chỉ đơn giản hơn.
+- **Mục 2.7:** tính năng này là ví dụ thứ hai về **domain event** (sau gamification), và là ví dụ tốt về
+  **dùng lại hạ tầng**: real-time đi đúng đường Redis→STOMP mà phòng đấu đã mở, chung một
+  `RedisMessageListenerContainer`.
+- **"Khó khăn & cách giải quyết":** cặp bẫy JPA gặp lần thứ hai (và lần này rút ra được nguyên tắc rộng hơn),
+  cùng cái bẫy `@JsonRawValue` một chiều.
+- **Mục 3.4:** hai lỗi thật do test frontend bắt được — cả hai đều không lộ ra khi thử tay. Đây là lập luận
+  cụ thể cho việc viết test giao diện, không chỉ test backend.
 
 ---
 

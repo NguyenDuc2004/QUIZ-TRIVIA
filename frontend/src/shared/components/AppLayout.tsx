@@ -10,6 +10,8 @@ import {
 } from '@ant-design/icons'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
 import { useAuthStore } from '@/features/auth/store/authStore'
+import NotificationBell from '@/features/notification/components/NotificationBell'
+import { useNotificationSocket } from '@/features/notification/hooks/useNotificationSocket'
 
 const { Header, Content } = Layout
 const { Text } = Typography
@@ -37,6 +39,10 @@ export default function AppLayout() {
   const [keyword, setKeyword] = useState('')
 
   const canCreate = user?.role === 'CREATOR' || user?.role === 'ADMIN'
+
+  // Một kết nối WebSocket cho cả phiên đăng nhập, gắn ở layout vì thông báo tới bất cứ lúc nào ở bất cứ
+  // trang nào (features/16, FR-67). Hook tự bỏ qua khi chưa đăng nhập.
+  useNotificationSocket()
   const isAdmin = user?.role === 'ADMIN'
 
   // Màu chữ phải có hậu tố `!`. Đây là thẻ <a>, và Ant Design chèn CSS `a { color }` lúc chạy ở NGOÀI
@@ -139,6 +145,9 @@ export default function AppLayout() {
               </Button>
             </Link>
           )}
+          {/* Chuông đứng TRƯỚC avatar: thông báo là thứ người dùng nhìn thường xuyên hơn menu tài khoản,
+              và đặt sau avatar thì nó rơi ra sát mép phải màn hình */}
+          {user && <NotificationBell />}
           {user && (
             <Dropdown menu={{ items: accountMenuItems }} trigger={['click']} placement="bottomRight">
               {/* Vùng bấm gộp avatar + tên + vai trò: cả khối là một đích bấm, không phải ba đích

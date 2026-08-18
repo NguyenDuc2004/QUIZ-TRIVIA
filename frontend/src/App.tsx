@@ -17,6 +17,8 @@ import DeckDetailPage from '@/features/flashcard/pages/DeckDetailPage'
 import DecksPage from '@/features/flashcard/pages/DecksPage'
 import AchievementsPage from '@/features/gamification/pages/AchievementsPage'
 import LeaderboardPage from '@/features/season/pages/LeaderboardPage'
+import NotificationsPage from '@/features/notification/pages/NotificationsPage'
+import NotificationSettingsPage from '@/features/notification/pages/NotificationSettingsPage'
 import ReviewSessionPage from '@/features/flashcard/pages/ReviewSessionPage'
 import QuizIntroPage from '@/features/attempt/pages/QuizIntroPage'
 import BrowseQuizzesPage from '@/features/quiz/pages/BrowseQuizzesPage'
@@ -90,6 +92,10 @@ export default function App() {
         <Route path="/achievements" element={<AchievementsPage />} />
         {/* Bảng xếp hạng theo mùa (features/15) — đọc từ Redis ZSET, dựng lại được từ xp_events */}
         <Route path="/leaderboard" element={<LeaderboardPage />} />
+        {/* Thông báo (features/16). Không có mục trên thanh điều hướng: lối vào là chuông ở góc phải,
+            và thêm một mục thứ sáu vào thanh vừa gom xuống 5 mục là đi ngược việc vừa làm. */}
+        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/notifications/settings" element={<NotificationSettingsPage />} />
         <Route path="/flashcards/review" element={<ReviewSessionPage />} />
         <Route path="/flashcards/decks/:id" element={<DeckDetailPage />} />
         {/* Trợ lý học tập: mở cho MỌI người đã đăng nhập, không riêng CREATOR — người học chính là

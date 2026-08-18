@@ -574,12 +574,30 @@ job nền chạy mỗi giờ (`@Scheduled`), idempotent qua bốn chốt ở cơ
 
 ## 7g. Thông báo — `/notifications`
 ```
-GET    /api/v1/notifications              Danh sách thông báo
-PUT    /api/v1/notifications/{id}/read     Đánh dấu đã đọc
-PUT    /api/v1/notifications/read-all      Đánh dấu tất cả đã đọc
-GET/PUT /api/v1/notifications/settings     Cài đặt thông báo
+GET     /api/v1/notifications                Danh sách thông báo của tôi, mới nhất trước      ✅
+GET     /api/v1/notifications/unread-count   Số chưa đọc, cho chấm đỏ trên chuông            ✅
+PUT     /api/v1/notifications/{id}/read      Đánh dấu đã đọc → 204                           ✅
+PUT     /api/v1/notifications/read-all       Đánh dấu tất cả đã đọc → { daDanhDau }          ✅
+GET/PUT /api/v1/notifications/settings       Cài đặt loại thông báo                          ✅
 ```
-WebSocket: subscribe `/user/queue/notifications` (real-time in-app).
+- **Mọi endpoint chỉ làm việc trên thông báo của chính người gọi** — không có tham số `userId` ở bất kỳ đâu, id
+  lấy từ token. `PUT {id}/read` với thông báo của người khác trả **204 và không làm gì**: một mã lỗi chỉ nói cho
+  người dò id biết là id đó có thật.
+- **Không có endpoint tạo thông báo.** Thông báo chỉ sinh từ sự kiện thật trong hệ thống hoặc job nền — mở một
+  đường ghi qua API là mở kênh spam sẵn có. `POST /notifications` trả **405**.
+- `unread-count` có endpoint riêng vì chấm đỏ hiện ở **mọi** trang: kéo về 20 thông báo đầy đủ chỉ để lấy một
+  con số là tốn vô ích, và con số đó còn sai nếu có hơn 20 cái chưa đọc.
+- `read-all` trả **số dòng vừa đổi**, không phải tổng số thông báo — cái đã đọc từ trước không đếm lại.
+- `GET settings` trả kèm `dieuChinhDuoc`: **danh sách loại hiện trên trang cài đặt**, do máy chủ quyết định.
+  Frontend không tự liệt kê, vì loại nào đã có nguồn phát là việc của máy chủ. `PUT settings` **đặt lại toàn bộ**
+  danh sách loại bị tắt (không phải bật/tắt từng cái), và bỏ qua `SYSTEM` trong im lặng — loại đó không tắt được.
+- Trường `data` trả về là **đối tượng JSON**, không phải chuỗi cần `JSON.parse`. Ví dụ
+  `{"kind":"SRS_DUE","soThe":7}` · `{"kind":"LEVEL_UP","level":5}` · `{"kind":"BADGE","code":"PERFECT_1"}`.
+
+WebSocket: subscribe `/user/queue/notifications`. Đích thật là `/user/{userId}/queue/notifications` — Spring tự
+ghép tiền tố theo danh tính của phiên, nên client **không** tự nhét `userId` vào. Frame CONNECT vẫn cần
+`Authorization: Bearer <JWT>` như phòng đấu (§5.2). Thông báo đi vòng qua Redis Pub/Sub trước khi xuống broker,
+cùng lý do với sự kiện phòng: broker của Spring nằm trong bộ nhớ từng instance.
 
 ## 8. Thống kê — `/analytics`
 ```

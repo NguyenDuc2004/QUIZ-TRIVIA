@@ -48,6 +48,7 @@ public class GamificationService {
     private final AchievementCounters counters;
     private final ObjectMapper objectMapper;
     private final com.datn.quizai.season.service.SeasonLeaderboardService leaderboardService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public GamificationService(UserStatsRepository statsRepository,
                               XpEventRepository xpEventRepository,
@@ -55,7 +56,8 @@ public class GamificationService {
                               UserBadgeRepository userBadgeRepository,
                               AchievementCounters counters,
                               ObjectMapper objectMapper,
-                              com.datn.quizai.season.service.SeasonLeaderboardService leaderboardService) {
+                              com.datn.quizai.season.service.SeasonLeaderboardService leaderboardService,
+                              org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.statsRepository = statsRepository;
         this.xpEventRepository = xpEventRepository;
         this.badgeRepository = badgeRepository;
@@ -63,6 +65,7 @@ public class GamificationService {
         this.counters = counters;
         this.objectMapper = objectMapper;
         this.leaderboardService = leaderboardService;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -89,6 +92,7 @@ public class GamificationService {
         UserStats stats = statsRepository.findById(userId)
                 .orElseGet(() -> statsRepository.save(new UserStats(userId)));
 
+        int capCu = stats.getLevel();
         stats.setTotalXp(stats.getTotalXp() + xp);
         stats.setLevel(LevelCalculator.capTuXp(stats.getTotalXp()));
 
@@ -102,7 +106,17 @@ public class GamificationService {
         // Redis bên trong hàm này được nuốt và ghi log, vì XP đã vào cơ sở dữ liệu và ZSET dựng lại được.
         leaderboardService.congDiem(userId, xp);
 
-        traoHuyHieuDatDuoc(userId, stats);
+        List<Badge> vuaTrao = traoHuyHieuDatDuoc(userId, stats);
+
+        // Phát sự kiện sau khi mọi thay đổi đã xong (features/16, FR-53). Người nhận là listener sau-commit,
+        // nên phát sớm hơn cũng không đổi thứ tự — nhưng đặt ở đây thì đọc code thấy rõ "đây là kết quả
+        // cuối", không phải một trạng thái nửa vời.
+        if (stats.getLevel() > capCu) {
+            eventPublisher.publishEvent(new LevelUpEvent(userId, capCu, stats.getLevel()));
+        }
+        for (Badge badge : vuaTrao) {
+            eventPublisher.publishEvent(new BadgeEarnedEvent(userId, badge.getCode(), badge.getName()));
+        }
         return true;
     }
 
