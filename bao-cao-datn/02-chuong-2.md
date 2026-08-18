@@ -232,11 +232,11 @@ Lớp biên `RecommendationPage` gọi `RecommendationService`; lớp này dùng
 
 Hệ thống áp dụng nguyên tắc lưu trữ đa hệ với ba hệ quản trị, mỗi hệ đảm nhiệm loại dữ liệu phù hợp với đặc tính của nó: PostgreSQL 16 cho dữ liệu nghiệp vụ có tính giao dịch và kho vector học liệu, Neo4j 5 cho đồ thị hành vi phục vụ gợi ý, Redis cho dữ liệu ngắn hạn và thông điệp thời gian thực.
 
-Cơ sở dữ liệu quan hệ được thiết kế theo các quy ước: dùng kiểu `uuid` làm khóa chính cho mọi bảng; đặt tên theo quy ước snake_case; cột thời gian dùng `timestamptz`; kiểu liệt kê lưu dạng `varchar` kèm ràng buộc `CHECK` thay vì kiểu enum của PostgreSQL để việc bổ sung giá trị mới không cần thay đổi kiểu; dữ liệu phi cấu trúc lưu `jsonb`. Mọi thay đổi lược đồ thực hiện qua migration Flyway được đánh số và không sửa lại tệp đã áp dụng, nhờ đó cơ sở dữ liệu ở mọi môi trường dựng lại được từ đầu một cách xác định. Hình 2.28 thể hiện sơ đồ thực thể quan hệ tổng quan.
+Cơ sở dữ liệu quan hệ được thiết kế theo các quy ước: dùng kiểu `uuid` làm khóa chính cho mọi bảng; đặt tên theo quy ước snake_case; cột thời gian dùng `timestamptz`; kiểu liệt kê lưu dạng `varchar` kèm ràng buộc `CHECK` thay vì kiểu enum của PostgreSQL để việc bổ sung giá trị mới không cần thay đổi kiểu; dữ liệu phi cấu trúc lưu `jsonb`. Mọi thay đổi lược đồ thực hiện qua migration Flyway được đánh số và không sửa lại tệp đã áp dụng, nhờ đó cơ sở dữ liệu ở mọi môi trường dựng lại được từ đầu một cách xác định. Hình 2.28 thể hiện sơ đồ thực thể quan hệ tổng quan. Để hình đọc được ở khổ giấy, sơ đồ **không vẽ các đường nối tới bảng `users`**: gần như mọi bảng đều có khóa ngoại `user_id` hoặc `owner_id` trỏ về `users`, và vẽ đủ thì bảng này trở thành một trục có hai mươi bảng treo vào, khiến sơ đồ dàn ngang và mất khả năng đọc. Các quan hệ đó vẫn tồn tại đầy đủ trong lược đồ.
 
 [HÌNH 2.28: Sơ đồ thực thể quan hệ (ERD) tổng quan — cần chèn]
 
-Phần đã hiện thực của hệ thống gồm 16 bảng trên PostgreSQL, được tổ chức theo các nhóm chức năng. Bảng 2.10 đến Bảng 2.14 liệt kê đầy đủ các bảng cùng mô tả ngắn gọn.
+Phần đã hiện thực của hệ thống gồm 29 bảng trên PostgreSQL, được tổ chức theo các nhóm chức năng. Bảng 2.10 đến Bảng 2.14 liệt kê nhóm dữ liệu lõi, Bảng 2.15 đến Bảng 2.17 liệt kê nhóm dữ liệu của các chức năng mở rộng, kèm mô tả ngắn gọn.
 
 **Bảng 2.10. Nhóm người dùng và danh mục**
 
@@ -279,15 +279,42 @@ Phần đã hiện thực của hệ thống gồm 16 bảng trên PostgreSQL, �
 | `chat_sessions` | Phiên hội thoại với trợ lý học tập, tiêu đề cắt từ câu hỏi đầu tiên |
 | `chat_messages` | Từng lượt hỏi và trả lời trong một phiên hội thoại |
 
+**Bảng 2.15. Nhóm thẻ ghi nhớ và lặp lại ngắt quãng**
+
+| Bảng | Mô tả |
+|------|-------|
+| `flashcard_decks` | Bộ thẻ của một người dùng: tiêu đề, chủ đề |
+| `flashcards` | Thẻ ghi nhớ: mặt trước, mặt sau, gợi ý, thẻ nhãn, và nguồn tạo (tự soạn, sinh từ AI, hoặc dựng từ câu đã làm sai) |
+| `flashcard_reviews` | **Trạng thái lặp lại ngắt quãng theo từng cặp (thẻ, người dùng)**: hệ số dễ, khoảng cách ngày, số lần ôn đúng liên tiếp, ngày đến hạn. Tách riêng khỏi `flashcards` vì một thẻ dùng chung có thể được nhiều người ôn với lịch hoàn toàn khác nhau |
+
+**Bảng 2.16. Nhóm trò chơi hóa và bảng xếp hạng theo mùa**
+
+| Bảng | Mô tả |
+|------|-------|
+| `user_stats` | Tổng hợp cho mỗi người dùng: tổng điểm kinh nghiệm, cấp độ, chuỗi ngày học hiện tại và dài nhất, ngày hoạt động gần nhất |
+| `xp_events` | Sổ từng lần cộng điểm kinh nghiệm: nguồn, khóa của hành động, số điểm. Ràng buộc duy nhất trên (người dùng, loại nguồn, khóa nguồn) là chốt **idempotent** ở tầng cơ sở dữ liệu — một hành động chỉ cộng điểm đúng một lần dù có gọi lại |
+| `badges`, `user_badges` | Định nghĩa huy hiệu (mã, tên, điều kiện dạng `jsonb`) và bản ghi trao huy hiệu cho người dùng kèm thời điểm |
+| `daily_challenges`, `user_daily_progress` | Thử thách của từng ngày (luật dạng `jsonb`, điểm thưởng) và tiến độ của mỗi người trên thử thách đó |
+| `seasons`, `season_rankings` | Mùa giải (khoảng thời gian, trạng thái) và bảng xếp hạng **chốt lại khi mùa kết thúc**. Bảng xếp hạng đang diễn ra nằm ở Redis dạng Sorted Set, không ở đây — nó là chỉ mục dựng lại được từ `xp_events`, không phải nguồn sự thật |
+
+**Bảng 2.17. Nhóm chống gian lận thi**
+
+| Bảng | Mô tả |
+|------|-------|
+| `proctoring_events` | Nhật ký tín hiệu hành vi trong chế độ thi: loại tín hiệu (sáu loại, có ràng buộc kiểm tra), thời điểm phát sinh, và chi tiết dạng `jsonb`. Chi tiết **chỉ chứa số** — với thao tác dán chỉ lưu độ dài đoạn văn bản, không lưu nội dung |
+| `attempt_integrity` | Bản tổng hợp của mỗi lượt thi: điểm rủi ro 0–100, danh sách cờ giải thích lý do dạng `jsonb`, nhận định của mô hình ngôn ngữ, và trạng thái rà soát. Ràng buộc duy nhất trên lượt thi bảo đảm tính lại không sinh dòng thứ hai |
+
+Nhóm bảng chống gian lận có ba đặc điểm thiết kế xuất phát từ **ràng buộc đạo đức** chứ không từ nhu cầu kỹ thuật, nên cần nêu rõ. Thứ nhất, hai bảng này **chỉ có dữ liệu cho lượt thi tính điểm**; lượt luyện tập không sinh dòng nào, và máy chủ từ chối tín hiệu gửi lên cho lượt luyện tập. Thứ hai, cột chi tiết được máy chủ **dựng lại từ một danh sách trường vô hại** thay vì lưu nguyên gói tin của phía trình duyệt — phía trình duyệt đã chỉ đọc độ dài đoạn dán rồi bỏ chuỗi đi, nhưng nếu chỉ có một lớp bảo vệ thì một bản mã nguồn phía người dùng bị sửa đủ để nội dung chảy vào cơ sở dữ liệu. Thứ ba, cột trạng thái rà soát mặc định là *chờ rà soát* và **không có đường nào để hệ thống tự đổi giá trị đó**: tín hiệu thu từ trình duyệt có thể bị chặn hoặc giả mạo, nên chúng chỉ là cảnh báo hỗ trợ quyết định của con người. Giao diện phản ánh đúng điều này — mọi báo cáo đều hiện kèm một câu nhắc rằng điểm rủi ro không phải bằng chứng gian lận, và câu nhắc đó đặt ngay cạnh con số chứ không ở cuối trang.
+
 Riêng bảng `material_chunks` có một đặc điểm thiết kế cần nêu rõ: cột vector nhúng **không** được lập chỉ mục xấp xỉ. Nguyên nhân đã trình bày ở mục 1.3.2 — truy vấn RAG phải lọc quyền đọc trước rồi mới xếp theo khoảng cách, trong khi chỉ mục xấp xỉ làm ngược lại nên bỏ sót kết quả một cách im lặng. Ở quy mô vài trăm tới vài nghìn đoạn, quét tuần tự trên tập đã lọc quyền vừa nhanh vừa không bỏ sót; khi kho vượt cỡ vài chục nghìn đoạn mới cần chỉ mục xấp xỉ, và lúc đó phải bật kèm cơ chế quét lặp của pgvector để chỉ mục tự tìm thêm khi bộ lọc quyền loại bớt ứng viên.
 
 Mô hình đồ thị trên Neo4j gồm ba loại nút `User`, `Quiz`, `Topic` và ba loại quan hệ `ATTEMPTED`, `PRACTICED`, `COVERS` như đã trình bày ở mục 1.3.5; ràng buộc duy nhất trên định danh của cả ba loại nút được tạo lúc ứng dụng khởi động, thiếu bước này thì lệnh `MERGE` vẫn chạy nhưng quét toàn bộ nút mỗi lần và chậm dần theo kích thước đồ thị mà không có triệu chứng gì. Dữ liệu trên Redis gồm trạng thái phòng đang chơi, kênh xuất bản sự kiện ván đấu, khóa phiên khách vãng lai, refresh token cùng chỉ mục ngược từ người dùng tới các phiên của họ, bộ đệm kết quả AI và bộ đếm hạn mức.
 
-Các bảng phục vụ chức năng mở rộng — thẻ ghi nhớ và lặp lại ngắt quãng, chống gian lận, trò chơi hóa, lớp học và giao bài, bảng xếp hạng theo mùa, thông báo — đã được thiết kế trong tài liệu nhưng chưa hiện thực, nên không trình bày chi tiết ở đây.
+Hai nhóm bảng còn lại trong thiết kế — lớp học cùng giao bài, và thông báo — đã được đặc tả trong tài liệu nhưng chưa hiện thực, nên không trình bày chi tiết ở đây và cũng không xuất hiện trên sơ đồ Hình 2.28.
 
 ### 2.2.2. Thiết kế kiến trúc và mô-đun
 
-Mã nguồn phía máy chủ được tổ chức theo nghiệp vụ dưới gói gốc `com.datn.quizai`, gồm các mô-đun `auth`, `user`, `quiz`, `attempt`, `file`, `realtime`, `ai`, `chat`, `recommend`, `analytics`, cùng `common` (thực thể cơ sở, kiểm tra quyền sở hữu, DTO dùng chung, xử lý ngoại lệ) và `config` (cấu hình bảo mật, WebSocket, Redis Pub/Sub, tài liệu API). Nguyên tắc tổ chức là **nhóm theo tính năng, bên trong mỗi tính năng mới chia theo tầng** (`controller`, `service`, `repository`, `domain`, `dto`); nhờ vậy sửa một tính năng chỉ cần mở một thư mục mà ranh giới các tầng vẫn rõ. Hai gói `common` và `config` không chia theo tầng vì không phải tính năng nghiệp vụ. Thư mục kiểm thử phản chiếu đúng cấu trúc này.
+Mã nguồn phía máy chủ được tổ chức theo nghiệp vụ dưới gói gốc `com.datn.quizai`, gồm các mô-đun `auth`, `user`, `quiz`, `attempt`, `file`, `realtime`, `ai`, `chat`, `recommend`, `analytics`, `admin`, `flashcard`, `gamification`, `season`, `integrity`, cùng `common` (thực thể cơ sở, kiểm tra quyền sở hữu, DTO dùng chung, xử lý ngoại lệ) và `config` (cấu hình bảo mật, WebSocket, Redis Pub/Sub, tài liệu API). Nguyên tắc tổ chức là **nhóm theo tính năng, bên trong mỗi tính năng mới chia theo tầng** (`controller`, `service`, `repository`, `domain`, `dto`); nhờ vậy sửa một tính năng chỉ cần mở một thư mục mà ranh giới các tầng vẫn rõ. Hai gói `common` và `config` không chia theo tầng vì không phải tính năng nghiệp vụ. Thư mục kiểm thử phản chiếu đúng cấu trúc này.
 
 Quan hệ phụ thuộc là một chiều Controller → Service → Repository → Domain. Controller không chứa logic nghiệp vụ và không bao giờ trả trực tiếp thực thể ra API mà chuyển qua DTO. Riêng lớp tích hợp AI được cô lập sau interface `AiProvider` cùng lớp điều phối `AiOrchestrator`, nên việc đổi hoặc thêm nhà cung cấp không ảnh hưởng tầng nghiệp vụ. Hình 2.29 thể hiện sơ đồ phân lớp và cấu trúc mô-đun.
 

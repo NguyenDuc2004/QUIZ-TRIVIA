@@ -497,12 +497,26 @@ chiếu thẻ đáng ngờ với nguồn.
 
 ## 7c. Chống gian lận — `/attempts/{id}/proctoring-events`, `/integrity`
 ```
-POST   /api/v1/attempts/{id}/proctoring-events   Gửi sự kiện hành vi (batch)
-GET    /api/v1/attempts/{id}/integrity           Báo cáo tính toàn vẹn (Creator/Admin)
-GET    /api/v1/admin/integrity/flagged           Danh sách bài thi bị gắn cờ
-PUT    /api/v1/admin/integrity/{id}/review       Đánh dấu hợp lệ/không hợp lệ
+POST   /api/v1/attempts/{id}/proctoring-events   Gửi lô tín hiệu hành vi (≤ 50/lô)                 ✅
+GET    /api/v1/attempts/{id}/integrity           Báo cáo tính toàn vẹn (chủ quiz hoặc Admin)       ✅
+PUT    /api/v1/attempts/{id}/integrity/review    Kết luận hợp lệ / không hợp lệ                    ✅
+GET    /api/v1/admin/integrity/flagged           Hàng chờ bài bị gắn cờ (Admin), `?status=`        ✅
 ```
-Real-time: sự kiện có thể gửi qua WebSocket `/app/room/{code}/proctoring`.
+- `POST proctoring-events` chỉ nhận **lượt EXAM của chính mình**; lượt PRACTICE trả `400`. Thân request là
+  `{ events: [{ type, occurredAt, length?, seconds? }] }` — **không có trường nội dung**, và server dựng lại
+  `detail` từ đúng hai trường số đó thay vì lưu nguyên gói tin.
+- `GET integrity` trả `404` cho **người làm bài** (kể cả bài của chính họ) — xem
+  [features/12](features/12-anti-cheat.md). Trả `404` chứ không `403` vì `403` đã là một xác nhận rằng lượt đó
+  có báo cáo.
+- `PUT review` **không** nằm dưới `/admin/`: FR-47 cho phép chủ quiz kết luận bài của quiz mình mà không cần
+  quyền quản trị. Chỉ hàng chờ toàn hệ thống là việc riêng của Admin. Gửi `status: PENDING` trả `400` —
+  PENDING là trạng thái ban đầu, không phải một kết luận.
+- Mọi báo cáo đều kèm trường `canhBao`: tín hiệu giả mạo được, điểm rủi ro **không phải bằng chứng**.
+- Hàng chờ sắp theo điểm rủi ro giảm dần, mặc định lọc `PENDING`, và **không kèm từng sự kiện** (`suKien: []`)
+  — trang đó chỉ để chọn bài cần mở.
+
+Kênh WebSocket `/app/room/{code}/proctoring` **không hiện thực**: nó chỉ cần cho FR-44 (đối chiếu đáp án trong
+phòng đấu), mà FR-44 đã bỏ — lý do ở [features/12](features/12-anti-cheat.md).
 
 ## 7d. Gamification — `/gamification`
 ```
@@ -572,10 +586,16 @@ WebSocket: subscribe `/user/queue/notifications` (real-time in-app).
 GET    /api/v1/analytics/me                       Tiến độ của tôi (FR-85)
 GET    /api/v1/analytics/quizzes/{id}             Thống kê 1 quiz — chỉ chủ quiz (FR-86)
 GET    /api/v1/analytics/quizzes/{id}/attempts    Bài làm trên quiz của tôi, kèm cờ cần chấm tay
+                                                 và cờ đáng rà soát (FR-47)
 ```
 
 Cả ba đều **yêu cầu đăng nhập**. Hai endpoint `/quizzes/{id}` trả **404** khi quiz không thuộc
 người gọi — không phải 403, để không tiết lộ quiz đó có tồn tại (§10).
+
+`/quizzes/{id}/attempts` trả thêm `riskScore` và `reviewStatus`. Cả hai **chỉ khác `null` khi bài vượt ngưỡng
+gắn cờ (60)** — bài dưới ngưỡng vẫn có bản ghi trong `attempt_integrity` nhưng máy chủ cố ý không gửi con số
+ra: lý do ở [features/12](features/12-anti-cheat.md). Vì vậy `null` ở đây nghĩa là *không có gì đáng nói*,
+không phải *thiếu dữ liệu*.
 
 `/analytics/me` **không** trả điểm mạnh/yếu theo chủ đề. Phần đó ở `/recommendations/path` (§7),
 tính từ đồ thị Neo4j. Tính lại cùng kết luận từ PostgreSQL sẽ cho hai API nói về một chuyện bằng hai

@@ -1,5 +1,7 @@
 package com.datn.quizai.analytics.dto;
 
+import com.datn.quizai.integrity.domain.ReviewStatus;
+
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -11,6 +13,8 @@ import java.util.UUID;
  * danh sách là mở rộng phạm vi truy cập dữ liệu riêng tư mà không có lý do.
  *
  * @param needsManualGrading còn câu nào cần người chấm hay không — cờ này là lý do danh sách tồn tại
+ * @param riskScore          điểm rủi ro, <b>chỉ khác null khi bài vượt ngưỡng gắn cờ</b> — xem javadoc
+ * @param reviewStatus       trạng thái rà soát, chỉ khác null khi {@code riskScore} khác null
  */
 public record QuizAttemptSummary(
         UUID attemptId,
@@ -20,6 +24,8 @@ public record QuizAttemptSummary(
         OffsetDateTime submittedAt,
         long pendingAiCount,
         long failedAiCount,
-        boolean needsManualGrading
+        boolean needsManualGrading,
+        Integer riskScore,
+        ReviewStatus reviewStatus
 ) {
 }

@@ -376,7 +376,132 @@ class AnalyticsIntegrationTest {
         }
     }
 
+    // ============================================ FR-47 — cờ đáng rà soát trong danh sách bài làm
+
+    @Test
+    @DisplayName("Bài vượt ngưỡng: danh sách bài làm hiện điểm rủi ro và trạng thái chờ rà soát")
+    void shouldSurfaceFlaggedAttemptInOwnerList() throws Exception {
+        // Không có cột này thì FR-47 chỉ đúng một nửa: chủ quiz CÓ quyền xem báo cáo, nhưng đường vào duy
+        // nhất là mở từng bài — với hàng trăm bài nộp thì trên thực tế họ không bao giờ tìm ra bài nào.
+        String quizId = quizWithChoiceQuestions("Quiz có bài đáng rà soát", 2);
+        String attemptId = startAttempt(quizId, learnerToken);
+        guiTinHieu(attemptId, learnerToken, danDai(3));
+        submit(attemptId, learnerToken);
+
+        JsonNode dong = timDong(quizId, attemptId);
+
+        assertThat(dong.get("riskScore").isNull()).as("bài vượt ngưỡng phải có điểm").isFalse();
+        assertThat(dong.get("riskScore").asInt()).isGreaterThanOrEqualTo(60);
+        assertThat(dong.get("reviewStatus").asText()).isEqualTo("PENDING");
+    }
+
+    @Test
+    @DisplayName("Bài DƯỚI ngưỡng: có bản ghi trong CSDL nhưng KHÔNG gửi điểm ra — null, không phải 0")
+    void shouldNotExposeRiskScoreBelowThreshold() throws Exception {
+        // Bài này CÓ dòng trong attempt_integrity (một tín hiệu COPY, điểm 5), nên test chứng minh máy chủ
+        // chủ động không gửi chứ không phải "chưa có dữ liệu". Gắn con số mức-đáng-ngờ vào từng người học là
+        // mời người ta xếp hạng học sinh theo độ nghi, và điểm thấp không kèm cờ nào thì cũng vô dụng.
+        String quizId = quizWithChoiceQuestions("Quiz có bài bình thường", 2);
+        String attemptId = startAttempt(quizId, peerToken);
+        guiTinHieu(attemptId, peerToken, """
+                [{"type":"COPY","occurredAt":"2026-08-17T10:00:00Z"}]
+                """);
+        submit(attemptId, peerToken);
+
+        // Chốt trước khi khẳng định điều chính: bản ghi PHẢI tồn tại với điểm 5. Không có bước này thì test
+        // vẫn xanh cả khi hệ thống chẳng tính gì cho bài này — và lúc đó nó không kiểm được điều nào cả.
+        JsonNode baoCao = json(get("/api/v1/attempts/{id}/integrity", attemptId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken));
+        assertThat(baoCao.get("riskScore").asInt())
+                .as("bản ghi tồn tại và có điểm thật, chỉ là dưới ngưỡng")
+                .isBetween(1, 59);
+
+        JsonNode dong = timDong(quizId, attemptId);
+
+        assertThat(dong.get("riskScore").isNull()).as("dưới ngưỡng thì không gửi điểm").isTrue();
+        assertThat(dong.get("reviewStatus").isNull()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Bài đã kết luận: danh sách hiện đúng trạng thái đó, không còn là việc phải làm")
+    void shouldShowConcludedStatusInOwnerList() throws Exception {
+        // Dòng cảnh báo trên giao diện đếm theo PENDING. Nếu kết luận rồi mà trạng thái vẫn PENDING thì con
+        // số đó không bao giờ giảm dù chủ quiz đã rà soát hết.
+        String quizId = quizWithChoiceQuestions("Quiz đã rà soát", 2);
+        String attemptId = startAttempt(quizId, learnerToken);
+        guiTinHieu(attemptId, learnerToken, danDai(3));
+        submit(attemptId, learnerToken);
+
+        mockMvc.perform(put("/api/v1/attempts/{id}/integrity/review", attemptId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"VALID\",\"note\":\"Em ấy dán bản nháp của mình\"}"))
+                .andExpect(status().isOk());
+
+        JsonNode dong = timDong(quizId, attemptId);
+
+        assertThat(dong.get("reviewStatus").asText()).isEqualTo("VALID");
+        // Điểm vẫn còn: kết luận không xoá con số, nó chỉ trả lời câu hỏi "đã ai xem chưa"
+        assertThat(dong.get("riskScore").isNull()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Lượt luyện tập KHÔNG có điểm rủi ro trong danh sách, dù cùng quiz")
+    void shouldLeavePracticeAttemptWithoutRisk() throws Exception {
+        // Luyện tập không bị giám sát — đó là lời hứa in trên màn làm bài, và listener bỏ qua lượt PRACTICE.
+        String quizId = quizWithChoiceQuestions("Quiz luyện tập", 2);
+        String body = mockMvc.perform(post("/api/v1/quizzes/{id}/attempts", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + peerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"mode\":\"PRACTICE\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String attemptId = objectMapper.readTree(body).get("attempt").get("id").asText();
+        submit(attemptId, peerToken);
+
+        JsonNode dong = timDong(quizId, attemptId);
+        assertThat(dong.get("riskScore").isNull()).isTrue();
+
+        // Và ở đây `null` phải là "không có bản ghi nào", khác hẳn trường hợp dưới ngưỡng ở test trên. Kiểm cả
+        // hai chiều thì mới phân biệt được "luyện tập không bị giám sát" với "giám sát rồi nhưng điểm thấp".
+        mockMvc.perform(get("/api/v1/attempts/{id}/integrity", attemptId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken))
+                .andExpect(status().isNotFound());
+    }
+
     // ================================================================ helper
+
+    /** {@code n} lần dán đoạn dài — mỗi lần 15×2 điểm, ba lần là 90/100 nên chắc chắn vượt ngưỡng 60. */
+    private String danDai(int n) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < n; i++) {
+            sb.append(i > 0 ? "," : "")
+              .append("{\"type\":\"PASTE\",\"occurredAt\":\"2026-08-17T10:0%d:00Z\",\"length\":400}"
+                      .formatted(i));
+        }
+        return sb.append("]").toString();
+    }
+
+    private void guiTinHieu(String attemptId, String token, String eventsJson) throws Exception {
+        mockMvc.perform(post("/api/v1/attempts/{id}/proctoring-events", attemptId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"events\":%s}".formatted(eventsJson)))
+                .andExpect(status().isOk());
+    }
+
+    /** Dòng của một lượt cụ thể trong danh sách bài làm mà chủ quiz nhìn thấy. */
+    private JsonNode timDong(String quizId, String attemptId) throws Exception {
+        JsonNode attempts = json(get("/api/v1/analytics/quizzes/{id}/attempts", quizId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken));
+
+        for (JsonNode dong : attempts) {
+            if (dong.get("attemptId").asText().equals(attemptId)) {
+                return dong;
+            }
+        }
+        throw new AssertionError("Không tìm thấy lượt " + attemptId + " trong danh sách bài làm");
+    }
 
     private record Essay(String quizId, String attemptId, String questionId) {
     }
