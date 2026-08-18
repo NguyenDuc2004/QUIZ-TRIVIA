@@ -80,7 +80,7 @@ export default function AdminQuizzesPage() {
               <div className="min-w-0">
                 {/* Mở trang giới thiệu quiz để xem nội dung trước khi quyết định ẩn — không ai nên ẩn một
                     quiz chỉ dựa vào tiêu đề */}
-                <Link to={`/quizzes/${row.id}`} className="font-bold">
+                <Link to={`/admin/quizzes/${row.id}`} className="font-bold">
                   {title}
                 </Link>
                 <div className="text-ink-soft text-xs">

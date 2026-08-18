@@ -5,7 +5,8 @@ import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage'
 import LoginPage from '@/features/auth/pages/LoginPage'
 import ProfilePage from '@/features/auth/pages/ProfilePage'
 import RegisterPage from '@/features/auth/pages/RegisterPage'
-import { useIsAuthenticated } from '@/features/auth/store/authStore'
+import { useAuthStore, useIsAuthenticated } from '@/features/auth/store/authStore'
+import { trangChuTheoVaiTro } from '@/features/auth/trangChu'
 import GradeAttemptPage from '@/features/analytics/pages/GradeAttemptPage'
 import MyProgressPage from '@/features/analytics/pages/MyProgressPage'
 import QuizStatsPage from '@/features/analytics/pages/QuizStatsPage'
@@ -27,6 +28,7 @@ import AdminAiUsagePage from '@/features/admin/pages/AdminAiUsagePage'
 import AdminCategoriesPage from '@/features/admin/pages/AdminCategoriesPage'
 import AdminOverviewPage from '@/features/admin/pages/AdminOverviewPage'
 import AdminQuizzesPage from '@/features/admin/pages/AdminQuizzesPage'
+import AdminQuizDetailPage from '@/features/admin/pages/AdminQuizDetailPage'
 import AdminRoomsPage from '@/features/admin/pages/AdminRoomsPage'
 import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
 import AdminIntegrityPage from '@/features/integrity/pages/AdminIntegrityPage'
@@ -42,7 +44,14 @@ import AppLayout from '@/shared/components/AppLayout'
 
 /** Đã đăng nhập thì không cần vào lại trang đăng nhập/đăng ký. */
 function GuestOnlyRoute({ children }: { children: React.ReactNode }) {
-  return useIsAuthenticated() ? <Navigate to="/quizzes" replace /> : <>{children}</>
+  const role = useAuthStore((state) => state.user?.role)
+  return useIsAuthenticated() ? <Navigate to={trangChuTheoVaiTro(role)} replace /> : <>{children}</>
+}
+
+/** `/` đưa mỗi vai trò về đúng khu của mình. */
+function TrangChu() {
+  const role = useAuthStore((state) => state.user?.role)
+  return <Navigate to={trangChuTheoVaiTro(role)} replace />
 }
 
 export default function App() {
@@ -68,15 +77,20 @@ export default function App() {
         }
       />
 
-      {/* Khu vực cần đăng nhập, dùng chung layout có header sticky */}
+      {/*
+        Khu học tập. `roles` cố ý KHÔNG có ADMIN: quản trị viên chỉ làm việc trong khu quản trị.
+        Khu này không có gì cho họ, và để một tài khoản có quyền tác động lên người khác đi lang thang
+        giữa dữ liệu của người khác là mở một cửa không cần thiết. Admin gõ tay đường dẫn ở đây sẽ được
+        đưa về `/admin` — xem `trangChuTheoVaiTro`.
+      */}
       <Route
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={['LEARNER', 'CREATOR']}>
             <AppLayout />
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Navigate to="/quizzes" replace />} />
+        <Route path="/" element={<TrangChu />} />
         {/* Bộ mặt "học viên": lưới card */}
         <Route path="/quizzes" element={<BrowseQuizzesPage />} />
         <Route path="/quizzes/:id" element={<QuizIntroPage />} />
@@ -151,10 +165,16 @@ export default function App() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="categories" element={<AdminCategoriesPage />} />
         <Route path="quizzes" element={<AdminQuizzesPage />} />
+        {/* Xem nội dung quiz để có căn cứ trước khi kiểm duyệt. Nằm TRONG khu admin vì quản trị viên
+            không vào được khu học tập — dẫn sang `/quizzes/{id}` sẽ chỉ bị đá ngược về `/admin`. */}
+        <Route path="quizzes/:id" element={<AdminQuizDetailPage />} />
         <Route path="rooms" element={<AdminRoomsPage />} />
         {/* Rà soát tính toàn vẹn bài thi (features/12) */}
         <Route path="integrity" element={<AdminIntegrityPage />} />
         <Route path="ai" element={<AdminAiUsagePage />} />
+        {/* Hồ sơ dùng lại đúng trang của khu học tập: nội dung y hệt (đổi tên, ảnh, mật khẩu), và dựng
+            một bản thứ hai chỉ để đổi khung là hai chỗ phải sửa mỗi lần đổi một dòng. */}
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
 
       {/*

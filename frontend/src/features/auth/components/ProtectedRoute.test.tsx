@@ -15,6 +15,9 @@ import { tokenStorage } from '@/shared/api/tokenStorage'
  *    nhập mà thiếu quyền; đẩy sang màn đăng nhập chỉ gây hiểu nhầm là phiên đã hết.
  * 3. Chưa đọc xong phiên đã lưu (`isReady = false`) → chờ, **không** điều hướng: điều hướng sớm làm
  *    trang nháy sang `/login` mỗi lần tải lại dù người dùng vẫn đang đăng nhập.
+ * 4. Đích của "sai vai trò" phải **theo vai trò**, không cố định `/quizzes`. Từ khi Admin bị chặn khỏi khu
+ *    học tập, đẩy họ về `/quizzes` là đẩy vào đúng chỗ vừa từ chối họ — vòng lặp chuyển hướng, trang trắng,
+ *    không có lỗi nào để lần ra. Đây là loại lỗi không thấy khi thử tay bằng tài khoản người học.
  */
 
 function renderAt(path: string, element: React.ReactNode) {
@@ -24,6 +27,7 @@ function renderAt(path: string, element: React.ReactNode) {
         <Route path={path} element={element} />
         <Route path="/login" element={<div>TRANG ĐĂNG NHẬP</div>} />
         <Route path="/quizzes" element={<div>TRANG KHÁM PHÁ</div>} />
+        <Route path="/admin" element={<div>KHU QUẢN TRỊ</div>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -82,6 +86,27 @@ describe('ProtectedRoute', () => {
     expect(screen.queryByText('TRANG ĐĂNG NHẬP'))
       .not.toBeInTheDocument()
     expect(screen.queryByText('NỘI DUNG ĐƯỢC BẢO VỆ')).not.toBeInTheDocument()
+  })
+
+  it('ADMIN bị chặn khỏi khu học tập thì về /admin, KHÔNG phải /quizzes', () => {
+    // Nếu đích là /quizzes thì Admin bị đá về đúng chỗ vừa từ chối họ và vòng lặp mãi. Đây là phép kiểm
+    // giữ cho ai đó về sau không "đơn giản hoá" lại thành một hằng số.
+    dangNhapVoiVaiTro('ADMIN')
+
+    renderAt('/quizzes', <ProtectedRoute roles={['LEARNER', 'CREATOR']}><NoiDung /></ProtectedRoute>)
+
+    expect(screen.getByText('KHU QUẢN TRỊ')).toBeInTheDocument()
+    expect(screen.queryByText('TRANG KHÁM PHÁ')).not.toBeInTheDocument()
+    expect(screen.queryByText('NỘI DUNG ĐƯỢC BẢO VỆ')).not.toBeInTheDocument()
+  })
+
+  it('CREATOR vẫn vào được khu học tập', () => {
+    // Đối chứng: nếu thiếu, phép kiểm trên vẫn xanh cả khi chặn nhầm CẢ MỌI vai trò khỏi khu học tập
+    dangNhapVoiVaiTro('CREATOR')
+
+    renderAt('/quizzes', <ProtectedRoute roles={['LEARNER', 'CREATOR']}><NoiDung /></ProtectedRoute>)
+
+    expect(screen.getByText('NỘI DUNG ĐƯỢC BẢO VỆ')).toBeInTheDocument()
   })
 
   it('ADMIN vào được khu vực của CREATOR', () => {
