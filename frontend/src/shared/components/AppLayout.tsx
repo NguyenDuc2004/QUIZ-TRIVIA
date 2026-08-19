@@ -5,7 +5,6 @@ import type { MenuProps } from 'antd'
 import {
   DownOutlined,
   LogoutOutlined,
-  SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
@@ -43,7 +42,6 @@ export default function AppLayout() {
   // Một kết nối WebSocket cho cả phiên đăng nhập, gắn ở layout vì thông báo tới bất cứ lúc nào ở bất cứ
   // trang nào (features/16, FR-67). Hook tự bỏ qua khi chưa đăng nhập.
   useNotificationSocket()
-  const isAdmin = user?.role === 'ADMIN'
 
   // Màu chữ phải có hậu tố `!`. Đây là thẻ <a>, và Ant Design chèn CSS `a { color }` lúc chạy ở NGOÀI
   // cascade layer, còn utility Tailwind v4 nằm TRONG @layer — luật ngoài layer thắng luật trong layer.
@@ -67,17 +65,9 @@ export default function AppLayout() {
       label: 'Trang cá nhân',
       onClick: () => navigate('/profile'),
     },
-    ...(isAdmin
-      ? [
-          { type: 'divider' as const },
-          {
-            key: 'admin',
-            icon: <SettingOutlined />,
-            label: 'Khu quản trị',
-            onClick: () => navigate('/admin'),
-          },
-        ]
-      : []),
+    // KHÔNG còn mục "Khu quản trị" ở đây. Quản trị viên không vào được layout này nữa (route khu học tập
+    // chỉ nhận LEARNER và CREATOR), nên mục đó là một nhánh không ai chạy tới — và một nhánh chết trong
+    // giao diện thì lần sau đọc code sẽ tưởng Admin vẫn qua lại được giữa hai khu.
     { type: 'divider' },
     {
       key: 'logout',
@@ -193,6 +183,8 @@ interface MucMenu {
 }
 
 const MUC_HOC_TAP: MucMenu[] = [
+  { to: '/classrooms', label: 'Lớp học', moTa: 'Lớp bạn dạy và lớp bạn tham gia' },
+  { to: '/my-assignments', label: 'Bài tập của tôi', moTa: 'Bài giáo viên giao, kèm hạn nộp' },
   { to: '/flashcards', label: 'Thẻ ghi nhớ', moTa: 'Ôn theo lịch lặp lại ngắt quãng' },
   { to: '/achievements', label: 'Thành tích', moTa: 'XP, cấp độ, chuỗi ngày học và huy hiệu' },
   { to: '/leaderboard', label: 'Xếp hạng mùa', moTa: 'So điểm với người học khác trong mùa này' },

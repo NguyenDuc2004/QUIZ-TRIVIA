@@ -21,6 +21,7 @@ import lombok.Setter;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Một lượt làm bài — bảng `quiz_attempts` (docs/features/03-gameplay.md).
@@ -67,6 +68,16 @@ public class QuizAttempt extends BaseEntity {
 
     @Column(name = "max_score", nullable = false)
     private int maxScore = 0;
+
+    /**
+     * Bài tập mà lượt này thuộc về (features/14); null với lượt tự luyện, và đó là đa số.
+     * <p>
+     * Là {@code UUID} thuần chứ KHÔNG phải liên kết {@code @ManyToOne} tới {@code Assignment}: tầng làm bài
+     * không nên biết gì về lớp học. Một cột id là đủ để tính năng 14 tra ngược, còn một liên kết entity kéo
+     * theo cả import và một quan hệ hai chiều giữa hai tính năng lẽ ra độc lập.
+     */
+    @Column(name = "assignment_id")
+    private UUID assignmentId;
 
     @OneToMany(mappedBy = "attempt", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderIndex ASC")

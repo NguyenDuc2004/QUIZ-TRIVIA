@@ -3,7 +3,6 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Avatar, Dropdown, Layout, Tag, Tooltip, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import {
-  ArrowLeftOutlined,
   DashboardOutlined,
   DownOutlined,
   FileProtectOutlined,
@@ -15,6 +14,7 @@ import {
   SafetyOutlined,
   TagsOutlined,
   TeamOutlined,
+  UserOutlined,
 } from '@ant-design/icons'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
 import { useAuthStore } from '@/features/auth/store/authStore'
@@ -33,8 +33,10 @@ const { Text } = Typography
  *   quan gì khi đang đọc chi phí AI.
  * - **Sidebar mở rộng được** — bảy mục vẫn gọn, còn thanh ngang khu học tập đã phải gom nhóm ở 10 mục.
  *
- * Lối vào nằm trong menu tài khoản ở {@code AppLayout}, lối ra là "Về khu học tập" ở đáy sidebar —
- * chuyển ngữ cảnh phải đi được cả hai chiều, không để ai mắc kẹt một bên.
+ * <b>Không có lối ra sang khu học tập.</b> Quản trị viên đăng nhập là vào thẳng đây và ở lại đây: khu học
+ * tập không có gì cho họ, và để một tài khoản có quyền tác động lên người khác đi lang thang giữa dữ liệu của
+ * người khác là mở một cửa không cần thiết. Hai thứ họ từng phải sang bên kia mới làm được — xem hồ sơ và xem
+ * nội dung một quiz để kiểm duyệt — nay đều có bản riêng trong khu này.
  */
 export default function AdminLayout() {
   const user = useAuthStore((state) => state.user)
@@ -48,10 +50,10 @@ export default function AdminLayout() {
 
   const accountMenuItems: MenuProps['items'] = [
     {
-      key: 'back',
-      icon: <ArrowLeftOutlined />,
-      label: 'Về khu học tập',
-      onClick: () => navigate('/quizzes'),
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: 'Hồ sơ của tôi',
+      onClick: () => navigate('/admin/profile'),
     },
     { type: 'divider' },
     {
@@ -82,7 +84,7 @@ export default function AdminLayout() {
               thuGon ? 'justify-center px-0' : 'px-4'
             }`}
           >
-            <Link to="/quizzes" className="flex items-center gap-2.5 overflow-hidden">
+            <Link to="/admin" className="flex items-center gap-2.5 overflow-hidden">
               {/* Khối chữ Q làm dấu nhận diện: khi thu gọn còn 72px thì đây là thứ duy nhất còn thấy */}
               <span className="bg-brand flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-extrabold text-white">
                 Q
@@ -132,19 +134,15 @@ export default function AdminLayout() {
             </NavGroup>
           </nav>
 
-          {/* Lối ra đặt ở đáy sidebar, luôn thấy được — không bắt người dùng đi tìm trong menu tài khoản */}
+          {/*
+            KHÔNG còn lối "Về khu học tập". Quản trị viên chỉ làm việc trong khu này, nên một đường dẫn
+            sang khu học tập giờ chỉ là một cú đá ngược về `/admin` — một nút bấm vào thì không có gì xảy
+            ra là tệ hơn không có nút.
+            Chỗ đó nay là Hồ sơ: trước kia admin đổi mật khẩu bằng cách sang khu học tập, và chặn xong mà
+            không thay thế thì họ mất luôn đường đổi mật khẩu của chính mình.
+          */}
           <div className="border-admin-line shrink-0 border-t p-2">
-            <Tooltip title={thuGon ? 'Về khu học tập' : ''} placement="right">
-              <Link
-                to="/quizzes"
-                className={`flex items-center gap-3 rounded-lg py-2.5 text-sm text-white! transition-colors hover:bg-white/10 ${
-                  thuGon ? 'justify-center px-0' : 'px-3'
-                }`}
-              >
-                <ArrowLeftOutlined className="shrink-0 text-base text-white!" />
-                {!thuGon && <span className="truncate">Về khu học tập</span>}
-              </Link>
-            </Tooltip>
+            <NavItem to="/admin/profile" icon={<UserOutlined />} label="Hồ sơ của tôi" thuGon={thuGon} />
           </div>
         </div>
       </Sider>

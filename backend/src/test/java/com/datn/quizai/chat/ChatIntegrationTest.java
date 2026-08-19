@@ -490,43 +490,56 @@ class ChatIntegrationTest {
             body.put("materialId", materialId);
         }
 
-        String raw = sseClient()
-                .post().uri("/api/v1/ai/chat")
+        var request = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create("http://localhost:" + port + "/api/v1/ai/chat"))
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.TEXT_EVENT_STREAM)
-                .bodyValue(objectMapper.writeValueAsString(body))
-                .retrieve()
-                .bodyToMono(String.class)
-                .block(java.time.Duration.ofSeconds(20));
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .header(HttpHeaders.ACCEPT, MediaType.TEXT_EVENT_STREAM_VALUE)
+                .timeout(java.time.Duration.ofSeconds(20))
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(
+                        objectMapper.writeValueAsString(body), java.nio.charset.StandardCharsets.UTF_8))
+                .build();
 
-        return parseSse(raw == null ? "" : raw);
+        // Đọc thành byte rồi tự giải mã UTF-8, không dùng `ofString()`: hàm đó theo charset mà response
+        // khai báo, và ở luồng SSE nó không phải UTF-8 — chữ có dấu sẽ ra "chÃ o".
+        byte[] raw = jdkClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofByteArray()).body();
+
+        return parseSse(new String(raw, java.nio.charset.StandardCharsets.UTF_8));
     }
 
     /**
-     * WebClient dùng kết nối MỚI cho mỗi lượt, không qua pool.
-     * <p>
-     * Trước đây chỗ này dùng {@code WebClient.create()} (pool dùng chung) kèm {@code .retry(1)}, và nó sinh ra
-     * hai lỗi chập chờn khác nhau trong lần chạy toàn bộ suite:
+     * Client HTTP để đọc luồng SSE — dùng {@link java.net.http.HttpClient} của JDK, <b>không</b> dùng
+     * {@code WebClient}.
+     *
+     * <h3>Ba lần sửa cùng một chỗ, và vì sao lần này bỏ hẳn thư viện</h3>
      * <ol>
-     *   <li>Luồng SSE kết thúc là server đóng kết nối, nhưng pool vẫn giữ nó; lượt sau bốc đúng kết nối đã
-     *       chết → {@code Connection prematurely closed BEFORE response}.</li>
-     *   <li>Tệ hơn: {@code .retry(1)} <b>gửi lại một request có tác dụng phụ</b>. Request đầu đã tạo phiên
-     *       chat ở phía server trước khi kết nối chết, nên lượt thử lại tạo phiên thứ HAI — và phép kiểm
-     *       "danh sách phiên" mong 2 phiên lại thấy 3.</li>
+     *   <li>Ban đầu: {@code WebClient.create()} (pool dùng chung). Luồng SSE kết thúc là server đóng kết nối
+     *       nhưng pool vẫn giữ nó, lượt sau bốc đúng kết nối đã chết →
+     *       {@code Connection prematurely closed BEFORE response}.</li>
+     *   <li>Vá bằng {@code .retry(1)} — <b>tệ hơn</b>: nó gửi lại một request <i>có tác dụng phụ</i>, và
+     *       request đầu đã kịp tạo phiên chat, nên lượt thử lại tạo phiên thứ HAI.</li>
+     *   <li>Bỏ pool bằng {@code ConnectionProvider.newConnection()} — hết hai lỗi trên, nhưng còn lỗi thứ ba
+     *       hiếm hơn: {@code IllegalArgumentException: empty headers are not allowed} ném từ
+     *       {@code HttpObjectDecoder.readHeaders} của Netty, tức <b>bộ giải mã phản hồi ở phía client</b> mất
+     *       đồng bộ. Vài lượt mới đỏ một lần, và đỏ ở một test method khác nhau mỗi lần.</li>
      * </ol>
-     * Tắt pool thì không còn kết nối chết để bốc, nên không cần thử lại, nên không có tác dụng phụ nhân đôi.
-     * Xử lý nguyên nhân thay vì che triệu chứng.
+     *
+     * <h3>Nói thẳng: không truy được nguyên nhân bên trong Netty</h3>
+     * Bật {@code wiretap} để xem byte thật thì <b>không tái hiện được</b> — thêm một handler vào pipeline là
+     * đủ đổi nhịp và che mất tình huống. Chỗ hỏng nằm trong thư viện, không nằm trong mã của dự án, và cũng
+     * không nằm ở phía server: trình duyệt đọc luồng này bằng {@code EventSource} vẫn chạy đúng.
+     * <p>
+     * Nên thay vì vá lần thứ tư, bỏ hẳn thành phần hay vỡ. Test này không cần gì của WebClient — nó chỉ cần
+     * POST một request rồi đọc toàn bộ phản hồi. {@code java.net.http.HttpClient} làm đúng ngần đó với bộ
+     * giải mã HTTP của JDK, không có tầng reactive, không có cơ chế thử lại ẩn.
+     * <p>
+     * {@code HTTP_1_1} tường minh: luồng SSE của Tomcat là chunked HTTP/1.1, và để client tự thương lượng lên
+     * HTTP/2 là thêm một biến số vào đúng chỗ vừa mất ba lần sửa.
      */
-    private org.springframework.web.reactive.function.client.WebClient sseClient() {
-        var httpClient = reactor.netty.http.client.HttpClient.create(
-                reactor.netty.resources.ConnectionProvider.newConnection());
-        return org.springframework.web.reactive.function.client.WebClient.builder()
-                .baseUrl("http://localhost:" + port)
-                .clientConnector(
-                        new org.springframework.http.client.reactive.ReactorClientHttpConnector(httpClient))
-                .build();
-    }
+    private final java.net.http.HttpClient jdkClient = java.net.http.HttpClient.newBuilder()
+            .version(java.net.http.HttpClient.Version.HTTP_1_1)
+            .connectTimeout(java.time.Duration.ofSeconds(10))
+            .build();
 
     /** Bóc từng khối {@code event: … / data: …} của định dạng SSE. */
     private List<Event> parseSse(String raw) {

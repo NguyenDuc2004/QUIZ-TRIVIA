@@ -19,7 +19,7 @@ public enum NotificationType {
     /** Lên cấp hoặc mở khoá huy hiệu (features/13, FR-53). */
     ACHIEVEMENT("Thành tích"),
 
-    /** Bài tập sắp hết hạn — chưa có nguồn phát, chờ tính năng 14. */
+    /** Bài tập sắp hết hạn (features/14) — job nhắc trước hạn 24 giờ, chỉ nhắc người chưa nộp. */
     ASSIGNMENT_DUE("Hạn nộp bài"),
 
     /** Lời mời vào phòng đấu — chưa có nguồn phát, chờ tính năng 04. */
@@ -38,9 +38,15 @@ public enum NotificationType {
         return nhan;
     }
 
-    /** Có nguồn phát thật ở thời điểm hiện tại — quyết định loại nào hiện trên trang cài đặt. */
+    /**
+     * Có nguồn phát thật ở thời điểm hiện tại — quyết định loại nào hiện trên trang cài đặt.
+     * <p>
+     * {@code ROOM_INVITE} vẫn chưa có: phòng đấu vào bằng mã PIN, không có cơ chế mời. Khai sẵn trong ràng
+     * buộc {@code CHECK} của V18 để khi nào làm thì không phải thêm migration, nhưng không đưa lên trang cài
+     * đặt — một công tắc cho loại chưa ai gửi là một công tắc không làm gì cả.
+     */
     public boolean daCoNguonPhat() {
-        return this == SRS_REMINDER || this == ACHIEVEMENT || this == SYSTEM;
+        return this == SRS_REMINDER || this == ACHIEVEMENT || this == ASSIGNMENT_DUE || this == SYSTEM;
     }
 
     /**

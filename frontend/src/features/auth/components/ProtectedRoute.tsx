@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { Spin } from 'antd'
 import { useAuthStore, useIsAuthenticated } from '../store/authStore'
+import { trangChuTheoVaiTro } from '../trangChu'
 
 /**
  * Chặn route cần đăng nhập. Guest bị đẩy về /login (docs/features/01-auth.md).
@@ -36,10 +37,13 @@ export default function ProtectedRoute({
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
-  // Đã đăng nhập nhưng sai vai trò: về trang khám phá, không phải /login — họ không thiếu phiên
-  // đăng nhập, mà thiếu quyền, nên đẩy sang màn hình đăng nhập chỉ gây hiểu nhầm.
+  // Đã đăng nhập nhưng sai vai trò: về trang chủ CỦA VAI TRÒ ĐÓ, không phải /login — họ không thiếu
+  // phiên đăng nhập, mà thiếu quyền, nên đẩy sang màn hình đăng nhập chỉ gây hiểu nhầm.
+  //
+  // Đích phải theo vai trò chứ không cố định `/quizzes`: từ khi Admin bị chặn khỏi khu học tập, đẩy họ
+  // về `/quizzes` là đẩy vào đúng chỗ vừa từ chối họ — vòng lặp chuyển hướng, trang trắng, không lỗi.
   if (roles && (!role || !roles.includes(role))) {
-    return <Navigate to="/quizzes" replace />
+    return <Navigate to={trangChuTheoVaiTro(role)} replace />
   }
 
   return <>{children}</>

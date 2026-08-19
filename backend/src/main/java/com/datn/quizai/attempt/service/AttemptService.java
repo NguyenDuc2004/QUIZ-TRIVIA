@@ -115,6 +115,42 @@ public class AttemptService {
             finish(attempt, AttemptStatus.EXPIRED, attempt.getExpiresAt());
         }
 
+        return detailOf(dungLuot(quiz, request.modeOrDefault(), null, now, current));
+    }
+
+    /**
+     * Bắt đầu một lượt cho <b>bài tập được giao</b> (features/14, FR-56).
+     * <p>
+     * Khác {@link #start} đúng hai điểm, và cả hai đều có lý do:
+     * <ol>
+     *   <li><b>Không kiểm {@code visibility}.</b> Quiz của giáo viên thường để PRIVATE, và {@code start} chặn
+     *       quiz PRIVATE của người khác — đúng, không nên nới. Phần cho phép nằm ở tầng gọi: người gọi đã
+     *       được {@code AssignmentService} xác nhận là thành viên của lớp được giao bài đó. Nếu để tầng làm
+     *       bài tự kiểm thì nó phải biết về lớp học, và hai tính năng lẽ ra độc lập sẽ dính vào nhau.</li>
+     *   <li><b>Luôn là {@code EXAM}.</b> Bài tập là bài tính điểm, nên nó cũng phải được features/12 thu tín
+     *       hiệu hành vi như mọi lượt thi khác. Cho chọn chế độ ở đây là mở đường làm bài tập ở chế độ luyện
+     *       tập — nơi đáp án hiện ra ngay sau mỗi câu.</li>
+     * </ol>
+     * Trả về <b>id</b> chứ không phải cả bài làm: bên gọi chỉ cần biết đưa học sinh tới đâu, và trả cả đề ở
+     * đây là bắt tầng lớp học phải hiểu định dạng đề.
+     */
+    @Transactional
+    public UUID batDauChoBaiTap(UUID quizId, UUID assignmentId, JwtService.AuthenticatedUser current) {
+        Quiz quiz = quizRepository.findByIdWithQuestions(quizId)
+                .orElseThrow(() -> BusinessException.notFound("Không tìm thấy quiz"));
+
+        return dungLuot(quiz, AttemptMode.EXAM, assignmentId, OffsetDateTime.now(), current).getId();
+    }
+
+    /**
+     * Dựng một lượt làm bài: chốt đề, sinh sẵn ô trả lời cho từng câu, tính điểm tối đa.
+     * <p>
+     * Tách ra vì hai đường vào ({@link #start} và {@link #batDauChoBaiTap}) khác nhau ở phần <i>cho phép</i>
+     * chứ không ở phần <i>dựng lượt</i>. Chép đôi hai mươi dòng này là để hai đường lệch nhau về sau — mà lệch
+     * ở đây nghĩa là bài tập tính điểm tối đa khác bài tự luyện trên cùng một quiz.
+     */
+    private QuizAttempt dungLuot(Quiz quiz, AttemptMode mode, UUID assignmentId,
+                                 OffsetDateTime now, JwtService.AuthenticatedUser current) {
         List<QuizQuestion> questions = quiz.getQuizQuestions().stream()
                 .sorted(Comparator.comparingInt(QuizQuestion::getOrderIndex))
                 .toList();
@@ -123,8 +159,9 @@ public class AttemptService {
         }
 
         User user = userRepository.getReferenceById(current.id());
-        QuizAttempt attempt = new QuizAttempt(user, quiz, request.modeOrDefault());
+        QuizAttempt attempt = new QuizAttempt(user, quiz, mode);
         attempt.setStartedAt(now);
+        attempt.setAssignmentId(assignmentId);
         if (quiz.getTimeLimitSec() != null) {
             attempt.setExpiresAt(now.plusSeconds(quiz.getTimeLimitSec()));
         }
@@ -138,7 +175,7 @@ public class AttemptService {
         }
         attempt.setMaxScore(maxScore);
 
-        return detailOf(attemptRepository.save(attempt));
+        return attemptRepository.save(attempt);
     }
 
     /**

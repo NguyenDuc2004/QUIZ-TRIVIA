@@ -143,12 +143,37 @@ Khu quản trị dùng `AdminLayout` riêng thay vì `AppLayout` của khu học
 | Sidebar | Rộng 232px, nền `--color-ink`, thu gọn dưới breakpoint `lg`. Mục đang mở có viền trái trắng + nền mờ |
 | Thương hiệu | "Quiz AI" + dòng phụ *"Khu quản trị"* — nói rõ đang ở khu nào ngay từ góc trên |
 | Header | Trắng, gọn: tiêu đề khu + góc tài khoản có thẻ *Quản trị viên* màu `volcano` |
-| Lối ra | Mục *"Về khu học tập"* dưới đường kẻ trong sidebar, **và** trong menu tài khoản |
+| Lối ra | **Không có.** Xem "Admin chỉ ở trong khu quản trị" bên dưới |
 | Nội dung | Bảng dày thông tin như bộ mặt bảng điều khiển — dùng lại `PageHeader`, `EmptyState` |
 
-**Lối vào** nằm trong menu tài khoản của `AppLayout` (mục *"Khu quản trị"*), chỉ hiện với vai trò ADMIN.
-Không thêm link vào thanh điều hướng ngang: vào khu quản trị là **chuyển ngữ cảnh**, không phải điều
-hướng trong cùng ngữ cảnh, nên nó thuộc menu tài khoản chứ không thuộc thanh menu nội dung.
+### Admin chỉ ở trong khu quản trị
+
+Tài khoản ADMIN **đăng nhập là vào thẳng `/admin` và ở lại đó**. Khu học tập chỉ nhận `LEARNER` và `CREATOR`;
+Admin gõ tay `/quizzes` sẽ được đưa về `/admin`. Không còn mục *"Khu quản trị"* trong menu tài khoản của
+`AppLayout` và không còn lối *"Về khu học tập"* trong sidebar — cả hai đều trở thành nhánh không ai chạy tới.
+
+Lý do: khu học tập không có gì cho một tài khoản quản trị, và để một tài khoản có quyền tác động lên người
+khác đi lang thang giữa dữ liệu của người khác là mở một cửa không cần thiết.
+
+**Chặn ở tầng định tuyến frontend, không chặn ở API.** Đây là yêu cầu về *điều hướng*, không phải về bảo mật —
+và siết ở tầng API sẽ làm vỡ chính khu quản trị: kiểm duyệt quiz, đọc câu hỏi, và báo cáo tính toàn vẹn đều
+dựa trên việc ADMIN được `OwnershipGuard.canManage` coi như chủ sở hữu. Quyền backend giữ nguyên.
+
+Hai việc Admin từng phải sang khu học tập mới làm được, nay có bản riêng trong khu này:
+
+| Việc | Trước | Nay |
+|---|---|---|
+| Xem hồ sơ, đổi mật khẩu | `/profile` ở khu học tập | `/admin/profile` — **dùng lại đúng component** `ProfilePage`, không dựng bản thứ hai |
+| Xem nội dung quiz để kiểm duyệt | dẫn sang `/quizzes/{id}` | `/admin/quizzes/{id}` — trang **chỉ đọc**, hiện đề, đáp án đúng và giải thích |
+
+Trang xem quiz là chỗ dễ bị bỏ sót nhất khi chặn: bỏ hẳn liên kết thì Admin phải quyết định **ẩn nội dung của
+người khác mà không nhìn được nội dung đó** — đúng kiểu quyết định mù mà [features/12](12-anti-cheat.md) cố
+tránh. Trang này cố ý **không có nút hành động nào**; ẩn/hiện vẫn nằm ở trang danh sách, nơi có đủ ngữ cảnh.
+
+**Một cái bẫy trong lúc làm:** đích chuyển hướng khi sai vai trò trước đây là hằng số `/quizzes`. Giữ nguyên nó
+thì Admin bị đẩy về đúng chỗ vừa từ chối họ — **vòng lặp chuyển hướng, trang trắng, không có lỗi nào để lần
+ra**, và không thấy được khi thử bằng tài khoản người học. Đích nay tính theo vai trò
+(`trangChuTheoVaiTro`), và có test riêng giữ cho nó không bị "đơn giản hoá" lại thành hằng số.
 
 Wireframe: `Hình 2.38` (Quản lý người dùng) và `Hình 2.39` (Giám sát AI) trong báo cáo.
 
