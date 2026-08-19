@@ -230,6 +230,8 @@ SEND      /app/room/{code}/answer    Gửi đáp án { questionId, optionIds?, t
 SEND      /app/room/{code}/next      Host chuyển câu / kết thúc ván
 SEND      /app/room/{code}/ready     Bật/tắt Sẵn sàng { ready }
 SEND      /app/room/{code}/avatar    Đổi nhân vật { avatar }
+SEND      /app/room/{code}/proctoring Tín hiệu rời trang { type: TAB_HIDDEN | TAB_VISIBLE }
+SEND      /app/room/{code}/warn      Host nhắc riêng một người { playerId }
 ```
 
 **Xác thực:** danh tính đi trong header của **frame CONNECT**, không phải query string. Chấp nhận
@@ -248,6 +250,8 @@ nằm ở frame CONNECT (`StompAuthChannelInterceptor`).
 | `QUESTION` | cả phòng | câu hỏi + `deadlineAtMillis`. **Không kèm đáp án đúng** |
 | `PLAYER_ANSWERED` | cả phòng | chỉ `{ answeredCount, totalPlayers }` |
 | `ANSWER_RESULT` | **riêng người trả lời** | `{ correct, points, totalScore, elapsedMillis }` |
+| `PROCTORING_FLAG` | **riêng host** | `{ playerId, displayName, guest, soCauLap, lyDo }` — cờ chống gian lận |
+| `PROCTORING_WARNING` | **riêng người bị nhắc** | `{ message }` — lời nhắc của host |
 | `QUESTION_CLOSED` | cả phòng | đáp án đúng + giải thích + bảng xếp hạng |
 | `LEADERBOARD` | cả phòng | bảng xếp hạng |
 | `GAME_FINISHED` | cả phòng | bảng xếp hạng chung cuộc |
@@ -515,8 +519,28 @@ GET    /api/v1/admin/integrity/flagged           Hàng chờ bài bị gắn c�
 - Hàng chờ sắp theo điểm rủi ro giảm dần, mặc định lọc `PENDING`, và **không kèm từng sự kiện** (`suKien: []`)
   — trang đó chỉ để chọn bài cần mở.
 
-Kênh WebSocket `/app/room/{code}/proctoring` **không hiện thực**: nó chỉ cần cho FR-44 (đối chiếu đáp án trong
-phòng đấu), mà FR-44 đã bỏ — lý do ở [features/12](features/12-anti-cheat.md).
+### Cảnh báo live trong phòng đấu ✅
+```
+GET  /api/v1/rooms/{code}/proctoring   Tổng kết tín hiệu của phòng — CHỈ host   ✅
+```
+Cùng với hai kênh STOMP ở [§5.2](#52-websocket-stomp--endpoint-ws-) — `SEND /app/room/{code}/proctoring` và
+`SEND /app/room/{code}/warn`.
+
+- **`PROCTORING_FLAG` bắt buộc đi qua kênh riêng của host**, không lên `/topic/room/{code}`. Kênh chung có mọi
+  người chơi subscribe, nên phát cờ ở đó là nêu tên người bị nghi trước cả phòng — dựa trên một tín hiệu client
+  chặn được và giả mạo được.
+- **Ngưỡng khác bài thi cá nhân.** Bài thi đếm số lần (`chuyển tab 3 lần`); phòng đấu đếm **số câu khác nhau có
+  khuôn rời-rồi-về** (ngưỡng 2 câu). Phòng đấu nhiễu hơn nhiều vì phần lớn người chơi vào bằng điện thoại sau
+  khi quét QR — một tin nhắn đến là một `visibilitychange`.
+- **Server tự đóng số thứ tự câu và mốc thời gian**, không nhận từ client: tin client thì một client sửa đổi có
+  thể dồn mọi tín hiệu vào một câu để không bao giờ thành khuôn.
+- **Khách vãng lai cũng được ghi và nhắc được.** Log gắn với `player_id` phạm vi phòng, không phải `user_id` —
+  bảng `room_proctoring_events` cố ý không có khoá ngoại tới `users`.
+- Quyền của host dừng ở **nhắc riêng**: không trừ điểm, không đuổi. Lý do ở
+  [features/12](features/12-anti-cheat.md).
+
+Kênh này **không** phục vụ FR-44 (đối chiếu đáp án trùng trong phòng đấu) — FR-44 đã bỏ vì phòng đấu không lưu
+lựa chọn từng câu, lý do ở [features/12](features/12-anti-cheat.md).
 
 ## 7d. Gamification — `/gamification`
 ```

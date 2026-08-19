@@ -306,26 +306,59 @@ class NotificationIntegrationTest {
     // ======================================================== 4. FR-53 — món nợ của tính năng 13
 
     @Test
-    @DisplayName("Lên cấp sinh thông báo thành tích, và xử lý lại KHÔNG sinh cái thứ hai")
+    @DisplayName("Lên cấp sinh thông báo thành tích, và XỬ LÝ LẠI CÙNG SỰ KIỆN không sinh cái thứ hai")
     void shouldNotifyOnLevelUp() {
         UUID user = taoNguoiDung("thongbao-lencap@example.com");
 
-        // Bài đúng 100% cho đủ XP để vượt ngưỡng cấp 2
+        // Cấp 2 cần 100 XP tích luỹ (LevelCalculator: 100 * level^1.5). Mỗi bài đúng 100% cho
+        // XP_NOP_BAI 20 + XP_THUONG_HOAN_HAO 15 = 35 XP, nên phải BA bài mới vượt ngưỡng (105 XP).
+        // Bản đầu của test này chỉ nộp hai bài (70 XP) — người dùng chưa từng lên cấp 2, và thông
+        // báo nó đếm được thật ra là HUY HIỆU. Nói dối về chính thứ mình kiểm.
+        UUID baiCuoi = null;
+        for (int i = 0; i < 3; i++) {
+            baiCuoi = taoBaiLam(user, 10, 10);
+            gamificationListener.onAttemptSubmitted(new AttemptSubmittedEvent(baiCuoi, user));
+        }
+
+        assertThat(capCua(user))
+                .as("ba bài hoàn hảo = 105 XP, phải vượt ngưỡng 100 XP của cấp 2")
+                .isEqualTo(2);
+        assertThat(tieuDeThanhTich(user, "level:2"))
+                .as("FR-53: lên cấp phải có thông báo, khoá chống trùng là level:{cấp}")
+                .isNotNull();
+
+        long truoc = demThongBao(user, NotificationType.ACHIEVEMENT);
+
+        // XỬ LÝ LẠI ĐÚNG SỰ KIỆN ĐÓ — đây mới là "retry", thứ khoá chống trùng tồn tại để chặn.
+        // Nộp THÊM một bài mới thì khác hẳn: XP tăng tiếp nên có thể mở huy hiệu mới, và một thông
+        // báo mới lúc đó là ĐÚNG. Lẫn hai chuyện này là lý do bản cũ đỏ.
+        gamificationListener.onAttemptSubmitted(new AttemptSubmittedEvent(baiCuoi, user));
+
+        assertThat(demThongBao(user, NotificationType.ACHIEVEMENT))
+                .as("chạy lại cùng một sự kiện không được sinh thông báo thứ hai")
+                .isEqualTo(truoc);
+    }
+
+    @Test
+    @DisplayName("Làm THÊM bài mới mà mở được huy hiệu mới thì VẪN phải có thông báo mới")
+    void shouldNotifyAgainForADifferentAchievement() {
+        UUID user = taoNguoiDung("thongbao-huyhieu-moi@example.com");
+
+        // Bài 1: 35 XP — mở huy hiệu PERFECT_ATTEMPTS ngưỡng 1, chưa tới ngưỡng XP 50
+        gamificationListener.onAttemptSubmitted(
+                new AttemptSubmittedEvent(taoBaiLam(user, 10, 10), user));
+        long sauBai1 = demThongBao(user, NotificationType.ACHIEVEMENT);
+        assertThat(sauBai1).isPositive();
+
+        // Bài 2: 70 XP — vượt ngưỡng XP 50, mở một huy hiệu KHÁC
         gamificationListener.onAttemptSubmitted(
                 new AttemptSubmittedEvent(taoBaiLam(user, 10, 10), user));
 
+        // Khoá chống trùng là `badge:{mã}`, nên huy hiệu khác mã thì phải qua được — chống trùng
+        // KHÔNG có nghĩa là "mỗi người một thông báo thành tích".
         assertThat(demThongBao(user, NotificationType.ACHIEVEMENT))
-                .as("FR-53: lên cấp hoặc mở huy hiệu phải có thông báo")
-                .isPositive();
-
-        long lan1 = demThongBao(user, NotificationType.ACHIEVEMENT);
-        gamificationListener.onAttemptSubmitted(
-                new AttemptSubmittedEvent(taoBaiLam(user, 10, 10), user));
-
-        // Khoá chống trùng là `level:{cấp}` và `badge:{mã}` — cùng cấp, cùng huy hiệu thì không gửi lại
-        assertThat(demThongBao(user, NotificationType.ACHIEVEMENT))
-                .as("một người chỉ lên cấp 2 đúng một lần trong đời")
-                .isEqualTo(lan1);
+                .as("huy hiệu khác thì khoá chống trùng khác, phải sinh thông báo mới")
+                .isGreaterThan(sauBai1);
     }
 
     @Test
@@ -457,6 +490,20 @@ class NotificationIntegrationTest {
         Long n = jdbc.queryForObject("select count(*) from notifications where user_id = ? and type = ?",
                 Long.class, user, type.name());
         return n == null ? 0 : n;
+    }
+
+    private int capCua(UUID user) {
+        Integer level = jdbc.queryForObject("select level from user_stats where user_id = ?",
+                Integer.class, user);
+        return level == null ? 1 : level;
+    }
+
+    /** Tiêu đề của thông báo thành tích có đúng khoá chống trùng này, null nếu chưa có. */
+    private String tieuDeThanhTich(UUID user, String dedupeKey) {
+        return jdbc.query("""
+                        select title from notifications where user_id = ? and dedupe_key = ?
+                        """,
+                rs -> rs.next() ? rs.getString(1) : null, user, dedupeKey);
     }
 
     private String tieuDeDauTien(UUID user) {

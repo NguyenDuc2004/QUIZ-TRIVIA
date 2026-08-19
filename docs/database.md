@@ -216,6 +216,23 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 > `review_status` mặc định **PENDING** và không có đường nào để hệ thống tự đổi nó — kết luận chỉ đến từ chủ quiz
 > hoặc Admin. Chỉ ghi cho lượt **EXAM**; lượt PRACTICE không có dòng nào ở cả hai bảng.
 
+**room_proctoring_events** *(V20)* — Cảnh báo live trong phòng đấu ([features/12](features/12-anti-cheat.md))
+| room_proctoring_events: id, room_id (FK game_rooms), player_id, player_name, is_guest, event_type (TAB_HIDDEN/TAB_VISIBLE), question_index, occurred_at, created_at |
+
+> **Bảng riêng, không dùng `proctoring_events`.** Bảng V17 có `attempt_id NOT NULL` → `quiz_attempts` và
+> `user_id NOT NULL` → `users`. Phòng đấu vi phạm cả hai: nó **không tạo dòng `quiz_attempts` nào** (điểm nằm ở
+> `game_room_players`), và **khách vãng lai không có dòng `users`**. Nhồi `attempt_id` giả để lách thì mọi thống
+> kê theo lượt thi sẽ đếm cả dòng không thuộc lượt thi nào.
+>
+> **`player_id` không có khoá ngoại** — đó là danh tính *phạm vi phòng*: với thành viên là `users.id`, với khách
+> là UUID sinh lúc vào phòng. Nhờ dùng chung một kiểu, phần ghi nhận không rẽ nhánh "nếu là khách thì…".
+>
+> **Không có `risk_score`, không có `review_status`.** Hai cột đó chỉ có nghĩa khi có người quay lại kết luận;
+> ván xong là phòng tan. Thêm vào là hứa một quy trình xử lý không tồn tại.
+>
+> **`question_index` là cột làm nên khuôn lặp** — đếm số câu *khác nhau* có tín hiệu mới phân biệt được "một lần
+> bị gián đoạn" với "lặp lại ở nhiều câu". `-1` = còn ở phòng chờ, không được tính.
+
 **Gamification** ([features/13](features/13-gamification.md))
 | user_stats: user_id (PK), total_xp, level, current_streak, longest_streak, last_active_date |
 | badges: id, code, name, description, condition (jsonb), icon |

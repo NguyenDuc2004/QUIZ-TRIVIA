@@ -42,6 +42,8 @@
 | 18/08 | **Lát cắt 16: Thông báo** (V18) — job nhắc ôn 7:00, real-time qua Redis→STOMP, chuông + cài đặt, 29 test · trả nốt FR-53 của tính năng 13 | 7/7 | 🟢 xong |
 | 18/08 (chiều) | **Lát cắt 14: Lớp học** (V19) — mã lớp, giao bài, bảng theo dõi, 32 test · **ĐỦ 16/16 chức năng** · chặn Admin khỏi khu học tập · sửa flake chat lần cuối | 9/9 | 🟢 xong |
 
+| 19/08 | **Cảnh báo gian lận live trong phòng đấu** (V20) — cờ riêng cho host, nhắc riêng, khuôn lặp thay vì đếm số lần, 30 test · phát hiện thiết kế đã chốt không khớp schema · sửa 1 test đỏ có sẵn trên `main` | 8/8 | 🟢 xong |
+
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
 ---
@@ -2875,6 +2877,138 @@ trong phòng đấu) và cảnh báo live trong phòng đấu — cái sau đã 
 - **Mục 3.4:** lát cắt này là ví dụ tốt về **test đơn vị cho phần có nhánh logic** (8 ca cho hàm tính trạng
   thái) tách khỏi **test tích hợp cho phần phân quyền** (16 ca) — hai loại câu hỏi khác nhau, hai loại test
   khác nhau.
+
+---
+
+## 📅 T4 — 19/08/2026 — Cảnh báo gian lận trực tiếp trong phòng đấu
+
+**Mục tiêu:** làm mục còn hoãn có giá trị nhất — phần chống gian lận (features/12) trước nay **chỉ áp cho bài
+thi cá nhân**, phòng đấu real-time không có một tín hiệu nào. Thiết kế đã chốt từ lát cắt 12, hoãn tới sau
+tính năng 16 vì cần hạ tầng gửi riêng cho một người.
+
+**Xong:** V20 (1 bảng) · 2 kênh STOMP + 1 endpoint REST · 2 loại sự kiện mới · 1 hook + 2 component frontend ·
+9 test đơn vị + 6 test tích hợp + 15 test frontend. Backend 437 → 454, frontend 45 → 60.
+Dọc đường phát hiện **một test có sẵn trên `main` đang đỏ** và nó đỏ vì tiền đề sai — sửa luôn.
+
+---
+
+### Một câu trong thiết kế đã chốt KHÔNG thực hiện được — phát hiện trước khi viết dòng code nào
+
+Bản chốt ở `features/12` ghi: *"Sau ván: kết luận và xử lý điểm ở màn báo cáo, **dùng lại cơ chế
+`PENDING → VALID/INVALID` kèm ghi chú đã có**"*.
+
+Đọc lại schema thì câu đó sai ở **cả hai đầu**:
+
+| Ràng buộc của `V17__anti_cheat.sql` | Thực tế phòng đấu |
+|---|---|
+| `proctoring_events.attempt_id NOT NULL` → `quiz_attempts` | Phòng đấu **không tạo một dòng `quiz_attempts` nào** — 0 lần dùng `QuizAttempt` trong `RoomService`; điểm nằm ở `game_room_players` |
+| `proctoring_events.user_id NOT NULL` → `users` | **Khách vãng lai không có dòng `users`** — và đó chính là nhóm người phòng đấu tồn tại để phục vụ |
+
+Nếu cứ lao vào code thì sẽ phát hiện lúc đã viết xong nửa tính năng, và lối ra dễ nhất lúc đó là **nhồi một
+`attempt_id` giả** để lách ràng buộc. Làm vậy thì mọi truy vấn thống kê theo lượt thi về sau sẽ đếm cả những
+dòng không thuộc lượt thi nào — một lỗi âm thầm, không bao giờ báo.
+
+Không sửa migration đã commit (CLAUDE.md cấm). Cách làm: **bảng riêng** `room_proctoring_events`, khoá theo
+`player_id` phạm vi phòng nên khách và thành viên dùng chung một đường.
+
+Và bảng đó **cố ý không có** `risk_score` lẫn `review_status`. Hai cột ấy chỉ có nghĩa khi có người quay lại
+kết luận; ván xong là phòng tan, không ai quay lại. Đây là lần thứ hai dự án gặp *"một cột sẽ không làm gì
+cả"* — lần đầu là ô nhập hạn mức AI ở FR-84, và câu trả lời vẫn thế: không thêm.
+
+### Ngưỡng của bài thi đưa nguyên sang phòng đấu là sai
+
+Bài thi cá nhân gắn cờ khi *"chuyển tab 3 lần"*. Phòng đấu nhiễu hơn hẳn: phần lớn người chơi vào bằng điện
+thoại sau khi quét QR, và **một tin nhắn đến là một `visibilitychange`**. Phòng 10 người × 10 câu thì gần như
+chắc chắn có người đạt 3 lần mà không làm gì sai — và khi mọi người đều bị gắn cờ thì cái cờ mất nghĩa.
+
+Nên cờ ở đây đếm **khuôn lặp**: *rời trang rồi quay lại trong lúc câu hỏi còn sống, lặp ở nhiều câu khác nhau*
+(ngưỡng 2 câu). Bốn lần rời-về trong **cùng một câu** vẫn không gắn cờ.
+
+**Khuôn này tự loại được trường hợp vô hại, và đó là điểm hay nhất của nó.** Server đóng số câu *đang mở* vào
+mỗi tín hiệu. Người bị gián đoạn thật — nghe một cuộc gọi 30 giây — lúc quay lại thì ván đã sang câu sau, và
+WebSocket vẫn mở nên client đã nhận câu mới trong lúc ẩn: tín hiệu quay lại của họ mang **số câu khác**, câu bị
+rời chỉ có một nửa cặp. Người tra cứu ở tab khác thì phải về *trước khi hết giờ* mới trả lời được, nên cả hai
+nửa cùng một số câu. Khuôn không cần biết họ đi đâu; nó chỉ phân biệt *đi rồi về kịp trả lời* với *đi và mất
+câu đó*.
+
+### Ba test phủ định xanh RỖNG — và chỉ lộ ra vì ba test dương cùng lúc đỏ
+
+Lần chạy test tích hợp đầu tiên: 3 đỏ (không nhận được cờ), 3 xanh (không có cờ — đúng như mong đợi). Nhưng ba
+cái xanh đang xanh **vì cùng một lý do khiến ba cái kia đỏ**: cờ chưa bao giờ được sinh ra.
+
+Nguyên nhân thật: **Spring xử lý message STOMP trên một bể luồng** (`clientInboundChannel`), nên hai frame gửi
+cách nhau vài milli-giây **không** có thứ tự đảm bảo — kể cả khi cùng một session. Cả bốn tín hiệu bị xử lý sau
+lệnh `next` của host nên cùng mang một số câu.
+
+Lần sửa đầu em chờ `ANSWER_RESULT` quay về làm điểm đồng bộ. **Vẫn đỏ** — vì nó cũng chỉ là một message khác
+trên đúng bể luồng đó. Điểm đồng bộ duy nhất đáng tin là **trạng thái đã ghi**: đọc
+`GET /rooms/{code}/proctoring` cho tới khi thấy đúng số liệu, rồi mới chuyển câu.
+
+Hai thứ giữ lại từ chuyện này:
+- Mỗi test phủ định giờ kèm một **đối chứng dương**. Test "một câu thì không gắn cờ" khẳng định luôn
+  `soLanRoiTrang = 4` và `soCauLap = 1` — chứng minh tín hiệu *đã* ghi đủ rồi hệ thống mới **chủ động** không
+  gắn cờ. Thiếu nó thì test vẫn xanh khi cả đường ghi bị hỏng.
+- Test "host tự chuyển tab" khẳng định bảng tổng kết **rỗng**, không chỉ "không có cờ" — để phân biệt *bỏ tín
+  hiệu ngay từ đầu* với *ghi rồi mới lọc khi hiển thị*.
+
+Một lần đỏ mà nếu bỏ qua thì đã có 6 test vô nghĩa nằm trong báo cáo.
+
+### Quyền của host: chỉ nhắc, và đó là quyết định chứ không phải chưa kịp làm
+
+Đề xuất ban đầu của người hướng dẫn có *trừ điểm* và *kick*. Sau khi cân, chốt là **chỉ nhắc riêng**, và test
+`ProctoringFlagPanel` khẳng định trên màn hình **chỉ có đúng một nút** — để lần sau không ai "bổ sung cho đủ".
+
+Lý do: ở màn rà soát sau bài thi, giáo viên có *thời gian* — đọc chuỗi tín hiệu, cân nhắc hoàn cảnh, hỏi lại
+học sinh, và quyết định lùi lại được. Giữa phòng đấu thì host có ba giây, đang lo điều hành, trên một tín hiệu
+client vẫn chặn được và giả mạo được. Một thông báo bật lên → cờ đỏ → người chơi bị loại khỏi cuộc thi tính
+điểm, không hoàn tác, không được nói gì. Nhắc thì đủ để người định gian lận biết mình đang bị thấy.
+
+### Một cái bẫy nhỏ về tên người chơi
+
+`RoomParticipant.displayName()` là **null với thành viên đã đăng nhập** — tên của họ nằm ở trạng thái phòng từ
+lúc vào nên frame STOMP không mang theo nữa. Lấy thẳng từ participant thì bản tổng kết **mất tên đúng những
+người có tài khoản**, còn khách vẫn có tên: lỗi chỉ lộ một nửa, và nửa lộ ra lại là nửa ít ai kiểm. Tên phải
+lấy từ `RoomState`.
+
+### Ghi chú báo cáo
+
+- **Mục 2.2 / 2.6:** đây là ví dụ tốt cho *ràng buộc kỹ thuật buộc phải đổi thiết kế* — một câu trong bản chốt
+  không sống được khi gặp schema thật, và cách xử lý là sửa cả tài liệu lẫn code cho khớp thay vì lách.
+- **"Khó khăn & cách giải quyết":** ba mục — (1) khoá ngoại `NOT NULL` chặn đường tái dùng bảng cũ; (2) bể
+  luồng STOMP làm mất thứ tự message khiến test rung; (3) ba test phủ định xanh rỗng.
+- **Mục 3.4:** minh hoạ rõ nhất trong cả dự án về **đối chứng dương cho test phủ định**. Con số "6 test mới"
+  không nói được gì; chuyện 3 trong 6 cái từng xanh vì lý do sai thì nói được nhiều.
+- **Mục 3.5:** phần này thêm 2 loại sự kiện vào phòng đấu nhưng **không đo lại load test** — tín hiệu rời trang
+  thưa hơn lượt trả lời vài bậc, và số liệu 08/08 đã chỉ ra nghẽn nằm ở đường *nhận đáp án*. Không có số mới
+  thì không ghi số mới.
+- **Bốn trụ cột:** đây là chỗ **real-time và chống gian lận gặp nhau** — trước lát cắt này hai phần chạy song
+  song mà không biết nhau.
+
+---
+
+### Món phụ: một test trên `main` đỏ vì nó kiểm sai thứ nó nói
+
+Chạy toàn bộ suite thì `NotificationIntegrationTest.shouldNotifyOnLevelUp` đỏ. Kiểm bằng cách stash hết việc
+đang làm rồi chạy trên bản gốc: **đỏ y nguyên** — lỗi có sẵn, không do lát cắt này.
+
+Truy ra thì **code đúng, test sai tiền đề**. Cấp 2 cần 100 XP tích luỹ; mỗi bài đúng 100% cho 20 + 15 = 35 XP:
+
+| Sau bài | XP | Thành tích mở được |
+|---|---|---|
+| 1 | 35 | 🎯 huy hiệu `PERFECT_ATTEMPTS ≥ 1` |
+| 2 | 70 | 🌱 huy hiệu `XP ≥ 50` |
+
+Hai bài mới được 70 XP nên **người dùng chưa từng lên cấp 2**. Thông báo mà test đếm là *huy hiệu*, và cái thứ
+hai là một huy hiệu **khác mã** nên khoá chống trùng `badge:{mã}` cho qua — hoàn toàn đúng.
+
+Lỗi thật của test: nó lẫn **"chạy lại cùng một sự kiện"** (retry — thứ khoá chống trùng tồn tại để chặn) với
+**"làm thêm một bài nữa"** (hành động mới, được phép sinh thành tích mới). Sửa: nộp ba bài cho thật sự lên cấp
+2, khẳng định có thông báo khoá `level:2`, rồi **bắn lại đúng sự kiện cũ** và đếm không đổi. Thêm một test nữa
+khẳng định điều ngược lại: huy hiệu *khác* thì **phải** có thông báo mới — chống trùng không có nghĩa là "mỗi
+người một thông báo thành tích".
+
+Bài học giống hệt chuyện đối chứng dương ở trên: một test xanh/đỏ không nói gì nếu nó không kiểm đúng thứ tên
+nó ghi.
 
 ---
 

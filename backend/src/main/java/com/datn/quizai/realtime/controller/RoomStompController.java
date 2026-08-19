@@ -2,8 +2,11 @@ package com.datn.quizai.realtime.controller;
 
 import com.datn.quizai.common.exception.BusinessException;
 import com.datn.quizai.realtime.domain.RoomParticipant;
+import com.datn.quizai.realtime.dto.RoomProctoringSignalRequest;
 import com.datn.quizai.realtime.dto.SubmitRoomAnswerRequest;
+import com.datn.quizai.realtime.service.RoomProctoringService;
 import com.datn.quizai.realtime.service.RoomService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -15,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Điều khiển ván đấu qua STOMP — docs/api.md §5.2.
@@ -29,9 +33,11 @@ public class RoomStompController {
     private static final Logger log = LoggerFactory.getLogger(RoomStompController.class);
 
     private final RoomService roomService;
+    private final RoomProctoringService proctoringService;
 
-    public RoomStompController(RoomService roomService) {
+    public RoomStompController(RoomService roomService, RoomProctoringService proctoringService) {
         this.roomService = roomService;
+        this.proctoringService = proctoringService;
     }
 
     @MessageMapping("/room/{roomCode}/start")
@@ -66,6 +72,35 @@ public class RoomStompController {
         Object avatar = payload.get("avatar");
         roomService.setAvatar(roomCode, participant(authentication),
                 avatar == null ? null : avatar.toString());
+    }
+
+    /**
+     * Người chơi báo mình vừa rời trang hoặc quay lại (features/12, cảnh báo live).
+     * <p>
+     * Không trả về gì và không báo lỗi cho người gửi: đây là đường nền, người đang chơi không nên thấy bất kỳ
+     * dấu hiệu nào của cơ chế giám sát ngoài lời nhắc của host. Ngay cả việc tín hiệu bị bỏ (đã đủ hạn mức,
+     * không còn trong phòng) cũng im lặng.
+     */
+    @MessageMapping("/room/{roomCode}/proctoring")
+    public void proctoring(@DestinationVariable String roomCode,
+                           @Payload @Valid RoomProctoringSignalRequest request,
+                           Authentication authentication) {
+        proctoringService.ghiNhan(roomCode, participant(authentication), request.type());
+    }
+
+    /**
+     * Host nhắc riêng một người chơi bị gắn cờ (features/12, cảnh báo live).
+     * <p>
+     * {@code playerId} đến từ payload — khác với danh tính người gửi, thứ luôn lấy từ phiên. Đây là chỗ duy
+     * nhất trong ván đấu mà một người chỉ định người khác, nên quyền host được kiểm ở service.
+     */
+    @MessageMapping("/room/{roomCode}/warn")
+    public void warn(@DestinationVariable String roomCode,
+                     @Payload Map<String, Object> payload,
+                     Authentication authentication) {
+        Object playerId = payload.get("playerId");
+        proctoringService.nhacRieng(roomCode, participant(authentication),
+                playerId == null ? null : UUID.fromString(playerId.toString()));
     }
 
     /**

@@ -12,7 +12,7 @@ Tạo động lực cạnh tranh theo chu kỳ: xếp hạng người dùng theo
 ## Yêu cầu chức năng
 - **FR-60** [S] ✅ Quản lý **mùa** (season) có thời gian bắt đầu/kết thúc.
 - **FR-61** [S] ✅ Tính điểm mùa (season points) từ hoạt động trong khoảng thời gian mùa (XP kiếm được, thắng phòng đấu...).
-- **FR-62** [S] 🟡 **Bảng xếp hạng theo mùa** — làm phạm vi **toàn hệ thống**. Theo lớp cần tính năng 14 (chưa làm); *theo bạn bè* không tồn tại ở bất kỳ đâu trong docs.
+- **FR-62** [S] 🟡 **Bảng xếp hạng theo mùa** — làm phạm vi **toàn hệ thống**. *Theo lớp*: [tính năng 14](14-classroom.md) đã làm nên dữ liệu đã đủ, nhưng vẫn không làm — lý do ở bảng dưới. *Theo bạn bè* không tồn tại ở bất kỳ đâu trong docs.
 - **FR-63** [S] ✅ Kết thúc mùa: chốt bảng, **trao phần thưởng ảo** cho top N, lưu lịch sử, reset điểm mùa.
 - **FR-64** [C] ⏳ Phân hạng bronze/silver/gold — chưa làm. Cần chọn ngưỡng, mà chọn ngưỡng khi chưa có dữ liệu thật thì chỉ là số bịa.
 
@@ -21,7 +21,7 @@ Tạo động lực cạnh tranh theo chu kỳ: xếp hạng người dùng theo
 | Quyết định | Vì sao |
 |---|---|
 | **Redis là chỉ mục, PostgreSQL là nguồn sự thật** | Đặc tả gợi ý giữ điểm mùa trong ZSET. Nhưng Redis ở dự án này chạy không bật AOF — một lần restart mất dữ liệu là **mất sạch bảng xếp hạng, không dựng lại được**. Điểm mùa thật là `sum(xp_events.xp)` trong khoảng thời gian mùa; ZSET chỉ là bản sao để đọc nhanh, và tự dựng lại khi rỗng |
-| **Chỉ phạm vi toàn hệ thống** | Theo lớp phụ thuộc tính năng 14 (chưa làm). *Theo bạn bè* **không tồn tại**: không bảng, không API, không yêu cầu chức năng nào trong toàn bộ docs. Thêm hai bộ lọc luôn trả cùng một danh sách là hứa với người dùng một thứ không có |
+| **Chỉ phạm vi toàn hệ thống** | *Theo lớp* giờ đã có dữ liệu ([tính năng 14](14-classroom.md) có `classroom_members`) nhưng vẫn không làm: mỗi lớp cần một ZSET riêng, tức số khoá Redis nhân theo *số lớp × số mùa*, trong khi một lớp chỉ vài chục người — mà **bảng theo dõi lớp ở features/14 đã trả lời đúng câu hỏi "ai đang dẫn đầu lớp"** trên dữ liệu chính xác hơn. *Theo bạn bè* **không tồn tại**: không bảng, không API, không yêu cầu chức năng nào trong toàn bộ docs. Thêm hai bộ lọc luôn trả cùng một danh sách là hứa với người dùng một thứ không có |
 | **Chỉ có endpoint đọc** | Điểm mùa đến từ XP, XP đến từ hành động học thật (features/13). Mở đường ghi là mở đường tự leo hạng |
 
 **Chốt mùa idempotent bằng bốn chốt**, không bằng một cờ trong bộ nhớ:
