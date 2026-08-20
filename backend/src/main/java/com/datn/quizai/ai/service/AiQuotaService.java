@@ -98,25 +98,42 @@ public class AiQuotaService {
     }
 
     /**
+     * Kiểm hạn mức <b>mà KHÔNG ghi nhận lượt nào</b>.
+     *
+     * <h4>Vì sao cần một hàm chỉ-kiểm riêng</h4>
+     * Tác vụ AI nặng chạy nền: {@code POST /ai/generate-questions} trả 202 kèm {@code jobId} ngay, còn lời
+     * gọi mô hình xảy ra sau ở luồng nền. Nếu chỉ chốt hạn mức trong {@link #kiemTraVaGhiNhan} — nơi luồng
+     * nền gọi tới — thì người đã hết lượt vẫn nhận <b>202</b> rồi mới thấy job hỏng.
+     * <p>
+     * Chi phí vẫn được khống chế đúng (mô hình không bị gọi), nhưng người dùng phải bấm rồi chờ rồi mới
+     * biết mình hết lượt — và bấm mười lần thì tạo mười job hỏng. Nên chốt thêm ở lúc <i>nhận việc</i>.
+     * <p>
+     * <b>Không cộng lượt ở đây</b>: cộng cả lúc nhận việc lẫn lúc gọi mô hình là trừ đôi, và người dùng
+     * mất một nửa hạn mức mà không hiểu vì sao.
+     *
+     * @throws BusinessException 429 khi đã hết lượt trong ngày
+     */
+    public void kiemTra(UUID userId) {
+        HanMuc hm = hanMuc(userId);
+        if (hm == null) {
+            return;
+        }
+        if (daDungHomNay(userId) >= hm.gioiHan()) {
+            throw hetLuot(hm.gioiHan());
+        }
+    }
+
+    /**
      * Kiểm hạn mức <b>và</b> ghi nhận một lượt. Gọi một lần cho mỗi yêu cầu của người dùng.
      *
      * @throws BusinessException 429 khi đã hết lượt trong ngày
      */
     public void kiemTraVaGhiNhan(UUID userId) {
-        if (userId == null) {
+        HanMuc hm = hanMuc(userId);
+        if (hm == null) {
             return;
         }
-        // Đọc cột MỘT lần rồi tự suy ra hạn mức: gọi hanMucCua() ở đây là truy vấn lần thứ hai cho cùng
-        // một câu hỏi, trên đường chạy ở mỗi lời gọi AI.
-        Integer rieng = userRepository.findAiDailyQuotaById(userId).orElse(null);
-        int hanMuc = rieng != null ? rieng : hanMucMacDinh;
-
-        // `rieng == null && mặc định <= 0` = CHƯA BẬT hạn mức cho hệ thống → không chặn ai.
-        // Còn `rieng == 0` = quản trị viên CẤM người này. Cùng con số 0, hai nghĩa trái ngược, phân biệt
-        // bằng NGUỒN của nó — đó là lý do cột trên `users` để null được.
-        if (rieng == null && hanMucMacDinh <= 0) {
-            return;
-        }
+        int hanMuc = hm.gioiHan();
 
         String key = key(userId);
         if (redis.opsForValue().get(key) == null) {
@@ -130,9 +147,38 @@ public class AiQuotaService {
             // Lùi lại lượt vừa cộng: yêu cầu này bị từ chối nên nó không được tính là đã dùng. Không lùi
             // thì mỗi lần bị chặn lại đẩy bộ đếm lên cao thêm, và con số hiện ở khu quản trị thành vô nghĩa.
             redis.opsForValue().decrement(key);
-            throw new BusinessException(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,
-                    "Bạn đã dùng hết " + hanMuc + " lượt AI của hôm nay. Hạn mức đặt lại vào 00:00.");
+            throw hetLuot(hanMuc);
         }
+    }
+
+    /** Hạn mức đang áp; {@code null} = không chặn người này. */
+    private record HanMuc(int gioiHan) {
+    }
+
+    /**
+     * Quyết định hạn mức áp cho một người, hoặc {@code null} nếu không chặn.
+     * <p>
+     * Một chỗ duy nhất đọc cột và diễn giải ý nghĩa của nó, để {@link #kiemTra} và
+     * {@link #kiemTraVaGhiNhan} không bao giờ hiểu khác nhau về cùng một con số.
+     */
+    private HanMuc hanMuc(UUID userId) {
+        if (userId == null) {
+            return null;   // tác vụ hệ thống, không thuộc về ai
+        }
+        Integer rieng = userRepository.findAiDailyQuotaById(userId).orElse(null);
+
+        // `rieng == null && mặc định <= 0` = CHƯA BẬT hạn mức cho hệ thống → không chặn ai.
+        // Còn `rieng == 0` = quản trị viên CẤM người này. Cùng con số 0, hai nghĩa trái ngược, phân biệt
+        // bằng NGUỒN của nó — đó là lý do cột trên `users` để null được.
+        if (rieng == null && hanMucMacDinh <= 0) {
+            return null;
+        }
+        return new HanMuc(rieng != null ? rieng : hanMucMacDinh);
+    }
+
+    private BusinessException hetLuot(int hanMuc) {
+        return new BusinessException(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,
+                "Bạn đã dùng hết " + hanMuc + " lượt AI của hôm nay. Hạn mức đặt lại vào 00:00.");
     }
 
     /**

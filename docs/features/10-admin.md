@@ -72,6 +72,15 @@ lượt vì sự cố họ không gây ra, và "20 lượt" không còn tương 
 **Nhúng học liệu KHÔNG tính vào hạn mức.** Một tài liệu chia 50 đoạn là 50 lời gọi `embed` cho *một* hành
 động của người dùng; tính vào thì hạn mức hết ngay ở tài liệu đầu tiên. Chi phí phần này theo dõi qua FR-74.
 
+**Chốt hạn mức ở HAI chỗ, và chỉ một chỗ cộng lượt.** Tác vụ AI nặng chạy nền: `POST /ai/generate-questions`
+trả 202 kèm `jobId` ngay, còn lời gọi mô hình xảy ra sau ở luồng nền. Bản đầu chỉ chốt trong
+`AiOrchestrator` — nơi luồng nền gọi tới — nên chạy thật ngày 20/08 lộ ra: **người bị cấm vẫn nhận 202**,
+rồi mới thấy job hỏng. Chi phí vẫn khống chế đúng (bảng audit xác nhận 0 lời gọi mô hình), nhưng họ bấm
+mười lần là tạo mười job hỏng mà không hiểu vì sao.
+
+Nên thêm `kiemTra()` **chỉ kiểm, không cộng lượt** ở lúc nhận việc. Cộng ở cả hai chỗ là **trừ đôi** —
+người dùng mất một nửa hạn mức mà không có cách nào biết.
+
 **Giao diện hiện cả hạn mức lẫn số đã dùng hôm nay** — một ô nhập không kèm mức tiêu thụ thật thì quản trị
 viên chỉ đoán, và con số họ đặt sẽ hoặc quá chặt hoặc vô nghĩa.
 

@@ -44,7 +44,7 @@
 
 | 19/08 | **Cảnh báo gian lận live trong phòng đấu** (V20) — cờ riêng cho host, nhắc riêng, khuôn lặp thay vì đếm số lần, 30 test · phát hiện thiết kế đã chốt không khớp schema · sửa 1 test đỏ có sẵn trên `main` | 8/8 | 🟢 xong |
 
-| 20/08 | **Đổi dự phòng AI sang Groq** · **FR-48 thi nghiêm ngặt** (V21) · **FR-58 xuất bảng điểm CSV** · **FR-84 hạn mức AI** (V22) — 494 test BE / 67 FE · sửa 2 lỗi có sẵn | 11/11 | 🟢 xong — fallback đã đo thật |
+| 20/08 | **Đổi dự phòng AI sang Groq** · **FR-48 thi nghiêm ngặt** (V21) · **FR-58 xuất bảng điểm CSV** · **FR-84 hạn mức AI** (V22) — 494 test BE / 67 FE · sửa 2 lỗi có sẵn | 13/13 | 🟢 xong — fallback đo thật, tìm & sửa 1 lỗi khi chạy thật |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -3218,6 +3218,32 @@ chạm hạn mức gói miễn phí phải chờ. Đây là **so sánh chỉ bá
 **Phát biểu đúng cho báo cáo:** *nhà cung cấp dự phòng đã phục vụ thật qua ứng dụng, và logic chuyển đã
 được kiểm bằng test; còn một lần chuyển thật do lỗi tạm thời của Gemini thì chưa quan sát được* — muốn ép
 phải chặn mạng ở mức hệ điều hành vì Gemini hardcode base URL.
+
+---
+
+### Chạy thật trên server lộ ra một lỗi mà 500 test không bắt được
+
+Kiểm 13 điểm của FR-48/58/84 trên server đang chạy. Mười hai điểm xanh; điểm thứ mười ba đỏ:
+**người bị cấm gọi AI vẫn nhận `202 Accepted`** thay vì 429.
+
+Nguyên nhân là một thứ chỉ lộ ra khi ghép các tầng lại: tác vụ AI nặng **chạy nền**. Endpoint trả `jobId`
+ngay, còn lời gọi mô hình xảy ra sau ở luồng nền — nơi duy nhất có chốt hạn mức. Test tích hợp của FR-84
+gọi thẳng `AiQuotaService` nên không thấy; test của tầng job không biết gì về hạn mức.
+
+**Kiểm lại trước khi kết luận:** bảng audit cho thấy **0 lời gọi mô hình** sau lúc cấm, và job FAILED đúng
+thông báo hạn mức. Nghĩa là mục đích chính — khống chế chi phí — vẫn nguyên vẹn. Lỗi nằm ở *phản hồi cho
+người dùng*, không ở *hiệu lực của hạn mức*. Phân biệt được hai chuyện đó quyết định mức độ nghiêm trọng.
+
+**Cách sửa và cái bẫy trong đó:** thêm chốt ở lúc nhận việc. Nhưng chốt mới phải **chỉ kiểm, không cộng
+lượt** — cộng ở cả hai chỗ là trừ đôi, và người dùng mất một nửa hạn mức mà không có cách nào biết. Tách
+`kiemTra()` khỏi `kiemTraVaGhiNhan()`, dùng chung một hàm riêng quyết định "hạn mức áp cho người này là
+bao nhiêu" để hai đường không bao giờ hiểu khác nhau về cùng một con số.
+
+Thêm 4 test, trong đó một test kiểm đúng cái bẫy: gọi `kiemTra()` mười lần rồi khẳng định số lượt đã dùng
+vẫn là 0, và vẫn còn đủ hạn mức thật.
+
+> Bài học: **500 test xanh không thay được một lần chạy thật.** Lỗi này nằm ở chỗ nối giữa hai tầng mà mỗi
+> tầng đều có test riêng và đều đúng.
 
 ---
 

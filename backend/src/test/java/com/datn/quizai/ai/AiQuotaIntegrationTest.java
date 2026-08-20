@@ -188,6 +188,60 @@ class AiQuotaIntegrationTest {
         assertThatCode(() -> quotaService.kiemTraVaGhiNhan(nguoiKhac)).doesNotThrowAnyException();
     }
 
+    @Test
+    @DisplayName("kiemTra() KHÔNG cộng lượt — cộng cả lúc nhận việc lẫn lúc gọi mô hình là trừ đôi")
+    void checkOnlyMustNotConsumeQuota() {
+        datHanMuc(user, 3);
+
+        for (int i = 0; i < 10; i++) {
+            quotaService.kiemTra(user);
+        }
+
+        // Vẫn 0: nếu kiemTra() cộng lượt thì người dùng mất một nửa hạn mức mà không hiểu vì sao —
+        // mỗi lần bấm bị trừ hai (một ở lúc nhận việc, một ở lúc gọi mô hình thật).
+        assertThat(quotaService.daDungHomNay(user)).isZero();
+
+        // Và vẫn còn đủ 3 lượt thật
+        for (int i = 0; i < 3; i++) {
+            quotaService.kiemTraVaGhiNhan(user);
+        }
+        assertThat(catchThrowableOfType(BusinessException.class,
+                () -> quotaService.kiemTraVaGhiNhan(user))).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Hết lượt rồi thì kiemTra() chặn NGAY — người dùng biết trước khi tạo job")
+    void checkOnlyMustBlockWhenExhausted() {
+        // Đây là lỗi tìm ra khi chạy thật ngày 20/08: tác vụ AI nặng chạy nền nên `POST /ai/generate-questions`
+        // trả 202 kèm jobId ngay, còn chốt hạn mức chỉ nằm ở tầng orchestrator mà luồng nền mới gọi tới.
+        // Người đã bị cấm nhận 202 rồi mới thấy job hỏng — chi phí vẫn khống chế đúng (mô hình không bị gọi),
+        // nhưng bấm mười lần là tạo mười job hỏng.
+        datHanMuc(user, 1);
+        quotaService.kiemTraVaGhiNhan(user);
+
+        BusinessException loi = catchThrowableOfType(BusinessException.class,
+                () -> quotaService.kiemTra(user));
+
+        assertThat(loi).isNotNull();
+        assertThat(loi.getStatus().value()).isEqualTo(429);
+    }
+
+    @Test
+    @DisplayName("Bị CẤM (hạn mức 0) thì kiemTra() chặn ngay từ lượt đầu")
+    void checkOnlyMustBlockBannedUser() {
+        datHanMuc(user, 0);
+
+        assertThat(catchThrowableOfType(BusinessException.class, () -> quotaService.kiemTra(user)))
+                .isNotNull();
+    }
+
+    @Test
+    @DisplayName("Chưa bật hạn mức thì kiemTra() không chặn ai")
+    void checkOnlyMustNotBlockWhenNotConfigured() {
+        assertThatCode(() -> quotaService.kiemTra(user)).doesNotThrowAnyException();
+        assertThatCode(() -> quotaService.kiemTra(null)).doesNotThrowAnyException();
+    }
+
     // ------------------------------------------------------------------ trợ giúp
 
     private UUID taoNguoiDung() {
