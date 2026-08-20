@@ -74,7 +74,7 @@ Các tính năng mức [S]/[C] tăng giá trị sản phẩm nhưng không thu�
 - **Sinh đề:** lấy mẫu N câu AI sinh, chuyên gia/người chấm đánh giá tính đúng, độ liên quan học liệu, chất lượng đáp án nhiễu → tỉ lệ đạt.
 - **Chấm tự luận:** so điểm AI với điểm người chấm trên tập mẫu → sai số trung bình / độ tương quan.
 - **RAG:** đo tỉ lệ câu trả lời có căn cứ (grounded) vs. ảo giác.
-- **Fallback:** demo tắt Gemini → xác nhận Groq tiếp quản, đo thời gian chuyển.
+- **Fallback:** ✅ đo 20/08 — Groq phục vụ thật 9/9 câu qua ứng dụng, độ trễ TB 2 039 ms so với 10 526 ms của Gemini. *Một lần chuyển thật do lỗi tạm thời chưa quan sát được* (key sai là lỗi vĩnh viễn nên đúng thiết kế là KHÔNG chuyển); logic chuyển kiểm bằng 6 unit test. Xem so-lieu-3.6 §7.
 
 ## 3. Tiêu chí đánh giá (cho báo cáo)
 - Độ hoàn thiện tính năng theo mức ưu tiên [M].

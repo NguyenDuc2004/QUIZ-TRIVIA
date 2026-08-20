@@ -40,6 +40,8 @@ bài nào thất bại.
 | Trợ lý — có học liệu | Trả lời đúng và có trích dẫn | **3/3** |
 | Trợ lý — ngoài học liệu | Nói không biết thay vì suy đoán | **2/2** |
 | Trợ lý — ngoài học liệu | Vẫn hiện nguồn dù nói không biết *(càng thấp càng tốt)* | **2/2** ⚠ |
+| Đường dự phòng *(đo 20/08)* | Câu sinh được qua Groq | **9/9** |
+| Đường dự phòng *(đo 20/08)* | Độ trễ TB Groq so với Gemini | **2 039 ms** so với **10 526 ms** |
 
 Ba hạng mục đầu đạt mức dùng được trong thực tế. Hạng mục cuối là **hạn chế đã phát hiện**, trình bày
 ở mục 6.
@@ -162,7 +164,93 @@ Hai hướng xử lý, cần **đo thêm trước khi chọn**:
 > **Ghi vào nợ, không sửa bằng con số đoán.** Chọn ngưỡng mới mà không có số liệu khoảng cách thực tế
 > thì chỉ là đổi một con số tuỳ ý bằng một con số tuỳ ý khác.
 
-## 7. Điều phép đo này không nói
+## 7. Đường dự phòng Gemini → Groq
+
+> Đo thật ngày **20/08/2026**. Đây là phép đo đầu tiên của đường dự phòng trong cả dự án — trước ngày này
+> nó **chưa một lần chạy**, vì nhà cung cấp dự phòng cũ (xAI Grok) không có gói miễn phí.
+
+### 7.1. Vì sao đổi nhà cung cấp dự phòng
+
+| | xAI Grok (cũ) | Groq (mới) |
+|---|---|---|
+| Gói miễn phí | **Không** — key hợp lệ vẫn trả 403 `permission-denied` (đo 08/08) | Có |
+| Streaming | Không hiện thực | **Có** |
+| Embedding | Không | Không |
+
+Hệ quả của cột "streaming": trước đây nếu Gemini hỏng thì **trợ lý học tập tắt hẳn**, vì
+`AiOrchestrator.stream()` lọc theo `supportsStreaming()` và danh sách còn lại rỗng. Sau khi đổi, chữ vẫn
+chảy từ nhà cung cấp dự phòng.
+
+**Groq ≠ Grok** — hai tên khác nhau đúng một ký tự nhưng là hai thứ khác hẳn: Groq (groq.com) là nhà cung
+cấp hạ tầng suy luận chạy mô hình mở, Grok là mô hình của xAI.
+
+### 7.2. Model mặc định phải đổi ngay trước khi đo
+
+Model dự định dùng — `llama-3.3-70b-versatile` — **đã bị Groq gỡ**, phát hiện khi gọi
+`GET /openai/v1/models` trước lúc đo. Đây là lần thứ **ba** dự án gặp đúng chuyện này:
+
+| Lần | Nhà cung cấp | Model bị gỡ |
+|---|---|---|
+| 1 | Google | `text-embedding-004` |
+| 2 | xAI | `grok-2` |
+| 3 | Groq | `llama-3.3-70b-versatile` |
+
+Nếu không kiểm trước, cấu hình sẽ *trông như* đã có đường dự phòng trong khi nó không bao giờ chạy được.
+Model dùng để đo: **`openai/gpt-oss-120b`**.
+
+### 7.3. Kết quả: Groq phục vụ sinh đề qua chính ứng dụng
+
+Điều kiện: chạy backend với `--app.ai.gemini.api-key=` (rỗng) nên `AiOrchestrator` lọc Gemini ra, Groq là
+provider duy nhất còn lại. `max-attempts-background=1` để mỗi bài đúng một lời gọi.
+
+| Chủ đề | Câu nhận được / xin | Thời gian |
+|---|---:|---:|
+| Đạo hàm của hàm số một biến | **3/3** | 4 071 ms |
+| Câu bị động trong tiếng Anh | **3/3** | 2 015 ms |
+| Cấu trúc dữ liệu ngăn xếp | **3/3** | 2 014 ms |
+| **Tổng** | **9/9** | TB 2 700 ms |
+
+Toàn bộ 9 câu đi qua bộ kiểm cấu trúc của chính dự án (`QuestionJsonParser`) — không câu nào bị loại. Nội
+dung tiếng Việt đúng chính tả và có dấu.
+
+### 7.4. So sánh độ trễ hai nhà cung cấp
+
+Lấy từ bảng audit `ai_request_logs`, chỉ tính lượt `SUCCESS` của tính năng sinh đề:
+
+| Nhà cung cấp | Số lượt | Độ trễ TB | Token vào TB | Token ra TB |
+|---|---:|---:|---:|---:|
+| Gemini (`gemini-3.6-flash`) | 18 | **10 526 ms** | 1 072 | 549 |
+| Groq (`openai/gpt-oss-120b`) | 3 | **2 039 ms** | 658 | 586 |
+
+Groq nhanh hơn khoảng **5 lần** trên cùng loại tác vụ. Cần nói rõ hai điều để con số này không bị đọc quá:
+số lượt của Groq còn ít (3), và độ trễ của Gemini bao gồm cả những lần chạm hạn mức gói miễn phí phải chờ.
+Đây là **so sánh chỉ báo**, không phải một phép đo hiệu năng có kiểm soát.
+
+### 7.5. Điều phép đo này KHÔNG chứng minh
+
+Phần trung thực nhất của mục này.
+
+**Chưa ép được một lần chuyển provider thật khi lỗi tạm thời.** Cách thử là đặt sai key Gemini, và kết quả
+là Gemini trả `HTTP 400` mà **Groq không tiếp quản**. Kiểm lại thì đó là **hành vi đúng thiết kế**:
+`AiOrchestrator` chỉ chuyển nhà cung cấp khi lỗi *tạm thời* (429, 5xx, mất mạng). Key sai là lỗi vĩnh viễn —
+gửi sang nhà cung cấp khác cũng hỏng y hệt, thử lại chỉ tốn thêm một lời gọi và một khoảng chờ.
+
+Ép một lỗi tạm thời thật cần chặn mạng ở mức hệ điều hành (Gemini hardcode base URL), nên không làm trong
+phép đo này. Thay vào đó, logic chuyển được chứng minh bằng **6 unit test** trong
+`AiOrchestratorFallbackTest`, phủ đúng ranh giới:
+
+| Tình huống | Kết quả mong đợi |
+|---|---|
+| Provider đầu hỏng **tạm thời** | Chuyển sang provider sau, trả kết quả của nó |
+| Provider đầu hỏng **vĩnh viễn** | **Không** chuyển, ném lỗi ra ngoài |
+| Provider chưa cấu hình key | Bỏ qua, không gọi rồi mới nhận lỗi |
+| Mọi provider đều hỏng | 503 kèm thông điệp người dùng hiểu được |
+| Streaming | Chỉ xét provider có streaming |
+
+Nên phát biểu đúng là: **nhà cung cấp dự phòng đã phục vụ thật qua ứng dụng, và logic chuyển đã được kiểm
+bằng test; còn một lần chuyển thật do lỗi tạm thời của Gemini thì chưa quan sát được.**
+
+## 8. Điều phép đo này không nói
 
 Nói rõ giới hạn để không ai đọc quá con số:
 

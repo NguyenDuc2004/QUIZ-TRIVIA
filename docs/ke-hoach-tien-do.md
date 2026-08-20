@@ -103,7 +103,7 @@ Còn nợ: chưa mở hai trình duyệt nhìn tận mắt; chưa đo tải (đ�
 
 **Tổng kết tuần 5:** Làm gộp trong ngày 07/08, sớm hơn kế hoạch. 138/138 test pass và **22/22 ca
 nghiệm thu với Gemini thật** — nạp học liệu → embedding → similarity search → sinh đề bám tài liệu
-→ Creator duyệt. Còn nợ: chưa demo được fallback (đã đổi sang Groq ngày 20/08 để đo được); chưa giới hạn hạn mức và
+→ Creator duyệt. Fallback đã đo thật ngày 20/08 sau khi đổi sang Groq — xem so-lieu-3.6 §7. Còn nợ: chưa giới hạn hạn mức và
 chưa cache theo hash(prompt).
 — **Mốc: trụ cột AI sinh đề (RAG) hoạt động.** ✅
 

@@ -27,7 +27,7 @@ class GroqProviderTest {
 
     /** Không cần key thật: chỉ gọi hàm đọc chuỗi, không chạm mạng. */
     private final GroqProvider provider = new GroqProvider(
-            WebClient.builder(), "", "llama-3.3-70b-versatile");
+            WebClient.builder(), "", "openai/gpt-oss-120b");
 
     // ------------------------------------------------------------------ bóc mảnh SSE
 
@@ -35,7 +35,7 @@ class GroqProviderTest {
     @DisplayName("Bóc được chữ từ mảnh SSE thật của Groq")
     void shouldExtractDeltaFromRealChunk() {
         String chunk = """
-                {"id":"chatcmpl-1","object":"chat.completion.chunk","model":"llama-3.3-70b-versatile",
+                {"id":"chatcmpl-1","object":"chat.completion.chunk","model":"openai/gpt-oss-120b",
                  "choices":[{"index":0,"delta":{"content":"Đạo hàm"},"finish_reason":null}]}
                 """;
 

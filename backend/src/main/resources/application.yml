@@ -142,9 +142,12 @@ app:
       # chờ N giây" vốn hữu ích hơn nhiều.
       api-key: ${GROQ_API_KEY:}
       # Kiểm model còn sống: GET https://api.groq.com/openai/v1/models (cần key).
-      # Nhà cung cấp gỡ model là chuyện thường — đã dính hai lần với Google và xAI — nên để cấu
-      # hình được, đừng hardcode.
-      model: ${GROQ_MODEL:llama-3.3-70b-versatile}
+      #
+      # Nhà cung cấp gỡ model là chuyện thường, và dự án đã dính BA lần: text-embedding-004 của
+      # Google, grok-2 của xAI, và llama-3.3-70b-versatile của chính Groq — cái cuối bị gỡ trước cả
+      # khi kịp chạy lần đầu (kiểm ngày 20/08/2026: không còn trong danh sách model). Vì vậy đừng
+      # hardcode, và kiểm lại danh sách trước khi tin rằng fallback đang hoạt động.
+      model: ${GROQ_MODEL:openai/gpt-oss-120b}
 
 springdoc:
   swagger-ui:

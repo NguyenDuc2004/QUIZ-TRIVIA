@@ -44,7 +44,7 @@
 
 | 19/08 | **Cảnh báo gian lận live trong phòng đấu** (V20) — cờ riêng cho host, nhắc riêng, khuôn lặp thay vì đếm số lần, 30 test · phát hiện thiết kế đã chốt không khớp schema · sửa 1 test đỏ có sẵn trên `main` | 8/8 | 🟢 xong |
 
-| 20/08 | **Đổi dự phòng AI sang Groq** · **FR-48 thi nghiêm ngặt** (V21) · **FR-58 xuất bảng điểm CSV** · **FR-84 hạn mức AI** (V22) — 494 test BE / 67 FE · sửa 2 lỗi có sẵn | 9/9 | 🟡 chờ key Groq để đo fallback |
+| 20/08 | **Đổi dự phòng AI sang Groq** · **FR-48 thi nghiêm ngặt** (V21) · **FR-58 xuất bảng điểm CSV** · **FR-84 hạn mức AI** (V22) — 494 test BE / 67 FE · sửa 2 lỗi có sẵn | 11/11 | 🟢 xong — fallback đã đo thật |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -3183,6 +3183,41 @@ quan gì tới code. Mất một vòng chạy 10 phút để nhận ra. Từ đ�
   bảo mật* (tiêm công thức CSV). FR-84 là ví dụ cho *thứ tự làm quyết định tính năng có giá trị hay không*.
 - **Mục 2.8:** V21 và V22 đều là cột thêm vào bảng có sẵn, và cả hai đều có một quyết định về `null` —
   `strict_exam` mặc định FALSE, `ai_daily_quota` mặc định NULL, vì hai lý do khác nhau.
+
+---
+
+### Có key Groq: đo thật, và ba điều bất ngờ
+
+**1. Model mặc định em chọn đã bị gỡ trước cả khi kịp chạy lần đầu.** Gọi `GET /openai/v1/models` trước
+khi đo thì `llama-3.3-70b-versatile` không còn trong danh sách. Đây là lần **thứ ba** dự án dính đúng
+chuyện này — sau `text-embedding-004` của Google và `grok-2` của xAI. Không kiểm trước thì cấu hình sẽ
+*trông như* đã có đường dự phòng trong khi nó không bao giờ chạy được. Đổi sang `openai/gpt-oss-120b`.
+
+**2. Ép Gemini hỏng bằng key sai thì Groq KHÔNG tiếp quản — và đó là đúng.** Bảng audit ghi rõ:
+`gemini | FAILED | HTTP 400`, không có dòng `groq` nào theo sau. `AiOrchestrator` chỉ chuyển nhà cung cấp
+khi lỗi **tạm thời** (429, 5xx, mất mạng); key sai là lỗi vĩnh viễn, gửi sang chỗ khác cũng hỏng y hệt.
+Đúng bài học đã ghi ngày 10/08 với Grok 403.
+
+Nhưng để phân biệt "đúng thiết kế" với "hỏng" thì phải có test nói rõ ranh giới — và **suốt cả dự án chưa
+có test nào cho chính đường chuyển provider**, thứ trung tâm của trụ cột AI. Lý do rất đơn giản và cũng rất
+đáng ngại: `GROK_API_KEY` luôn để trống nên provider dự phòng bị lọc ra ngay từ đầu, nghĩa là logic chuyển
+**chưa từng được thực thi** — không bởi người dùng, cũng không bởi test. Viết `AiOrchestratorFallbackTest`
+6 ca, phủ đúng ranh giới tạm thời / vĩnh viễn / chưa cấu hình / hỏng hết / streaming.
+
+**3. Groq nhanh hơn Gemini khoảng 5 lần trên cùng tác vụ.**
+
+| Nhà cung cấp | Số lượt | Độ trễ TB | Token vào | Token ra |
+|---|---:|---:|---:|---:|
+| Gemini `gemini-3.6-flash` | 18 | 10 526 ms | 1 072 | 549 |
+| Groq `openai/gpt-oss-120b` | 3 | **2 039 ms** | 658 | 586 |
+
+Sinh đề qua chính ứng dụng: **9/9 câu**, cả 9 qua được bộ kiểm cấu trúc `QuestionJsonParser`, tiếng Việt
+đúng dấu. Nhưng phải nói rõ để không ai đọc quá: Groq mới 3 lượt, và độ trễ của Gemini gồm cả những lần
+chạm hạn mức gói miễn phí phải chờ. Đây là **so sánh chỉ báo**, không phải phép đo hiệu năng có kiểm soát.
+
+**Phát biểu đúng cho báo cáo:** *nhà cung cấp dự phòng đã phục vụ thật qua ứng dụng, và logic chuyển đã
+được kiểm bằng test; còn một lần chuyển thật do lỗi tạm thời của Gemini thì chưa quan sát được* — muốn ép
+phải chặn mạng ở mức hệ điều hành vì Gemini hardcode base URL.
 
 ---
 

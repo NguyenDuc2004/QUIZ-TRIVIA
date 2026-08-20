@@ -113,7 +113,7 @@ GROQ_API_KEY          # Lấy miễn phí ở https://console.groq.com/keys — 
                       # là hành vi ĐÚNG. Đừng điền một key không dùng được: khi Gemini hết hạn mức
                       # nó sẽ chuyển sang Groq, Groq trả 401 (lỗi KHÔNG tạm thời), và người dùng
                       # nhận "unauthorized" thay cho "hết hạn mức, chờ N giây" vốn hữu ích hơn.
-GROQ_MODEL            # mặc định llama-3.3-70b-versatile
+GROQ_MODEL            # mặc định openai/gpt-oss-120b
                       # Kiểm model còn sống: GET https://api.groq.com/openai/v1/models
 AI_PROVIDER_ORDER=gemini,groq
 ```
