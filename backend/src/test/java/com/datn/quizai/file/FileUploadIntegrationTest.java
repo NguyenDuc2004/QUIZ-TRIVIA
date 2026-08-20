@@ -25,11 +25,14 @@ import org.testcontainers.utility.DockerImageName;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -134,8 +137,10 @@ class FileUploadIntegrationTest {
     }
 
     @Test
-    @DisplayName("Learner không được tải ảnh lên (403); Guest bị chặn (401)")
+    @DisplayName("Learner không tải được ảnh QUIZ (403); Guest bị chặn (401)")
     void shouldRestrictUploadByRole() throws Exception {
+        // Chỉ đúng cho /files/images — ảnh quiz không giới hạn số lượng nên phải khoá theo vai trò.
+        // Ảnh ĐẠI DIỆN đi đường khác và learner phải tải được: xem các test ở cuối lớp.
         mockMvc.perform(multipart("/api/v1/files/images")
                         .file(pngFile("anh.png"))
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken))
@@ -197,6 +202,141 @@ class FileUploadIntegrationTest {
                         .content("{\"title\":\"Quiz không ảnh\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.thumbnailUrl").doesNotExist());
+    }
+
+    // ======================================================================= ảnh đại diện
+
+    @Test
+    @DisplayName("Learner tải được ảnh ĐẠI DIỆN — đây là nhu cầu có thật của người học")
+    void learnerCanUploadAvatar() throws Exception {
+        // Trước đây trang hồ sơ gọi /files/images, nên người học bấm "Chọn ảnh từ máy" trên chính hồ sơ
+        // của mình lại nhận 403 "Bạn không có quyền thực hiện hành động này".
+        String body = mockMvc.perform(multipart("/api/v1/files/avatar")
+                        .file(pngFile("toi.png"))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        String url = objectMapper.readTree(body).get("url").asText();
+        assertThat(url).startsWith("/uploads/avatars/").endsWith(".png");
+        // Tên file do server sinh, không lấy tên client gửi
+        assertThat(url).doesNotContain("toi");
+
+        // Ảnh đại diện hiện ở bảng xếp hạng và phòng đấu, nên phải xem được cả khi chưa đăng nhập
+        mockMvc.perform(get(url)).andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Tên file ảnh đại diện gắn với id người tải, lấy từ token chứ không từ tham số")
+    void avatarFileNameIsTiedToTheUploader() throws Exception {
+        String id = idCuaToi(learnerToken);
+
+        String body = mockMvc.perform(multipart("/api/v1/files/avatar")
+                        .file(pngFile("a.png"))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(objectMapper.readTree(body).get("fileName").asText())
+                .as("id người dùng là phần đầu tên file — nếu nhận id qua tham số thì đây là "
+                        + "đường ghi đè ảnh người khác")
+                .startsWith(id + "-");
+    }
+
+    @Test
+    @DisplayName("Tải lại ảnh đại diện: mỗi người vẫn chỉ tốn ĐÚNG MỘT file, và URL đổi")
+    void avatarKeepsExactlyOneFilePerUser() throws Exception {
+        String creatorId = idCuaToi(creatorToken);
+
+        String url1 = taiAnhDaiDien(creatorToken);
+        String url2 = taiAnhDaiDien(creatorToken);
+        String url3 = taiAnhDaiDien(creatorToken);
+
+        // Ràng buộc "mỗi người một file" chính là thứ cho phép mở endpoint này cho MỌI tài khoản:
+        // không có nó thì bất kỳ ai đăng ký được cũng biến hệ thống thành chỗ chứa file miễn phí.
+        assertThat(cacAnhCua(creatorId))
+                .as("ba lần tải lên nhưng chỉ còn lại một file")
+                .hasSize(1);
+
+        // URL phải đổi mỗi lần, nếu không thì trình duyệt và các màn hình khác vẫn hiện ảnh cũ từ cache
+        assertThat(List.of(url1, url2, url3)).doesNotHaveDuplicates();
+        assertThat(cacAnhCua(creatorId).get(0)).endsWith(url3.substring(url3.lastIndexOf('/') + 1));
+    }
+
+    @Test
+    @DisplayName("Dọn ảnh cũ chỉ đụng vào ảnh của CHÍNH người tải, không đụng ảnh người khác")
+    void cleanupNeverTouchesOtherUsersAvatars() throws Exception {
+        String learnerId = idCuaToi(learnerToken);
+        taiAnhDaiDien(learnerToken);
+
+        // Người khác tải ảnh lên nhiều lần
+        taiAnhDaiDien(creatorToken);
+        taiAnhDaiDien(creatorToken);
+
+        assertThat(cacAnhCua(learnerId)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Guest không tải được ảnh đại diện (401) — không có id thì không biết ghi cho ai")
+    void guestCannotUploadAvatar() throws Exception {
+        mockMvc.perform(multipart("/api/v1/files/avatar").file(pngFile("a.png")))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("File giả dạng ảnh vẫn bị chặn ở đường ảnh đại diện — dùng chung phép kiểm")
+    void avatarRejectsDisguisedFile() throws Exception {
+        MockMultipartFile fake = new MockMultipartFile(
+                "file", "avatar.png", MediaType.IMAGE_PNG_VALUE, "<?php echo 1; ?>".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/files/avatar")
+                        .file(fake)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Chỉ nhận ảnh JPG, PNG, GIF hoặc WebP"));
+    }
+
+    @Test
+    @DisplayName("Learner gắn được ảnh vừa tải làm ảnh đại diện của mình")
+    void learnerCanSetUploadedAvatarOnProfile() throws Exception {
+        String url = taiAnhDaiDien(learnerToken);
+
+        mockMvc.perform(put("/api/v1/users/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"displayName":"Người học có ảnh","avatarUrl":"%s"}
+                                """.formatted(url)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.avatarUrl").value(url));
+    }
+
+    /** Tải một ảnh đại diện, trả về URL công khai. */
+    private String taiAnhDaiDien(String token) throws Exception {
+        String body = mockMvc.perform(multipart("/api/v1/files/avatar")
+                        .file(pngFile("anh.png"))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(body).get("url").asText();
+    }
+
+    /** Các file ảnh đại diện còn lại trên đĩa của một người dùng. */
+    private List<String> cacAnhCua(String userId) throws IOException {
+        Path folder = tempUploadDir.resolve("avatars");
+        try (Stream<Path> files = Files.list(folder)) {
+            return files.map(f -> f.getFileName().toString())
+                    .filter(name -> name.startsWith(userId + "-"))
+                    .toList();
+        }
+    }
+
+    private String idCuaToi(String token) throws Exception {
+        String body = mockMvc.perform(get("/api/v1/users/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(body).get("id").asText();
     }
 
     private String register(String email, String role) throws Exception {

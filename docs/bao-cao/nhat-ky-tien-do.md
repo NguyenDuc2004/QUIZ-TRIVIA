@@ -47,6 +47,7 @@
 | 20/08 | **Đổi dự phòng AI sang Groq** · **FR-48 thi nghiêm ngặt** (V21) · **FR-58 xuất bảng điểm CSV** · **FR-84 hạn mức AI** (V22) — 494 test BE / 67 FE · sửa 2 lỗi có sẵn | 13/13 | 🟢 xong — fallback đo thật, tìm & sửa 1 lỗi khi chạy thật |
 | 20/08 (chiều) | **Làm nốt 6 mục hoãn**: FR-11, FR-36, FR-32, FR-12, FR-64, FR-69 — hết mục ⏳ | 6/6 | 🟢 xong |
 | 20/08 (tối) | **Đánh bóng phần người dùng thấy**: số người đã học · sửa hồ sơ + ảnh đại diện · chân trang · hover thẻ quiz · **đăng ký Google nhận đúng vai trò** — 571 test BE / 67 FE | 5/5 | 🟢 xong — 2 lỗi thật do người dùng chỉ ra |
+| 21/08 | **Người học không đổi được ảnh đại diện (403)** — tách đường tải riêng, mỗi người một file · dọn phòng chờ: bỏ IP dưới QR, cho "sẵn sàng" có hậu quả — 578 test BE / 67 FE | 2/2 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -3450,6 +3451,124 @@ nhập lại có thể đổi vai trò.
   đã nghĩ đủ*.
 - **Mục 3.3 (giao diện):** phần từ chối hiện điểm đánh giá dùng được làm ví dụ cho nguyên tắc "không bịa dữ
   liệu" — và nói rõ được **vì sao** ở chỗ này nó nghiêm trọng hơn trang trí: số đánh giá là căn cứ chọn bài học.
+
+---
+
+## 📅 T6 — 21/08/2026 — Một dòng phân quyền đúng lúc viết ra, sai từ lúc có trang hồ sơ
+
+**Xong:** người học đổi được ảnh đại diện · dọn phòng chờ. Backend 571 → **578 test**, frontend 67.
+
+Người dùng gửi ảnh chụp màn hình: đang ở vai trò Người học, mở trang **Hồ sơ của tôi**, bấm *"Chọn ảnh từ
+máy"* và nhận **"Bạn không có quyền thực hiện hành động này"** — ngay trên trang hồ sơ của chính mình.
+
+---
+
+### Chú thích trong code nói đúng, nhưng chỉ đúng ở thời điểm nó được viết
+
+`FileController` ghi rõ:
+
+> *Chỉ CREATOR/ADMIN được tải ảnh: **người học không có nhu cầu**, mà mở cho mọi tài khoản thì thành chỗ
+> chứa file miễn phí cho bất kỳ ai đăng ký được.*
+
+Lúc viết dòng đó, `/files/images` chỉ phục vụ **ảnh bìa quiz** — và đúng là người học không có nhu cầu.
+Câu đó **tự sai đi** vào hôm qua, khi trang hồ sơ sửa được ra đời và ô chọn ảnh trỏ vào đúng endpoint ấy.
+
+Đây là loại lỗi không ai "gây ra": không commit nào làm hỏng nó, không dòng nào bị sửa sai. Một tiền đề
+đúng trở thành sai vì **thế giới quanh nó đổi**. Bộ test cũng khẳng định điều đó — có hẳn một test tên
+*"Learner không được tải ảnh lên (403)"*, và nó **vẫn xanh** trong lúc người dùng đang bị chặn. Test không
+sai; nó chỉ đang bảo vệ một quyết định đã hết hạn.
+
+### Lời phản đối trong chú thích cũ vẫn còn giá trị — nên không nới quyền
+
+Cách nhanh nhất là đổi `hasAnyRole('CREATOR','ADMIN')` thành `isAuthenticated()`. Nhưng vế sau của chú
+thích cũ **không hề hết hạn**: mở đường tải ảnh không giới hạn số lượng cho mọi tài khoản thì hệ thống
+thành chỗ chứa file miễn phí, và bất kỳ ai cũng đăng ký được.
+
+Nên tách **đường riêng** `/files/avatar`, mở cho mọi người đã đăng nhập, và gỡ đúng cái lo trên bằng một
+ràng buộc chứ không bằng cách bỏ qua nó:
+
+| | `/files/images` | `/files/avatar` |
+|---|---|---|
+| Quyền | CREATOR/ADMIN | mọi tài khoản đã đăng nhập |
+| Số file mỗi người | không giới hạn | **đúng một** |
+| Tên file | `{uuid}.{ext}` | `{userId}-{ngẫu nhiên}.{ext}` |
+
+Tên file bắt đầu bằng id người dùng, và mọi file cũ của **chính họ** bị xoá sau khi ghi file mới. Tải lên
+một nghìn lần vẫn chỉ tốn một file: tổng dung lượng bị chặn bởi **số tài khoản**, không phải số lần bấm
+nút. Cái lo ban đầu biến mất mà không phải từ chối người dùng thứ gì.
+
+### Ba chi tiết nhỏ, mỗi cái hỏng theo một kiểu riêng
+
+**Xoá ảnh cũ phải chạy SAU khi ghi ảnh mới.** Xoá trước mà lượt ghi hỏng giữa chừng thì người dùng mất
+luôn ảnh đang có — họ chỉ định *đổi* ảnh, không định *mất* ảnh. Và lỗi ở bước dọn dẹp chỉ ghi log: ảnh mới
+đã lưu xong, để cả yêu cầu thất bại vì một file rác nằm lại là đánh đổi sai.
+
+**`userId` lấy từ token, không nhận qua tham số.** Nó được ghép thẳng vào tên file, nên nhận từ client là
+mở đường ghi đè ảnh người khác. Có test riêng cho cả chuyện dọn dẹp **không đụng vào ảnh của người khác**.
+
+**Phần ngẫu nhiên sau id là để đổi URL.** Nếu tên file cố định theo id thì URL không đổi, và trình duyệt
+cùng những màn hình khác đang hiện ảnh cũ vẫn lấy từ cache — người dùng đổi ảnh xong tưởng là hỏng.
+
+### Một lỗi thứ hai lộ ra trong cùng ảnh chụp
+
+Ngay dưới ô chọn ảnh có dòng *"nên dùng ảnh ngang 16:9"*, và khung xem trước cũng là khung 16:9. Đó là lời
+khuyên **của ảnh bìa quiz**, bị dùng lại nguyên vẹn cho ảnh đại diện — thứ luôn hiện trong khung tròn, nên
+ảnh ngang sẽ bị cắt mất hai bên. Người làm đúng theo hướng dẫn sẽ nhận kết quả tệ hơn người bỏ qua nó.
+
+`ImageUploader` giờ có `variant`, đổi **ba thứ cùng lúc** vì cả ba phải đổi cùng nhau: endpoint gọi tới,
+khung xem trước (vuông / 16:9), và lời gợi ý.
+
+### Một lỗ em tự tạo ra rồi tự bắt được
+
+Bản đầu của `storeAvatar` gọi thẳng `detectType`, tức **bỏ qua** phép kiểm file rỗng và kiểm dung lượng —
+hai thứ đó đang nằm trong thân `storeImage`. Đường mới sẽ nhận ảnh vượt hạn mức 2MB.
+
+Đã tách thành `kiemTra` dùng chung. Bài học lặp lại đúng câu đã viết hôm chiều 20/08 khi tách
+`UploadedImagePath`: **luật an toàn bị nhân đôi thì lần sau ai đó sửa một chỗ mà quên chỗ kia, và chỗ bị
+quên chính là lỗ hổng** — ở đây "ai đó" là em, và khoảng cách giữa hai lần chỉ một ngày.
+
+---
+
+### Phòng chờ: một dòng chữ đúng lúc dev, thừa lúc triển khai
+
+Dưới mã QR có in đường dẫn — `http://192.168.0.101:5173/join/320438`. Lý do ban đầu: *"người dùng thấy ngay
+QR đang trỏ đi đâu"*. Lý do đó **chỉ có nghĩa trên máy dev**, khi đường dẫn là một địa chỉ LAN thô mà chính
+người tạo phòng cũng cần nhìn để tin là QR không hỏng. Khi triển khai thật, nó chỉ là tên miền của đúng
+trang đang mở: không thêm thông tin gì, mà chiếm chỗ ngay dưới mã QR — thứ thường được chiếu lên máy chiếu
+cho cả lớp quét.
+
+Vẫn giữ đường dẫn ở **một chỗ**: thẻ cảnh báo khi backend không dò được địa chỉ LAN và QR trỏ về
+`localhost`. Ở đó nó không phải trang trí mà là **bằng chứng** giải thích vì sao điện thoại quét không vào
+được.
+
+### "Tôi đã sẵn sàng" — câu hỏi của người dùng đúng vào chỗ yếu
+
+Người dùng hỏi: *"ở ô tôi đã sẵn sàng, cái đó là tượng trưng đúng không?"*
+
+Nửa đúng, và nửa sai đó mới đáng nói. Trạng thái này là **dữ liệu thật**: lưu trong `RoomState` (Redis),
+phát cho cả phòng qua `PLAYER_READY`, đếm lại ở `readyCount` — con số hiện trên màn hình không bịa. Nhưng
+`RoomService.start` **không hề kiểm** nó: chủ phòng bấm là vào ván ngay, dù không ai sẵn sàng. Nên người
+chơi bấm nút mà **không có gì thay đổi**, và một nút như vậy thì đúng là trang trí.
+
+Không chặn cứng theo `readyCount`, vì như thế **một người bỏ máy đi lấy nước là đủ giữ cả lớp lại vô thời
+hạn**, mà chủ phòng chỉ còn cách đuổi họ ra — hình phạt nặng hơn hẳn cái lỗi. Thay vào đó chủ phòng bị
+**hỏi lại** khi còn người chưa sẵn sàng, với hai lựa chọn *Vẫn bắt đầu* / *Chờ thêm*.
+
+Điểm đáng ghi: hành vi cũ **không sai với đặc tả** — đặc tả chỉ nói "bấm Sẵn sàng, danh sách cập nhật
+real-time", không nói gì về việc nó có chặn hay không. Nó **im lặng ở đúng chỗ quan trọng**, và khoảng im
+lặng đó được lấp bằng cách dễ nhất là không làm gì cả. Giờ đặc tả đã ghi rõ *"tín hiệu cho chủ phòng, không
+phải khoá"* kèm lý do, để lần sau không ai đọc nó rồi tưởng là thiếu sót mà đi chặn.
+
+### Ghi chú báo cáo
+
+- **"Khó khăn & cách giải quyết":** đây là ví dụ tốt nhất từ trước tới giờ cho ý *bộ test xanh không chứng
+  minh hệ thống đúng*. Không phải test viết ẩu — test **đúng với đặc tả tại thời điểm viết**, và đặc tả mới
+  là thứ hết hạn. Cặp đôi với ba lỗi "hỏng trong im lặng" hôm 20/08 tối.
+- **Mục 2.3 (yêu cầu phi chức năng) / 3.4:** bảng hai đường tải ảnh ở trên minh hoạ được *phân quyền nên
+  bám vào rủi ro cụ thể, không bám vào vai trò cho tiện* — cùng một hành động "tải ảnh lên", hai mức quyền
+  khác nhau vì một bên không giới hạn số lượng còn một bên chặn ở một file.
+- **Mục 2.4 (đặc tả use case "Chơi phòng đấu"):** chuyện nút "Sẵn sàng" là ví dụ cho *đặc tả im lặng cũng
+  là một loại thiếu sót* — không có dòng nào sai, nhưng chỗ không nói tới thì bị lấp bằng cách dễ nhất.
 
 ---
 

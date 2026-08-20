@@ -26,6 +26,20 @@ Cho phép nhiều người chơi cùng tham gia một phòng đấu quiz thời 
 - **FR-28b** [M] ✅ **Avatar**: khách bấm "Ngẫu nhiên" hoặc chọn nhân vật; thành viên đổi được ngay trong phòng.
 - **FR-28c** [M] ✅ **Phòng chờ live**: danh sách người chơi dạng thẻ kèm avatar, trạng thái **Đã sẵn sàng**.
 
+### "Sẵn sàng" là tín hiệu cho chủ phòng, không phải khoá
+
+Trạng thái này là **dữ liệu thật**: lưu trong `RoomState` (Redis), phát cho cả phòng qua `PLAYER_READY`,
+và đếm lại ở `readyCount`. Nhưng nó **không chặn** `RoomService.start` — chủ phòng bắt đầu ván lúc nào
+cũng được.
+
+Đó là quyết định có chủ ý. Chặn cứng thì **một người bỏ máy đi lấy nước là đủ giữ cả lớp lại vô thời hạn**,
+mà chủ phòng không có cách nào gỡ ngoài việc đuổi người đó ra — một hình phạt nặng hơn hẳn cái lỗi.
+
+Đổi lại, nếu bấm là vào ván luôn thì nút "Tôi đã sẵn sàng" **chẳng dẫn tới đâu**: người chơi bấm mà không
+có gì thay đổi, và một nút như vậy chỉ là trang trí. Nên giao diện chủ phòng **hỏi lại** khi còn người chưa
+sẵn sàng ("Còn 2/5 người chưa bấm sẵn sàng"), với hai lựa chọn *Vẫn bắt đầu* / *Chờ thêm*. Tín hiệu có tác
+dụng thật, mà quyền quyết định vẫn nằm ở chủ phòng.
+
 ## Luồng xử lý
 ```
 Host tạo phòng → sinh PIN 6 số → game_rooms (Postgres) + room:{code} (Redis, TTL)
