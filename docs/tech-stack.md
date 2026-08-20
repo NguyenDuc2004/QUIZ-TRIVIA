@@ -27,7 +27,7 @@
 | Thành phần | Công nghệ | Ghi chú |
 |-----------|-----------|---------|
 | Provider chính | **Google Gemini API** | `gemini-3.6-flash` (nhanh), `gemini-2.5-pro` (chất lượng) |
-| Provider dự phòng | **xAI Grok API** | Fallback khi Gemini lỗi tạm thời. ⚠️ **Không có gói miễn phí** — team mới chưa nạp tín dụng thì mọi lời gọi trả 403 `permission-denied`. Đo thật ngày 08/08/2026: key hợp lệ nhưng bị chặn ở tầng quyền. Vì vậy `GROK_API_KEY` để trống, và fallback hiện **chưa chạy thật** dù cơ chế đã hiện thực xong |
+| Provider dự phòng | **Groq API** (groq.com) | Fallback khi Gemini lỗi tạm thời. **Không phải Grok của xAI** — hai chữ khác đúng một ký tự. Đã đổi từ xAI Grok sang đây vì xAI **không có gói miễn phí**: đo thật ngày 08/08/2026 cho thấy key hợp lệ vẫn bị chặn ở tầng quyền (403 `permission-denied`), nên suốt cả dự án fallback **chưa một lần chạy thật**. Groq có gói miễn phí, API tương thích OpenAI, và **có streaming** — thứ xAI không có, nhờ đó trợ lý học tập lần đầu cũng có đường lui |
 | Embedding | Gemini embedding | Tạo vector cho RAG |
 | HTTP client | Spring `WebClient` | Gọi REST của LLM |
 | Abstraction | ~~Spring AI~~ (không dùng) | Gọi trực tiếp qua `WebClient`, tự viết `AiOrchestrator` để kiểm soát fallback/quota |
@@ -108,13 +108,14 @@ MAX_IMAGE_SIZE_BYTES   # mặc định 2097152 (2MB)
 
 # AI
 GEMINI_API_KEY, GEMINI_MODEL
-GROK_API_KEY          # ĐỂ TRỐNG nếu team xAI chưa có tín dụng.
-                      # Điền key của team không tín dụng còn TỆ HƠN để trống: Gemini hết hạn mức
-                      # sẽ chuyển sang Grok, Grok trả 403 (lỗi không tạm thời), và thông báo
-                      # "hết hạn mức, chờ N giây" bị thay bằng "permission denied" khó hiểu.
-                      # Để trống thì AiOrchestrator lọc Grok ra khỏi danh sách ngay từ đầu.
-GROK_MODEL            # mặc định grok-4.5 — grok-2 đã bị xAI gỡ ("Model not found")
-AI_PROVIDER_ORDER=gemini,grok
+GROQ_API_KEY          # Lấy miễn phí ở https://console.groq.com/keys — Groq, KHÔNG phải Grok.
+                      # Để trống thì AiOrchestrator lọc Groq ra khỏi danh sách ngay từ đầu, và đó
+                      # là hành vi ĐÚNG. Đừng điền một key không dùng được: khi Gemini hết hạn mức
+                      # nó sẽ chuyển sang Groq, Groq trả 401 (lỗi KHÔNG tạm thời), và người dùng
+                      # nhận "unauthorized" thay cho "hết hạn mức, chờ N giây" vốn hữu ích hơn.
+GROQ_MODEL            # mặc định llama-3.3-70b-versatile
+                      # Kiểm model còn sống: GET https://api.groq.com/openai/v1/models
+AI_PROVIDER_ORDER=gemini,groq
 ```
 
 > **Không commit API key** vào repo. Dùng `.env` (đã gitignore) hoặc secret manager.

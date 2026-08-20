@@ -195,7 +195,7 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 | chat_messages: id, session_id, role (user/assistant), content, created_at |
 
 **ai_request_logs** *(V6)* — audit & giám sát chi phí
-| id | user_id | feature (embedding/generation/grading/chat) | provider (gemini/grok) | model | tokens_in | tokens_out | latency_ms | status | error_message | created_at |
+| id | user_id | feature (embedding/generation/grading/chat) | provider (gemini/groq) | model | tokens_in | tokens_out | latency_ms | status | error_message | created_at |
 
 > Ghi trong transaction **riêng** (`REQUIRES_NEW`): job hỏng và rollback thì bản ghi audit vẫn phải còn.
 > Đây là nguồn số liệu cho mục 3.6 báo cáo (chi phí, độ trễ, tỉ lệ fallback).
@@ -215,6 +215,26 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 >
 > `review_status` mặc định **PENDING** và không có đường nào để hệ thống tự đổi nó — kết luận chỉ đến từ chủ quiz
 > hoặc Admin. Chỉ ghi cho lượt **EXAM**; lượt PRACTICE không có dòng nào ở cả hai bảng.
+
+**users.ai_daily_quota** *(V22)* — Hạn mức AI mỗi ngày ([features/10](features/10-admin.md))
+
+> Cột `INTEGER` **nullable** trên `users`. `null` = chưa đặt riêng, dùng mặc định hệ thống; `0` = quản trị
+> viên **cấm** người đó gọi AI. Gộp hai thứ thì hoặc không cấm được ai, hoặc mọi tài khoản mới bị cấm ngay —
+> nên `DEFAULT NULL`, không phải `DEFAULT 0`.
+>
+> **Bộ đếm KHÔNG nằm ở đây.** Nó tăng mỗi lời gọi AI; ghi vào PostgreSQL là một UPDATE cho mỗi lời gọi trên
+> đúng một dòng mà nhiều luồng tranh nhau. Đếm ở Redis (`aiquota:{userId}:{ngày}`) và **dựng lại từ
+> `ai_request_logs`** khi Redis rỗng — cùng nguyên tắc "PostgreSQL là nguồn sự thật, Redis là chỉ mục" của
+> bảng xếp hạng mùa. V22 thêm `idx_ai_request_logs_user_created` cho đúng phép dựng lại đó.
+
+**quizzes.strict_exam** *(V21)* — Chế độ thi nghiêm ngặt ([features/12](features/12-anti-cheat.md))
+
+> Cột `BOOLEAN NOT NULL DEFAULT FALSE` trên `quizzes`. Đặt ở quiz chứ không ở `quiz_attempts`: người quyết
+> định mức nghiêm khắc là người ra đề, còn đặt ở lượt làm bài thì người làm tự tắt được. Mặc định FALSE để
+> không đổi hành vi của quiz đang có.
+>
+> Cờ này chỉ có nghĩa với lượt `EXAM` — ràng buộc đó chốt ở tầng service vì `mode` nằm ở bảng khác, và API
+> trả về giá trị **đã tính cho từng lượt** (`quiz.strictExam && mode == EXAM`) thay vì cờ thô.
 
 **room_proctoring_events** *(V20)* — Cảnh báo live trong phòng đấu ([features/12](features/12-anti-cheat.md))
 | room_proctoring_events: id, room_id (FK game_rooms), player_id, player_name, is_guest, event_type (TAB_HIDDEN/TAB_VISIBLE), question_index, occurred_at, created_at |

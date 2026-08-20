@@ -1,6 +1,7 @@
 package com.datn.quizai.admin.service;
 
 import com.datn.quizai.admin.dto.AdminUserResponse;
+import com.datn.quizai.ai.service.AiQuotaService;
 import com.datn.quizai.auth.service.RefreshTokenService;
 import com.datn.quizai.common.dto.PageResponse;
 import com.datn.quizai.common.exception.BusinessException;
@@ -35,10 +36,13 @@ public class AdminUserService {
 
     private final UserRepository userRepository;
     private final RefreshTokenService refreshTokenService;
+    private final AiQuotaService quotaService;
 
-    public AdminUserService(UserRepository userRepository, RefreshTokenService refreshTokenService) {
+    public AdminUserService(UserRepository userRepository, RefreshTokenService refreshTokenService,
+                            AiQuotaService quotaService) {
         this.userRepository = userRepository;
         this.refreshTokenService = refreshTokenService;
+        this.quotaService = quotaService;
     }
 
     @Transactional(readOnly = true)
@@ -91,6 +95,27 @@ public class AdminUserService {
      * token đang cầm vẫn dùng được tới lúc hết hạn, và refresh token vẫn gia hạn được — tức "khoá" chỉ
      * có hiệu lực sau vài phút, đúng lúc quản trị viên tin rằng nó có hiệu lực ngay.
      */
+    /**
+     * Đặt hạn mức số lượt gọi AI mỗi ngày cho một người (FR-84).
+     *
+     * @param quota {@code null} = xoá hạn mức riêng, quay về mặc định hệ thống; {@code 0} = CẤM người này
+     *              gọi AI. Hai thứ khác nhau, và gộp lại thì hoặc không cấm được ai, hoặc mọi người dùng
+     *              chưa từng được đặt sẽ bị cấm
+     */
+    @Transactional
+    public AdminUserResponse setAiQuota(UUID targetId, Integer quota, UUID currentAdminId) {
+        if (quota != null && quota < 0) {
+            throw BusinessException.badRequest("Hạn mức không được là số âm");
+        }
+        User user = require(targetId);
+        user.setAiDailyQuota(quota);
+
+        log.info("Quản trị {} đặt hạn mức AI của {} thành {}", currentAdminId, targetId,
+                quota == null ? "mặc định hệ thống" : quota);
+
+        return AdminUserResponse.from(user, quotaService.daDungHomNay(targetId));
+    }
+
     @Transactional
     public AdminUserResponse setLocked(UUID targetId, boolean locked, UUID currentAdminId) {
         User user = require(targetId);

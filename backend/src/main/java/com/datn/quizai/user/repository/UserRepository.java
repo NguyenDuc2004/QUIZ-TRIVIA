@@ -18,6 +18,16 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmail(String email);
 
+    /**
+     * Chỉ lấy hạn mức AI, không nạp cả entity (FR-84).
+     * <p>
+     * Truy vấn này chạy ở <b>mỗi lời gọi AI</b>, nên nạp cả `User` kèm mọi cột là trả giá cho thứ không
+     * dùng tới. Trả {@code Optional} rỗng khi người dùng không tồn tại HOẶC khi cột là null — bên gọi xử
+     * lý cả hai như nhau: dùng mặc định hệ thống.
+     */
+    @Query("select u.aiDailyQuota from User u where u.id = :id")
+    Optional<Integer> findAiDailyQuotaById(@Param("id") UUID id);
+
     boolean existsByEmail(String email);
 
     /**

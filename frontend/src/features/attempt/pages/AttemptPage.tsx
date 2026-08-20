@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Alert, Button, Modal, Progress, Skeleton, Space, Tag, Typography } from 'antd'
+import { Alert, Button, Modal, Progress, Skeleton, Space, Tag, Typography, message } from 'antd'
 import { getApiErrorMessage } from '@/shared/api/client'
 import PageHeader from '@/shared/components/PageHeader'
+import StrictExamGate, { StrictExamReminder } from '@/features/integrity/components/StrictExamGate'
+import { useProctoring } from '@/features/integrity/hooks/useProctoring'
+import { useStrictExam } from '@/features/integrity/hooks/useStrictExam'
 import { QUESTION_TYPE_LABEL } from '@/features/quiz/constants'
 import type { AnswerFeedback, AnswerPayload, AttemptDetail, AttemptQuestion } from '../api/attemptApi'
 import AnswerInput from '../components/AnswerInput'
@@ -10,7 +13,6 @@ import AttemptTimer from '../components/AttemptTimer'
 import QuestionReview from '../components/QuestionReview'
 import { MODE_LABEL, STATUS_COLOR, STATUS_LABEL, formatDuration } from '../constants'
 import { useAnswerQuestion, useAttempt, useSubmitAttempt } from '../hooks/useAttemptQueries'
-import { useProctoring } from '@/features/integrity/hooks/useProctoring'
 import ProctoringNotice from '@/features/integrity/components/ProctoringNotice'
 
 const { Text, Paragraph, Title } = Typography
@@ -71,6 +73,31 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
   // đây là lớp thứ hai chứ không phải lớp duy nhất.
   useProctoring(attempt.id, !isPractice)
 
+  // FR-48. Dùng thẳng `attempt.strictExam` — KHÔNG tự nhân với `!isPractice` ở đây: server đã tính rồi, và
+  // tính lại ở client là mở đường cho hai bên nói khác nhau.
+  const { dangToanManHinh, vaoToanManHinh } = useStrictExam(attempt.strictExam)
+
+  /**
+   * Đã từng vào toàn màn hình cho bài này chưa.
+   *
+   * Phân biệt hai trạng thái mà nếu gộp lại thì giao diện sai ở một trong hai: **chưa bắt đầu** (che đề,
+   * hiện cửa vào) và **đã vào rồi nhưng vừa thoát ra** (hiện đề, chỉ nhắc). Chỉ nhìn `dangToanManHinh` thì
+   * người bấm nhầm Esc giữa bài bị che mất đề đang làm dở.
+   */
+  const [daVaoToanManHinh, setDaVaoToanManHinh] = useState(false)
+
+  const moToanManHinh = async () => {
+    const duoc = await vaoToanManHinh()
+    if (duoc) {
+      setDaVaoToanManHinh(true)
+    } else {
+      // Trình duyệt từ chối (Safari trên iPhone không có Fullscreen API cho phần tử thường). Cho làm bài
+      // chứ không chặn: chặn là biến một hạn chế của thiết bị thành mất quyền dự thi.
+      setDaVaoToanManHinh(true)
+      message.warning('Trình duyệt của bạn không vào được toàn màn hình. Bạn vẫn làm bài bình thường.')
+    }
+  }
+
   const commit = (payload: AnswerPayload) => {
     answerMutation.mutate(
       {
@@ -114,6 +141,17 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
           không nói với người bị thu là làm sau lưng họ. Chỉ hiện ở chế độ thi vì luyện tập không thu gì. */}
       {!isPractice && <ProctoringNotice />}
 
+      {/* Đã thoát toàn màn hình giữa chừng: nhắc, KHÔNG che đề. Che đi là phạt người bấm nhầm Esc bằng
+          cách chặn họ làm tiếp, trong khi tín hiệu đã ghi rồi */}
+      {attempt.strictExam && !dangToanManHinh && daVaoToanManHinh && (
+        <StrictExamReminder onVao={() => void moToanManHinh()} />
+      )}
+
+      {/* Cửa vào: che đề cho tới khi người học chủ động vào toàn màn hình. Chỉ hiện một dải cảnh báo mà
+          bên dưới vẫn đọc được đề thì không ai bấm, và cả chế độ nghiêm ngặt thành dòng chữ trang trí */}
+      {attempt.strictExam && !daVaoToanManHinh ? (
+        <StrictExamGate dangToanManHinh={dangToanManHinh} onVao={() => void moToanManHinh()} />
+      ) : (
       <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
         <div className="flex flex-col gap-4">
           {locked ? (
@@ -205,6 +243,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
           </div>
         </aside>
       </div>
+      )}
     </Space>
   )
 }

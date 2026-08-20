@@ -15,7 +15,7 @@ Biến ứng dụng thành công cụ giáo dục thật: Creator (giáo viên) 
 - **FR-55** [S] ✅ Giao **bài tập** (gắn quiz cho lớp) với thời gian mở và hạn nộp, cả hai đều tuỳ chọn.
 - **FR-56** [S] ✅ Học sinh xem bài được giao & trạng thái (5 trạng thái, xem bảng dưới).
 - **FR-57** [S] ✅ **Bảng theo dõi lớp:** ai đã nộp, điểm, số nộp muộn, điểm trung bình. *Câu sai nhiều* đã có ở [features/09](09-analytics.md) cho từng quiz — không làm lại bản theo lớp vì nó trả lời cùng một câu hỏi trên cùng một tập dữ liệu.
-- **FR-58** [C] ⏳ Xuất bảng điểm CSV/PDF — hoãn, lý do bên dưới.
+- **FR-58** [C] 🟡 Xuất bảng điểm — **CSV đã làm**, PDF không làm, lý do bên dưới.
 - **FR-59** [C] ✅ Vai trò trong lớp: chủ nhiệm / trợ giảng.
 
 ## Năm trạng thái của một bài tập
@@ -58,12 +58,31 @@ dòng thành viên nữa thì có hai nguồn sự thật cho cùng một câu h
 người khác — hai việc đó không hoàn tác được, và cho trợ giảng tự nâng người khác lên trợ giảng là mở một
 đường để quyền lan ra mà chủ nhiệm không biết.
 
-## Vì sao hoãn xuất bảng điểm (FR-58)
+## Xuất bảng điểm: làm CSV, không làm PDF (FR-58)
 
-Mức `[C]`. CSV thì rẻ, nhưng PDF cần thêm một thư viện vào stack cho đúng một tính năng, và bảng điểm PDF sinh
-từ máy chủ còn phải lo font tiếng Việt — một chỗ hỏng lặng lẽ (chữ ra ô vuông) chỉ phát hiện khi mở file. Bảng
-theo dõi trên giao diện đã trả lời được câu hỏi chính (*ai chưa nộp, ai điểm thấp*); xuất file là tiện thêm,
-không phải điều kiện để dùng được.
+Ranh giới không đổi so với lúc hoãn: **CSV rẻ, PDF thì không**. PDF cần thêm một thư viện vào stack cho đúng
+một tính năng, và bảng điểm PDF sinh từ máy chủ còn phải nhúng font tiếng Việt — thiếu font thì chữ ra ô
+vuông, một lỗi chỉ phát hiện khi ai đó mở file. Giáo viên cần bảng điểm để **tính toán tiếp** (nhập vào sổ,
+cộng trung bình), việc đó hợp với bảng tính hơn hẳn với PDF.
+
+`GET /api/v1/assignments/{id}/results.csv` — chỉ chủ nhiệm hoặc trợ giảng.
+
+### Ba luật của file CSV, cả ba đều hỏng lặng lẽ
+
+Không luật nào làm server trả lỗi: file vẫn 200, vẫn tải về, vẫn mở được, chỉ nội dung là sai — đúng loại
+lỗi mà lý do hoãn PDF đã nêu, hoá ra CSV cũng có.
+
+| Luật | Không làm thì sao |
+|---|---|
+| **BOM UTF-8 đầu tệp** | Excel trên Windows không tự đoán UTF-8 cho `.csv`: "Nguyễn Văn An" hiện thành "Nguyá»…n VÄƒn An" |
+| **Thoát theo RFC 4180** | Một dấu phẩy trong tên người đẩy lệch cả hàng, và điểm bị gán sang cột khác |
+| **Chặn tiêm công thức** | Tên hiển thị do người dùng tự đặt. Một cái tên bắt đầu bằng `=`, `+`, `-` hay `@` **chạy như công thức** khi giáo viên mở bằng Excel — nạn nhân là người không làm gì sai |
+
+Chặn tiêm công thức bằng cách thêm dấu nháy đơn đứng trước. **Bọc ngoặc kép là không đủ** — Excel vẫn diễn
+giải công thức nằm trong ngoặc kép; ngoặc kép là luật *định dạng*, không phải luật *an toàn*.
+
+Người **chưa nộp** để **ô trống**, không phải 0 — cùng lý do với `diem = null` ở API: ghi 0 là nói sai về
+họ, và mọi phép trung bình trên cột đó sai theo.
 
 ## Luồng xử lý
 ```
@@ -91,6 +110,7 @@ DELETE /api/v1/assignments/{id}                    Gỡ bài tập (giáo viên)
 GET    /api/v1/me/assignments                      Bài được giao cho tôi, kèm trạng thái của tôi  ✅
 POST   /api/v1/assignments/{id}/attempts           Bắt đầu / làm tiếp bài tập                     ✅
 GET    /api/v1/assignments/{id}/results            Bảng theo dõi lớp (giáo viên)                  ✅
+GET    /api/v1/assignments/{id}/results.csv        Tải bảng điểm CSV (giáo viên)                  ✅
 ```
 - **Tham gia lớp là `/classrooms/join/{code}`**, không phải `/classrooms/{code}/join` như bản nháp: đặt
   `{code}` ở vị trí đầu sẽ đụng khuôn `/classrooms/{id}`, và một mã lớp gõ sai biến thành một UUID không hợp

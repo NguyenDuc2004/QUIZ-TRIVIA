@@ -26,7 +26,16 @@ public record AttemptSummaryResponse(
         int questionCount,
         int answeredCount,
         int correctCount,
-        Integer durationSec
+        Integer durationSec,
+        /**
+         * Chế độ thi nghiêm ngặt CÓ ÁP CHO LƯỢT NÀY hay không (features/12, FR-48).
+         * <p>
+         * Đây là {@code quiz.strictExam && mode == EXAM} đã tính sẵn, <b>không phải</b> cờ thô của quiz.
+         * Trả cờ thô thì frontend phải tự nhớ nhân với chế độ ở mọi chỗ dùng — sớm muộn sẽ có một chỗ quên,
+         * và lượt luyện tập bị ép toàn màn hình. Quy tắc "luyện tập không bị theo dõi" là ràng buộc của đặc
+         * tả, nên nó phải được quyết ở một chỗ duy nhất, và chỗ đó là server.
+         */
+        boolean strictExam
 ) {
     /** Số câu / số câu đã trả lời / số câu đúng của một bài làm. */
     public record Counts(int questionCount, int answeredCount, int correctCount) {
@@ -60,7 +69,8 @@ public record AttemptSummaryResponse(
                 counts.questionCount(),
                 counts.answeredCount(),
                 counts.correctCount(),
-                durationSec(attempt));
+                durationSec(attempt),
+                attempt.getQuiz().isStrictExam() && attempt.getMode() == AttemptMode.EXAM);
     }
 
     /** Thời gian làm bài thực tế; null khi bài chưa nộp. */

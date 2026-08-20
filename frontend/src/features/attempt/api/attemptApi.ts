@@ -17,6 +17,12 @@ export interface AttemptSummary {
   quizId: string
   quizTitle: string
   mode: AttemptMode
+  /**
+   * Chế độ thi nghiêm ngặt CÓ ÁP CHO LƯỢT NÀY hay không (FR-48).
+   * Server đã tính sẵn `quiz.strictExam && mode === 'EXAM'` — client KHÔNG tự nhân lại, xem
+   * AttemptSummaryResponse ở backend.
+   */
+  strictExam: boolean
   status: AttemptStatus
   startedAt: string
   expiresAt: string | null

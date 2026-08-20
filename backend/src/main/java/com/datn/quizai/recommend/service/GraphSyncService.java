@@ -101,14 +101,23 @@ public class GraphSyncService {
     public int syncPublicCatalog() {
         GraphSyncReader.Catalog catalog = reader.loadCatalog();
 
-        catalog.topicsByQuiz().forEach((quizId, topics) -> {
-            graphWriter.upsertQuizNode(quizId, catalog.titles().get(quizId), "PUBLIC");
-            graphWriter.replaceQuizTopics(quizId, topics);
-        });
+        // MỖI quiz thử lại riêng, không bọc cả vòng lặp trong một lần thử.
+        //
+        // Bọc cả vòng thì một deadlock ở quiz thứ 50 làm chạy lại từ quiz thứ nhất — vô ích vì 49 cái
+        // trước đã ghi xong, và làm tăng đúng thứ gây deadlock: thời gian giữ khoá.
+        catalog.topicsByQuiz().forEach((quizId, topics) -> thuLaiKhiDungDo(
+                "quiz " + quizId,
+                () -> {
+                    graphWriter.upsertQuizNode(quizId, catalog.titles().get(quizId), "PUBLIC");
+                    graphWriter.replaceQuizTopics(quizId, topics);
+                }));
 
         // Gỡ nút của quiz/tài khoản đã bị xoá ở PostgreSQL. Không có bước này thì đồ thị chỉ lớn
         // lên mãi, và tệ hơn: hệ thống gợi ý một quiz đã biến mất, người dùng bấm vào nhận 404.
-        long pruned = graphWriter.pruneDeleted(catalog.validUserIds(), catalog.validQuizIds());
+        long[] soGo = new long[1];
+        thuLaiKhiDungDo("gỡ nút cũ",
+                () -> soGo[0] = graphWriter.pruneDeleted(catalog.validUserIds(), catalog.validQuizIds()));
+        long pruned = soGo[0];
 
         log.info("Đồ thị gợi ý: {} quiz công khai, gỡ {} nút không còn trong PostgreSQL",
                 catalog.topicsByQuiz().size(), pruned);
@@ -148,23 +157,40 @@ public class GraphSyncService {
             return;
         }
 
-        for (int attempt = 1; ; attempt++) {
+        thuLaiKhiDungDo("bài " + attemptId, () -> write(snapshot));
+    }
+
+    /**
+     * Chạy một phép ghi Neo4j, thử lại khi đụng độ với luồng khác.
+     *
+     * <h4>Vì sao phải là một chỗ dùng chung, không phải một vòng lặp trong {@link #sync}</h4>
+     * Bản đầu chỉ bọc đường đồng bộ theo bài làm. Đường {@link #syncPublicCatalog} ghi vào <b>cùng những
+     * nút Quiz đó</b> nhưng không có thử lại, nên hai đường chạy song song thì đường không được bọc đổ —
+     * và nó đổ ra ngoài thành lỗi 500 cho người dùng. Đã bắt được đúng chuyện này ở
+     * {@code shouldOrderPathByWeakestFirst}: deadlock qua {@code rebuildForUser → syncPublicCatalog}.
+     *
+     * <h4>Hai kiểu đụng độ, cùng cách chữa</h4>
+     * <ul>
+     *   <li>{@code TransientDataAccessException}: Neo4j phát hiện deadlock rồi huỷ một bên.</li>
+     *   <li>{@code DataIntegrityViolationException}: hai luồng cùng {@code MERGE} một nút chưa tồn tại,
+     *       cả hai cùng quyết định tạo, và ràng buộc duy nhất chặn kẻ tới sau. {@code MERGE} nghe như
+     *       "tạo nếu chưa có" nhưng <b>không nguyên tử</b> với luồng khác — chỗ này rất dễ tin nhầm.</li>
+     * </ul>
+     * Thử lại an toàn <b>chính vì mọi phép ghi ở đây idempotent</b>.
+     */
+    private void thuLaiKhiDungDo(String moTa, Runnable phepGhi) {
+        for (int lan = 1; ; lan++) {
             try {
-                write(snapshot);
+                phepGhi.run();
                 return;
             } catch (org.springframework.dao.TransientDataAccessException
                      | org.springframework.dao.DataIntegrityViolationException e) {
-                // Hai kiểu đụng độ, cùng cách chữa:
-                //  - TransientDataAccess: Neo4j phát hiện deadlock rồi huỷ một bên.
-                //  - DataIntegrityViolation: hai luồng cùng MERGE một nút chưa tồn tại, cả hai cùng
-                //    quyết định tạo, và ràng buộc duy nhất chặn kẻ tới sau. MERGE nghe như "tạo nếu
-                //    chưa có" nhưng KHÔNG nguyên tử với luồng khác — chỗ này rất dễ tin nhầm.
-                if (attempt >= DEADLOCK_RETRIES) {
+                if (lan >= DEADLOCK_RETRIES) {
                     throw e;
                 }
-                log.debug("Đụng độ ghi Neo4j khi đồng bộ bài {} ({}), thử lại lần {}",
-                        attemptId, e.getClass().getSimpleName(), attempt + 1);
-                sleepBriefly(attempt);
+                log.debug("Đụng độ ghi Neo4j khi đồng bộ {} ({}), thử lại lần {}",
+                        moTa, e.getClass().getSimpleName(), lan + 1);
+                sleepBriefly(lan);
             }
         }
     }

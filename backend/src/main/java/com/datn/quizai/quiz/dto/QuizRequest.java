@@ -34,6 +34,14 @@ public record QuizRequest(
          * Chỉ nhận đường dẫn nội bộ {@code /uploads/…} — xem {@code QuizService.applyRequest}.
          */
         @Size(max = 500, message = "Đường dẫn ảnh tối đa 500 ký tự")
-        String thumbnailUrl
+        String thumbnailUrl,
+
+        /**
+         * Chế độ thi nghiêm ngặt (FR-48). Bỏ trống → false.
+         * <p>
+         * Kiểu bao {@code Boolean} chứ không phải {@code boolean}: client cũ không gửi trường này thì
+         * {@code null}, và service giữ nguyên giá trị đang có thay vì âm thầm tắt cờ của chủ quiz.
+         */
+        Boolean strictExam
 ) {
 }

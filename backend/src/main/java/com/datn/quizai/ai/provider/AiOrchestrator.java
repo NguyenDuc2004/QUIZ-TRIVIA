@@ -1,5 +1,6 @@
 package com.datn.quizai.ai.provider;
 
+import com.datn.quizai.ai.service.AiQuotaService;
 import com.datn.quizai.ai.service.AiRequestLogger;
 import com.datn.quizai.common.exception.BusinessException;
 import org.slf4j.Logger;
@@ -21,7 +22,7 @@ import java.util.UUID;
  * Trách nhiệm:
  * <ul>
  *   <li><b>Fallback theo thứ tự cấu hình</b> {@code app.ai.provider-order} — Gemini hỏng thì
- *       chuyển sang Grok, nhưng chỉ với lỗi <i>tạm thời</i>: prompt sai định dạng thì gửi sang
+ *       chuyển sang Groq, nhưng chỉ với lỗi <i>tạm thời</i>: prompt sai định dạng thì gửi sang
  *       provider khác cũng hỏng y vậy, thử lại chỉ tốn tiền.</li>
  *   <li><b>Bỏ qua provider chưa cấu hình key</b> thay vì gọi rồi nhận lỗi.</li>
  *   <li><b>Ghi audit</b> mọi lần gọi: provider nào phục vụ, bao nhiêu token, mất bao lâu.</li>
@@ -50,6 +51,9 @@ public class AiOrchestrator {
      */
     private final int maxAttemptsBackground;
 
+    /** Hạn mức số lượt gọi AI mỗi ngày theo từng người (features/10, FR-84). */
+    private final AiQuotaService quotaService;
+
     /** Giãn cách giữa các lần thử, tăng dần để không dồn thêm tải lên provider đang quá tải. */
     private static final long BASE_BACKOFF_MILLIS = 1200;
 
@@ -77,10 +81,12 @@ public class AiOrchestrator {
     public AiOrchestrator(List<AiProvider> providers,
                           AiRequestLogger requestLogger,
                           AiThrottleState throttleState,
+                          AiQuotaService quotaService,
                           @Value("${app.ai.provider-order}") String providerOrder,
                           @Value("${app.ai.max-attempts-background:4}") int maxAttemptsBackground) {
         this.requestLogger = requestLogger;
         this.throttleState = throttleState;
+        this.quotaService = quotaService;
         this.maxAttemptsBackground = maxAttemptsBackground;
 
         Map<String, AiProvider> byName = new LinkedHashMap<>();
@@ -122,6 +128,11 @@ public class AiOrchestrator {
      *                   chờ gần một phút thì người dùng tưởng hệ thống treo.
      */
     public AiCompletion complete(AiPrompt prompt, String feature, UUID userId, boolean background) {
+        // Chặn hạn mức TRƯỚC vòng thử lại, đúng một lần cho mỗi yêu cầu của người dùng (FR-84). Đặt bên
+        // trong `callWithFallback` thì mỗi lần thử lại là một lượt bị trừ — người dùng mất lượt vì nhà
+        // cung cấp hôm nay không ổn định, một chuyện họ không gây ra và không biết.
+        quotaService.kiemTraVaGhiNhan(userId);
+
         return callWithFallback(feature, userId, provider -> provider.complete(prompt), provider -> true,
                 background ? BACKGROUND_WAIT_CAP_MILLIS : INTERACTIVE_WAIT_CAP_MILLIS);
     }
@@ -146,6 +157,13 @@ public class AiOrchestrator {
         if (candidates.isEmpty()) {
             return Flux.error(new BusinessException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
                     "Chưa cấu hình provider AI nào hỗ trợ streaming."));
+        }
+        // Hạn mức áp cho cả trợ lý học tập: một câu hỏi cho trợ lý cũng là một lời gọi mô hình. Ném lỗi
+        // vào trong Flux chứ không ném thẳng, để bên gọi (SSE) xử lý cùng một đường với mọi lỗi khác.
+        try {
+            quotaService.kiemTraVaGhiNhan(userId);
+        } catch (BusinessException e) {
+            return Flux.error(e);
         }
         return streamFrom(candidates, 0, prompt, feature, userId);
     }

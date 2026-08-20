@@ -174,6 +174,20 @@ export default function QuizIntroPage() {
           </Radio.Group>
           <Paragraph className="mb-4! text-ink-soft text-xs">{MODE_HINT[mode]}</Paragraph>
 
+          {/* FR-48. Nói TRƯỚC khi bấm bắt đầu, không phải lúc màn hình đã đổi: người học cần biết mình sắp
+              vào toàn màn hình để còn chọn thời điểm — đóng bớt tab, ngồi vào chỗ yên tĩnh. Bật lên đột ngột
+              giữa lúc họ chưa sẵn sàng thì lần thoát ra đầu tiên là do MÌNH gây ra, mà nó vẫn bị ghi lại.
+              Chỉ hiện khi đang chọn chế độ Thi, vì luyện tập không áp cờ này */}
+          {quiz.strictExam && mode === 'EXAM' && (
+            <Alert
+              type="warning"
+              showIcon
+              className="mb-4"
+              message="Bài này bật chế độ thi nghiêm ngặt"
+              description="Bạn sẽ được yêu cầu vào toàn màn hình trước khi làm bài, và chuột phải bị khoá. Bạn vẫn thoát toàn màn hình được, nhưng mỗi lần thoát đều được ghi lại."
+            />
+          )}
+
           <Button
             type="primary"
             size="large"

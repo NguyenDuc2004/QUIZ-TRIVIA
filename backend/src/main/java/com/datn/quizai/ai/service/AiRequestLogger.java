@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
@@ -36,6 +37,23 @@ public class AiRequestLogger {
         insert(userId, feature, completion.provider(), completion.model(),
                 completion.tokensIn(), completion.tokensOut(),
                 (int) completion.latencyMs(), "SUCCESS", null);
+    }
+
+    /**
+     * Đếm số lời gọi của một người từ mốc thời gian trở đi — nguồn sự thật để dựng lại bộ đếm hạn mức
+     * (FR-84) khi Redis rỗng.
+     * <p>
+     * Đặt ở đây chứ không ở một repository mới: lớp này đã sở hữu bảng `ai_request_logs`, và tách câu SQL
+     * của cùng một bảng ra hai chỗ là mở đường cho hai chỗ hiểu khác nhau về nó.
+     * <p>
+     * Đếm <b>cả bản ghi FAILED</b>: một lời gọi hỏng vẫn tốn hạn mức của nhà cung cấp, và nếu không tính
+     * thì một người có thể gửi prompt sai định dạng vô hạn lần mà không bao giờ chạm hạn mức.
+     */
+    public long demTuThoiDiem(UUID userId, OffsetDateTime tu) {
+        Long n = jdbc.queryForObject(
+                "select count(*) from ai_request_logs where user_id = ? and created_at >= ?",
+                Long.class, userId, tu);
+        return n == null ? 0 : n;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

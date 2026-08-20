@@ -519,6 +519,41 @@ GET    /api/v1/admin/integrity/flagged           Hàng chờ bài bị gắn c�
 - Hàng chờ sắp theo điểm rủi ro giảm dần, mặc định lọc `PENDING`, và **không kèm từng sự kiện** (`suKien: []`)
   — trang đó chỉ để chọn bài cần mở.
 
+### Hạn mức AI theo người (FR-84) ✅
+```
+PUT /api/v1/admin/users/{id}/ai-quota?quota=N   Đặt hạn mức mỗi ngày (Admin)   ✅
+```
+`quota` **bỏ trống** = xoá hạn mức riêng, quay về mặc định hệ thống. `quota=0` = **cấm** người đó gọi AI —
+một quyết định khác hẳn với bỏ trống. `AdminUserResponse` trả kèm `aiDailyQuota` (null nếu chưa đặt riêng)
+và `aiUsedToday`.
+
+Hết hạn mức thì mọi lời gọi AI của người đó trả **429** kèm thông báo nói rõ số lượt và lúc nào đặt lại.
+Chi tiết ở [features/10](features/10-admin.md).
+
+### Xuất bảng điểm lớp (FR-58) ✅
+```
+GET /api/v1/assignments/{id}/results.csv   Bảng điểm CSV — chỉ chủ nhiệm/trợ giảng   ✅
+```
+Trả `text/csv; charset=UTF-8` kèm **BOM UTF-8** (thiếu nó thì Excel trên Windows đọc tiếng Việt thành ký tự
+lỗi) và `Content-Disposition: attachment; filename*=UTF-8''…` (RFC 5987, để tên tệp giữ được dấu).
+
+Ô dữ liệu được bọc theo RFC 4180 **và** vô hiệu hoá công thức: ô bắt đầu bằng `=` `+` `-` `@` được thêm một
+dấu nháy đơn phía trước, vì Excel chạy những ô đó như công thức và tên hiển thị là dữ liệu người dùng tự đặt.
+Chi tiết ở [features/14](features/14-classroom.md).
+
+**Không có bản PDF** — lý do ở [features/14](features/14-classroom.md).
+
+### Chế độ thi nghiêm ngặt (FR-48) ✅
+
+Không có endpoint mới. Cờ đi kèm hai DTO đã có:
+
+- `QuizSummaryResponse.strictExam` — chủ quiz bật/tắt qua `POST/PUT /quizzes` (trường `strictExam`).
+  **Bỏ trống khi cập nhật thì GIỮ NGUYÊN** giá trị đang có, không đặt về false: một client cũ hoặc một form
+  thiếu trường không được phép âm thầm tắt cờ của chủ quiz.
+- `AttemptSummaryResponse.strictExam` — **đã tính cho chính lượt đó** (`quiz.strictExam && mode == EXAM`),
+  không phải cờ thô. Client không tự nhân lại: tính ở hai nơi là mở đường cho hai bên nói khác nhau, và
+  hậu quả là lượt luyện tập bị ép toàn màn hình.
+
 ### Cảnh báo live trong phòng đấu ✅
 ```
 GET  /api/v1/rooms/{code}/proctoring   Tổng kết tín hiệu của phòng — CHỈ host   ✅

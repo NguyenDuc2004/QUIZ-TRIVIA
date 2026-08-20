@@ -560,7 +560,7 @@ RoomStateStore (Redis), SpeedScorer, GameEventPublisher (Redis Pub/Sub) → Game
 
 `[HÌNH 2.6: Biểu đồ trình tự UC_SinhDeAI — Creator → AiController → MaterialService (Tika, chunk,
 embedding) → MaterialChunkRepository (pgvector); nhánh sinh đề: AiJobService → QuestionGenerationService →
-AiOrchestrator → GeminiProvider (dự phòng GrokProvider) → QuestionJsonParser — cần vẽ và chèn vào]`
+AiOrchestrator → GeminiProvider (dự phòng GroqProvider) → QuestionJsonParser — cần vẽ và chèn vào]`
 
 *Hình 2.6. Biểu đồ trình tự use case Sinh đề bằng AI*
 
@@ -820,7 +820,7 @@ Trạng thái đang chơi nằm ở Redis; bảng này chỉ lưu thông tin đ�
 | id | UUID | Định danh bản ghi (PK) |
 | user_id | UUID | Người dùng phát sinh lời gọi (FK → users) |
 | feature | varchar | Chức năng: embedding / generation / grading / chat |
-| provider | varchar | Nhà cung cấp đã dùng: gemini / grok |
+| provider | varchar | Nhà cung cấp đã dùng: gemini / groq |
 | model | varchar | Tên mô hình |
 | tokens_in, tokens_out | integer | Số token vào và ra |
 | latency_ms | integer | Độ trễ của lời gọi |

@@ -22,7 +22,7 @@ Phát hiện và cảnh báo hành vi gian lận trong chế độ thi (bài thi
 - **FR-47** [S] ✅ Báo cáo tính toàn vẹn cho Creator/Admin; cho phép đánh dấu hợp lệ/không hợp lệ. Có **hai** đường vào, và thiếu một trong hai thì yêu cầu này chỉ đúng nửa vời:
   - **Admin** — hàng chờ toàn hệ thống `/admin/integrity`, lọc theo trạng thái rà soát.
   - **Chủ quiz** — cột *Rủi ro* + dòng cảnh báo ở trang thống kê quiz, dẫn sang màn chấm bài. Không có cột này thì chủ quiz *có quyền* xem báo cáo nhưng phải mở từng bài mới tìm ra, nên với hàng trăm bài nộp thì trên thực tế chỉ Admin phát hiện được — còn người hiểu hoàn cảnh lớp mình nhất thì không thấy gì.
-- **FR-48** [C] ⏳ Chế độ thi nghiêm ngặt: bắt buộc fullscreen, khóa chuột phải, cảnh báo khi vi phạm.
+- **FR-48** [C] ✅ Chế độ thi nghiêm ngặt: yêu cầu toàn màn hình, khoá chuột phải, cảnh báo khi thoát. *Chủ quiz bật ở form soạn quiz; chỉ áp cho lượt EXAM.* Xem "Vì sao gọi là ma sát chứ không phải khoá" bên dưới.
 
 ## Cảnh báo live trong phòng đấu ✅ (đã làm)
 
@@ -174,11 +174,48 @@ khác nhau, không phải vì thiếu nhất quán:
 | Vì sao | Tín hiệu chỉ dùng để tính điểm rủi ro *sau khi nộp*; trễ 10 giây không ai thấy, mà gom lô thì bớt request lúc người ta đang thi | Cờ phải tới host **trong lúc câu hỏi còn sống**; gom lô thì cờ đến sau khi ván đã sang câu khác và host chẳng còn gì làm với nó |
 | Loại tín hiệu | 6 loại, có cả `COPY`/`PASTE` | 2 loại, chỉ `TAB_HIDDEN`/`TAB_VISIBLE` — đáp án phòng đấu là nút bấm, không có gì để dán |
 
+## Vì sao FR-48 gọi là ma sát chứ không phải khoá
+
+Đặc tả viết *"**bắt buộc** fullscreen"*. Không làm được, và điều quan trọng là **nói thẳng** thay vì để
+người dùng tự phát hiện:
+
+| Trình duyệt cho phép | Trình duyệt KHÔNG cho phép |
+|---|---|
+| Vào toàn màn hình **từ một cú bấm của người dùng** | Tự vào toàn màn hình khi trang mở |
+| Biết lúc người dùng thoát ra | Chặn phím Esc |
+| Chặn menu chuột phải | Chặn F12 / Ctrl+Shift+I |
+
+Nên FR-48 làm ba việc: (1) che đề cho tới khi người học **chủ động** bấm vào toàn màn hình; (2) phát hiện
+lúc thoát và nhắc quay lại; (3) để lại tín hiệu `FULLSCREEN_EXIT` trong hồ sơ.
+
+Giá trị thật nằm ở chỗ **biến việc rời bài thi thành có chủ ý** và để lại dấu vết, chứ không phải dựng một
+bức tường. Đây đúng nguyên tắc trung tâm của cả tính năng 12: *hệ thống đưa dữ kiện, người thật quyết định*.
+
+**Ba chỗ trong giao diện đều nói thật về giới hạn này** — chữ trợ giúp ở form soạn quiz, cảnh báo ở trang
+giới thiệu quiz, và cửa vào trước khi làm bài. Nói dối rằng *không thể* thoát là một lời hứa mà ai cũng tự
+phát hiện là sai ngay lần đầu bấm Esc; và khi đó họ kết luận cả cơ chế giám sát là trò đùa. Nguy hiểm hơn:
+**giáo viên sẽ tin vào một rào chắn không tồn tại** và bỏ qua việc rà soát tín hiệu — tức mất đúng thứ có
+tác dụng thật.
+
+**Che đề, không chỉ hiện cảnh báo.** Một dải cảnh báo mà bên dưới vẫn đọc được đề thì chẳng ai bấm nút, và
+chế độ nghiêm ngặt thành một dòng chữ trang trí. Nhưng **thoát ra giữa chừng thì chỉ nhắc, không che lại**:
+che đi là phạt người bấm nhầm Esc bằng cách chặn họ làm tiếp, trong khi tín hiệu đã ghi rồi.
+
+**Thiết bị không hỗ trợ thì vẫn cho làm bài.** Safari trên iPhone không có Fullscreen API cho phần tử
+thường. Chặn ở đó là biến một hạn chế của thiết bị thành mất quyền dự thi.
+
 ## Dữ liệu liên quan (bổ sung PostgreSQL)
 
 `V17__anti_cheat.sql` — bài thi cá nhân:
 - `proctoring_events(id, attempt_id, user_id, event_type, detail jsonb, occurred_at)`
 - `attempt_integrity(id, attempt_id, risk_score, flags jsonb, ai_note text, review_status: PENDING/VALID/INVALID, reviewed_by, reviewed_at, review_note)`
+
+`V21__strict_exam.sql` — chế độ thi nghiêm ngặt:
+- `quizzes` thêm cột `strict_exam BOOLEAN NOT NULL DEFAULT FALSE`
+
+Đặt ở **quiz** chứ không phải ở lượt làm bài: người quyết định mức nghiêm khắc là người ra đề. Đặt ở
+`quiz_attempts` thì người làm bài tự chọn được, tức tự tắt được. Mặc định **FALSE** để không đổi hành vi
+của những quiz đang chạy mà chủ quiz không hề biết.
 
 `V20__room_proctoring.sql` — phòng đấu:
 - `room_proctoring_events(id, room_id, player_id, player_name, is_guest, event_type, question_index, occurred_at)`

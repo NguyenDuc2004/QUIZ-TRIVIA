@@ -21,6 +21,8 @@ export const quizSchema = z.object({
     .max(600, 'Thời gian tối đa 600 phút')
     .nullable()
     .optional(),
+  /** Chế độ thi nghiêm ngặt (FR-48) — chỉ có nghĩa với lượt EXAM, server tự lọc. */
+  strictExam: z.boolean(),
 })
 
 export type QuizForm = z.infer<typeof quizSchema>

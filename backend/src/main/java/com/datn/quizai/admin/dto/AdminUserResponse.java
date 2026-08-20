@@ -29,9 +29,22 @@ public record AdminUserResponse(
         Role role,
         boolean locked,
         String loginMethod,
+        /**
+         * Hạn mức AI mỗi ngày đặt riêng cho người này (FR-84); {@code null} = dùng mặc định hệ thống.
+         * <p>
+         * Giữ nguyên {@code null} thay vì quy về số mặc định: quản trị viên cần phân biệt "chưa đặt riêng"
+         * với "đặt riêng đúng bằng mặc định" — cái sau sẽ không đổi theo khi mặc định hệ thống đổi.
+         */
+        Integer aiDailyQuota,
+        /** Số lượt AI đã dùng hôm nay. Không có nó thì ô nhập hạn mức là một con số không có bối cảnh. */
+        long aiUsedToday,
         OffsetDateTime createdAt
 ) {
     public static AdminUserResponse from(User user) {
+        return from(user, 0);
+    }
+
+    public static AdminUserResponse from(User user, long aiUsedToday) {
         return new AdminUserResponse(
                 user.getId(),
                 user.getEmail(),
@@ -40,6 +53,8 @@ public record AdminUserResponse(
                 user.getRole(),
                 user.isLocked(),
                 loginMethodOf(user),
+                user.getAiDailyQuota(),
+                aiUsedToday,
                 user.getCreatedAt());
     }
 

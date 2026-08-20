@@ -1,8 +1,10 @@
 import { Link, useParams } from 'react-router-dom'
-import { Card, Skeleton, Statistic, Table, Tag, Typography } from 'antd'
+import { Button, Card, Skeleton, Statistic, Table, Tag, Typography, message } from 'antd'
+import { DownloadOutlined } from '@ant-design/icons'
+import { useState } from 'react'
 import PageHeader from '@/shared/components/PageHeader'
 import EmptyState from '@/shared/components/EmptyState'
-import type { AssignmentResultRow, TrangThaiBaiTap } from '../api/classroomApi'
+import { classroomApi, type AssignmentResultRow, type TrangThaiBaiTap } from '../api/classroomApi'
 import { useAssignmentResults } from '../hooks/useClassroom'
 
 const { Text } = Typography
@@ -25,6 +27,32 @@ const MAU: Record<TrangThaiBaiTap, string> = {
 export default function AssignmentResultsPage() {
   const { id } = useParams<{ id: string }>()
   const { data, isPending, isError } = useAssignmentResults(id)
+  const [dangTai, setDangTai] = useState(false)
+
+  /**
+   * Tải bảng điểm CSV (FR-58).
+   *
+   * Phải đi qua axios rồi tự tạo link tải, không dùng `<a href>` thẳng: request cần header `Authorization`,
+   * mà thẻ `<a>` không mang được — server sẽ trả 401 và người dùng nhận một tab trắng.
+   */
+  const taiCsv = async () => {
+    if (!id) return
+    setDangTai(true)
+    try {
+      const blob = await classroomApi.taiBangDiemCsv(id)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `bang-diem-${data?.baiTap.title ?? 'bai-tap'}.csv`
+      a.click()
+      // Thu hồi ngay sau khi bấm: mỗi blob giữ nguyên bộ nhớ cho tới khi tab đóng nếu không gọi
+      URL.revokeObjectURL(url)
+    } catch {
+      message.error('Không tải được bảng điểm')
+    } finally {
+      setDangTai(false)
+    }
+  }
 
   if (isPending) {
     return <Skeleton active paragraph={{ rows: 8 }} />
@@ -44,6 +72,11 @@ export default function AssignmentResultsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
+        actions={
+          <Button icon={<DownloadOutlined />} loading={dangTai} onClick={() => void taiCsv()}>
+            Tải bảng điểm (CSV)
+          </Button>
+        }
         title={baiTap.title}
         description={
           <>

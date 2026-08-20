@@ -22,6 +22,8 @@ public record QuizSummaryResponse(
         boolean aiGenerated,
         String thumbnailUrl,
         Integer timeLimitSec,
+        /** FR-48 — người học cần biết TRƯỚC khi bấm bắt đầu, xem QuizIntroPage. */
+        boolean strictExam,
         int questionCount,
         UUID ownerId,
         String ownerDisplayName,
@@ -48,6 +50,7 @@ public record QuizSummaryResponse(
                 quiz.isAiGenerated(),
                 quiz.getThumbnailUrl(),
                 quiz.getTimeLimitSec(),
+                quiz.isStrictExam(),
                 questionCount,
                 quiz.getOwner().getId(),
                 quiz.getOwner().getDisplayName(),

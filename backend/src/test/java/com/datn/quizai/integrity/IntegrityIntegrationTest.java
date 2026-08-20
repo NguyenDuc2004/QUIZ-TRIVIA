@@ -299,6 +299,94 @@ class IntegrityIntegrationTest {
         return objectMapper.readTree(body).get("accessToken").asText();
     }
 
+    // ============================================================ FR-48 — chế độ thi nghiêm ngặt
+
+    @Test
+    @DisplayName("Quiz bật chế độ nghiêm ngặt: lượt EXAM nhận strictExam = true")
+    void shouldMarkExamAttemptAsStrict() throws Exception {
+        UUID quiz = taoQuiz(idChuQuiz, true);
+        UUID luot = taoLuotTrenQuiz(idHocVien, quiz, "EXAM");
+
+        mockMvc.perform(get("/api/v1/attempts/{id}", luot)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenHocVien))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.attempt.strictExam").value(true));
+    }
+
+    @Test
+    @DisplayName("Cùng quiz đó nhưng lượt LUYỆN TẬP: strictExam = false")
+    void shouldNotApplyStrictModeToPracticeAttempt() throws Exception {
+        // Đây là luật quan trọng nhất của FR-48 và là chỗ dễ hỏng nhất: server trả cờ ĐÃ TÍNH cho lượt này
+        // (`quiz.strictExam && mode == EXAM`), không trả cờ thô của quiz. Trả cờ thô thì frontend phải tự
+        // nhớ nhân với chế độ ở mọi chỗ dùng, và một chỗ quên là người luyện tập bị ép toàn màn hình —
+        // vi phạm thẳng ràng buộc "luyện tập không bị theo dõi" của đặc tả.
+        UUID quiz = taoQuiz(idChuQuiz, true);
+        UUID luot = taoLuotTrenQuiz(idHocVien, quiz, "PRACTICE");
+
+        mockMvc.perform(get("/api/v1/attempts/{id}", luot)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenHocVien))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.attempt.strictExam").value(false));
+    }
+
+    @Test
+    @DisplayName("Quiz KHÔNG bật thì lượt EXAM cũng không nghiêm ngặt")
+    void shouldNotApplyStrictModeWhenQuizDoesNotAskForIt() throws Exception {
+        UUID quiz = taoQuiz(idChuQuiz, false);
+        UUID luot = taoLuotTrenQuiz(idHocVien, quiz, "EXAM");
+
+        mockMvc.perform(get("/api/v1/attempts/{id}", luot)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenHocVien))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.attempt.strictExam").value(false));
+    }
+
+    @Test
+    @DisplayName("Mặc định của quiz mới là TẮT — không đổi hành vi của quiz đang có")
+    void shouldDefaultToDisabled() throws Exception {
+        String body = mockMvc.perform(post("/api/v1/quizzes")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenChuQuiz)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Quiz không khai strictExam\",\"difficulty\":\"EASY\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.strictExam").value(false))
+                .andReturn().getResponse().getContentAsString();
+
+        // Bật lên rồi cập nhật KHÔNG kèm trường đó: phải giữ nguyên, không âm thầm tắt
+        String quizId = objectMapper.readTree(body).get("id").asText();
+        mockMvc.perform(put("/api/v1/quizzes/{id}", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenChuQuiz)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Quiz không khai strictExam\",\"strictExam\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.strictExam").value(true));
+
+        mockMvc.perform(put("/api/v1/quizzes/{id}", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenChuQuiz)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Sửa tiêu đề thôi\"}"))
+                .andExpect(status().isOk())
+                // Client cũ hoặc một form thiếu trường không được phép tắt cờ của chủ quiz
+                .andExpect(jsonPath("$.strictExam").value(true));
+    }
+
+    /** Quiz có/không bật chế độ nghiêm ngặt. */
+    private UUID taoQuiz(UUID chuQuiz, boolean nghiemNgat) {
+        return UUID.fromString(jdbc.queryForObject("""
+                insert into quizzes (id, owner_id, title, visibility, difficulty, strict_exam)
+                values (gen_random_uuid(), ?, 'Đề thi FR-48', 'PRIVATE', 'MEDIUM', ?)
+                returning id::text
+                """, String.class, chuQuiz, nghiemNgat));
+    }
+
+    private UUID taoLuotTrenQuiz(UUID nguoiLam, UUID quizId, String mode) {
+        return UUID.fromString(jdbc.queryForObject("""
+                insert into quiz_attempts (id, user_id, quiz_id, mode, status, started_at, max_score)
+                values (gen_random_uuid(), ?, ?, ?, 'IN_PROGRESS', now(), 10)
+                returning id::text
+                """, String.class, nguoiLam, quizId, mode));
+    }
+
     private UUID idOf(String email) {
         return UUID.fromString(jdbc.queryForObject("select id::text from users where email = ?",
                 String.class, email));

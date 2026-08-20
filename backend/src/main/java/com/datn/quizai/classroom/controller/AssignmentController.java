@@ -4,10 +4,14 @@ import com.datn.quizai.auth.service.JwtService;
 import com.datn.quizai.classroom.dto.AssignmentResponse;
 import com.datn.quizai.classroom.dto.AssignmentResultsResponse;
 import com.datn.quizai.classroom.service.AssignmentService;
+import com.datn.quizai.classroom.service.BangDiemCsvWriter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -64,6 +70,26 @@ public class AssignmentController {
             @AuthenticationPrincipal JwtService.AuthenticatedUser current,
             @PathVariable UUID id) {
         return assignmentService.ketQua(id, current);
+    }
+
+    @GetMapping(value = "/assignments/{id}/results.csv", produces = "text/csv; charset=UTF-8")
+    @Operation(summary = "Tải bảng điểm dạng CSV — chủ nhiệm hoặc trợ giảng. Mở được bằng Excel/Google Sheets.")
+    public ResponseEntity<byte[]> ketQuaCsv(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
+            @PathVariable UUID id) {
+
+        AssignmentResultsResponse ketQua = assignmentService.ketQua(id, current);
+        byte[] noiDung = BangDiemCsvWriter.dung(ketQua).getBytes(StandardCharsets.UTF_8);
+
+        // Tên tệp đi qua RFC 5987 (filename*=UTF-8''...) để giữ được dấu tiếng Việt. Chỉ dùng `filename=`
+        // thì tên có dấu bị trình duyệt cắt hoặc thay bằng dấu hỏi.
+        String tenTep = URLEncoder.encode(BangDiemCsvWriter.tenTep(ketQua.baiTap().title()),
+                StandardCharsets.UTF_8).replace("+", "%20");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + tenTep)
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(noiDung);
     }
 
     @DeleteMapping("/assignments/{id}")

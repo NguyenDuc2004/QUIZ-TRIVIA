@@ -30,6 +30,8 @@ export interface QuizSummary {
   aiGenerated: boolean
   thumbnailUrl: string | null
   timeLimitSec: number | null
+  /** Chế độ thi nghiêm ngặt (FR-48): yêu cầu toàn màn hình, khoá chuột phải. Chỉ áp cho lượt EXAM. */
+  strictExam: boolean
   questionCount: number
   ownerId: string
   ownerDisplayName: string
@@ -72,6 +74,7 @@ export interface QuizBody {
   difficulty?: Difficulty
   visibility?: Visibility
   timeLimitSec?: number | null
+  strictExam?: boolean
   thumbnailUrl?: string | null
 }
 
@@ -84,6 +87,7 @@ export interface QuestionBody {
   topic?: string | null
   points?: number | null
   timeLimitSec?: number | null
+  strictExam?: boolean
   options: { content: string; correct: boolean }[]
 }
 

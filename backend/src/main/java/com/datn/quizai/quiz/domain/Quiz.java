@@ -62,6 +62,19 @@ public class Quiz extends BaseEntity {
     @Column(name = "time_limit_sec")
     private Integer timeLimitSec;
 
+    /**
+     * Chế độ thi nghiêm ngặt (features/12, FR-48): yêu cầu toàn màn hình và khoá chuột phải.
+     * <p>
+     * <b>Chỉ có nghĩa với lượt {@code EXAM}</b> — lượt luyện tập bỏ qua hoàn toàn, giống như tín hiệu chống
+     * gian lận cũng chỉ thu ở lượt EXAM. Ràng buộc này chốt ở tầng service vì {@code mode} nằm ở bảng khác.
+     * <p>
+     * Là <b>rào cản ma sát</b> chứ không phải khoá: trình duyệt không cho ép toàn màn hình và người dùng
+     * luôn bấm Esc thoát được. Giá trị thật là làm việc rời bài thi trở nên <i>có chủ ý</i> và để lại tín
+     * hiệu {@code FULLSCREEN_EXIT}.
+     */
+    @Column(name = "strict_exam", nullable = false)
+    private boolean strictExam = false;
+
     /** Danh sách câu hỏi kèm thứ tự trong quiz này. */
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderIndex ASC")

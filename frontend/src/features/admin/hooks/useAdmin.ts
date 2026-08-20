@@ -149,6 +149,26 @@ export function useChangeRole() {
   })
 }
 
+export function useSetAiQuota() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, quota }: { id: string; quota: number | null }) => adminApi.setAiQuota(id, quota),
+    onSuccess: (user) => {
+      // Nói rõ BA trạng thái khác nhau. "Đã lưu" trơn thì quản trị viên không biết mình vừa CẤM ai đó —
+      // và 0 với null nhìn trên màn hình gần giống nhau.
+      message.success(
+        user.aiDailyQuota === null
+          ? `${user.displayName} dùng hạn mức mặc định của hệ thống.`
+          : user.aiDailyQuota === 0
+            ? `Đã CẤM ${user.displayName} gọi AI.`
+            : `Hạn mức của ${user.displayName}: ${user.aiDailyQuota} lượt/ngày.`,
+      )
+      queryClient.invalidateQueries({ queryKey: [ADMIN_KEY] })
+    },
+    onError: (error) => message.error(getApiErrorMessage(error)),
+  })
+}
+
 export function useSetLocked() {
   const queryClient = useQueryClient()
   return useMutation({

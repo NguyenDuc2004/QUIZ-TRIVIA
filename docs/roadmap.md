@@ -22,7 +22,7 @@
 - Đồng bộ câu hỏi, đáp án, live leaderboard.
 
 ### Tuần 5 — Lõi AI + RAG ⭐
-- AiOrchestrator + GeminiProvider + GrokProvider + fallback + circuit breaker.
+- AiOrchestrator + GeminiProvider + GroqProvider + fallback + circuit breaker.
 - Pipeline RAG: ingest học liệu (Tika → chunk → embedding → pgvector).
 - Sinh đề từ học liệu + human-in-the-loop.
 
@@ -74,7 +74,7 @@ Các tính năng mức [S]/[C] tăng giá trị sản phẩm nhưng không thu�
 - **Sinh đề:** lấy mẫu N câu AI sinh, chuyên gia/người chấm đánh giá tính đúng, độ liên quan học liệu, chất lượng đáp án nhiễu → tỉ lệ đạt.
 - **Chấm tự luận:** so điểm AI với điểm người chấm trên tập mẫu → sai số trung bình / độ tương quan.
 - **RAG:** đo tỉ lệ câu trả lời có căn cứ (grounded) vs. ảo giác.
-- **Fallback:** demo tắt Gemini → xác nhận Grok tiếp quản, đo thời gian chuyển.
+- **Fallback:** demo tắt Gemini → xác nhận Groq tiếp quản, đo thời gian chuyển.
 
 ## 3. Tiêu chí đánh giá (cho báo cáo)
 - Độ hoàn thiện tính năng theo mức ưu tiên [M].
@@ -87,7 +87,7 @@ Các tính năng mức [S]/[C] tăng giá trị sản phẩm nhưng không thu�
 
 | Rủi ro | Giảm thiểu |
 |--------|-----------|
-| Giới hạn hạn mức/chi phí API AI | Fallback Grok, cache, quota, chọn model rẻ |
+| Giới hạn hạn mức/chi phí API AI | Fallback Groq (có gói miễn phí), cache, quota, chọn model rẻ |
 | LLM trả sai định dạng JSON | Structured output + validate + retry |
 | Chất lượng câu hỏi AI không ổn định | Human-in-the-loop duyệt trước khi xuất bản |
 | Đồng bộ real-time phức tạp | Redis Pub/Sub + kiểm thử tải sớm |

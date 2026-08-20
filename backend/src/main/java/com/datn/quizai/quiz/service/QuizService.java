@@ -175,6 +175,12 @@ public class QuizService {
         quiz.setTimeLimitSec(request.timeLimitSec());
         quiz.setThumbnailUrl(validThumbnailUrl(request.thumbnailUrl()));
 
+        // null = client không gửi trường này → GIỮ NGUYÊN giá trị đang có. Đặt về false khi null sẽ âm thầm
+        // tắt chế độ thi nghiêm ngặt mỗi lần một client cũ (hoặc một form thiếu trường) gọi cập nhật quiz.
+        if (request.strictExam() != null) {
+            quiz.setStrictExam(request.strictExam());
+        }
+
         if (request.categoryId() == null) {
             quiz.setCategory(null);
         } else {

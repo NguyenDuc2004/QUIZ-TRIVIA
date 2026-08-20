@@ -20,7 +20,7 @@
 │   ▼                    ▼                    ▼               │
 │ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐      │
 │ │ RAG Pipeline │ │AI Orchestrator│ │ Realtime Game    │      │
-│ │ ingest +     │ │ Gemini→Grok  │ │ Engine (WebSocket│      │
+│ │ ingest +     │ │ Gemini→Groq  │ │ Engine (WebSocket│      │
 │ │ retrieval    │ │ +CircuitBrkr │ │ + Redis Pub/Sub) │      │
 │ └──────────────┘ └──────────────┘ └──────────────────┘      │
 │   Security (JWT) · Async Jobs · Caching · Validation         │
@@ -30,7 +30,7 @@
 ┌───────────┐ ┌────────┐ ┌────────────┐ ┌──────────────────────┐
 │PostgreSQL │ │ Neo4j  │ │   Redis    │ │ External AI Providers│
 │+ pgvector │ │ đồ thị │ │ cache,     │ │ Gemini API (chính)   │
-│dữ liệu +  │ │ hành vi│ │ session,   │ │ Grok API (fallback)  │
+│dữ liệu +  │ │ hành vi│ │ session,   │ │ Groq API (fallback)  │
 │vector     │ │ gợi ý  │ │ realtime   │ └──────────────────────┘
 └───────────┘ └────────┘ └────────────┘
 ```
@@ -85,7 +85,7 @@ com.datn.quizai
 │   ├── domain      #   GameRoom, GameRoomPlayer, RoomState (Redis), RoomStatus
 │   └── dto
 ├── ai              # Lớp AI
-│   ├── provider    #   AiProvider (interface), GeminiProvider, GrokProvider, AiOrchestrator
+│   ├── provider    #   AiProvider (interface), GeminiProvider, GroqProvider, AiOrchestrator
 │   ├── rag         #   TextExtractor (Tika), TextChunker
 │   ├── generation  #   QuestionGenerationService, QuestionPromptBuilder, QuestionJsonParser
 │   ├── controller  #   AiController
@@ -111,7 +111,7 @@ com.datn.quizai
 ```
 Creator upload học liệu → Tika trích text → chunk → embedding → pgvector
 Creator yêu cầu sinh đề → retrieval k đoạn liên quan → prompt + context
-   → AiOrchestrator (Gemini→Grok) → validate JSON → câu hỏi nháp → Creator duyệt
+   → AiOrchestrator (Gemini→Groq) → validate JSON → câu hỏi nháp → Creator duyệt
 ```
 
 ### 4.2. Phòng đấu real-time
@@ -130,13 +130,13 @@ Learner mở trang gợi ý → truy vấn Cypher → danh sách quiz + lộ tr�
    → LLM tóm tắt lý do gợi ý
 ```
 
-## 5. Fallback AI (Gemini → Grok)
+## 5. Fallback AI (Gemini → Groq)
 
 ```
 Request AI → AiOrchestrator
   1) Gemini (primary)  ── thành công → trả kết quả
                        └─ lỗi 429/5xx/timeout ↓
-  2) Grok (fallback)   ── thành công → trả kết quả (source=grok)
+  2) Groq (fallback)   ── thành công → trả kết quả (source=groq)
                        └─ lỗi ↓
   3) Trả lỗi thân thiện + (tùy chọn) cache/template dự phòng
 ```

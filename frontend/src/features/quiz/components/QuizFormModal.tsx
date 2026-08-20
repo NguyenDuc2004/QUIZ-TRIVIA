@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Form, Input, InputNumber, Modal, Radio, Select } from 'antd'
+import { Form, Input, InputNumber, Modal, Radio, Select, Switch, Typography } from 'antd'
 import ImageUploader from '@/shared/components/ImageUploader'
 import type { QuizBody, QuizSummary } from '../api/quizApi'
 import { DIFFICULTY_OPTIONS } from '../constants'
@@ -35,6 +35,7 @@ export default function QuizFormModal({ open, quiz, onClose }: Props) {
       difficulty: 'MEDIUM',
       visibility: 'PRIVATE',
       timeLimitMinutes: null,
+      strictExam: false,
     },
   })
 
@@ -49,6 +50,7 @@ export default function QuizFormModal({ open, quiz, onClose }: Props) {
       difficulty: quiz?.difficulty ?? 'MEDIUM',
       visibility: quiz?.visibility ?? 'PRIVATE',
       timeLimitMinutes: quiz?.timeLimitSec ? Math.round(quiz.timeLimitSec / 60) : null,
+      strictExam: quiz?.strictExam ?? false,
     })
   }, [open, quiz, reset])
 
@@ -61,6 +63,7 @@ export default function QuizFormModal({ open, quiz, onClose }: Props) {
       difficulty: values.difficulty,
       visibility: values.visibility,
       timeLimitSec: values.timeLimitMinutes ? values.timeLimitMinutes * 60 : null,
+      strictExam: values.strictExam,
     }
 
     if (quiz) {
@@ -152,6 +155,27 @@ export default function QuizFormModal({ open, quiz, onClose }: Props) {
                 className="w-full"
                 onChange={(value) => field.onChange(value ?? null)}
               />
+            )}
+          />
+        </Form.Item>
+
+        {/* FR-48. Chữ trợ giúp nói THẲNG rằng đây là ma sát chứ không phải khoá — người ra đề mà tin
+            vào một rào chắn không tồn tại thì sẽ bỏ qua việc rà soát tín hiệu sau bài thi, tức là mất
+            đúng cái thứ có tác dụng thật */}
+        <Form.Item
+          label="Chế độ thi nghiêm ngặt"
+          help="Yêu cầu người thi vào toàn màn hình và khoá chuột phải. Chỉ áp dụng cho chế độ Thi. Người thi vẫn thoát toàn màn hình được — mỗi lần thoát sẽ được ghi lại để bạn xem khi rà soát."
+        >
+          <Controller
+            name="strictExam"
+            control={control}
+            render={({ field }) => (
+              <div className="flex items-center gap-2">
+                <Switch checked={field.value} onChange={field.onChange} />
+                <Typography.Text className="text-ink-soft text-sm">
+                  {field.value ? 'Đang bật' : 'Đang tắt'}
+                </Typography.Text>
+              </div>
             )}
           />
         </Form.Item>
