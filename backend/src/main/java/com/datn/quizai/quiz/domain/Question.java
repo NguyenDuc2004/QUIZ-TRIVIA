@@ -50,6 +50,15 @@ public class Question extends BaseEntity {
     private String explanation;
 
     /**
+     * Ảnh minh hoạ của câu hỏi (features/02, FR-11); null = câu hỏi chỉ có chữ.
+     * <p>
+     * Chỉ nhận đường dẫn nội bộ {@code /uploads/...} do {@code POST /files/images} sinh ra — xem
+     * {@code UploadedImagePath} về lý do không nhận URL ngoài.
+     */
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
+    /**
      * Tiêu chí chấm câu tự luận (features/06). Không có rubric thì mô hình tự nghĩ ra thang điểm
      * của riêng nó và hai lần chấm cùng một bài có thể lệch nhau — rubric là thứ neo điểm lại.
      */

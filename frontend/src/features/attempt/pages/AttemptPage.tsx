@@ -168,6 +168,16 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
 
               <Paragraph className="mb-4! text-base font-bold!">{question.content}</Paragraph>
 
+              {/* FR-11. Giới hạn chiều cao thay vì để ảnh chiếm cả màn: người học cần thấy ảnh VÀ các
+                  lựa chọn cùng lúc, không phải cuộn qua lại giữa đề và đáp án khi đang tính giờ */}
+              {question.imageUrl && (
+                <img
+                  src={question.imageUrl}
+                  alt="Ảnh minh hoạ của câu hỏi"
+                  className="mb-4 max-h-72 w-auto max-w-full border border-line object-contain"
+                />
+              )}
+
               <AnswerInput
                 question={question}
                 value={draft[question.questionId] ?? EMPTY_ANSWER}

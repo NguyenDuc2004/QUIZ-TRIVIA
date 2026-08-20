@@ -316,6 +316,16 @@ export default function RoomPage() {
 
             <Paragraph className="mt-4! mb-4! text-lg font-bold!">{question.content}</Paragraph>
 
+            {/* FR-11. Thấp hơn màn làm bài đơn (max-h-56): phòng đấu tính điểm theo TỐC ĐỘ, nên đẩy các
+                nút đáp án xuống dưới màn hình là trực tiếp lấy mất điểm của người chơi màn hình nhỏ */}
+            {question.imageUrl && (
+              <img
+                src={question.imageUrl}
+                alt="Ảnh minh hoạ của câu hỏi"
+                className="mb-4 max-h-56 w-auto max-w-full border border-line object-contain"
+              />
+            )}
+
             {isChoice ? (
               question.type === 'MULTIPLE_CHOICE' ? (
                 <Checkbox.Group

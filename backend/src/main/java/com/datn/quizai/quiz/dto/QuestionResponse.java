@@ -18,6 +18,8 @@ public record QuestionResponse(
         QuestionType type,
         String content,
         String explanation,
+        /** Ảnh minh hoạ (FR-11); null = câu hỏi chỉ có chữ. */
+        String imageUrl,
         String rubric,
         Difficulty difficulty,
         String topic,
@@ -41,6 +43,7 @@ public record QuestionResponse(
                 question.getType(),
                 question.getContent(),
                 question.getExplanation(),
+                question.getImageUrl(),
                 question.getRubric(),
                 question.getDifficulty(),
                 question.getTopic(),

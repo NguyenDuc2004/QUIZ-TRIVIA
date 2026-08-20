@@ -26,6 +26,14 @@ public record AttemptQuestionResponse(
         int orderIndex,
         QuestionType type,
         String content,
+        /**
+         * Ảnh minh hoạ của câu hỏi (features/02, FR-11); null = câu hỏi chỉ có chữ.
+         * <p>
+         * Ảnh nằm ở <b>phần đề bài</b> nên luôn hiện, kể cả lúc chưa nộp — khác hẳn {@code explanation} và
+         * {@code correctOptionIds} vốn chỉ lộ sau khi nộp. Thiếu trường này thì ảnh lưu được nhưng người
+         * học không bao giờ thấy, và cả tính năng thành vô nghĩa.
+         */
+        String imageUrl,
         Difficulty difficulty,
         int maxScore,
         Integer timeLimitSec,
@@ -74,6 +82,7 @@ public record AttemptQuestionResponse(
                 answer.getOrderIndex(),
                 question.getType(),
                 question.getContent(),
+                question.getImageUrl(),
                 question.getDifficulty(),
                 answer.getMaxScore(),
                 question.getTimeLimitSec(),

@@ -216,6 +216,12 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 > `review_status` mặc định **PENDING** và không có đường nào để hệ thống tự đổi nó — kết luận chỉ đến từ chủ quiz
 > hoặc Admin. Chỉ ghi cho lượt **EXAM**; lượt PRACTICE không có dòng nào ở cả hai bảng.
 
+**questions.image_url** *(V23)* — Ảnh câu hỏi ([features/02](features/02-quiz-management.md))
+
+> `VARCHAR(500)` nullable. Chỉ nhận đường dẫn nội bộ `/uploads/…` do `POST /files/images` sinh ra; ràng
+> buộc chốt ở `UploadedImagePath` — dùng chung với ảnh bìa quiz vì đó là **luật an toàn**, và nhân đôi luật
+> an toàn là tạo một chỗ sẽ bị quên khi nới.
+
 **users.ai_daily_quota** *(V22)* — Hạn mức AI mỗi ngày ([features/10](features/10-admin.md))
 
 > Cột `INTEGER` **nullable** trên `users`. `null` = chưa đặt riêng, dùng mặc định hệ thống; `0` = quản trị

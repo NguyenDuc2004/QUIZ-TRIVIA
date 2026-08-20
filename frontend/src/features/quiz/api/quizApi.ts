@@ -51,6 +51,8 @@ export interface Question {
   type: QuestionType
   content: string
   explanation: string | null
+  /** Ảnh minh hoạ (FR-11); null = câu hỏi chỉ có chữ. Đường dẫn nội bộ /uploads/… */
+  imageUrl: string | null
   /** Tiêu chí chấm câu tự luận (features/06). */
   rubric: string | null
   difficulty: Difficulty
@@ -82,6 +84,7 @@ export interface QuestionBody {
   type: QuestionType
   content: string
   explanation?: string | null
+  imageUrl?: string | null
   rubric?: string | null
   difficulty?: Difficulty
   topic?: string | null

@@ -46,6 +46,8 @@ export interface AttemptQuestion {
   orderIndex: number
   type: QuestionType
   content: string
+  /** Ảnh minh hoạ của câu hỏi (FR-11); null = câu chỉ có chữ. */
+  imageUrl: string | null
   difficulty: Difficulty
   maxScore: number
   timeLimitSec: number | null

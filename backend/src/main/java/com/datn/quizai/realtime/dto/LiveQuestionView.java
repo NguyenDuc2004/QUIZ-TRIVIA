@@ -21,6 +21,8 @@ public record LiveQuestionView(
         int total,
         QuestionType type,
         String content,
+        /** Ảnh minh hoạ của câu hỏi (FR-11); null = câu chỉ có chữ. */
+        String imageUrl,
         int points,
         int timeLimitSec,
         long deadlineAtMillis,
@@ -41,6 +43,7 @@ public record LiveQuestionView(
 
         return new LiveQuestionView(
                 question.getId(), index, total, question.getType(), question.getContent(),
+                question.getImageUrl(),
                 question.getPoints() == null ? 1 : question.getPoints(),
                 timeLimitSec, deadlineAtMillis, options);
     }

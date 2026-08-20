@@ -68,6 +68,16 @@ export default function QuestionReview({
 
       <Paragraph className="mb-4! text-base font-bold!">{question.content}</Paragraph>
 
+      {/* FR-11. Xem lại cũng phải có ảnh: người học đối chiếu đáp án với ĐỀ BÀI, mà thiếu ảnh thì nhiều
+          câu không còn hiểu được — "hình nào sau đây là đồ thị hàm số?" mà không có hình là câu vô nghĩa */}
+      {question.imageUrl && (
+        <img
+          src={question.imageUrl}
+          alt="Ảnh minh hoạ của câu hỏi"
+          className="mb-4 max-h-72 w-auto max-w-full border border-line object-contain"
+        />
+      )}
+
       {isChoice ? (
         <div className="flex flex-col gap-2">
           {question.options.map((option) => {

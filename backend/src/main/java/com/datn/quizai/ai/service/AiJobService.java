@@ -201,8 +201,10 @@ public class AiJobService {
                 .toList();
 
         // rubric để null: mô hình sinh đề không tự đặt tiêu chí chấm, Creator soạn khi cần (features/06)
+        // imageUrl để null: mô hình sinh CHỮ, không sinh ảnh. Câu do AI đề xuất mà tự gắn một đường dẫn
+        // ảnh nào đó là gắn ảnh không tồn tại — Creator tự thêm ảnh khi duyệt nếu muốn (FR-11).
         return new QuestionRequest(
-                question.type(), question.content(), question.explanation(), null,
+                question.type(), question.content(), question.explanation(), null, null,
                 question.difficulty(), question.topic(), 1, null, options);
     }
 

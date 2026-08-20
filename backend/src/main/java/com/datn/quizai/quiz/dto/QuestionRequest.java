@@ -27,6 +27,13 @@ public record QuestionRequest(
         String explanation,
 
         /**
+         * Ảnh minh hoạ, lấy từ {@code POST /api/v1/files/images} (FR-11). Bỏ trống = câu hỏi chỉ có chữ.
+         * Chỉ nhận đường dẫn nội bộ {@code /uploads/…}.
+         */
+        @Size(max = 500, message = "Đường dẫn ảnh tối đa 500 ký tự")
+        String imageUrl,
+
+        /**
          * Tiêu chí chấm câu tự luận (features/06). Bỏ trống thì AI chấm bằng cách đối chiếu với
          * đáp án mẫu; có tiêu chí thì điểm ổn định hơn hẳn giữa các lần chấm.
          */

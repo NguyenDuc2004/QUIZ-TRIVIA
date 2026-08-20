@@ -12,6 +12,7 @@ import com.datn.quizai.auth.service.JwtService;
 import com.datn.quizai.common.OwnershipGuard;
 import com.datn.quizai.common.dto.PageResponse;
 import com.datn.quizai.common.exception.BusinessException;
+import com.datn.quizai.file.service.UploadedImagePath;
 import com.datn.quizai.quiz.dto.QuizDetailResponse;
 import com.datn.quizai.quiz.dto.QuizRequest;
 import com.datn.quizai.quiz.dto.QuizSummaryResponse;
@@ -173,7 +174,7 @@ public class QuizService {
         quiz.setDifficulty(request.difficulty() == null ? Difficulty.MEDIUM : request.difficulty());
         quiz.setVisibility(request.visibility() == null ? Visibility.PRIVATE : request.visibility());
         quiz.setTimeLimitSec(request.timeLimitSec());
-        quiz.setThumbnailUrl(validThumbnailUrl(request.thumbnailUrl()));
+        quiz.setThumbnailUrl(UploadedImagePath.hopLeHoacNull(request.thumbnailUrl(), "Ảnh bìa"));
 
         // null = client không gửi trường này → GIỮ NGUYÊN giá trị đang có. Đặt về false khi null sẽ âm thầm
         // tắt chế độ thi nghiêm ngặt mỗi lần một client cũ (hoặc một form thiếu trường) gọi cập nhật quiz.
@@ -189,23 +190,6 @@ public class QuizService {
         }
     }
 
-    /**
-     * Chỉ chấp nhận ảnh bìa là đường dẫn nội bộ do {@code POST /api/v1/files/images} sinh ra.
-     * <p>
-     * Không nhận URL ngoài: ảnh bên thứ ba có thể chết bất cứ lúc nào, và mỗi lần người học mở
-     * trang là gửi một request kèm IP sang máy chủ lạ — người tạo quiz nhúng được cả pixel theo dõi.
-     * Chặn cả {@code ..} để không ai ghép được đường dẫn thoát ra ngoài thư mục ảnh.
-     */
-    private String validThumbnailUrl(String url) {
-        if (url == null || url.isBlank()) {
-            return null;
-        }
-        String trimmed = url.trim();
-        if (!trimmed.startsWith("/uploads/") || trimmed.contains("..")) {
-            throw BusinessException.badRequest("Ảnh bìa phải là ảnh đã tải lên hệ thống");
-        }
-        return trimmed;
-    }
 
     /**
      * Chuẩn hóa từ khóa thành mẫu LIKE chữ thường ({@code %java%}).

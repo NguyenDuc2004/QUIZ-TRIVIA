@@ -37,6 +37,8 @@ export const questionSchema = z
     type: z.enum(['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'FILL_BLANK', 'SHORT_ANSWER']),
     content: z.string().min(1, 'Nội dung câu hỏi không được để trống'),
     explanation: z.string().optional().or(z.literal('')),
+    /** Đường dẫn server trả về sau khi tải ảnh lên; null = câu hỏi chỉ có chữ (FR-11). */
+    imageUrl: z.string().nullable().optional(),
     rubric: z.string().max(2000, 'Tiêu chí chấm tối đa 2000 ký tự').optional().or(z.literal('')),
     difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']),
     topic: z.string().max(100, 'Chủ đề tối đa 100 ký tự').optional().or(z.literal('')),

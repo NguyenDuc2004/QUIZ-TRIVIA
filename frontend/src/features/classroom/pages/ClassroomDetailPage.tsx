@@ -13,13 +13,15 @@ import {
   Table,
   Tabs,
   Tag,
+  Tooltip,
   Typography,
+  message,
 } from 'antd'
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownloadOutlined, PlusOutlined } from '@ant-design/icons'
 import PageHeader from '@/shared/components/PageHeader'
 import EmptyState from '@/shared/components/EmptyState'
 import { useQuizList } from '@/features/quiz/hooks/useQuizQueries'
-import type { Assignment, Member } from '../api/classroomApi'
+import { classroomApi, type Assignment, type Member } from '../api/classroomApi'
 import {
   useAssignQuiz,
   useChangeMemberRole,
@@ -177,6 +179,31 @@ function BangBaiTap({
     )
   }
 
+  const [dangTai, setDangTai] = useState<string | null>(null)
+
+  /**
+   * Tải bảng điểm CSV ngay từ bảng bài tập (FR-58).
+   *
+   * Phải đi qua axios rồi tự dựng link tải, không dùng `<a href>` thẳng: request cần header
+   * `Authorization` mà thẻ `<a>` không mang được — server sẽ trả 401 và người dùng nhận một tab trắng.
+   */
+  const taiCsv = async (bai: Assignment) => {
+    setDangTai(bai.id)
+    try {
+      const blob = await classroomApi.taiBangDiemCsv(bai.id)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `bang-diem-${bai.title}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      message.error('Không tải được bảng điểm')
+    } finally {
+      setDangTai(null)
+    }
+  }
+
   return (
     <Table<Assignment>
       rowKey="id"
@@ -210,14 +237,26 @@ function BangBaiTap({
         ...(laGiaoVien
           ? [
               {
-                title: '',
+                // Cột này TỪNG không có tiêu đề, và link "Theo dõi" là chữ nhỏ lẫn vào bảng. Người dùng
+                // thật không tìm ra, nên cả tính năng xuất bảng điểm coi như không tồn tại — có mà không
+                // ai thấy thì bằng không có. Đặt tiêu đề, và đưa nút tải CSV ra ngay đây thay vì bắt mở
+                // thêm một trang nữa mới thấy.
+                title: 'Kết quả',
                 key: 'actions',
-                width: 150,
+                width: 230,
                 render: (_: unknown, row: Assignment) => (
-                  <div className="flex items-center gap-3">
-                    <Link to={`/assignments/${row.id}/results`} className="text-sm font-bold">
-                      Theo dõi
+                  <div className="flex items-center gap-2">
+                    <Link to={`/assignments/${row.id}/results`}>
+                      <Button size="small">Xem kết quả</Button>
                     </Link>
+                    <Tooltip title="Tải bảng điểm dạng CSV, mở được bằng Excel">
+                      <Button
+                        size="small"
+                        icon={<DownloadOutlined />}
+                        loading={dangTai === row.id}
+                        onClick={() => void taiCsv(row)}
+                      />
+                    </Tooltip>
                     <Popconfirm
                       title="Gỡ bài tập này?"
                       description="Bài làm của học sinh vẫn còn, chỉ thôi thuộc về bài tập."
