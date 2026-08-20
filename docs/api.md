@@ -66,22 +66,41 @@ DELETE /api/v1/questions/{id}           Xóa — 409 nếu đang dùng trong qui
 
 ### 3.1. Tải ảnh lên — `/files`
 ```
-POST   /api/v1/files/images       Tải một ảnh (multipart, field `file`)           ✅
-GET    /uploads/images/{ten-file} Xem ảnh — tài nguyên tĩnh, công khai            ✅
+POST   /api/v1/files/images        Tải ảnh quiz/câu hỏi (multipart, field `file`)  ✅
+POST   /api/v1/files/avatar        Tải ảnh đại diện của chính mình                 ✅
+GET    /uploads/images/{ten-file}  Xem ảnh — tài nguyên tĩnh, công khai            ✅
+GET    /uploads/avatars/{ten-file} Xem ảnh đại diện — tài nguyên tĩnh, công khai   ✅
 ```
 
-Trả về `{ url, fileName, size, contentType }`; lấy `url` gán vào `quizzes.thumbnailUrl`.
+Cả hai trả về `{ url, fileName, size, contentType }`; lấy `url` gán vào `quizzes.thumbnailUrl`,
+`questions.imageUrl` hoặc `users.avatarUrl`.
 
 | Luật | Chi tiết |
 |---|---|
-| Quyền tải lên | **CREATOR/ADMIN**. Learner → 403, Guest → 401 |
 | Định dạng | JPG, PNG, GIF, WebP — nhận dạng bằng **chữ ký byte**, không tin `Content-Type` client khai |
 | Dung lượng | tối đa **2MB** cho ảnh (giới hạn multipart chung 25MB dành cho học liệu RAG) |
-| Tên file | do server sinh từ UUID; **tên client gửi lên bị bỏ hoàn toàn** |
+| Tên file | do server sinh; **tên client gửi lên bị bỏ hoàn toàn** |
 | Xem ảnh | công khai, không cần token — ảnh bìa quiz phải hiện được với Guest |
 
-`thumbnailUrl` của quiz chỉ nhận đường dẫn nội bộ bắt đầu bằng `/uploads/` và không chứa `..`;
-URL bên ngoài trả **400** (tránh link chết và pixel theo dõi nhúng qua ảnh bên thứ ba).
+**Hai đường, hai mức quyền** — khác nhau vì rủi ro khác nhau:
+
+| | `/files/images` | `/files/avatar` |
+|---|---|---|
+| Quyền | **CREATOR/ADMIN** (Learner → 403, Guest → 401) | **mọi tài khoản đã đăng nhập** (Guest → 401) |
+| Số file mỗi người | không giới hạn | **đúng một** — ảnh cũ bị xoá sau khi ghi ảnh mới |
+| Tên file | `{uuid}.{ext}` | `{userId}-{ngẫu nhiên}.{ext}` |
+
+Chính ràng buộc *mỗi người một file* là thứ cho phép mở `/files/avatar` cho mọi tài khoản: tổng dung
+lượng bị chặn bởi **số tài khoản**, không phải số lần bấm nút, nên nó không mang rủi ro "chỗ chứa file
+miễn phí" khiến `/files/images` phải khoá theo vai trò. `userId` lấy từ **token**, không bao giờ nhận
+qua tham số — nó được ghép vào tên file, nhận từ client là mở đường ghi đè ảnh người khác. Phần ngẫu
+nhiên phía sau id để **đổi URL mỗi lần đổi ảnh**, nếu không trình duyệt vẫn hiện ảnh cũ từ cache.
+
+`thumbnailUrl` của quiz, `imageUrl` của câu hỏi và `avatarUrl` của người dùng đều chỉ nhận đường dẫn
+nội bộ bắt đầu bằng `/uploads/` và không chứa `..`; URL bên ngoài trả **400** (tránh link chết và pixel
+theo dõi nhúng qua ảnh bên thứ ba). Riêng `avatarUrl` có một ngoại lệ: **giá trị đang lưu luôn được chấp
+nhận**, nếu không thì người đăng nhập bằng Google — ảnh nằm ở `googleusercontent.com` — chỉ cần bấm Lưu
+một lần ở trang hồ sơ là mất ảnh.
 
 **Quyền:** `GET /categories`, `GET /quizzes`, `GET /quizzes/{id}` mở cho Guest (quiz PRIVATE của người khác trả **404**). Còn lại yêu cầu vai trò **CREATOR/ADMIN** và **quyền sở hữu** (sửa/xóa của người khác → **403**). `GET /quizzes?mine=true` yêu cầu đăng nhập.
 

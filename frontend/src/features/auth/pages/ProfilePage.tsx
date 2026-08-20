@@ -104,7 +104,7 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-4">
                   <Avatar size={64} src={anh ?? undefined} icon={<UserOutlined />} />
                   <div className="min-w-0 flex-1">
-                    <ImageUploader value={anh} onChange={setAnh} />
+                    <ImageUploader value={anh} onChange={setAnh} variant="avatar" />
                   </div>
                 </div>
               </Form.Item>
