@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, Skeleton, Tag, Typography } from 'antd'
+import { Button, Skeleton, Tag, Typography, message } from 'antd'
+import { getApiErrorMessage } from '@/shared/api/client'
 import { coverOf } from '@/features/quiz/coverGradient'
-import type { RecommendationSource } from '../api/recommendApi'
+import { recommendApi, type RecommendationSource } from '../api/recommendApi'
 import { useRecommendedQuizzes } from '../hooks/useRecommendQueries'
 
 const { Title, Text } = Typography
@@ -36,6 +38,30 @@ const SOURCE_COLOR: Record<RecommendationSource, string> = {
 export default function RecommendedQuizzes() {
   const { data, isPending } = useRecommendedQuizzes(4)
 
+  // Hook phải nằm TRƯỚC mọi `return` sớm: component này thoát sớm ở ba nhánh (đang tải / không có dữ
+  // liệu / danh sách rỗng), và đặt useState sau một trong số đó là vi phạm luật hook — React sẽ đổ.
+  const [loiGiai, setLoiGiai] = useState<Record<string, string>>({})
+  const [dangHoi, setDangHoi] = useState<string | null>(null)
+
+  /**
+   * Hỏi AI vì sao quiz này được gợi ý (FR-36).
+   *
+   * Thay lý do mẫu bằng lời giải thích, và **ẩn luôn nút** sau khi hỏi: hỏi lại cùng một quiz không cho
+   * thêm thông tin gì (backend cache 24 giờ và trả về đúng chuỗi cũ), nên để nút lại chỉ mời bấm vô ích.
+   */
+  const hoiViSao = async (quizId: string) => {
+    setDangHoi(quizId)
+    try {
+      const giaiThich = await recommendApi.explain(quizId)
+      setLoiGiai((prev) => ({ ...prev, [quizId]: giaiThich }))
+    } catch (error) {
+      // Hết hạn mức AI (429) cũng rơi vào đây — thông báo của backend nói rõ còn bao nhiêu lượt
+      message.error(getApiErrorMessage(error))
+    } finally {
+      setDangHoi(null)
+    }
+  }
+
   if (isPending) {
     return <Skeleton active paragraph={{ rows: 2 }} />
   }
@@ -44,7 +70,7 @@ export default function RecommendedQuizzes() {
   }
 
   if (data.items.length === 0) {
-    return (
+  return (
       <section className="border border-line bg-white p-5">
         <div className="mb-2 flex flex-wrap items-center gap-3">
           <Title level={4} className="mb-0!">
@@ -97,8 +123,23 @@ export default function RecommendedQuizzes() {
 
               <Text className="line-clamp-2-title mb-1 font-bold">{item.title}</Text>
 
-              {/* Lý do do backend viết — gợi ý không nói vì sao thì người dùng không có căn cứ để tin */}
-              <Text className="mb-3 text-ink-soft text-xs">{item.reason}</Text>
+              {/* Lý do do backend viết — gợi ý không nói vì sao thì người dùng không có căn cứ để tin.
+                  LUÔN có sẵn và không tốn gì; lời giải thích của AI chỉ là bản nói kỹ hơn khi được hỏi */}
+              <Text className="mb-2 text-ink-soft text-xs">
+                {loiGiai[item.quizId] ?? item.reason}
+              </Text>
+
+              {!loiGiai[item.quizId] && (
+                <Button
+                  type="link"
+                  size="small"
+                  loading={dangHoi === item.quizId}
+                  className="mb-2 h-auto! self-start p-0!"
+                  onClick={() => void hoiViSao(item.quizId)}
+                >
+                  Vì sao gợi ý này?
+                </Button>
+              )}
 
               <Link to={`/quizzes/${item.quizId}`} className="mt-auto">
                 <Button size="small" block>

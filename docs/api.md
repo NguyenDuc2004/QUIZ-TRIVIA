@@ -519,6 +519,16 @@ GET    /api/v1/admin/integrity/flagged           Hàng chờ bài bị gắn c�
 - Hàng chờ sắp theo điểm rủi ro giảm dần, mặc định lọc `PENDING`, và **không kèm từng sự kiện** (`suKien: []`)
   — trang đó chỉ để chọn bài cần mở.
 
+### Giải thích gợi ý bằng AI (FR-36) ✅
+```
+POST /api/v1/recommendations/{quizId}/explain   Nhờ AI nói rõ vì sao gợi ý   ✅
+```
+**Bấm mới gọi**, không tự chạy khi mở trang: gọi cho cả danh sách là mười lời gọi mô hình cho một lần lướt,
+và từ FR-84 chúng tiêu vào hạn mức AI của chính người học. Cache 24 giờ.
+
+Endpoint **tra lại danh sách gợi ý thật** của người gọi thay vì tin `quizId` từ URL — không thì ai cũng bắt
+mô hình bịa lý do cho một quiz chưa từng được gợi ý. Chi tiết ở [features/07](features/07-recommendation-neo4j.md).
+
 ### Hạn mức AI theo người (FR-84) ✅
 ```
 PUT /api/v1/admin/users/{id}/ai-quota?quota=N   Đặt hạn mức mỗi ngày (Admin)   ✅

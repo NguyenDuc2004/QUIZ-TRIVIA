@@ -10,7 +10,7 @@ Mỗi tính năng có file đặc tả riêng. Mức ưu tiên: **[M]** Must · 
 | 04 | Phòng đấu real-time (Multiplayer) | [04-multiplayer-realtime.md](04-multiplayer-realtime.md) | [M] | ✅ Real-time | ✅ xong |
 | 05 | AI sinh đề từ học liệu (RAG) | [05-ai-rag-generation.md](05-ai-rag-generation.md) | [M] | ✅ AI/RAG | ✅ xong |
 | 06 | AI chấm & giải thích tự luận | [06-ai-grading.md](06-ai-grading.md) | [M] | ✅ AI | ✅ xong |
-| 07 | Gợi ý cá nhân hóa (Neo4j) | [07-recommendation-neo4j.md](07-recommendation-neo4j.md) | [M] | ✅ Neo4j | ✅ xong (hoãn FR-36 lý do gợi ý bằng LLM, FR-32 adaptive) |
+| 07 | Gợi ý cá nhân hóa (Neo4j) | [07-recommendation-neo4j.md](07-recommendation-neo4j.md) | [M] | ✅ Neo4j | ✅ xong (hoãn FR-32 adaptive) |
 | 08 | Trợ lý học tập RAG chatbot | [08-ai-chatbot-rag.md](08-ai-chatbot-rag.md) | [M] | ✅ AI/RAG | ✅ xong |
 | 09 | Thống kê & báo cáo | [09-analytics.md](09-analytics.md) | [S] | | ✅ xong |
 | 10 | Quản trị (Admin) | [10-admin.md](10-admin.md) | [S] | | ✅ xong |

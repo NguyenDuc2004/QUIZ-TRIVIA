@@ -13,7 +13,7 @@ Phân tích hành vi/sở thích người dùng bằng **cơ sở dữ liệu đ
 - **FR-33** [M] ✅ Xây dựng đồ thị người dùng–chủ đề–quiz–câu hỏi từ hành vi.
 - **FR-34** [M] ✅ Gợi ý quiz dựa trên thuật toán đồ thị (tương đồng/collaborative).
 - **FR-35** [M] ✅ Đề xuất lộ trình học cá nhân hóa theo năng lực & điểm yếu.
-- **FR-36** [S] ⏳ LLM giải thích lý do gợi ý bằng ngôn ngữ tự nhiên.
+- **FR-36** [S] ✅ LLM giải thích lý do gợi ý bằng ngôn ngữ tự nhiên — **bấm mới gọi**, có cache. Xem mục riêng bên dưới.
 - **FR-32** [S] ⏳ Adaptive difficulty trong phiên làm bài (chọn câu theo chuỗi đúng/sai).
 
 ## Hai thứ bản thiết kế đầu bỏ đi, và vì sao
@@ -57,7 +57,7 @@ dựa trên cái gì.
    Chạy sau `AFTER_COMMIT`, và **đồng bộ lại lần nữa** sau khi AI chấm xong câu tự luận, vì lúc nộp
    những câu đó còn 0 điểm.
 2. Learner mở trang gợi ý → truy vấn Cypher → danh sách quiz / lộ trình.
-3. *(FR-36, chưa làm)* LLM tóm tắt kết quả đồ thị thành lý do gợi ý.
+3. *(FR-36)* LLM diễn đạt lại kết quả đồ thị thành lý do gợi ý — chỉ khi người dùng bấm hỏi.
 
 Đồng bộ **idempotent**: toàn bộ dùng `MERGE` + `SET`, chạy lại bao nhiêu lần cũng cho cùng một đồ
 thị. Cần vậy vì bước 1 chạy hai lần cho cùng một bài, và vì job nền có thể chạy lại sau lỗi.
@@ -232,9 +232,44 @@ lại được.
 Thử lại an toàn **chính vì đồng bộ idempotent**. Đây là lần thứ hai tính chất đó trả công: lần đầu
 là để chạy hai lượt cho mỗi bài (lúc nộp và sau khi AI chấm).
 
+## Giải thích gợi ý bằng AI (FR-36)
+
+`POST /api/v1/recommendations/{quizId}/explain`
+
+### Bấm mới gọi, không tự chạy khi mở trang
+
+Cách làm hiển nhiên là sinh lời giải thích cho cả danh sách ngay khi mở trang. Không làm vậy, vì hai lý do
+— và **cái thứ hai chỉ mới xuất hiện hôm nay**:
+
+1. Mười thẻ gợi ý là **mười lời gọi mô hình** cho một lần lướt qua, mà phần lớn thẻ người dùng không quan tâm.
+2. Từ khi có [hạn mức AI theo người (FR-84)](10-admin.md), những lời gọi đó tiêu vào hạn mức của **chính
+   người học**. Mở trang gợi ý ba lần là hết lượt sinh đề của họ — họ bị phạt vì một tính năng họ không
+   chủ động dùng.
+
+Nên mỗi thẻ **luôn có sẵn lý do dạng mẫu** dựng từ dữ liệu đồ thị (không tốn gì), còn lời giải thích của
+mô hình chỉ sinh khi bấm. Cache Redis 24 giờ theo `(userId, quizId)` để hỏi lại không tính lượt lần nữa.
+
+### Không tin `quizId` từ URL
+
+Endpoint **tra lại danh sách gợi ý thật** của người gọi rồi mới tìm quiz trong đó. Nhận thẳng `quizId` làm
+dữ kiện thì bất kỳ ai cũng bảo hệ thống *"giải thích vì sao gợi ý quiz X cho tôi"* với một quiz chưa từng
+được gợi ý — và mô hình sẽ bịa ra một lý do **nghe rất thuyết phục** cho một điều không có thật.
+
+### Mô hình diễn đạt lại dữ kiện, không được nghĩ thêm
+
+Prompt chỉ chứa những gì đồ thị thật sự biết: chủ đề đang yếu, số người tương tự đã làm, số lượt làm, nguồn
+gợi ý. Số 0 và danh sách rỗng **bị loại khỏi prompt** — đưa vào thì mô hình sẽ cố diễn đạt chúng thành câu,
+và câu đó chỉ có thể vô duyên (*"chưa có ai học giống bạn làm quiz này"*).
+
+Đây là ranh giới chống ảo giác thật sự: **mô hình chỉ nói được về thứ nó được cho biết**, còn ràng buộc
+trong system prompt chỉ là lớp thứ hai. Có test riêng chốt rằng dữ kiện không bao giờ chứa đánh giá, số
+sao hay mức độ phổ biến — đúng những thứ [mục "Hai thứ bản thiết kế đầu bỏ đi"](#) đã loại vì không có
+nguồn dữ liệu; để chúng quay về qua lời giải thích của AI là phá chính quyết định đó.
+
+Mô hình trả rỗng thì **giữ lý do mẫu**, không trả chuỗi trống: thẻ gợi ý không nói vì sao thì người dùng
+không có căn cứ để tin hay bỏ qua.
+
 ## Chưa làm
-- **FR-36** LLM giải thích lý do gợi ý — sẽ tốn thêm hạn mức AI cho mỗi lần mở trang; cần cân nhắc
-  cache trước khi bật.
 - **FR-32** Adaptive difficulty trong phiên làm bài.
 - Gỡ nút dùng `WHERE NOT id IN $ids` — với vài trăm bản ghi thì không sao, nhưng đây là phép so
   danh sách nên sẽ chậm dần; ngân hàng quiz lớn thì phải đổi sang đánh dấu theo lô.
