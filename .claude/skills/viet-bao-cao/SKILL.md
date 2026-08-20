@@ -23,8 +23,9 @@ Soạn báo cáo Đồ án tốt nghiệp cho đề tài **"Xây dựng ứng d�
 
 ## Nơi lưu nội dung báo cáo
 
-- Nội dung viết ra: `docs/bao-cao/noi-dung/` — mỗi phần một file: `00-mo-dau.md`, `01-tong-quan.md`, `02-phan-tich-thiet-ke.md`, `03-thuc-nghiem-danh-gia.md`, `04-ket-luan.md`, `05-tai-lieu-tham-khao.md`.
-- Bản Word xuất ra: `docs/bao-cao/bao-cao-datn.docx` (hoặc từng chương rồi ghép).
+- **Nội dung báo cáo nằm ở `bao-cao-datn/` — thư mục ở GỐC dự án, không phải trong `docs/`.** Mỗi phần một file: `front-matter.md`, `00-mo-dau.md`, `01-chuong-1.md`, `02-chuong-2.md`, `03-chuong-3.md`, `04-ket-luan.md`, `05-tai-lieu-tham-khao.md`. Đọc `bao-cao-datn/README.md` trước khi sửa bất cứ gì.
+- Hình **không vẽ tay**: mỗi hình là một định nghĩa dạng text trong `bao-cao-datn/build/gen-*.js`, sinh ra `assets/hinh-x.y.png`. Sửa nội dung hình = sửa vài dòng chữ rồi chạy lại script.
+- Bản Word xuất ra: `bao-cao-datn/bao-cao-datn-v{n}.docx`, đánh số tăng dần, không ghi đè bản cũ; bản chốt tên là `-final.docx`.
 - Nhật ký & số liệu phát sinh: `docs/bao-cao/nhat-ky-tien-do.md` (mục "Ghi chú báo cáo" của mỗi ngày) — luôn quét file này trước khi viết Chương 3.
 
 ## Map nội dung báo cáo → tài liệu nguồn
@@ -50,7 +51,7 @@ Báo cáo dài → **viết theo từng phần, xác nhận xong mới sang ph�
 1. **Chốt phạm vi**: user muốn viết phần nào (Mở đầu / một chương / một mục / cả cuốn). Nếu là "cả cuốn" → vẫn xuất theo thứ tự từng phần và dừng lại cho user review.
 2. **Đọc `references/cau-truc-bao-cao.md`** để lấy đúng dàn ý + mẫu bảng của phần đó.
 3. **Đọc tài liệu nguồn** tương ứng (bảng map trên) + kiểm tra mã nguồn thực tế nếu phần đó mô tả cái đã code.
-4. **Soạn Markdown trước** vào `docs/bao-cao/noi-dung/` cho user review (sửa nhanh hơn Word); chỉ soạn thẳng `.docx` khi user yêu cầu bản Word ngay.
+4. **Soạn Markdown trước** vào `bao-cao-datn/*.md` cho user review (sửa nhanh hơn Word); bản Word dựng bằng `node bao-cao-datn/build/build.js`, không bao giờ chỉnh tay trong Word.
 5. **Xuất `.docx`** theo preset trong `references/dinh-dang-haui.md` khi user yêu cầu.
 6. **Chạy checklist** dưới đây trước khi báo xong.
 

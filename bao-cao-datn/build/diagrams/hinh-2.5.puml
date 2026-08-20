@@ -70,7 +70,7 @@ rectangle "Chức năng dành cho quản trị viên" {
   usecase "Đổi vai trò người dùng" as U2
   usecase "Quản lý toàn bộ nội dung\n(quiz, câu hỏi)" as U3
   usecase "Quản lý danh mục" as U4
-  usecase "Cấu hình nhà cung cấp AI\n(thứ tự Gemini → Grok)" as U5
+  usecase "Cấu hình nhà cung cấp AI\n(thứ tự Gemini → Groq)" as U5
   usecase "Giám sát nhật ký gọi AI" as U6
   usecase "Giám sát chi phí và số token" as U7
 }

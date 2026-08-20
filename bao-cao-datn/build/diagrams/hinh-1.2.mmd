@@ -23,7 +23,7 @@ flowchart TB
     PB["Dựng prompt: chỉ dẫn hệ thống<br/>+ ngữ cảnh rào trong khối dữ liệu"]:::ret
   end
 
-  LLM["AiOrchestrator → Gemini (dự phòng Grok)"]:::llm
+  LLM["AiOrchestrator → Gemini (dự phòng Groq)"]:::llm
   OUT1["Câu hỏi nháp + đoạn nguồn<br/>→ người tạo nội dung duyệt"]:::ing
   OUT2["Câu trả lời theo luồng (SSE)<br/>+ danh sách tài liệu đã dựa vào"]:::ret
   NONE["Không còn đoạn nào đủ liên quan<br/>→ trả lời 'không biết', KHÔNG suy đoán"]:::guard

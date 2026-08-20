@@ -278,18 +278,34 @@ D["2.29"] = `flowchart TB
     C --> S --> R --> E
   end
 
-  subgraph M["Mô-đun theo tính năng — com.datn.quizai"]
-    direction LR
-    M1["auth<br/>JWT, RBAC, OTP"]:::mod
-    M2["user<br/>hồ sơ"]:::mod
-    M3["quiz<br/>quiz, câu hỏi, danh mục"]:::mod
-    M4["attempt<br/>làm bài, chấm điểm"]:::mod
-    M5["realtime<br/>phòng đấu STOMP"]:::mod
-    M6["ai<br/>RAG, sinh đề, chấm tự luận"]:::mod
-    M7["chat<br/>trợ lý học tập (SSE)"]:::mod
-    M8["recommend<br/>gợi ý Neo4j"]:::mod
-    M9["analytics<br/>thống kê"]:::mod
-    M10["file<br/>tải ảnh lên"]:::mod
+  subgraph M["Mô-đun theo tính năng — com.datn.quizai (17 mô-đun)"]
+    direction TB
+    subgraph MA["Lõi"]
+      direction LR
+      M1["auth<br/>JWT, RBAC, OTP"]:::mod
+      M2["user<br/>hồ sơ"]:::mod
+      M3["quiz<br/>quiz, câu hỏi, danh mục"]:::mod
+      M4["attempt<br/>làm bài, chấm điểm"]:::mod
+      M10["file<br/>tải ảnh lên"]:::mod
+    end
+    subgraph MB["Thời gian thực và AI"]
+      direction LR
+      M5["realtime<br/>phòng đấu STOMP"]:::mod
+      M6["ai<br/>RAG, sinh đề, chấm tự luận"]:::mod
+      M7["chat<br/>trợ lý học tập (SSE)"]:::mod
+      M8["recommend<br/>gợi ý Neo4j"]:::mod
+    end
+    subgraph MC["Mở rộng"]
+      direction LR
+      M9["analytics<br/>thống kê"]:::mod
+      M11["admin<br/>quản trị, hạn mức AI"]:::mod
+      M12["flashcard<br/>thẻ ghi nhớ, SRS"]:::mod
+      M13["gamification<br/>XP, huy hiệu, streak"]:::mod
+      M14["season<br/>xếp hạng theo mùa"]:::mod
+      M15["integrity<br/>chống gian lận"]:::mod
+      M16["classroom<br/>lớp học, giao bài"]:::mod
+      M17["notification<br/>thông báo, nhắc ôn"]:::mod
+    end
   end
 
   subgraph X["Không chia theo tầng — không phải tính năng nghiệp vụ"]

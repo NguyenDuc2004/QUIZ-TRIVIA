@@ -102,7 +102,7 @@ end
 CC --> B : event "meta" — sessionId + danh sách nguồn
 CS -> ORCH : stream(prompt)
 alt Lỗi trước mảnh chữ đầu tiên
-  ORCH -> ORCH : chuyển sang Grok
+  ORCH -> ORCH : chuyển sang Groq
 else Lỗi giữa luồng
   ORCH --> CC : event "error"
   note right of ORCH

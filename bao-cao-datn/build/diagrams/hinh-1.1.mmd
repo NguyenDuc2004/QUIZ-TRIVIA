@@ -16,7 +16,7 @@ flowchart TB
     WS["WebSocket Endpoint (/ws) — STOMP"]:::be
     SVC["Service Layer<br/>auth · quiz · attempt · realtime · ai · chat · recommend · analytics"]:::be
     RAG["RAG Pipeline<br/>Tika → chunk → embedding → truy hồi"]:::be
-    ORCH["AiOrchestrator<br/>Gemini → Grok + Circuit Breaker"]:::be
+    ORCH["AiOrchestrator<br/>Gemini → Groq + Circuit Breaker"]:::be
     GAME["Realtime Game Engine<br/>SpeedScorer + Redis Pub/Sub"]:::be
   end
 
@@ -27,7 +27,7 @@ flowchart TB
   end
 
   GEM["Google Gemini API<br/>(nhà cung cấp chính)"]:::ext
-  GRK["xAI Grok API<br/>(dự phòng)"]:::ext
+  GRK["Groq API<br/>(dự phòng)"]:::ext
 
   UI -->|"REST / HTTPS"| API
   SSEC -->|"SSE (text/event-stream)"| API

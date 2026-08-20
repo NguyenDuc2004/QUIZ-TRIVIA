@@ -361,16 +361,30 @@ const doc = new Document({
   ],
 });
 
+/**
+ * Tên bản Word theo PHIÊN BẢN, không ghi đè bản cũ.
+ *
+ * Trước đây build luôn ghi vào `BaoCao-QuizAI-DATN.docx`, nên mỗi lần dựng lại là mất bản trước. Trong
+ * giai đoạn trao đổi với giảng viên thì cần chỉ đích danh "bản nào", chứ không phải "bản mới nhất".
+ *
+ *   node build.js            -> bao-cao-datn-v{n+1}.docx  (tự tăng số)
+ *   node build.js --final    -> bao-cao-datn-final.docx   (bản chốt để nộp)
+ */
+function tenBanRa() {
+  if (process.argv.includes("--final")) return path.join(DIR, "bao-cao-datn-final.docx");
+
+  const daCo = fs.readdirSync(DIR)
+    .map((f) => /^bao-cao-datn-v(\d+)\.docx$/.exec(f))
+    .filter(Boolean)
+    .map((m) => Number(m[1]));
+
+  const tiepTheo = daCo.length ? Math.max(...daCo) + 1 : 1;
+  return path.join(DIR, `bao-cao-datn-v${tiepTheo}.docx`);
+}
+
 Packer.toBuffer(doc).then((buf) => {
-  let out = path.join(DIR, "BaoCao-QuizAI-DATN.docx");
-  try {
-    fs.writeFileSync(out, buf);
-  } catch (e) {
-    if (e.code === "EBUSY" || e.code === "EPERM") {
-      out = path.join(DIR, "BaoCao-QuizAI-DATN-new.docx");
-      fs.writeFileSync(out, buf);
-      console.log("(File chính đang mở/khóa — đã ghi sang bản mới)");
-    } else throw e;
-  }
+  const out = tenBanRa();
+  // Không bắt EBUSY nữa: tên file luôn mới nên không đụng bản đang mở trong Word.
+  fs.writeFileSync(out, buf);
   console.log("OK ->", out, "| bytes=", buf.length, "| figures=", figures.length, "| tables=", tables.length);
 });

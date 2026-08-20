@@ -113,7 +113,7 @@ group Pha 2 — Sinh đề
   QG -> ORCH : generate(prompt)
   ORCH -> ORCH : gọi Gemini
   alt Gemini lỗi tạm thời (429/5xx/timeout)
-    ORCH -> ORCH : chuyển sang Grok
+    ORCH -> ORCH : chuyển sang Groq
   end
   ORCH -> LOG : ghi provider, token, độ trễ
   ORCH --> QG : JSON câu hỏi

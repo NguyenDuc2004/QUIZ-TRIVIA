@@ -24,8 +24,12 @@ hai file này vẫn build được.
 ```bash
 cd build
 npm install                # lần đầu: cài mermaid-cli, docx, sharp…
-node build.js              # -> ../BaoCao-QuizAI-DATN.docx
+node build.js              # -> ../bao-cao-datn-v{n}.docx  (tự tăng số, KHÔNG ghi đè bản cũ)
+node build.js --final      # -> ../bao-cao-datn-final.docx (bản chốt để nộp)
 ```
+
+Bản Word đánh số phiên bản để trong lúc trao đổi với giảng viên còn chỉ đích danh được "bản nào",
+thay vì "bản mới nhất". Bản cũ không bị ghi đè, nên build lại lúc đang mở file trong Word cũng không sao.
 
 Mở file trong Word rồi nhấn `Ctrl+A` → `F9` → *Update entire table*. Mục lục và danh mục hình/bảng là
 field của Word nên số trang chỉ điền sau bước này.
