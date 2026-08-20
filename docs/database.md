@@ -216,6 +216,14 @@ bắt đầu để chốt đề: chủ quiz thêm/bớt câu sau đó không ả
 > `review_status` mặc định **PENDING** và không có đường nào để hệ thống tự đổi nó — kết luận chỉ đến từ chủ quiz
 > hoặc Admin. Chỉ ghi cho lượt **EXAM**; lượt PRACTICE không có dòng nào ở cả hai bảng.
 
+**quizzes.learnerCount** *(không phải cột — `@Formula`)* — Số người đã làm quiz
+
+> `count(distinct a.user_id) ... where a.quiz_id = id and a.status <> 'IN_PROGRESS'`, tính ngay trong câu
+> SELECT của danh sách nên không sinh N+1. **Không** tạo cột đếm sẵn: cột đó cần cập nhật mỗi lần có người
+> nộp bài, tức thêm một chỗ có thể lệch với sự thật, để đổi lấy tốc độ mà trang danh sách chưa cần.
+>
+> Đếm **người** chứ không đếm **lượt** — một người luyện tập 50 lần không làm quiz thành phổ biến.
+
 **questions.image_url** *(V23)* — Ảnh câu hỏi ([features/02](features/02-quiz-management.md))
 
 > `VARCHAR(500)` nullable. Chỉ nhận đường dẫn nội bộ `/uploads/…` do `POST /files/images` sinh ra; ràng

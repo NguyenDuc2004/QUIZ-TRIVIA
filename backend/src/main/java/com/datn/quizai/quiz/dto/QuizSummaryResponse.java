@@ -25,6 +25,13 @@ public record QuizSummaryResponse(
         /** FR-48 — người học cần biết TRƯỚC khi bấm bắt đầu, xem QuizIntroPage. */
         boolean strictExam,
         int questionCount,
+        /**
+         * Số NGƯỜI đã làm xong quiz này (không phải số lượt).
+         * <p>
+         * {@code 0} nghĩa là <b>chưa ai kịp làm</b>, không phải "quiz này dở" — giao diện phải ẩn hẳn con
+         * số thay vì hiện "0 người đã làm", vì số 0 đọc như một lời chê và phạt oan mọi quiz mới.
+         */
+        int learnerCount,
         UUID ownerId,
         String ownerDisplayName,
         OffsetDateTime createdAt
@@ -52,6 +59,7 @@ public record QuizSummaryResponse(
                 quiz.getTimeLimitSec(),
                 quiz.isStrictExam(),
                 questionCount,
+                quiz.getLearnerCount(),
                 quiz.getOwner().getId(),
                 quiz.getOwner().getDisplayName(),
                 quiz.getCreatedAt());

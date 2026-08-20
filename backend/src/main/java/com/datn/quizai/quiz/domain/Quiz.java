@@ -87,6 +87,28 @@ public class Quiz extends BaseEntity {
     @Formula("(select count(*) from quiz_questions qq where qq.quiz_id = id)")
     private int questionCount;
 
+    /**
+     * Số NGƯỜI đã làm xong quiz này — hiện dưới mỗi thẻ quiz để người học chọn được giữa hai chục quiz
+     * cùng chủ đề.
+     *
+     * <h4>Đếm người, không đếm lượt</h4>
+     * {@code count(distinct user_id)}, không phải {@code count(*)}. Một người luyện tập 50 lần sẽ làm quiz
+     * trông như có 50 người quan tâm — con số đó vừa sai vừa dễ thổi phồng. Nhãn trên giao diện cũng phải
+     * là "N người đã làm", không phải "N lượt".
+     *
+     * <h4>Chỉ tính bài đã xong</h4>
+     * {@code status <> 'IN_PROGRESS'}. Bấm vào rồi thoát ngay không phải là "đã làm quiz này". {@code EXPIRED}
+     * vẫn tính: hết giờ thì bài vẫn được chấm trên phần đã trả lời, người ta đã làm thật.
+     *
+     * <h4>Vì sao @Formula chứ không phải một cột đếm sẵn</h4>
+     * Cột đếm sẵn cần ai đó cập nhật mỗi lần có người nộp bài — thêm một chỗ có thể lệch với sự thật, để
+     * đổi lấy tốc độ mà trang danh sách chưa cần. {@code @Formula} nằm ngay trong câu SELECT của danh sách
+     * nên không sinh N+1, đúng cách {@link #questionCount} đang làm.
+     */
+    @Formula("(select count(distinct a.user_id) from quiz_attempts a "
+            + "where a.quiz_id = id and a.status <> 'IN_PROGRESS')")
+    private int learnerCount;
+
     public Quiz(User owner, String title) {
         this.owner = owner;
         this.title = title;

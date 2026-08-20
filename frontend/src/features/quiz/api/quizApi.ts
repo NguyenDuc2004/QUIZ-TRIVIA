@@ -33,6 +33,13 @@ export interface QuizSummary {
   /** Chế độ thi nghiêm ngặt (FR-48): yêu cầu toàn màn hình, khoá chuột phải. Chỉ áp cho lượt EXAM. */
   strictExam: boolean
   questionCount: number
+  /**
+   * Số NGƯỜI đã làm xong quiz này — không phải số lượt.
+   *
+   * `0` nghĩa là CHƯA AI KỊP LÀM, không phải "quiz dở". Giao diện phải ẩn hẳn thay vì hiện "0 người đã
+   * làm": số 0 đọc như một lời chê và phạt oan mọi quiz mới.
+   */
+  learnerCount: number
   ownerId: string
   ownerDisplayName: string
   createdAt: string

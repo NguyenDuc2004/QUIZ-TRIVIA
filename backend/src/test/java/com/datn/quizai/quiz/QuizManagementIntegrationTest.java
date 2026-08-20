@@ -401,6 +401,92 @@ class QuizManagementIntegrationTest {
         return objectMapper.readTree(body).get("id").asText();
     }
 
+    // ============================================================ số NGƯỜI đã làm quiz
+
+    @Test
+    @DisplayName("Đếm NGƯỜI, không đếm LƯỢT: một người làm ba lần vẫn là một người")
+    void shouldCountDistinctLearnersNotAttempts() throws Exception {
+        String quizId = quizSanSang("Quiz đếm người");
+
+        // Cùng một người làm xong ba lần
+        for (int i = 0; i < 3; i++) {
+            nopMotLuot(quizId, learnerToken);
+        }
+
+        // Đếm lượt thì ra 3 — và quiz trông như có ba người quan tâm trong khi chỉ có một.
+        // Con số đó vừa sai vừa dễ thổi phồng, nên phải là count(distinct user_id).
+        assertThat(soNguoiDaLam(quizId)).isEqualTo(1);
+
+        // Người thứ hai vào làm
+        nopMotLuot(quizId, otherLearnerToken());
+        assertThat(soNguoiDaLam(quizId)).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Bài ĐANG LÀM DỞ không tính — bấm vào rồi thoát không phải là 'đã làm'")
+    void shouldNotCountUnfinishedAttempts() throws Exception {
+        String quizId = quizSanSang("Quiz bỏ dở");
+
+        // Bắt đầu nhưng KHÔNG nộp
+        mockMvc.perform(post("/api/v1/quizzes/{id}/attempts", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"mode\":\"EXAM\"}"))
+                .andExpect(status().isCreated());
+
+        assertThat(soNguoiDaLam(quizId)).isZero();
+    }
+
+    @Test
+    @DisplayName("Quiz chưa ai làm trả về 0 — giao diện tự ẩn, KHÔNG hiện '0 người đã làm'")
+    void shouldReturnZeroForBrandNewQuiz() throws Exception {
+        String quizId = quizSanSang("Quiz mới tinh");
+
+        // 0 ở API là đúng; nghĩa "chưa ai kịp làm" chứ không phải "quiz dở". Việc ẩn con số là của giao
+        // diện — backend không được tự bịa ra một giá trị khác để né chuyện đó.
+        assertThat(soNguoiDaLam(quizId)).isZero();
+    }
+
+    /** Quiz công khai đã gắn một câu hỏi, sẵn sàng cho người khác làm. */
+    private String quizSanSang(String title) throws Exception {
+        String quizId = createQuiz(creatorToken, title, "PUBLIC");
+        String cau = createQuestion(creatorToken, "TRUE_FALSE", "Câu hỏi mẫu");
+        mockMvc.perform(put("/api/v1/quizzes/{id}/questions", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"questionIds\":[\"%s\"]}".formatted(cau)))
+                .andExpect(status().isOk());
+        return quizId;
+    }
+
+    /** Bắt đầu rồi nộp luôn một lượt — không trả lời câu nào, vì phép kiểm chỉ quan tâm bài đã XONG. */
+    private void nopMotLuot(String quizId, String token) throws Exception {
+        String body = mockMvc.perform(post("/api/v1/quizzes/{id}/attempts", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"mode\":\"EXAM\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        String attemptId = objectMapper.readTree(body).get("attempt").get("id").asText();
+        mockMvc.perform(post("/api/v1/attempts/{id}/submit", attemptId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    private int soNguoiDaLam(String quizId) throws Exception {
+        String body = mockMvc.perform(get("/api/v1/quizzes/{id}", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(body).get("learnerCount").asInt();
+    }
+
+    /** Một người học thứ hai, tạo theo yêu cầu để mỗi phép kiểm tự đủ. */
+    private String otherLearnerToken() throws Exception {
+        return register("hocvien-" + java.util.UUID.randomUUID() + "@example.com", "LEARNER");
+    }
+
     private String createQuiz(String token, String title, String visibility) throws Exception {
         String body = mockMvc.perform(post("/api/v1/quizzes")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)

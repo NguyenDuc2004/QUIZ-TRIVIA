@@ -155,6 +155,10 @@ export default function QuizIntroPage() {
           <div className="mb-4 flex flex-col gap-1">
             <Text className="text-ink-soft text-xs">Nội dung</Text>
             <Text className="font-bold!">{quiz.questionCount} câu hỏi</Text>
+            {/* Trang này là nơi người học QUYẾT ĐỊNH có làm hay không, nên con số thuộc về đây rõ hơn cả */}
+            {quiz.learnerCount > 0 && (
+              <Text className="text-ink-soft text-xs">{quiz.learnerCount} người đã làm quiz này</Text>
+            )}
             <Text className="text-ink-soft text-xs">
               {minutes ? `Giới hạn ${minutes} phút` : 'Không giới hạn thời gian'}
             </Text>

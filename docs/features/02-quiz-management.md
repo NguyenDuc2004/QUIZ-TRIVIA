@@ -107,6 +107,32 @@ bản này không hiểu, và đọc bừa sẽ **im lặng làm mất đúng nh
 
 Chặn trên **500 câu mỗi file**: không có chặn thì một file 50 000 câu treo cả tiến trình nhập.
 
+
+## Số người đã làm quiz
+
+Hiện dưới mỗi thẻ quiz và trên trang giới thiệu, để người học chọn được giữa hai chục quiz cùng chủ đề.
+
+### Ba quyết định, cái đầu quan trọng nhất
+
+| Quyết định | Vì sao |
+|---|---|
+| **Đếm NGƯỜI, không đếm LƯỢT** (`count(distinct user_id)`) | Một người luyện tập 50 lần sẽ làm quiz trông như có 50 người quan tâm — con số đó vừa sai vừa dễ thổi phồng. Nhãn cũng phải là *"N người đã làm"*, không phải *"N lượt"* |
+| **Chỉ tính bài đã xong** (`status <> 'IN_PROGRESS'`) | Bấm vào rồi thoát ngay không phải là "đã làm quiz này". `EXPIRED` **vẫn tính**: hết giờ thì bài vẫn được chấm trên phần đã trả lời |
+| **0 thì giao diện ẩn hẳn**, không hiện *"0 người đã làm"* | Số 0 đọc như một lời chê và phạt oan mọi quiz mới, trong khi thứ nó thật sự nói chỉ là *"chưa ai kịp làm"*. API vẫn trả 0 — việc ẩn là của giao diện, backend không bịa giá trị khác để né |
+
+### `@Formula`, không phải cột đếm sẵn
+
+Cột đếm sẵn cần ai đó cập nhật mỗi lần có người nộp bài — thêm một chỗ có thể lệch với sự thật, để đổi lấy
+tốc độ mà trang danh sách chưa cần. `@Formula` nằm ngay trong câu SELECT của danh sách nên **không sinh
+N+1**, đúng cách `questionCount` đang làm.
+
+### Vẫn KHÔNG có đánh giá / số sao
+
+Hệ thống không có dữ liệu đánh giá, và dự án đã từ chối bịa nó **hai lần**: [features/07](07-recommendation-neo4j.md)
+bỏ `q.rating` khỏi mô hình đồ thị, và `CLAUDE.md` §5 cấm thẳng. Muốn có sao thì phải làm hẳn tính năng đánh
+giá (bảng `quiz_ratings`, chỉ cho đánh giá sau khi nộp bài, ẩn trung bình khi dưới 5 phiếu) — không phải
+dán một ô sao lên thẻ.
+
 ## Luồng xử lý (tạo quiz)
 1. Creator tạo quiz + metadata.
 2. Thêm câu hỏi: soạn thủ công, chọn từ ngân hàng, hoặc **sinh bằng AI** (xem [05-ai-rag-generation.md](05-ai-rag-generation.md)).
