@@ -15,7 +15,7 @@ Cho phép Creator tạo, quản lý quiz và ngân hàng câu hỏi tái sử d�
 - **FR-9** [M] ✅ Đủ 5 loại: SINGLE_CHOICE, MULTIPLE_CHOICE, TRUE_FALSE, FILL_BLANK, SHORT_ANSWER — mỗi loại có luật riêng, xem [api.md §3](../api.md).
 - **FR-10** [M] ✅ Câu hỏi có nội dung, lựa chọn/đáp án, giải thích, điểm, độ khó, chủ đề, thời gian giới hạn.
 - **FR-11** [S] ✅ Đính kèm hình ảnh — **ảnh bìa quiz** và **ảnh cho từng câu hỏi** (V23), cùng đi qua `POST /api/v1/files/images`. Xem "Ảnh câu hỏi" bên dưới.
-- **FR-12** [C] ⏳ Import/Export quiz (JSON/CSV) — chưa làm.
+- **FR-12** [C] 🟡 Import/Export quiz — **JSON đã làm**, CSV không làm (lý do bên dưới).
 
 ## Quyết định thiết kế
 - **Đáp án của FILL_BLANK / SHORT_ANSWER** dùng chung bảng `question_options`: với `FILL_BLANK` mỗi dòng là một cách viết được chấp nhận (tự đánh dấu `is_correct = true`); với `SHORT_ANSWER` chỉ lưu **một** đáp án mẫu để AI đối chiếu khi chấm ([features/06](06-ai-grading.md)).
@@ -63,6 +63,49 @@ là một câu vô nghĩa.
 
 **AI sinh đề không gắn ảnh.** Mô hình sinh chữ, không sinh ảnh; để nó tự điền một đường dẫn nào đó là gắn
 ảnh không tồn tại. Creator tự thêm khi duyệt nếu muốn.
+
+
+## Xuất / nhập quiz (FR-12)
+
+```
+GET  /api/v1/quizzes/{id}/export   Tải file JSON (chỉ chủ quiz)   ✅
+POST /api/v1/quizzes/import        Nhập file thành quiz mới       ✅
+```
+
+### JSON, không CSV — chọn định dạng theo hình dạng dữ liệu
+
+Đặc tả ghi "JSON/CSV". Một quiz là dữ liệu **lồng nhau**: mỗi câu có nhiều lựa chọn, mỗi lựa chọn có cờ
+đúng/sai. Nhét vào bảng phẳng thì phải chọn một trong hai cách, và cả hai đều tệ:
+
+| Cách | Hỏng ở đâu |
+|---|---|
+| Một dòng mỗi lựa chọn | Thông tin câu hỏi lặp ở mọi dòng; sửa một chỗ quên chỗ kia là hỏng |
+| Cột `option1..option6` | Chặn cứng số lựa chọn; câu điền khuyết nhiều đáp án không đủ chỗ |
+
+Ngược lại, [bảng điểm lớp (FR-58)](14-classroom.md) vốn **phẳng** nên dùng CSV. Chọn theo hình dạng dữ liệu,
+không theo thói quen.
+
+### File là NỘI DUNG ĐỀ, không phải bản sao một dòng cơ sở dữ liệu
+
+Không mang theo `id`, chủ sở hữu, hay số liệu thống kê:
+
+- Mang `id` → nhập vào máy khác sẽ đụng id có sẵn hoặc **ghi đè nhầm quiz của người khác**.
+- Mang lượt làm bài → nhập xong quiz mới đã "có 500 lượt học" mà chưa ai làm — đúng kiểu bịa số mà cả dự án
+  tránh.
+- Mang `imageUrl` → đường dẫn trỏ vào `uploads/` của **máy cũ**; nhập sang máy khác chỉ tạo một đề đầy ảnh vỡ.
+
+### Ba quyết định về hành vi nhập
+
+| Quyết định | Vì sao |
+|---|---|
+| **Luôn tạo mới**, không bao giờ ghi đè | Một file cũ nhập nhầm sẽ xoá mất công sức sửa đề mà không có cách nào lấy lại — và đó đúng là thao tác người ta hay làm nhầm nhất với chức năng nhập file |
+| **Luôn PRIVATE**, không đọc `visibility` từ file | Nhập xong mà đề tự xuất hiện ở mục Khám phá cho cả thiên hạ xem là một bất ngờ không dễ chịu; muốn công khai thì bấm thêm một nút |
+| **Tất cả hoặc không có gì** (một transaction) | Nửa chừng hỏng mà đã ghi năm câu thì người dùng có một quiz cụt, không biết thiếu câu nào, và lần nhập lại tạo thêm một quiz cụt nữa |
+
+`formatVersion` mới hơn bản đang chạy thì **từ chối rõ ràng** thay vì đọc bừa: file mới có thể chứa trường
+bản này không hiểu, và đọc bừa sẽ **im lặng làm mất đúng những trường đó** — người dùng tưởng nhập thành công.
+
+Chặn trên **500 câu mỗi file**: không có chặn thì một file 50 000 câu treo cả tiến trình nhập.
 
 ## Luồng xử lý (tạo quiz)
 1. Creator tạo quiz + metadata.

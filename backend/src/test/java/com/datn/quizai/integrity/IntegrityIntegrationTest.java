@@ -170,10 +170,20 @@ class IntegrityIntegrationTest {
                         .content("{\"events\":[{\"type\":\"TAB_HIDDEN\",\"occurredAt\":\"2099-01-01T00:00:00Z\"}]}"))
                 .andExpect(status().isOk());
 
-        // Không chặn thì mọi thống kê theo thời gian đều lệch, và đây là trường dễ giả mạo nhất trong payload
+        // Không chặn thì mọi thống kê theo thời gian đều lệch, và đây là trường dễ giả mạo nhất trong payload.
+        //
+        // So với `now() + 1 phút` chứ không phải `now()` trơn: mốc bị kéo về theo đồng hồ của JVM, còn
+        // `now()` là đồng hồ bên trong container PostgreSQL — hai đồng hồ khác nhau và lệch nhau vài trăm
+        // milli-giây theo cả hai chiều (đo được 276ms trên máy này). Test so hai đồng hồ đó bằng dấu `<=`
+        // sẽ đỏ ngẫu nhiên vì môi trường, không vì sản phẩm; đã đỏ thật một lần trong lần chạy đầy đủ.
+        //
+        // Biên một phút vẫn loại được mốc 2099 một cách dứt khoát — thứ phép kiểm này thật sự quan tâm.
         assertThat(jdbc.queryForObject("""
-                select occurred_at <= now() from proctoring_events where attempt_id = ?
-                """, Boolean.class, attempt)).isTrue();
+                select occurred_at <= now() + interval '1 minute' from proctoring_events
+                 where attempt_id = ?
+                """, Boolean.class, attempt))
+                .as("mốc 2099 phải bị kéo về hiện tại")
+                .isTrue();
     }
 
     // ==================================================== 3. Không tự kết luận

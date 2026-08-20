@@ -519,6 +519,15 @@ GET    /api/v1/admin/integrity/flagged           Hàng chờ bài bị gắn c�
 - Hàng chờ sắp theo điểm rủi ro giảm dần, mặc định lọc `PENDING`, và **không kèm từng sự kiện** (`suKien: []`)
   — trang đó chỉ để chọn bài cần mở.
 
+### Xuất / nhập quiz (FR-12) ✅
+```
+GET  /api/v1/quizzes/{id}/export   Tải file JSON — chỉ chủ quiz      ✅
+POST /api/v1/quizzes/import        Nhập file → quiz MỚI, PRIVATE     ✅
+```
+File chứa **nội dung đề**, không chứa id / chủ sở hữu / thống kê / ảnh. Nhập **luôn tạo mới**, không bao giờ
+ghi đè. `formatVersion` mới hơn thì từ chối rõ ràng thay vì đọc bừa. **Không có bản CSV** — quiz là dữ liệu
+lồng nhau, xem [features/02](features/02-quiz-management.md).
+
 ### Thứ tự thích ứng khi luyện tập (FR-32) ✅
 ```
 GET /api/v1/attempts/{id}/next-question   Câu nên hỏi tiếp   ✅

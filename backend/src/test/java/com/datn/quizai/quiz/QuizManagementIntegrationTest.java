@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -261,6 +262,143 @@ class QuizManagementIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(body).get("accessToken").asText();
+    }
+
+    // ============================================================ FR-12 — xuất / nhập quiz
+
+    @Test
+    @DisplayName("Xuất rồi nhập lại: nội dung đề giữ nguyên từng câu, từng lựa chọn, từng đáp án đúng")
+    void shouldRoundTripQuiz() throws Exception {
+        String quizId = createQuiz(creatorToken, "Ôn tập Giải tích", "PUBLIC");
+        String c1 = createQuestion(creatorToken, "SINGLE_CHOICE", "Đạo hàm của x² là gì?");
+        String c2 = createQuestion(creatorToken, "TRUE_FALSE", "Hàm hằng có đạo hàm bằng 0?");
+        mockMvc.perform(put("/api/v1/quizzes/{id}/questions", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"questionIds\":[\"%s\",\"%s\"]}".formatted(c1, c2)))
+                .andExpect(status().isOk());
+
+        String file = mockMvc.perform(get("/api/v1/quizzes/{id}/export", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken))
+                .andExpect(status().isOk())
+                // Tên tệp qua RFC 5987 để giữ dấu tiếng Việt
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        org.hamcrest.Matchers.containsString("filename*=UTF-8''")))
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode xuat = objectMapper.readTree(file);
+        assertThat(xuat.get("title").asText()).isEqualTo("Ôn tập Giải tích");
+        assertThat(xuat.get("questions")).hasSize(2);
+
+        // KHÔNG mang theo id / chủ sở hữu / thống kê: file là NỘI DUNG ĐỀ, không phải bản sao dòng CSDL
+        assertThat(xuat.has("id")).isFalse();
+        assertThat(xuat.has("ownerId")).isFalse();
+        assertThat(xuat.has("attemptCount")).isFalse();
+        assertThat(xuat.get("questions").get(0).has("id")).isFalse();
+
+        // Nhập lại bằng chính file vừa xuất
+        String moi = mockMvc.perform(post("/api/v1/quizzes/import")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(file))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("Ôn tập Giải tích"))
+                .andExpect(jsonPath("$.questionCount").value(2))
+                // LUÔN riêng tư dù file ghi PUBLIC — nhập xong mà đề tự xuất hiện ở mục Khám phá là một
+                // bất ngờ không dễ chịu; muốn công khai thì bấm thêm một nút
+                .andExpect(jsonPath("$.visibility").value("PRIVATE"))
+                .andReturn().getResponse().getContentAsString();
+
+        String quizMoiId = objectMapper.readTree(moi).get("id").asText();
+        assertThat(quizMoiId).as("nhập LUÔN tạo mới, không ghi đè quiz cũ").isNotEqualTo(quizId);
+
+        // Xuất bản mới ra và so với bản gốc: nội dung đề phải trùng khớp
+        String file2 = mockMvc.perform(get("/api/v1/quizzes/{id}/export", quizMoiId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode lai = objectMapper.readTree(file2);
+        assertThat(lai.get("questions")).hasSize(2);
+        for (int i = 0; i < 2; i++) {
+            JsonNode goc = xuat.get("questions").get(i);
+            JsonNode sau = lai.get("questions").get(i);
+            assertThat(sau.get("content").asText()).isEqualTo(goc.get("content").asText());
+            assertThat(sau.get("type").asText()).isEqualTo(goc.get("type").asText());
+            // Đáp án đúng là thứ mất đi thì đề thành vô dụng mà nhìn vẫn "đủ câu"
+            assertThat(sau.get("options")).isEqualTo(goc.get("options"));
+        }
+    }
+
+    @Test
+    @DisplayName("Quiz của người khác: không xuất được")
+    void shouldNotExportOthersQuiz() throws Exception {
+        String quizId = createQuiz(creatorToken, "Quiz riêng của tôi", "PRIVATE");
+
+        mockMvc.perform(get("/api/v1/quizzes/{id}/export", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + otherCreatorToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("File không có câu hỏi nào: từ chối 400")
+    void shouldRejectEmptyImport() throws Exception {
+        mockMvc.perform(post("/api/v1/quizzes/import")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"formatVersion\":1,\"title\":\"Quiz rỗng\",\"questions\":[]}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("File của phiên bản mới hơn: từ chối rõ ràng thay vì đọc bừa")
+    void shouldRejectNewerFormatVersion() throws Exception {
+        // Đọc bừa thì file mới có thể chứa trường bản này không hiểu, và nó IM LẶNG làm mất đúng
+        // những trường đó — người dùng tưởng nhập thành công.
+        mockMvc.perform(post("/api/v1/quizzes/import")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"formatVersion":99,"title":"Quiz tương lai","questions":[
+                                  {"type":"TRUE_FALSE","content":"Câu hỏi",
+                                   "options":[{"content":"Đúng","correct":true},
+                                              {"content":"Sai","correct":false}]}]}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("99")));
+    }
+
+    @Test
+    @DisplayName("Quiz nhập vào thuộc về NGƯỜI NHẬP, không phải người xuất")
+    void importedQuizBelongsToImporter() throws Exception {
+        String quizId = createQuiz(creatorToken, "Đề chia sẻ", "PUBLIC");
+        String cau = createQuestion(creatorToken, "TRUE_FALSE", "Câu hỏi mẫu");
+        mockMvc.perform(put("/api/v1/quizzes/{id}/questions", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"questionIds\":[\"%s\"]}".formatted(cau)))
+                .andExpect(status().isOk());
+
+        String file = mockMvc.perform(get("/api/v1/quizzes/{id}/export", quizId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken))
+                .andReturn().getResponse().getContentAsString();
+
+        // Người KHÁC nhập file đó — đây chính là cách dùng "chia sẻ đề cho đồng nghiệp"
+        mockMvc.perform(post("/api/v1/quizzes/import")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + otherCreatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(file))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.ownerId").value(idOf(otherCreatorToken)));
+    }
+
+    /** Id người dùng từ token — cần để khẳng định quiz nhập vào thuộc về ĐÚNG người nhập. */
+    private String idOf(String token) throws Exception {
+        String body = mockMvc.perform(get("/api/v1/users/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(body).get("id").asText();
     }
 
     private String createQuiz(String token, String title, String visibility) throws Exception {
