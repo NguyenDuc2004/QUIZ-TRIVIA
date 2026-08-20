@@ -15,9 +15,13 @@ Nhờ vậy sửa nội dung là sửa file `.md` rồi build lại, không ph�
 | `assets/` | 39 hình PNG đã sinh (`hinh-1.1.png` … `hinh-2.37.png`) |
 | `build/` | Script sinh hình và dựng file Word |
 
-**Chưa có:** `03-chuong-3.md` (Thực nghiệm và đánh giá) và `04-ket-luan.md` — chờ số liệu đo mục 3.5
-(hiệu năng thời gian thực) và 3.6 (độ chính xác AI). `build.js` tự bỏ qua file chưa tồn tại, nên thiếu
-hai file này vẫn build được.
+| `03-chuong-3.md` | Chương 3 — Thực nghiệm và đánh giá (số liệu 3.5 và 3.6 đã đo thật) |
+
+**Chưa có:** `04-ket-luan.md`. `build.js` tự bỏ qua file chưa tồn tại nên vẫn build được.
+
+**17 hình của Chương 3 (3.1–3.17) chưa có ảnh** — chúng là ảnh chụp màn hình sản phẩm và một biểu đồ,
+không sinh được từ định nghĩa text. `build.js` chèn khung xám thay chỗ. Script `capture/capture.mjs`
+hiện là bản của **đồ án khác** (nói về Khoa, Môn học, gv.demo) nên chưa dùng lại được.
 
 ## Dựng lại bản Word
 

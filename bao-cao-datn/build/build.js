@@ -283,12 +283,14 @@ function abbrElements() {
 }
 
 // ---------- parse thân bài TRƯỚC (để thu thập figures/tables) ----------
-// Chương 3 và Kết luận chưa viết (chờ số liệu đo mục 3.5 và 3.6) — bỏ khỏi danh sách thay vì
-// tạo file rỗng, để bản Word không có mục trống trong mục lục.
+// Bộ lọc `existsSync` phía dưới cho phép khai đủ danh sách ngay cả khi một phần chưa viết: file chưa có
+// thì bị bỏ qua kèm cảnh báo, thay vì phải tạo file rỗng và để lại một mục trống trong mục lục.
 const bodyFiles = [
   "00-mo-dau.md",
   "01-chuong-1.md",
   "02-chuong-2.md",
+  "03-chuong-3.md",
+  "04-ket-luan.md",
   "05-tai-lieu-tham-khao.md",
 ].filter((f) => {
   const ok = fs.existsSync(path.join(DIR, f));
