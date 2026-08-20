@@ -32,7 +32,24 @@ token Google hợp lệ cấp cho ứng dụng khác cũng đăng nhập vào đ
 |---|---|
 | Đã liên kết (khớp `google_id`) | Đăng nhập luôn, đồng bộ lại ảnh đại diện |
 | Email đã có tài khoản mật khẩu | **Liên kết** Google vào tài khoản đó, giữ nguyên mật khẩu và tên hiển thị cũ — người dùng dùng được cả hai cách |
-| Hoàn toàn mới | Tạo tài khoản **không mật khẩu**, vai trò **LEARNER** (không cho chọn vai trò, cùng lý do đăng ký thường bị hạ vai trò ADMIN) |
+| Hoàn toàn mới | Tạo tài khoản **không mật khẩu**, vai trò lấy từ lựa chọn ở trang đăng ký — **cùng luật với đăng ký thường**: nhận LEARNER/CREATOR, hạ ADMIN |
+
+### Vai trò CHỈ áp khi tạo mới
+
+Endpoint `/auth/google` dùng chung cho **cả đăng nhập lẫn đăng ký** — Google không phân biệt hai việc đó.
+Nên vai trò gửi kèm chỉ có tác dụng ở dòng cuối bảng trên; hai trường hợp đầu (đã liên kết, hoặc liên kết
+vào tài khoản email sẵn có) **giữ nguyên vai trò đang có**.
+
+Không có ràng buộc này thì bất kỳ ai cũng tự lên CREATOR bằng cách **đăng nhập lại** và gửi kèm trường đó —
+và một người dùng LEARNER chỉ cần **liên kết Google** là lên CREATOR. Có test riêng cho cả hai đường.
+
+**Vì sao bản đầu đặt cứng LEARNER, và vì sao lý do đó không đứng vững.** Chú thích cũ ghi *"cho tự chọn vai
+trò là mở đường tự phong CREATOR"*. Nhưng **đăng ký thường vốn đã cho tự chọn CREATOR** — chỉ ADMIN bị hạ.
+Nên đó không phải một quyết định bảo mật mà là một **mâu thuẫn nội bộ**: cùng một người, cùng một lựa chọn,
+ra hai kết quả khác nhau chỉ vì bấm nút nào. Tệ hơn, lựa chọn bị bỏ qua **trong im lặng** — người dùng chọn
+"Tạo quiz, sinh đề AI", bấm Google, rồi không hiểu vì sao không thấy mục soạn quiz.
+
+Ranh giới an ninh thật của dự án là **ADMIN**, và nó không bị đụng tới.
 
 Chỉ liên kết theo email khi Google báo **`email_verified`**; nếu không, ai tạo tài khoản Google mang
 email của người khác cũng chiếm được tài khoản của họ.

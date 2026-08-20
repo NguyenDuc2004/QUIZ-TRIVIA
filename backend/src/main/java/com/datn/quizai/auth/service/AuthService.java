@@ -165,17 +165,26 @@ public class AuthService {
      *   <li><b>Có tài khoản email/mật khẩu cùng địa chỉ</b> — <i>liên kết</i> tài khoản Google vào
      *       đó thay vì tạo tài khoản thứ hai. Chỉ làm được vì Google đã xác minh email; nếu không
      *       thì bất kỳ ai tạo tài khoản Google với email của người khác sẽ chiếm được tài khoản.</li>
-     *   <li><b>Hoàn toàn mới</b> — tạo tài khoản không có mật khẩu, vai trò LEARNER.</li>
+     *   <li><b>Hoàn toàn mới</b> — tạo tài khoản không có mật khẩu, vai trò lấy từ {@code request.role()}.</li>
      * </ol>
-     * Tài khoản mới luôn là LEARNER: cho tự chọn vai trò qua tham số là mở đường tự phong CREATOR,
-     * cùng lý do với việc đăng ký thường bị hạ vai trò ADMIN.
+     *
+     * <h4>Vai trò CHỈ áp khi tạo mới</h4>
+     * Hai trường hợp đầu giữ nguyên vai trò đang có, kể cả khi client gửi kèm {@code role}. Endpoint này
+     * dùng chung cho cả đăng nhập lẫn đăng ký — Google không phân biệt hai việc đó — nên áp vai trò ở mọi
+     * lần gọi đồng nghĩa với việc <b>ai cũng tự lên CREATOR bằng cách đăng nhập lại</b>.
+     * <p>
+     * Với tài khoản mới thì dùng đúng luật của đăng ký thường: nhận LEARNER/CREATOR, hạ ADMIN. Trước đây
+     * chỗ này đặt cứng LEARNER, và hệ quả là người dùng chọn "Tạo quiz, sinh đề AI" trên trang đăng ký rồi
+     * bấm Google sẽ <b>bị bỏ qua lựa chọn trong im lặng</b> — vào hệ thống với vai trò Người học mà không
+     * hiểu vì sao không thấy mục soạn quiz. Lý do cũ ("cho chọn vai trò là mở đường tự phong CREATOR")
+     * không đứng vững, vì đăng ký thường vốn đã cho tự chọn CREATOR.
      */
     @Transactional
     public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
         GoogleTokenVerifier.GoogleAccount account = googleTokenVerifier.verify(request.idToken());
 
         User user = userRepository.findByGoogleId(account.subject())
-                .orElseGet(() -> linkOrCreate(account));
+                .orElseGet(() -> linkOrCreate(account, request.role()));
 
         // Google đã xác minh xong danh tính nên người gọi chắc chắn là chủ tài khoản — nói rõ lý do
         // bị chặn ở đây không tiết lộ gì thêm
@@ -189,21 +198,36 @@ public class AuthService {
         return issueTokens(user);
     }
 
-    private User linkOrCreate(GoogleTokenVerifier.GoogleAccount account) {
+    private User linkOrCreate(GoogleTokenVerifier.GoogleAccount account, Role vaiTroMongMuon) {
         return userRepository.findByEmail(account.email())
                 .map(existing -> {
+                    // LIÊN KẾT vào tài khoản sẵn có: giữ NGUYÊN vai trò đang có, bỏ qua `vaiTroMongMuon`.
+                    // Đây không phải tạo mới, nên áp vai trò ở đây là mở đúng đường tự nâng cấp mà cả
+                    // thiết kế này tránh: một người dùng LEARNER chỉ cần liên kết Google là lên CREATOR.
                     existing.setGoogleId(account.subject());
-                    log.info("Đã liên kết tài khoản Google vào người dùng sẵn có {}", existing.getId());
+                    log.info("Đã liên kết tài khoản Google vào người dùng sẵn có {} (giữ vai trò {})",
+                            existing.getId(), existing.getRole());
                     return existing;
                 })
                 .orElseGet(() -> {
                     User created = new User(account.email(), null,
-                            displayNameOrFallback(account), Role.LEARNER);
+                            displayNameOrFallback(account), vaiTroKhiTaoMoi(vaiTroMongMuon));
                     created.setGoogleId(account.subject());
                     created.setAvatarUrl(account.pictureUrl());
                     log.info("Tạo tài khoản mới từ Google cho {}", account.email());
                     return userRepository.save(created);
                 });
+    }
+
+    /**
+     * Vai trò cho tài khoản Google <b>mới</b> — cùng luật với {@code register}.
+     * <p>
+     * Bỏ trống hoặc ADMIN đều thành LEARNER. Ranh giới an ninh của dự án là ADMIN, không phải CREATOR:
+     * đăng ký bằng email vốn đã cho tự chọn CREATOR, nên chặn nó ở riêng đường Google chỉ tạo ra hai kết
+     * quả khác nhau cho cùng một lựa chọn của cùng một người.
+     */
+    private Role vaiTroKhiTaoMoi(Role mongMuon) {
+        return (mongMuon == null || mongMuon == Role.ADMIN) ? Role.LEARNER : mongMuon;
     }
 
     /** Google không phải lúc nào cũng trả tên; lấy phần trước @ làm tên hiển thị tạm. */

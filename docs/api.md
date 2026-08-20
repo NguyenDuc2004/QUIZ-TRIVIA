@@ -12,8 +12,13 @@ POST   /api/v1/auth/logout-all       Đăng xuất mọi thiết bị (mất má
 POST   /api/v1/auth/change-password Đổi mật khẩu (cần đăng nhập) → 204              ✅
 POST   /api/v1/auth/forgot-password Gửi mã OTP đặt lại mật khẩu → 204               ✅
 POST   /api/v1/auth/reset-password  Đặt lại mật khẩu bằng mã OTP → 204              ✅
-POST   /api/v1/auth/google          Đăng nhập bằng Google (ID token) → token        ✅
+POST   /api/v1/auth/google          Đăng nhập/đăng ký bằng Google (ID token) → token  ✅
 ```
+`POST /auth/google` nhận thêm `role` **tuỳ chọn**, và nó **chỉ có tác dụng khi tạo tài khoản mới** — cùng
+luật với đăng ký thường (nhận LEARNER/CREATOR, hạ ADMIN). Tài khoản đã tồn tại, kể cả khi vừa được *liên
+kết* từ tài khoản email sẵn có, **giữ nguyên vai trò đang có**: endpoint này dùng chung cho cả đăng nhập,
+nên áp vai trò ở mọi lần gọi đồng nghĩa với việc ai cũng tự lên CREATOR bằng cách đăng nhập lại.
+
 
 **Quên mật khẩu (FR-4).** `forgot-password` **luôn trả 204** dù email có tài khoản hay không — báo
 "email không tồn tại" là mở đường cho việc dò danh sách người dùng. Mã 6 chữ số, sống 10 phút, dùng

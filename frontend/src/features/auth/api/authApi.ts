@@ -41,8 +41,15 @@ export const authApi = {
     apiClient.post<AuthResult>('/auth/login', body).then((res) => res.data),
 
   /** Gửi ID token của Google; backend tự xác minh chữ ký rồi cấp token của hệ thống. */
-  loginWithGoogle: (idToken: string) =>
-    apiClient.post<AuthResult>('/auth/google', { idToken }).then((res) => res.data),
+  /**
+   * Đăng nhập / đăng ký bằng Google.
+   *
+   * `role` CHỈ có tác dụng khi backend tạo tài khoản mới — tài khoản đã tồn tại giữ nguyên vai trò đang
+   * có. Nên trang đăng nhập KHÔNG truyền tham số này: gửi ở đó chỉ tạo ấn tượng sai rằng đăng nhập lại
+   * có thể đổi vai trò.
+   */
+  loginWithGoogle: (idToken: string, role?: Role) =>
+    apiClient.post<AuthResult>('/auth/google', { idToken, role }).then((res) => res.data),
 
   logout: (refreshToken: string) =>
     apiClient.post<void>('/auth/logout', { refreshToken }).then((res) => res.data),
