@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, Input, Popconfirm, Select, Space, Table, Tag } from 'antd'
+import { Button, Input, Popconfirm, Select, Space, Table, Tag, Tooltip, Upload, message } from 'antd'
+import { UploadOutlined } from '@ant-design/icons'
+import { useQueryClient } from '@tanstack/react-query'
+import { getApiErrorMessage } from '@/shared/api/client'
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
-import type { Difficulty, QuizSummary, Visibility } from '../api/quizApi'
+import { quizApi, type Difficulty, type QuizSummary, type Visibility } from '../api/quizApi'
 import { DIFFICULTY_COLOR, DIFFICULTY_LABEL, DIFFICULTY_OPTIONS, VISIBILITY_LABEL } from '../constants'
 import { useCategories, useDeleteQuiz, useQuizList } from '../hooks/useQuizQueries'
 import QuizFormModal from '../components/QuizFormModal'
@@ -106,6 +109,17 @@ export default function MyQuizzesPage() {
               </Link>
             </>
           )}
+          <Tooltip title="Tải file JSON để sao lưu hoặc chia sẻ đề">
+            <Button
+              type="link"
+              size="small"
+              className="px-0!"
+              loading={dangXuat === row.id}
+              onClick={() => void xuatQuiz(row)}
+            >
+              Xuất
+            </Button>
+          </Tooltip>
           <Button type="link" size="small" onClick={() => setEditing(row)}>
             Sửa
           </Button>
@@ -126,15 +140,81 @@ export default function MyQuizzesPage() {
     },
   ]
 
+  const queryClient = useQueryClient()
+  const [dangXuat, setDangXuat] = useState<string | null>(null)
+  const [dangNhap, setDangNhap] = useState(false)
+
+  /** Tải file JSON của một quiz (FR-12). Phải qua axios để mang header Authorization. */
+  const xuatQuiz = async (row: QuizSummary) => {
+    setDangXuat(row.id)
+    try {
+      const file = await quizApi.exportQuiz(row.id)
+      const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `quiz-${row.title}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      message.error(getApiErrorMessage(error))
+    } finally {
+      setDangXuat(null)
+    }
+  }
+
+  /**
+   * Đọc file ở client rồi gửi lên dạng JSON (FR-12).
+   *
+   * Bắt lỗi JSON hỏng RIÊNG với lỗi server: hai thứ này người dùng xử lý khác hẳn nhau — file hỏng thì
+   * họ phải chọn file khác, còn server từ chối thì nội dung file có vấn đề.
+   */
+  const nhapQuiz = async (file: File) => {
+    setDangNhap(true)
+    try {
+      const noiDung = await file.text()
+      let duLieu
+      try {
+        duLieu = JSON.parse(noiDung)
+      } catch {
+        message.error('File không phải JSON hợp lệ')
+        return
+      }
+      const moi = await quizApi.importQuiz(duLieu)
+      message.success(`Đã nhập "${moi.title}" với ${moi.questionCount} câu. Quiz đang ở chế độ riêng tư.`)
+      await queryClient.invalidateQueries({ queryKey: ['quizzes'] })
+    } catch (error) {
+      message.error(getApiErrorMessage(error))
+    } finally {
+      setDangNhap(false)
+    }
+  }
+
   return (
     <Space direction="vertical" size="large" className="w-full">
       <PageHeader
         title="Quiz của tôi"
         description="Quiz bạn tạo, gồm cả quiz đang ở chế độ riêng tư."
         actions={
-          <Button type="primary" onClick={() => setCreating(true)}>
-            Tạo quiz
-          </Button>
+          <>
+            <Upload
+              accept=".json"
+              showUploadList={false}
+              // beforeUpload trả false = KHÔNG tự gửi lên server. File JSON phải đọc ở client rồi POST
+              // thành body JSON; để Upload tự gửi thì nó gói vào multipart và endpoint không nhận được.
+              beforeUpload={(file) => {
+                void nhapQuiz(file)
+                return false
+              }}
+            >
+              <Button icon={<UploadOutlined />} loading={dangNhap}>
+                Nhập từ file
+              </Button>
+            </Upload>
+            <Button type="primary" onClick={() => setCreating(true)}>
+              Tạo quiz
+            </Button>
+          </>
         }
       />
 

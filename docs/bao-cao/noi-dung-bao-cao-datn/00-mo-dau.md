@@ -99,7 +99,7 @@ người.
 
 **Về trí tuệ nhân tạo:** ba chức năng AI được hiện thực — sinh đề từ học liệu, chấm và giải thích câu tự
 luận, trợ lý học tập hỏi–đáp bám học liệu. Nhà cung cấp mô hình chính là **Google Gemini**, dự phòng là
-**xAI Grok**; mọi lời gọi đi qua một lớp điều phối tự viết. Đồ án **không huấn luyện mô hình mới**, mà
+**Groq**; mọi lời gọi đi qua một lớp điều phối tự viết. Đồ án **không huấn luyện mô hình mới**, mà
 tập trung vào kiến trúc tích hợp, khả năng bám nguồn (grounding) và cơ chế dự phòng.
 
 **Về gợi ý cá nhân hoá:** dùng Neo4j để mô hình hoá quan hệ giữa người học, chủ đề và bài thi; gợi ý dựa

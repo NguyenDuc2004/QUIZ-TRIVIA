@@ -16,15 +16,50 @@ Giữ chân người dùng và hỗ trợ ghi nhớ bằng hệ thống thông b
 - **FR-66** [S] ✅ **Nhắc ôn tập theo SRS:** job 7:00 mỗi ngày, một câu `group by` lấy đúng người có thẻ đến hạn.
 - **FR-67** [S] ✅ Thông báo **in-app real-time** qua `/user/queue/notifications`, đi vòng qua Redis Pub/Sub.
 - **FR-68** [S] ✅ Trung tâm thông báo: chuông + chấm đỏ, danh sách phân trang, đánh dấu đã đọc / tất cả đã đọc.
-- **FR-69** [C] ⏳ Gửi **email** — hoãn, xem "Vì sao hoãn email" bên dưới.
+- **FR-69** [C] ✅ Gửi **email** — **mặc định TẮT**, là bản sao của thông báo in-app. Xem mục bên dưới.
 - **FR-70** [C] 🟡 Cài đặt: **bật/tắt từng loại đã làm**; **khung giờ nhắc (quiet hours) bỏ** — lý do bên dưới.
 
-## Vì sao hoãn email (FR-69)
+## Email (FR-69)
 
-Gửi email cần một máy chủ SMTP thật, một tài khoản gửi, và khoá của tài khoản đó nằm trong `.env`. Ba thứ đó
-không có trong [tech-stack.md](../tech-stack.md) và cũng không kiểm chứng được trong phạm vi đồ án: email vào
-hộp thư rác là chuyện thường với người gửi mới, nên "gửi thành công" ở phía mình không nói được gì về việc thư
-có tới. Thông báo in-app thì nhìn thấy được ngay, kiểm được, và đủ cho mục tiêu *nhắc ôn tập đúng hạn*.
+### Hoá ra hạ tầng đã có sẵn
+
+Lý do hoãn ban đầu nói cần *"một máy chủ SMTP thật, một tài khoản gửi, và khoá nằm trong `.env`"* — và cho
+rằng ba thứ đó không có trong stack. **Sai**: `spring-boot-starter-mail` cùng toàn bộ cấu hình `spring.mail`
+và `app.mail.from` đã nằm trong dự án từ [features/01](01-auth.md) để gửi **OTP đặt lại mật khẩu** (FR-4).
+Thứ duy nhất thiếu là nối thông báo vào đường gửi đã có.
+
+### Mặc định TẮT — và dấu hiệu bật/tắt là TÀI KHOẢN GỬI, không phải host
+
+Đây là chỗ dễ sai nhất: `spring.mail.host` có **giá trị mặc định** (`smtp.gmail.com`) vì nó vốn được cấu hình
+sẵn cho OTP. Lấy host làm dấu hiệu thì tính năng **luôn "đang bật"** và hệ thống cố gửi thư ngay lần chạy đầu
+tiên — đúng thứ mà "mặc định tắt" muốn tránh. Không có `spring.mail.username` thì không gửi được gì, dù host
+trỏ đúng máy chủ Gmail.
+
+### Email là BẢN SAO, không phải kênh thay thế
+
+Thông báo **luôn** được ghi vào cơ sở dữ liệu và **luôn** hiện trong ứng dụng; email chỉ gửi thêm cho người
+không mở ứng dụng thường xuyên. Nhờ vậy email hỏng — SMTP sập, hộp thư đầy, thư vào spam — **không làm mất
+thông báo nào**.
+
+Đó cũng là lý do `EmailSender` chạy `@Async` và **nuốt mọi lỗi**: một máy chủ SMTP chậm không được phép làm
+chậm việc nộp bài hay job nhắc ôn, và một lần gửi hỏng không được phép rollback thông báo đã ghi.
+
+### Kiểm được tới đâu, và KHÔNG kiểm được cái gì
+
+Test dùng **máy chủ SMTP thật chạy trong bộ nhớ** (GreenMail, phạm vi test), không mock `JavaMailSender`.
+Mock chỉ chứng minh code *gọi đúng hàm* — nó vẫn xanh khi thư thiếu người nhận, sai mã hoá tiếng Việt, hay
+tiêu đề rỗng, đúng những thứ hỏng mà người dùng sẽ thấy.
+
+| Chứng minh được | KHÔNG chứng minh được |
+|---|---|
+| Thư tới đúng địa chỉ | Thư vào **hộp thư đến** thay vì thư rác |
+| Tiêu đề có tiền tố loại thông báo | Nhà cung cấp thư có chặn tên miền gửi không |
+| Tiếng Việt giải mã đúng dấu (quoted-printable UTF-8) | Tỉ lệ thư tới thật |
+| Nội dung rỗng thì lùi về tiêu đề, không gửi thư trắng | |
+
+Lý do hoãn ban đầu — *"gửi thành công ở phía mình không nói được gì về việc thư có tới"* — **vẫn đúng ở cột
+phải**, và nó phụ thuộc danh tiếng tên miền người gửi, nằm ngoài phạm vi đồ án. Nên phát biểu đúng là: *soạn
+đúng và gửi đúng giao thức thì đã kiểm; giao được thư thì chưa*.
 
 ## Vì sao bỏ khung giờ nhắc (quiet hours)
 

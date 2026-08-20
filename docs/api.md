@@ -519,6 +519,75 @@ GET    /api/v1/admin/integrity/flagged           Hàng chờ bài bị gắn c�
 - Hàng chờ sắp theo điểm rủi ro giảm dần, mặc định lọc `PENDING`, và **không kèm từng sự kiện** (`suKien: []`)
   — trang đó chỉ để chọn bài cần mở.
 
+### Phân hạng mùa (FR-64) ✅
+
+Không có endpoint mới. `LeaderboardResponse.Dong` trả kèm `phanHang` (`DONG`/`BAC`/`VANG`) và `nhanHang`
+(nhãn tiếng Việt). **Cả hai là `null` khi mùa chưa đủ 10 người** — phân hạng theo **vị trí tương đối**, nên
+"top 10% của 3 người" là câu vô nghĩa. Chi tiết ở [features/15](features/15-seasonal-leaderboard.md).
+
+### Xuất / nhập quiz (FR-12) ✅
+```
+GET  /api/v1/quizzes/{id}/export   Tải file JSON — chỉ chủ quiz      ✅
+POST /api/v1/quizzes/import        Nhập file → quiz MỚI, PRIVATE     ✅
+```
+File chứa **nội dung đề**, không chứa id / chủ sở hữu / thống kê / ảnh. Nhập **luôn tạo mới**, không bao giờ
+ghi đè. `formatVersion` mới hơn thì từ chối rõ ràng thay vì đọc bừa. **Không có bản CSV** — quiz là dữ liệu
+lồng nhau, xem [features/02](features/02-quiz-management.md).
+
+### Thứ tự thích ứng khi luyện tập (FR-32) ✅
+```
+GET /api/v1/attempts/{id}/next-question   Câu nên hỏi tiếp   ✅
+```
+Trả `{"questionId": "..."}`; **null** khi đã làm hết hoặc khi đây là lượt **thi** (thi không thích ứng thứ
+tự — mọi người phải làm cùng một đề theo cùng thứ tự để điểm so được).
+
+**Bộ đề không đổi, chỉ thứ tự đổi.** Chi tiết ở [features/03](features/03-gameplay.md).
+
+### Giải thích gợi ý bằng AI (FR-36) ✅
+```
+POST /api/v1/recommendations/{quizId}/explain   Nhờ AI nói rõ vì sao gợi ý   ✅
+```
+**Bấm mới gọi**, không tự chạy khi mở trang: gọi cho cả danh sách là mười lời gọi mô hình cho một lần lướt,
+và từ FR-84 chúng tiêu vào hạn mức AI của chính người học. Cache 24 giờ.
+
+Endpoint **tra lại danh sách gợi ý thật** của người gọi thay vì tin `quizId` từ URL — không thì ai cũng bắt
+mô hình bịa lý do cho một quiz chưa từng được gợi ý. Chi tiết ở [features/07](features/07-recommendation-neo4j.md).
+
+### Hạn mức AI theo người (FR-84) ✅
+```
+PUT /api/v1/admin/users/{id}/ai-quota?quota=N   Đặt hạn mức mỗi ngày (Admin)   ✅
+```
+`quota` **bỏ trống** = xoá hạn mức riêng, quay về mặc định hệ thống. `quota=0` = **cấm** người đó gọi AI —
+một quyết định khác hẳn với bỏ trống. `AdminUserResponse` trả kèm `aiDailyQuota` (null nếu chưa đặt riêng)
+và `aiUsedToday`.
+
+Hết hạn mức thì mọi lời gọi AI của người đó trả **429** kèm thông báo nói rõ số lượt và lúc nào đặt lại.
+Chi tiết ở [features/10](features/10-admin.md).
+
+### Xuất bảng điểm lớp (FR-58) ✅
+```
+GET /api/v1/assignments/{id}/results.csv   Bảng điểm CSV — chỉ chủ nhiệm/trợ giảng   ✅
+```
+Trả `text/csv; charset=UTF-8` kèm **BOM UTF-8** (thiếu nó thì Excel trên Windows đọc tiếng Việt thành ký tự
+lỗi) và `Content-Disposition: attachment; filename*=UTF-8''…` (RFC 5987, để tên tệp giữ được dấu).
+
+Ô dữ liệu được bọc theo RFC 4180 **và** vô hiệu hoá công thức: ô bắt đầu bằng `=` `+` `-` `@` được thêm một
+dấu nháy đơn phía trước, vì Excel chạy những ô đó như công thức và tên hiển thị là dữ liệu người dùng tự đặt.
+Chi tiết ở [features/14](features/14-classroom.md).
+
+**Không có bản PDF** — lý do ở [features/14](features/14-classroom.md).
+
+### Chế độ thi nghiêm ngặt (FR-48) ✅
+
+Không có endpoint mới. Cờ đi kèm hai DTO đã có:
+
+- `QuizSummaryResponse.strictExam` — chủ quiz bật/tắt qua `POST/PUT /quizzes` (trường `strictExam`).
+  **Bỏ trống khi cập nhật thì GIỮ NGUYÊN** giá trị đang có, không đặt về false: một client cũ hoặc một form
+  thiếu trường không được phép âm thầm tắt cờ của chủ quiz.
+- `AttemptSummaryResponse.strictExam` — **đã tính cho chính lượt đó** (`quiz.strictExam && mode == EXAM`),
+  không phải cờ thô. Client không tự nhân lại: tính ở hai nơi là mở đường cho hai bên nói khác nhau, và
+  hậu quả là lượt luyện tập bị ép toàn màn hình.
+
 ### Cảnh báo live trong phòng đấu ✅
 ```
 GET  /api/v1/rooms/{code}/proctoring   Tổng kết tín hiệu của phòng — CHỈ host   ✅

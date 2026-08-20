@@ -55,11 +55,13 @@ public class SeasonLeaderboardController {
         List<SeasonLeaderboardService.Dong> top = leaderboardService.top(limit);
         SeasonLeaderboardService.Dong cuaToi = leaderboardService.thuHangCuaToi(current.id());
 
+        long tongSoNguoi = leaderboardService.soNguoiThamGia();
+
         return new LeaderboardResponse(
                 mua.getId(), mua.getName(), mua.getStartAt(), mua.getEndAt(),
-                leaderboardService.soNguoiThamGia(),
-                top.stream().map(SeasonLeaderboardController::toDong).toList(),
-                cuaToi == null ? null : toDong(cuaToi));
+                tongSoNguoi,
+                top.stream().map(d -> toDong(d, tongSoNguoi)).toList(),
+                cuaToi == null ? null : toDong(cuaToi, tongSoNguoi));
     }
 
     @GetMapping("/current/me")
@@ -70,7 +72,8 @@ public class SeasonLeaderboardController {
         SeasonLeaderboardService.Dong cuaToi = leaderboardService.thuHangCuaToi(current.id());
         return cuaToi == null
                 ? org.springframework.http.ResponseEntity.noContent().build()
-                : org.springframework.http.ResponseEntity.ok(toDong(cuaToi));
+                : org.springframework.http.ResponseEntity.ok(
+                        toDong(cuaToi, leaderboardService.soNguoiThamGia()));
     }
 
     @GetMapping("/history")
@@ -82,8 +85,16 @@ public class SeasonLeaderboardController {
                 .toList();
     }
 
-    private static LeaderboardResponse.Dong toDong(SeasonLeaderboardService.Dong d) {
-        return new LeaderboardResponse.Dong(d.rank(), d.userId(), d.displayName(), d.avatarUrl(), d.score());
+    /**
+     * Ánh xạ sang DTO, tính luôn hạng Đồng/Bạc/Vàng (FR-64).
+     * <p>
+     * Hạng cần <b>tổng số người trong mùa</b> vì nó là vị trí tương đối, không phải ngưỡng điểm tuyệt đối —
+     * xem {@code PhanHang} về việc vì sao. Nên tham số đó bắt buộc, không có giá trị mặc định: quên truyền
+     * thì mọi người sẽ ra hạng null trong im lặng thay vì đỏ ở chỗ biên dịch.
+     */
+    private static LeaderboardResponse.Dong toDong(SeasonLeaderboardService.Dong d, long tongSoNguoi) {
+        return LeaderboardResponse.Dong.cua(
+                d.rank(), d.userId(), d.displayName(), d.avatarUrl(), d.score(), tongSoNguoi);
     }
 
     private static SeasonHistoryItem toHistory(SeasonRanking r) {

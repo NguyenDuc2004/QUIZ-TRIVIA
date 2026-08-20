@@ -45,6 +45,8 @@ export interface LiveQuestion {
   total: number
   type: QuestionType
   content: string
+  /** Ảnh minh hoạ (FR-11); null = câu chỉ có chữ. */
+  imageUrl: string | null
   points: number
   timeLimitSec: number
   /** Mốc hết giờ theo đồng hồ server (epoch millis). */

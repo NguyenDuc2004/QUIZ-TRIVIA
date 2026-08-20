@@ -14,6 +14,7 @@ import {
   Select,
   Space,
 } from 'antd'
+import ImageUploader from '@/shared/components/ImageUploader'
 import type { Question, QuestionBody, QuestionType } from '../api/quizApi'
 import { DIFFICULTY_OPTIONS, QUESTION_TYPE_HINT, QUESTION_TYPE_OPTIONS } from '../constants'
 import { useCreateQuestion, useQuestionTopics, useUpdateQuestion } from '../hooks/useQuizQueries'
@@ -74,6 +75,7 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
       type: 'SINGLE_CHOICE',
       content: '',
       explanation: '',
+      imageUrl: null,
       rubric: '',
       difficulty: 'MEDIUM',
       topic: '',
@@ -92,6 +94,7 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
       type: question?.type ?? 'SINGLE_CHOICE',
       content: question?.content ?? '',
       explanation: question?.explanation ?? '',
+      imageUrl: question?.imageUrl ?? null,
       rubric: question?.rubric ?? '',
       difficulty: question?.difficulty ?? 'MEDIUM',
       topic: question?.topic ?? '',
@@ -113,6 +116,7 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
       type: values.type,
       content: values.content,
       explanation: values.explanation || null,
+      imageUrl: values.imageUrl || null,
       rubric: values.rubric || null,
       difficulty: values.difficulty,
       topic: values.topic || null,
@@ -279,6 +283,21 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
             />
           </Form.Item>
         </Space>
+
+        {/* FR-11. Đặt TRƯỚC ô giải thích vì ảnh thuộc về đề bài — người soạn đọc từ trên xuống sẽ
+            gặp nó cùng lúc với nội dung câu hỏi, không phải sau phần hậu kiểm */}
+        <Form.Item
+          label="Ảnh minh hoạ"
+          help="Không bắt buộc. Ảnh hiện ngay dưới nội dung câu hỏi khi người học làm bài."
+        >
+          <Controller
+            name="imageUrl"
+            control={control}
+            render={({ field }) => (
+              <ImageUploader value={field.value ?? null} onChange={field.onChange} />
+            )}
+          />
+        </Form.Item>
 
         <Form.Item label="Giải thích đáp án" help="Hiện cho người học sau khi nộp bài">
           <Controller

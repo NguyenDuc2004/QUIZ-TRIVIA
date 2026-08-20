@@ -29,7 +29,7 @@
 - Chế độ chơi: luyện tập cá nhân, làm bài tính giờ, **phòng đấu real-time nhiều người**.
 - Ôn tập bằng **flashcard + lặp lại ngắt quãng (SRS)**; **chống gian lận** trong chế độ thi.
 - Mở rộng giáo dục & gắn kết: **gamification** (XP/badge/streak), **lớp học & giao bài**, **bảng xếp hạng theo mùa**, **thông báo/nhắc ôn**.
-- LLM: Google Gemini (chính) → xAI Grok (dự phòng khi Gemini lỗi).
+- LLM: Google Gemini (chính) → **Groq** (dự phòng khi Gemini lỗi — groq.com, *không phải* Grok của xAI).
 
 ## 5. Tác nhân & vai trò (RBAC)
 

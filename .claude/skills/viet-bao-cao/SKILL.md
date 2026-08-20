@@ -84,7 +84,7 @@ Khi dựng báo cáo, tra bảng **"Map chức năng → mục báo cáo"** ở 
 
 - **4 trụ cột theo phiếu giao đề tài**: (1) web Quiz/Trivia hoàn chỉnh + **phòng đấu multiplayer real-time** độ trễ thấp; (2) **Generative AI qua RAG** — trợ lý học tập + tự sinh cấu trúc đề thi từ học liệu; (3) **Neo4j** phân tích hành vi → gợi ý quiz & lộ trình học cá nhân hóa; (4) **kiểm thử hiệu năng chịu tải real-time + độ chính xác AI**. Bốn cái này phải nổi bật trong báo cáo.
 - **Stack**: Java 21 + Spring Boot 3.5, React 19 + Vite 8 + TypeScript + Ant Design v6 + Tailwind v4, PostgreSQL 16 + pgvector, Neo4j 5, Redis (cache/quota/trạng thái phòng/Pub-Sub), Spring WebSocket (STOMP), SSE cho chatbot, Apache Tika, Flyway, Resilience4j, Docker Compose.
-- **LLM**: Google Gemini (`gemini-3.6-flash`) là chính → **xAI Grok dự phòng**, đi qua `AiOrchestrator` tự viết bằng `WebClient` (KHÔNG dùng Spring AI, KHÔNG LangChain4j).
+- **LLM**: Google Gemini (`gemini-3.6-flash`) là chính → **Groq dự phòng** (groq.com, không phải Grok của xAI), đi qua `AiOrchestrator` tự viết bằng `WebClient` (KHÔNG dùng Spring AI, KHÔNG LangChain4j).
 - **4 tác nhân**: Guest, Learner, Creator, Admin (một user có thể vừa Learner vừa Creator).
 - **Kiến trúc**: monolith phân lớp Controller→Service→Repository, feature-based package `com.datn.quizai`.
 - **Thời gian thực hiện**: 20/07/2026 – 20/09/2026; CBHD ThS. Nguyễn Đức Lưu.

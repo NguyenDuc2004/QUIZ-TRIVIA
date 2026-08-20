@@ -80,6 +80,21 @@ public class AttemptController {
         return attemptService.answer(attemptId, request, current);
     }
 
+    @GetMapping("/attempts/{attemptId}/next-question")
+    @Operation(summary = "Câu nên hỏi tiếp ở chế độ LUYỆN TẬP (FR-32): sai hai câu liền thì gặp câu dễ "
+            + "hơn, đúng hai câu liền thì gặp câu khó hơn. Bộ đề KHÔNG đổi — chỉ thứ tự đổi, để điểm vẫn "
+            + "so được giữa các người học. Lượt thi trả về questionId = null.")
+    public java.util.Map<String, Object> nextQuestion(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
+            @PathVariable UUID attemptId) {
+        UUID next = attemptService.nextQuestionId(attemptId, current);
+        // HashMap thay vì Map.of: Map.of ném NullPointerException khi giá trị null, mà null ở đây là một
+        // câu trả lời hợp lệ ("đã làm hết" hoặc "lượt thi").
+        java.util.Map<String, Object> ketQua = new java.util.HashMap<>();
+        ketQua.put("questionId", next);
+        return ketQua;
+    }
+
     @PostMapping("/attempts/{attemptId}/submit")
     @Operation(summary = "Nộp bài và chấm; gọi lại trên bài đã nộp thì trả đúng kết quả cũ")
     public AttemptDetailResponse submit(@AuthenticationPrincipal JwtService.AuthenticatedUser current,

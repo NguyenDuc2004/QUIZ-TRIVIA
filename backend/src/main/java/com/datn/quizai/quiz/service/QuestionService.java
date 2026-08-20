@@ -10,6 +10,7 @@ import com.datn.quizai.auth.service.JwtService;
 import com.datn.quizai.common.OwnershipGuard;
 import com.datn.quizai.common.dto.PageResponse;
 import com.datn.quizai.common.exception.BusinessException;
+import com.datn.quizai.file.service.UploadedImagePath;
 import com.datn.quizai.quiz.dto.QuestionOptionRequest;
 import com.datn.quizai.quiz.dto.QuestionRequest;
 import com.datn.quizai.quiz.dto.TopicResponse;
@@ -127,6 +128,8 @@ public class QuestionService {
 
     private void applyRequest(Question question, QuestionRequest request) {
         question.setExplanation(request.explanation());
+        // Cùng luật an toàn với ảnh bìa quiz: chỉ nhận ảnh đã tải lên hệ thống này (FR-11).
+        question.setImageUrl(UploadedImagePath.hopLeHoacNull(request.imageUrl(), "Ảnh câu hỏi"));
         question.setRubric(request.rubric());
         question.setDifficulty(request.difficulty() == null ? Difficulty.MEDIUM : request.difficulty());
         question.setTopic(blankToNull(request.topic()));

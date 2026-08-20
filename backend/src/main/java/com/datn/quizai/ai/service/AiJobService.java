@@ -50,6 +50,7 @@ public class AiJobService {
     private final AiJobStatusWriter statusWriter;
     private final ApplicationEventPublisher eventPublisher;
     private final com.datn.quizai.ai.provider.AiThrottleState throttleState;
+    private final AiQuotaService quotaService;
 
     public AiJobService(AiJobRepository jobRepository,
                         QuestionGenerationService generationService,
@@ -58,8 +59,10 @@ public class AiJobService {
                         ObjectMapper objectMapper,
                         AiJobStatusWriter statusWriter,
                         ApplicationEventPublisher eventPublisher,
-                        com.datn.quizai.ai.provider.AiThrottleState throttleState) {
+                        com.datn.quizai.ai.provider.AiThrottleState throttleState,
+                        AiQuotaService quotaService) {
         this.jobRepository = jobRepository;
+        this.quotaService = quotaService;
         this.generationService = generationService;
         this.questionService = questionService;
         this.userRepository = userRepository;
@@ -73,6 +76,13 @@ public class AiJobService {
     @Transactional
     public AiJobResponse submitGeneration(GenerateQuestionsRequest request,
                                           JwtService.AuthenticatedUser current) {
+        // Chốt hạn mức NGAY lúc nhận việc (FR-84), không chờ tới lúc luồng nền gọi mô hình.
+        //
+        // Chỉ chốt ở tầng orchestrator thì người đã hết lượt vẫn nhận 202 kèm jobId rồi mới thấy job hỏng —
+        // chi phí vẫn được khống chế đúng, nhưng họ bấm mười lần là tạo mười job hỏng mà không hiểu vì sao.
+        // Đây là kiểm-KHÔNG-cộng-lượt; lượt thật do orchestrator ghi, cộng cả hai chỗ là trừ đôi.
+        quotaService.kiemTra(current.id());
+
         AiJob job = new AiJob(userRepository.getReferenceById(current.id()),
                 AiJobType.GENERATE_QUESTIONS, toJson(request));
         jobRepository.save(job);
@@ -191,8 +201,10 @@ public class AiJobService {
                 .toList();
 
         // rubric để null: mô hình sinh đề không tự đặt tiêu chí chấm, Creator soạn khi cần (features/06)
+        // imageUrl để null: mô hình sinh CHỮ, không sinh ảnh. Câu do AI đề xuất mà tự gắn một đường dẫn
+        // ảnh nào đó là gắn ảnh không tồn tại — Creator tự thêm ảnh khi duyệt nếu muốn (FR-11).
         return new QuestionRequest(
-                question.type(), question.content(), question.explanation(), null,
+                question.type(), question.content(), question.explanation(), null, null,
                 question.difficulty(), question.topic(), 1, null, options);
     }
 

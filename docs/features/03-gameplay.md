@@ -25,6 +25,53 @@ Cho phép người học làm quiz cá nhân, chấm điểm tự động, xem k
 3. Nộp bài → chấm câu cố định bằng logic; câu tự luận chuyển sang AI (xem [06-ai-grading.md](06-ai-grading.md)).
 4. Tính tổng điểm, cập nhật status: submitted, trả kết quả + giải thích.
 
+
+## Thứ tự thích ứng theo chuỗi đúng/sai (FR-32)
+
+`GET /api/v1/attempts/{id}/next-question` — chỉ có tác dụng với lượt **luyện tập**.
+
+### Đổi THỨ TỰ, không đổi BỘ ĐỀ
+
+Cách hiểu thông thường của "adaptive difficulty" là chọn một *tập câu hỏi khác nhau* cho từng người. Không
+làm vậy, vì bán kính ảnh hưởng lớn hơn nhiều so với giá trị:
+
+| Nếu đổi bộ đề | Hỏng cái gì |
+|---|---|
+| Hai người làm hai bộ câu khác nhau | **Điểm không so được** — bảng xếp hạng theo quiz (FR-19), bảng theo dõi lớp ([features/14](14-classroom.md), FR-57) và thống kê quiz ([features/09](09-analytics.md)) đều dựa trên giả định ngược lại |
+| Chọn câu động | Phá bất biến **"chốt đề lúc bắt đầu"** — `attempt_answers` sao lại toàn bộ câu kèm điểm tối đa để chủ quiz sửa đề giữa chừng không làm hỏng bài đang làm |
+
+Nên bộ đề giữ nguyên, thứ tự thì thích ứng. **Mọi câu vẫn được hỏi**, nên điểm vẫn so được và mọi tính năng
+dựa trên điểm vẫn đúng.
+
+### Chỉ luyện tập, không áp cho thi
+
+Thi là để **đo**: mọi người phải làm cùng một đề theo cùng một thứ tự, nếu không thì thứ tự trở thành một
+biến số ảnh hưởng tới điểm mà không ai kiểm soát. Luyện tập là để **học**, và ở đó thích ứng có ích thật.
+
+### Luật
+
+| Hai câu vừa làm | Câu tiếp theo |
+|---|---|
+| Đều sai | Câu **dễ nhất** còn lại — lấy lại đà |
+| Đều đúng | Câu **khó nhất** còn lại — đừng phí thời gian với thứ đã nắm |
+| Trộn, hoặc mới làm một câu | Theo thứ tự đề |
+
+Ngưỡng là **hai** câu chứ không phải một: một câu sai có thể là bấm nhầm hoặc một câu lắt léo, và đổi hướng
+ngay lập tức làm độ khó nhảy lên xuống từng câu — người học thấy đề "loạn" chứ không thấy nó thích ứng.
+
+### Chỗ dễ sai nhất: thứ tự LÀM khác thứ tự ĐỀ
+
+Chính thuật toán này đã đổi thứ tự ở các bước trước, nên *"hai câu gần nhất"* phải đọc theo **thời điểm trả
+lời**. Lọc danh sách đề rồi lấy hai phần tử cuối sẽ ra hai câu có **số thứ tự** lớn nhất — không phải hai
+câu người học vừa làm, và chuỗi đọc ra sai hoàn toàn. Có test dựng riêng một ví dụ mà hai cách đọc cho hai
+hướng **ngược nhau**.
+
+**Câu chưa đặt độ khó nằm giữa thang**, không rơi xuống đáy: "không biết" khác "dễ" và cũng khác "khó".
+
+**Server quyết định, không phải client** — dù client có đủ dữ liệu để tự tính. Tính ở client thì hai bản
+giao diện sẽ thích ứng khác nhau trên cùng dữ liệu. Server hỏng thì frontend lùi về thứ tự tuần tự: người
+đang làm bài không được kẹt lại vì một tính năng phụ trợ gặp sự cố.
+
 ## API liên quan
 [api.md](../api.md) mục 4 (`/attempts`).
 

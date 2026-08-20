@@ -12,6 +12,15 @@ export interface AdminUser {
   locked: boolean
   /** "Mật khẩu" | "Google" | "Mật khẩu và Google" — đủ để hỗ trợ khi người dùng báo không vào được. */
   loginMethod: string
+  /**
+   * Hạn mức AI mỗi ngày đặt riêng (FR-84); `null` = dùng mặc định hệ thống.
+   *
+   * `null` KHÁC `0`: null là "chưa đặt riêng", 0 là "cấm gọi AI". Giao diện phải giữ nguyên khác biệt đó,
+   * không quy null về 0.
+   */
+  aiDailyQuota: number | null
+  /** Số lượt AI đã dùng hôm nay — ô nhập hạn mức mà không có con số này thì không có bối cảnh để đặt. */
+  aiUsedToday: number
   createdAt: string
 }
 
@@ -178,6 +187,19 @@ export const adminApi = {
 
   setLocked: (id: string, locked: boolean) =>
     apiClient.put<AdminUser>(`/admin/users/${id}/locked`, null, { params: { locked } })
+      .then((res) => res.data),
+
+  /**
+   * Đặt hạn mức AI mỗi ngày (FR-84).
+   *
+   * `quota === null` gửi đi KHÔNG kèm tham số → server hiểu là xoá hạn mức riêng. Gửi `quota=0` là một
+   * quyết định khác hẳn: cấm người đó gọi AI.
+   */
+  setAiQuota: (id: string, quota: number | null) =>
+    apiClient
+      .put<AdminUser>(`/admin/users/${id}/ai-quota`, null, {
+        params: quota === null ? {} : { quota },
+      })
       .then((res) => res.data),
 
   aiUsage: (days: number) =>

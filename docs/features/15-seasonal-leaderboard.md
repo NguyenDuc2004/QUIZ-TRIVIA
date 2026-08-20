@@ -14,7 +14,7 @@ Tạo động lực cạnh tranh theo chu kỳ: xếp hạng người dùng theo
 - **FR-61** [S] ✅ Tính điểm mùa (season points) từ hoạt động trong khoảng thời gian mùa (XP kiếm được, thắng phòng đấu...).
 - **FR-62** [S] 🟡 **Bảng xếp hạng theo mùa** — làm phạm vi **toàn hệ thống**. *Theo lớp*: [tính năng 14](14-classroom.md) đã làm nên dữ liệu đã đủ, nhưng vẫn không làm — lý do ở bảng dưới. *Theo bạn bè* không tồn tại ở bất kỳ đâu trong docs.
 - **FR-63** [S] ✅ Kết thúc mùa: chốt bảng, **trao phần thưởng ảo** cho top N, lưu lịch sử, reset điểm mùa.
-- **FR-64** [C] ⏳ Phân hạng bronze/silver/gold — chưa làm. Cần chọn ngưỡng, mà chọn ngưỡng khi chưa có dữ liệu thật thì chỉ là số bịa.
+- **FR-64** [C] ✅ Phân hạng Đồng/Bạc/Vàng — theo **vị trí tương đối trong mùa**, không theo ngưỡng điểm. Xem mục riêng bên dưới.
 
 ## Ba quyết định của bản này
 
@@ -36,6 +36,39 @@ còn cơ hội đạt. Mùa cụ thể đã ghi ở `season_rankings`.
 
 **Mùa mới bắt đầu từ `end_at` của mùa cũ**, không từ `now()`: job quét mỗi giờ nên có thể chạy muộn vài chục
 phút, và lấy `now()` thì XP kiếm trong khoảng trống đó không thuộc mùa nào.
+
+
+## Phân hạng Đồng / Bạc / Vàng (FR-64)
+
+Mục này từng hoãn với lý do: *"cần chọn ngưỡng, mà chọn ngưỡng khi chưa có dữ liệu thật thì chỉ là số bịa"*.
+
+Lý do đó **đúng — với ngưỡng điểm tuyệt đối**. Một con số như *"1000 điểm là Vàng"* không dựa trên gì cả,
+và nó sai theo **hai chiều cùng lúc**: mùa ít người thì không ai đạt, mùa đông người thì ai cũng đạt.
+
+**Cách gỡ: tính theo vị trí tương đối trong chính mùa đó.**
+
+| Hạng | Vị trí |
+|---|---|
+| **Vàng** | Top 10% |
+| **Bạc** | 25% tiếp theo (tới 35%) |
+| **Đồng** | Phần còn lại |
+
+Ngưỡng không do ai nghĩ ra mà rút ra từ **phân bố thật** của người chơi mùa ấy — thứ luôn tồn tại và luôn
+đúng với quy mô hiện có. Cùng một thứ hạng cho hạng khác nhau tuỳ quy mô mùa, và đó chính là điểm mấu chốt:
+hạng 5 trong 10 người là nửa dưới bảng, hạng 5 trong 100 người là top 5%. Ngưỡng điểm tuyệt đối không phân
+biệt được hai chuyện đó.
+
+### Dưới 10 người thì KHÔNG phân hạng ai cả
+
+*"Top 10% của 3 người"* là một câu vô nghĩa: người đứng đầu trong ba người không nói lên điều gì, và trao
+cho họ huy hiệu Vàng **làm mất giá đúng cái huy hiệu đó** ở những mùa thật sự đông. Giao diện để trống ô
+hạng — trống là đúng, không phải thiếu dữ liệu.
+
+Con số 10 cũng là một ngưỡng, nhưng khác **bản chất** với ngưỡng bị bác ở trên: nó nói về *khi nào một tỉ lệ
+phần trăm bắt đầu có nghĩa*, không nói về *bao nhiêu điểm thì giỏi*.
+
+**Chưa có điểm (hạng ≤ 0) thì không có hạng**, khác hẳn hạng Đồng: Đồng nghĩa là *đã tham gia và đang ở
+nhóm dưới*, còn chưa có điểm nghĩa là *chưa tham gia*. Cùng nguyên tắc với `thuHangCuaToi = null`.
 
 ## Luồng xử lý
 ```

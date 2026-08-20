@@ -4,12 +4,14 @@ import com.datn.quizai.auth.service.JwtService;
 import com.datn.quizai.recommend.dto.LearningPathResponse;
 import com.datn.quizai.recommend.dto.RecommendationsResponse;
 import com.datn.quizai.recommend.service.GraphSyncService;
+import com.datn.quizai.recommend.service.RecommendReasonService;
 import com.datn.quizai.recommend.service.RecommendationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,6 +24,8 @@ import java.util.List;
  * <b>Yêu cầu đăng nhập.</b> Gợi ý dựa trên lịch sử làm bài của chính người gọi; không có khái niệm
  * "gợi ý cho khách" vì khách không có lịch sử. Khách xem danh sách quiz công khai như bình thường.
  */
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/recommendations")
 @Tag(name = "Recommendation", description = "Gợi ý quiz và lộ trình học dựa trên đồ thị Neo4j")
@@ -34,11 +38,14 @@ public class RecommendationController {
 
     private final RecommendationService recommendationService;
     private final GraphSyncService graphSyncService;
+    private final RecommendReasonService reasonService;
 
     public RecommendationController(RecommendationService recommendationService,
+                                    RecommendReasonService reasonService,
                                     GraphSyncService graphSyncService) {
         this.recommendationService = recommendationService;
         this.graphSyncService = graphSyncService;
+        this.reasonService = reasonService;
     }
 
     @GetMapping
@@ -59,6 +66,18 @@ public class RecommendationController {
         // Chỉ dựng lại phần của chính người gọi: không cần quyền quản trị, và không ai đụng được
         // vào dữ liệu của người khác.
         return java.util.Map.of("syncedAttempts", graphSyncService.rebuildForUser(current.id()));
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/{quizId}/explain")
+    @Operation(summary = "Nhờ AI giải thích vì sao quiz này được gợi ý cho tôi (FR-36). "
+            + "CHỦ ĐỘNG bấm mới gọi, không tự chạy khi mở trang: mười thẻ gợi ý là mười lời gọi mô hình "
+            + "cho một lần lướt, và từ FR-84 thì chúng tiêu vào hạn mức AI của chính người học. "
+            + "Kết quả cache 24 giờ nên hỏi lại không tốn thêm lượt.")
+    public java.util.Map<String, String> explain(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
+            @PathVariable UUID quizId) {
+
+        return java.util.Map.of("explanation", reasonService.giaiThich(quizId, current.id()));
     }
 
     @GetMapping("/path")

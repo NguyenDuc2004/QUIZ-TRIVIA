@@ -178,7 +178,11 @@ class AiGradingIntegrationTest {
         // `aiOrchestrator` là mock dùng chung cả lớp, và luồng chấm nền của một phép kiểm trước có thể
         // gọi mô hình muộn hơn cả lúc `reset` — khi đó `verifyNoInteractions` đỏ vì việc của phép kiểm
         // khác, không phải vì câu bỏ trống bị đẩy sang AI. Số chênh mới là thứ phép kiểm này muốn nói.
-        int truocKhiNop = org.mockito.Mockito.mockingDetails(aiOrchestrator).getInvocations().size();
+        //
+        // NHƯNG lấy số chênh vẫn chưa đủ: nếu luồng nền của phép kiểm trước gọi mô hình SAU lúc chụp mốc
+        // và TRƯỚC lúc so lại, lời gọi đó bị tính vào phép kiểm này. Đã đỏ thật một lần vì đúng chuyện đó.
+        // Nên phải chờ số lời gọi ĐỨNG YÊN rồi mới chụp mốc.
+        int truocKhiNop = choSoLoiGoiDungYen();
 
         submit(f.attemptId);   // không trả lời câu tự luận
 
@@ -448,6 +452,14 @@ class AiGradingIntegrationTest {
     }
 
     private Fixture fixtureWithShortAnswer(String title, int essayPoints, String rubric) throws Exception {
+        // Chờ luồng chấm nền của phép kiểm TRƯỚC lắng xuống rồi mới xoá stub.
+        //
+        // `reset()` trên một mock dùng chung trong khi một luồng nền còn đang gọi nó thì stub bị xoá giữa
+        // chừng: lời gọi đang chạy trả null, câu tự luận bị đánh AI_FAILED, và phép kiểm đỏ vì việc của
+        // phép kiểm khác. Đã đỏ thật hai lần theo hai kiểu khác nhau — một lần ở
+        // `shouldNotCallModelForBlankAnswer`, một lần ở `shouldNotLetLateAiGradeOverwriteHuman` — và cả hai
+        // lần đều XANH khi chạy riêng lớp này, đúng dấu hiệu của nhiễu giữa các phép kiểm.
+        choSoLoiGoiDungYen();
         reset(aiOrchestrator);
 
         String quizId = createQuiz(title);
@@ -587,4 +599,33 @@ class AiGradingIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(body).get("accessToken").asText();
     }
+
+    /**
+     * Chờ tới khi số lời gọi mô hình <b>ngừng tăng</b>, rồi trả về con số đó.
+     * <p>
+     * Đây là điểm đồng bộ cho một mock <b>dùng chung cả lớp</b> mà các phép kiểm trước có thể còn để lại
+     * luồng chấm nền đang chạy. Không có nó thì phép kiểm "câu bỏ trống không tốn lời gọi nào" đỏ ngẫu
+     * nhiên vì việc của phép kiểm khác — và một test đỏ ngẫu nhiên thì sớm muộn sẽ bị bỏ qua, tức mất luôn
+     * cả tác dụng thật của nó.
+     * <p>
+     * Chờ theo <i>trạng thái đứng yên</i> chứ không phải một khoảng thời gian đoán bừa: nhanh khi không có
+     * gì chạy nền, và vẫn đúng khi máy chạy chậm.
+     */
+    private int choSoLoiGoiDungYen() throws InterruptedException {
+        int truoc = -1;
+        int lanOnDinh = 0;
+        long han = System.currentTimeMillis() + 5_000;
+
+        while (System.currentTimeMillis() < han) {
+            int hienTai = org.mockito.Mockito.mockingDetails(aiOrchestrator).getInvocations().size();
+            lanOnDinh = hienTai == truoc ? lanOnDinh + 1 : 0;
+            truoc = hienTai;
+            if (lanOnDinh >= 3) {
+                return hienTai;
+            }
+            Thread.sleep(100);
+        }
+        return truoc;
+    }
+
 }

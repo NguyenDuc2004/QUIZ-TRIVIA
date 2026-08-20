@@ -52,6 +52,16 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private boolean locked = false;
 
+    /**
+     * Hạn mức số lượt gọi AI mỗi ngày của riêng người này (features/10, FR-84).
+     * <p>
+     * <b>null KHÁC 0.</b> {@code null} = chưa đặt riêng, dùng mặc định hệ thống; {@code 0} = quản trị viên
+     * cấm người này gọi AI. Gộp hai thứ lại thì hoặc không cấm được ai, hoặc mọi tài khoản mới bị cấm ngay
+     * từ lúc tạo — nên kiểu bao {@code Integer}, không phải {@code int}.
+     */
+    @Column(name = "ai_daily_quota")
+    private Integer aiDailyQuota;
+
     public User(String email, String passwordHash, String displayName, Role role) {
         this.email = email;
         this.passwordHash = passwordHash;

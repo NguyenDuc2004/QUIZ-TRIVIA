@@ -116,6 +116,17 @@ public class AdminController {
         return adminUserService.changeRole(id, role, current.id());
     }
 
+    @PutMapping("/users/{id}/ai-quota")
+    @Operation(summary = "Đặt hạn mức số lượt gọi AI mỗi ngày cho một người (FR-84). "
+            + "Bỏ trống quota = xoá hạn mức riêng, quay về mặc định hệ thống. "
+            + "quota = 0 nghĩa là CẤM người này gọi AI — khác hẳn với bỏ trống.")
+    public AdminUserResponse setAiQuota(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
+            @PathVariable UUID id,
+            @RequestParam(required = false) Integer quota) {
+        return adminUserService.setAiQuota(id, quota, current.id());
+    }
+
     @PutMapping("/users/{id}/locked")
     @Operation(summary = "Khoá hoặc mở khoá tài khoản. Khoá thì thu hồi mọi phiên ngay, và người đó "
             + "không đăng nhập lại được. Dữ liệu của họ giữ nguyên. Không thể tự khoá chính mình.")

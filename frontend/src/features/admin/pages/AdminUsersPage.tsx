@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Input, Popconfirm, Select, Space, Switch, Table, Tag, Typography } from 'antd'
+import { Input, InputNumber, Popconfirm, Select, Space, Switch, Table, Tag, Tooltip, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
 import { useAuthStore } from '@/features/auth/store/authStore'
 import type { Role } from '@/features/auth/api/authApi'
 import type { AdminUser } from '../api/adminApi'
-import { useAdminUsers, useChangeRole, useSetLocked } from '../hooks/useAdmin'
+import { useAdminUsers, useChangeRole, useSetAiQuota, useSetLocked } from '../hooks/useAdmin'
 
 const { Text } = Typography
 
@@ -28,6 +28,7 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(0)
   const [keyword, setKeyword] = useState('')
   const [role, setRole] = useState<Role | undefined>()
+  const setAiQuota = useSetAiQuota()
   const [locked, setLocked] = useState<boolean | undefined>()
 
   const currentUserId = useAuthStore((state) => state.user?.id)
@@ -114,6 +115,37 @@ export default function AdminUsersPage() {
           </Popconfirm>
         )
       },
+    },
+    {
+      // FR-84. Cột này hiện CẢ hạn mức lẫn số đã dùng hôm nay: một ô nhập không kèm mức tiêu thụ thật
+      // thì quản trị viên chỉ đoán, và con số họ đặt sẽ hoặc quá chặt hoặc vô nghĩa.
+      title: (
+        <Tooltip title="Số lượt gọi AI tối đa mỗi ngày. Để trống = dùng mặc định hệ thống; đặt 0 = cấm người này gọi AI.">
+          <span>Hạn mức AI</span>
+        </Tooltip>
+      ),
+      dataIndex: 'aiDailyQuota',
+      width: 190,
+      render: (quota: number | null, row) => (
+        <div className="flex flex-col gap-1">
+          <InputNumber
+            size="small"
+            min={0}
+            max={10000}
+            value={quota}
+            placeholder="Mặc định"
+            className="w-full"
+            disabled={setAiQuota.isPending}
+            // Ô trống gửi null = xoá hạn mức riêng. KHÔNG quy về 0: 0 nghĩa là cấm, một quyết định khác hẳn.
+            onChange={(value) => setAiQuota.mutate({ id: row.id, quota: value ?? null })}
+          />
+          <Text className="text-ink-soft text-xs">
+            {quota === 0
+              ? 'Đang cấm gọi AI'
+              : `Hôm nay đã dùng ${row.aiUsedToday}${quota === null ? '' : `/${quota}`}`}
+          </Text>
+        </div>
+      ),
     },
     {
       title: 'Ngày tạo',

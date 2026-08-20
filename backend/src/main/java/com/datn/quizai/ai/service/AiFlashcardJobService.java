@@ -53,6 +53,7 @@ public class AiFlashcardJobService {
     private final ObjectMapper objectMapper;
     private final AiJobStatusWriter statusWriter;
     private final ApplicationEventPublisher eventPublisher;
+    private final AiQuotaService quotaService;
 
     public AiFlashcardJobService(AiJobRepository jobRepository,
                                  FlashcardGenerationService generationService,
@@ -60,8 +61,10 @@ public class AiFlashcardJobService {
                                  UserRepository userRepository,
                                  ObjectMapper objectMapper,
                                  AiJobStatusWriter statusWriter,
-                                 ApplicationEventPublisher eventPublisher) {
+                                 ApplicationEventPublisher eventPublisher,
+                                 AiQuotaService quotaService) {
         this.jobRepository = jobRepository;
+        this.quotaService = quotaService;
         this.generationService = generationService;
         this.flashcardService = flashcardService;
         this.userRepository = userRepository;
@@ -73,6 +76,10 @@ public class AiFlashcardJobService {
     @Transactional
     public AiJobResponse submit(GenerateFlashcardsRequest request,
                                 JwtService.AuthenticatedUser current) {
+        // Cùng lý do với AiJobService.submitGeneration: chốt hạn mức ngay lúc nhận việc để người
+        // đã hết lượt không nhận 202 rồi mới thấy job hỏng. Kiểm-KHÔNG-cộng-lượt (FR-84).
+        quotaService.kiemTra(current.id());
+
         // Kiểm quyền trên bộ thẻ NGAY, trước khi tốn một lời gọi mô hình: nếu bộ thẻ không thuộc người này
         // thì kết quả sinh ra cũng không lưu được, và người dùng đáng được biết ngay thay vì sau ba mươi
         // giây chờ job.

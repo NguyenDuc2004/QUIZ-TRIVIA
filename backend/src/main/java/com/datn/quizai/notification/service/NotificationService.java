@@ -41,15 +41,18 @@ public class NotificationService {
     private final NotificationRepository repository;
     private final NotificationSettingsRepository settingsRepository;
     private final NotificationPusher pusher;
+    private final EmailSender emailSender;
     private final ObjectMapper objectMapper;
 
     public NotificationService(NotificationRepository repository,
                                NotificationSettingsRepository settingsRepository,
                                NotificationPusher pusher,
+                               EmailSender emailSender,
                                ObjectMapper objectMapper) {
         this.repository = repository;
         this.settingsRepository = settingsRepository;
         this.pusher = pusher;
+        this.emailSender = emailSender;
         this.objectMapper = objectMapper;
     }
 
@@ -94,6 +97,11 @@ public class NotificationService {
         // Đẩy SAU khi đã chắc chắn có trong cơ sở dữ liệu: đẩy trước thì người dùng thấy một thông báo
         // không có trong danh sách của họ
         vuaTao.ifPresent(n -> pusher.day(userId, n));
+
+        // Email là BẢN SAO, không phải kênh thay thế (FR-69). Gửi sau cùng và chạy nền: thông báo đã nằm
+        // trong cơ sở dữ liệu và đã hiện trong ứng dụng, nên SMTP chậm hay hỏng không được phép ảnh hưởng
+        // tới thứ đã chạy đúng. Mặc định tắt — xem EmailSender.
+        vuaTao.ifPresent(n -> emailSender.gui(userId, type, title, body));
         return vuaTao;
     }
 

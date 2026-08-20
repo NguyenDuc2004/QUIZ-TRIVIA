@@ -4,9 +4,11 @@ import com.datn.quizai.auth.service.JwtService;
 import com.datn.quizai.common.dto.PageResponse;
 import com.datn.quizai.quiz.domain.Difficulty;
 import com.datn.quizai.quiz.dto.QuizDetailResponse;
+import com.datn.quizai.quiz.dto.QuizPortableFormat;
 import com.datn.quizai.quiz.dto.QuizRequest;
 import com.datn.quizai.quiz.dto.QuizSummaryResponse;
 import com.datn.quizai.quiz.dto.SetQuizQuestionsRequest;
+import com.datn.quizai.quiz.service.QuizPortabilityService;
 import com.datn.quizai.quiz.service.QuizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -15,6 +17,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,10 +28,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 /**
@@ -43,8 +49,10 @@ import java.util.UUID;
 public class QuizController {
 
     private final QuizService quizService;
+    private final QuizPortabilityService portabilityService;
 
-    public QuizController(QuizService quizService) {
+    public QuizController(QuizService quizService, QuizPortabilityService portabilityService) {
+        this.portabilityService = portabilityService;
         this.quizService = quizService;
     }
 
@@ -108,6 +116,34 @@ public class QuizController {
                                            @PathVariable UUID id,
                                            @Valid @RequestBody SetQuizQuestionsRequest request) {
         return quizService.setQuestions(id, request.questionIds(), current);
+    }
+
+    @GetMapping("/{id}/export")
+    @Operation(summary = "Xuất quiz ra file JSON mang đi được (FR-12) — chỉ chủ quiz. "
+            + "File chứa NỘI DUNG ĐỀ, không chứa id, chủ sở hữu hay số liệu thống kê: nhập vào máy khác "
+            + "phải ra một quiz mới sạch, không phải bản sao mang theo 500 lượt học chưa ai làm.")
+    public ResponseEntity<QuizPortableFormat> exportQuiz(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
+            @PathVariable UUID id) {
+
+        QuizPortableFormat file = portabilityService.export(id, current);
+        String tenTep = URLEncoder.encode("quiz-" + file.title().replaceAll("[\\/:*?\"<>|]", "") + ".json",
+                StandardCharsets.UTF_8).replace("+", "%20");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + tenTep)
+                .body(file);
+    }
+
+    @PostMapping("/import")
+    @Operation(summary = "Nhập quiz từ file JSON (FR-12). LUÔN TẠO MỚI và luôn để riêng tư — "
+            + "không bao giờ ghi đè quiz có sẵn, vì một file cũ nhập nhầm sẽ xoá mất công sức sửa đề "
+            + "mà không có cách nào lấy lại.")
+    @ResponseStatus(HttpStatus.CREATED)
+    public QuizSummaryResponse importQuiz(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
+            @Valid @RequestBody QuizPortableFormat file) {
+        return portabilityService.importQuiz(file, current);
     }
 
     @DeleteMapping("/{id}")

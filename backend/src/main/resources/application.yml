@@ -32,6 +32,11 @@ spring:
       port: ${REDIS_PORT:6379}
 
   mail:
+    # Dùng cho CẢ HAI: OTP đặt lại mật khẩu (features/01, FR-4) và thông báo qua email (features/16, FR-69).
+    #
+    # ĐỂ TRỐNG `username` = TẮT cả hai. Lưu ý `host` có giá trị mặc định nên nó KHÔNG dùng được làm dấu
+    # hiệu bật/tắt — không có tài khoản gửi thì không gửi được gì, dù host trỏ đúng máy chủ Gmail.
+    #
     # Gmail SMTP. MAIL_PASSWORD phải là "App Password" 16 ký tự của Google,
     # KHÔNG phải mật khẩu đăng nhập Gmail — Google đã chặn đăng nhập bằng mật khẩu thường từ 2022.
     # Lấy tại: https://myaccount.google.com/apppasswords (cần bật xác minh 2 bước trước)
@@ -103,7 +108,7 @@ app:
     # Giới hạn riêng cho ảnh, chặt hơn giới hạn multipart chung ở trên (chung phải rộng cho học liệu RAG)
     max-image-size-bytes: ${MAX_IMAGE_SIZE_BYTES:2097152}   # 2MB
   ai:
-    provider-order: ${AI_PROVIDER_ORDER:gemini,grok}
+    provider-order: ${AI_PROVIDER_ORDER:gemini,groq}
     # Số lần thử lại tối đa cho tác vụ AI chạy nền khi vướng hạn mức nhà cung cấp.
     # Mặc định 4 — đủ vượt một cửa sổ hạn mức tính theo phút (Gemini miễn phí: 5 lượt/phút).
     #
@@ -112,6 +117,15 @@ app:
     # chạy. Đã xảy ra một lần và làm sai luôn số liệu.
     #   ./mvnw spring-boot:run -Dspring-boot.run.arguments=--app.ai.max-attempts-background=1
     max-attempts-background: ${AI_MAX_ATTEMPTS_BACKGROUND:4}
+    # Hạn mức số lượt gọi AI mỗi ngày cho MỖI người, khi quản trị viên chưa đặt riêng (FR-84).
+    #
+    # 0 = CHƯA BẬT hạn mức cho hệ thống, không chặn ai. Khác hẳn với việc quản trị viên đặt riêng số 0
+    # cho một người — cái đó nghĩa là CẤM người đó. Cùng con số, hai nghĩa trái ngược, phân biệt bằng
+    # nguồn: `users.ai_daily_quota` để null được chính là để phân biệt hai chuyện này.
+    #
+    # Mặc định để 0 vì bật sẵn một con số nào đó là áp một hạn mức mà không ai chọn, lên một hệ thống
+    # đang chạy. Cần thì đặt qua biến môi trường hoặc đặt riêng từng người ở khu quản trị.
+    default-daily-quota: ${AI_DEFAULT_DAILY_QUOTA:0}
     gemini:
       api-key: ${GEMINI_API_KEY:}
       # gemini-2.5-flash đã bị Google khoá với tài khoản mới (404 NOT_FOUND)
@@ -121,16 +135,24 @@ app:
       embedding-model: ${GEMINI_EMBEDDING_MODEL:gemini-embedding-001}
       # Phải khớp kiểu cột material_chunks.embedding vector(n) — đổi số này thì cần migration mới
       embedding-dimensions: ${GEMINI_EMBEDDING_DIMENSIONS:768}
-    grok:
-      # Provider dự phòng. Để trống api-key thì AiOrchestrator lọc Grok ra khỏi danh sách —
-      # KHÔNG được điền key của team chưa có tín dụng: khi đó Gemini hết hạn mức sẽ chuyển sang
-      # Grok, Grok trả 403 (lỗi KHÔNG tạm thời) và người dùng nhận "permission denied" thay cho
-      # thông báo "hết hạn mức, chờ N giây" vốn hữu ích hơn nhiều.
-      api-key: ${GROK_API_KEY:}
-      # grok-2 đã bị xAI gỡ (API trả "Model not found: grok-2") — cùng loại vấn đề với
-      # text-embedding-004 của Google. Kiểm model còn sống: GET https://api.x.ai/v1/models
-      # (cần tín dụng mới gọi được endpoint này).
-      model: ${GROK_MODEL:grok-4.5}
+    groq:
+      # Provider dự phòng — Groq (groq.com), KHÔNG phải Grok của xAI. Hai chữ khác đúng một ký tự.
+      #
+      # Thay xAI Grok vì xAI không có gói miễn phí: suốt cả dự án đường dự phòng chưa một lần chạy
+      # thật được, nên không ai biết nó có chạy hay không. Groq có gói miễn phí nên đo được.
+      #
+      # Để trống api-key thì AiOrchestrator lọc Groq ra khỏi danh sách — đó là hành vi ĐÚNG, đừng
+      # điền một key không dùng được: khi đó Gemini hết hạn mức sẽ chuyển sang Groq, Groq trả 401
+      # (lỗi KHÔNG tạm thời) và người dùng nhận "unauthorized" thay cho thông báo "hết hạn mức,
+      # chờ N giây" vốn hữu ích hơn nhiều.
+      api-key: ${GROQ_API_KEY:}
+      # Kiểm model còn sống: GET https://api.groq.com/openai/v1/models (cần key).
+      #
+      # Nhà cung cấp gỡ model là chuyện thường, và dự án đã dính BA lần: text-embedding-004 của
+      # Google, grok-2 của xAI, và llama-3.3-70b-versatile của chính Groq — cái cuối bị gỡ trước cả
+      # khi kịp chạy lần đầu (kiểm ngày 20/08/2026: không còn trong danh sách model). Vì vậy đừng
+      # hardcode, và kiểm lại danh sách trước khi tin rằng fallback đang hoạt động.
+      model: ${GROQ_MODEL:openai/gpt-oss-120b}
 
 springdoc:
   swagger-ui:

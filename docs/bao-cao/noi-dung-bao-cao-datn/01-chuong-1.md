@@ -59,7 +59,7 @@ thể cho hai kết quả khác nhau, và mô hình có thể trả về JSON th
 thống phải kiểm tra và xác thực đầu ra thay vì tin tưởng hoàn toàn.
 
 **Nhà cung cấp mô hình trong đồ án.** Hệ thống dùng **Google Gemini** (`gemini-3.6-flash`) làm nhà cung
-cấp chính, và **xAI Grok** làm nhà cung cấp dự phòng. Lý do dùng dịch vụ qua API thay vì tự triển khai mô
+cấp chính, và **Groq** làm nhà cung cấp dự phòng. Lý do dùng dịch vụ qua API thay vì tự triển khai mô
 hình nguồn mở: chất lượng tiếng Việt tốt hơn ở cùng mức chi phí, và không cần hạ tầng GPU — phù hợp phạm
 vi một đồ án tốt nghiệp.
 
@@ -344,7 +344,7 @@ và SSE chạy trên HTTP thông thường nên đơn giản hơn hẳn.
 │   ▼                    ▼                    ▼               │
 │ ┌──────────────┐ ┌───────────────┐ ┌──────────────────┐     │
 │ │ RAG Pipeline │ │AI Orchestrator│ │ Realtime Game    │     │
-│ │ ingest +     │ │ Gemini→Grok   │ │ Engine (WebSocket│     │
+│ │ ingest +     │ │ Gemini→Groq   │ │ Engine (WebSocket│     │
 │ │ retrieval    │ │ +CircuitBrkr  │ │ + Redis Pub/Sub) │     │
 │ └──────────────┘ └───────────────┘ └──────────────────┘     │
 │   Security (JWT) · Async Jobs · Caching · Validation        │
@@ -354,7 +354,7 @@ và SSE chạy trên HTTP thông thường nên đơn giản hơn hẳn.
 ┌───────────┐ ┌────────┐ ┌────────────┐ ┌──────────────────────┐
 │PostgreSQL │ │ Neo4j  │ │   Redis    │ │ External AI Providers│
 │+ pgvector │ │ đồ thị │ │ cache,     │ │ Gemini API (chính)   │
-│dữ liệu +  │ │ hành vi│ │ session,   │ │ Grok API (dự phòng)  │
+│dữ liệu +  │ │ hành vi│ │ session,   │ │ Groq API (dự phòng)  │
 │vector     │ │ gợi ý  │ │ realtime   │ └──────────────────────┘
 └───────────┘ └────────┘ └────────────┘
 ```
@@ -378,7 +378,7 @@ và SSE chạy trên HTTP thông thường nên đơn giản hơn hẳn.
    nền và trả về mã công việc (`jobId`) ngay, thay vì giữ kết nối HTTP chờ.
 
 **Cơ chế dự phòng nhà cung cấp AI.** Mọi lời gọi mô hình đi theo trình tự: gọi Gemini trước; nếu gặp lỗi
-tạm thời (vượt hạn mức 429, lỗi máy chủ 5xx, hết thời gian chờ) thì chuyển sang Grok; nếu cả hai lỗi thì
+tạm thời (vượt hạn mức 429, lỗi máy chủ 5xx, hết thời gian chờ) thì chuyển sang Groq; nếu cả hai lỗi thì
 trả về thông báo lỗi rõ ràng cho người dùng. **Cầu dao** (circuit breaker) của Resilience4j tránh việc
 gọi lặp lại một nhà cung cấp đang lỗi.
 

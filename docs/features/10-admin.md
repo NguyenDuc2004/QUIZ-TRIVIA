@@ -40,13 +40,49 @@ phòng đấu đang diễn ra, và kiểm soát chi phí AI.
 | FR-81 | Giám sát phòng đấu đang chạy: mã PIN, chủ phòng, quiz, số người, trạng thái | ✅ |
 | FR-82 | Cưỡng chế đóng phòng đấu đang treo hoặc vi phạm | ✅ |
 | FR-83 | Xem trạng thái cấu hình nhà cung cấp AI (**đã cấu hình / để trống**, không hiện giá trị khoá) | ✅ |
-| FR-84 | Đặt hạn mức số lượt gọi AI mỗi ngày cho mỗi người tạo nội dung | ⏸ hoãn |
+| FR-84 | Đặt hạn mức số lượt gọi AI mỗi ngày cho mỗi người tạo nội dung | ✅ |
 
-**FR-84 hoãn có lý do, xem như nợ kỹ thuật.** `AiOrchestrator` hiện không đếm lượt gọi theo từng người
-dùng, nên một ô nhập hạn mức chỉ lưu được con số mà không chặn được gì — quản trị viên sẽ tin rằng chi phí
-đã bị giới hạn trong khi thực tế không. Đó là kiểu sai tệ hơn việc thiếu tính năng. Làm đúng cần thêm bộ
-đếm theo user ở Redis và điểm chặn trong `AiOrchestrator`; trong lúc chờ, FR-74 vẫn cho thấy chi phí thật
-theo từng người để phát hiện lạm dụng.
+### FR-84 — hạn mức AI, làm đúng thứ tự
+
+Mục này từng hoãn với lý do: *một ô nhập hạn mức không chặn được gì còn tệ hơn không có ô nào*, vì quản trị
+viên sẽ tin rằng chi phí đã bị giới hạn. Nên phần đếm và điểm chặn được làm **trước**, ô nhập là phần cuối.
+
+`PUT /api/v1/admin/users/{id}/ai-quota?quota=N` · V22 thêm cột `users.ai_daily_quota`.
+
+**`null` KHÁC `0`, và đây là chỗ dễ hỏng nhất:**
+
+| Giá trị | Nghĩa |
+|---|---|
+| `null` | Chưa đặt riêng → dùng mặc định hệ thống (`app.ai.default-daily-quota`) |
+| `0` do quản trị viên đặt | **Cấm** người này gọi AI |
+| `0` là mặc định hệ thống | **Chưa bật** hạn mức, không chặn ai |
+
+Cùng con số `0` mang hai nghĩa trái ngược, phân biệt bằng **nguồn** của nó. Gộp lại thì hoặc không cấm được
+ai, hoặc mọi tài khoản mới bị cấm ngay từ lúc tạo.
+
+**Đếm ở Redis, sự thật ở PostgreSQL.** Bộ đếm tăng ở mỗi lời gọi — ghi vào PostgreSQL là một UPDATE cho mỗi
+lời gọi trên đúng một dòng mà nhiều luồng cùng tranh. Redis ở dự án này không bật AOF, nên bộ đếm **dựng lại
+từ `ai_request_logs`** khi khoá chưa có; không có bước đó thì một lần restart Redis là xoá hạn mức của cả hệ
+thống mà không ai nhận ra. Cùng nguyên tắc đã dùng cho bảng xếp hạng mùa.
+
+**Đếm lượt của NGƯỜI DÙNG, không đếm lần thử lại.** Một lần sinh đề hỏng rồi thử lại 3 lần vẫn là *một* lượt.
+Đếm từng lần thử thì hạn mức phụ thuộc vào việc nhà cung cấp hôm nay có ổn định hay không — người dùng mất
+lượt vì sự cố họ không gây ra, và "20 lượt" không còn tương ứng với lượng việc nào.
+
+**Nhúng học liệu KHÔNG tính vào hạn mức.** Một tài liệu chia 50 đoạn là 50 lời gọi `embed` cho *một* hành
+động của người dùng; tính vào thì hạn mức hết ngay ở tài liệu đầu tiên. Chi phí phần này theo dõi qua FR-74.
+
+**Chốt hạn mức ở HAI chỗ, và chỉ một chỗ cộng lượt.** Tác vụ AI nặng chạy nền: `POST /ai/generate-questions`
+trả 202 kèm `jobId` ngay, còn lời gọi mô hình xảy ra sau ở luồng nền. Bản đầu chỉ chốt trong
+`AiOrchestrator` — nơi luồng nền gọi tới — nên chạy thật ngày 20/08 lộ ra: **người bị cấm vẫn nhận 202**,
+rồi mới thấy job hỏng. Chi phí vẫn khống chế đúng (bảng audit xác nhận 0 lời gọi mô hình), nhưng họ bấm
+mười lần là tạo mười job hỏng mà không hiểu vì sao.
+
+Nên thêm `kiemTra()` **chỉ kiểm, không cộng lượt** ở lúc nhận việc. Cộng ở cả hai chỗ là **trừ đôi** —
+người dùng mất một nửa hạn mức mà không có cách nào biết.
+
+**Giao diện hiện cả hạn mức lẫn số đã dùng hôm nay** — một ô nhập không kèm mức tiêu thụ thật thì quản trị
+viên chỉ đoán, và con số họ đặt sẽ hoặc quá chặt hoặc vô nghĩa.
 
 ## Ba việc cố ý KHÔNG làm
 

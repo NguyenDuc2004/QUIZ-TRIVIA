@@ -155,6 +155,10 @@ export default function QuizIntroPage() {
           <div className="mb-4 flex flex-col gap-1">
             <Text className="text-ink-soft text-xs">Nội dung</Text>
             <Text className="font-bold!">{quiz.questionCount} câu hỏi</Text>
+            {/* Trang này là nơi người học QUYẾT ĐỊNH có làm hay không, nên con số thuộc về đây rõ hơn cả */}
+            {quiz.learnerCount > 0 && (
+              <Text className="text-ink-soft text-xs">{quiz.learnerCount} người đã làm quiz này</Text>
+            )}
             <Text className="text-ink-soft text-xs">
               {minutes ? `Giới hạn ${minutes} phút` : 'Không giới hạn thời gian'}
             </Text>
@@ -173,6 +177,20 @@ export default function QuizIntroPage() {
             </Space>
           </Radio.Group>
           <Paragraph className="mb-4! text-ink-soft text-xs">{MODE_HINT[mode]}</Paragraph>
+
+          {/* FR-48. Nói TRƯỚC khi bấm bắt đầu, không phải lúc màn hình đã đổi: người học cần biết mình sắp
+              vào toàn màn hình để còn chọn thời điểm — đóng bớt tab, ngồi vào chỗ yên tĩnh. Bật lên đột ngột
+              giữa lúc họ chưa sẵn sàng thì lần thoát ra đầu tiên là do MÌNH gây ra, mà nó vẫn bị ghi lại.
+              Chỉ hiện khi đang chọn chế độ Thi, vì luyện tập không áp cờ này */}
+          {quiz.strictExam && mode === 'EXAM' && (
+            <Alert
+              type="warning"
+              showIcon
+              className="mb-4"
+              message="Bài này bật chế độ thi nghiêm ngặt"
+              description="Bạn sẽ được yêu cầu vào toàn màn hình trước khi làm bài, và chuột phải bị khoá. Bạn vẫn thoát toàn màn hình được, nhưng mỗi lần thoát đều được ghi lại."
+            />
+          )}
 
           <Button
             type="primary"

@@ -54,6 +54,18 @@ export const recommendApi = {
 
   path: () => apiClient.get<LearningPath>('/recommendations/path').then((res) => res.data),
 
+  /**
+   * Nhờ AI giải thích vì sao quiz này được gợi ý (FR-36).
+   *
+   * CHỦ ĐỘNG bấm mới gọi. Gọi tự động cho cả danh sách là mười lời gọi mô hình cho một lần lướt, và từ
+   * FR-84 thì chúng tiêu vào hạn mức AI của chính người học — họ bị phạt vì thứ họ không chủ động dùng.
+   * Backend cache 24 giờ nên hỏi lại cùng một quiz không tốn thêm lượt.
+   */
+  explain: (quizId: string) =>
+    apiClient
+      .post<{ explanation: string }>(`/recommendations/${quizId}/explain`)
+      .then((res) => res.data.explanation),
+
   /** Dựng lại đồ thị từ lịch sử làm bài — cần cho bài đã làm trước khi có tính năng này. */
   rebuild: () =>
     apiClient

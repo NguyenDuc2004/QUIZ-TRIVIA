@@ -1,16 +1,24 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Alert, Button, Modal, Progress, Skeleton, Space, Tag, Typography } from 'antd'
+import { Alert, Button, Modal, Progress, Skeleton, Space, Tag, Typography, message } from 'antd'
 import { getApiErrorMessage } from '@/shared/api/client'
 import PageHeader from '@/shared/components/PageHeader'
+import StrictExamGate, { StrictExamReminder } from '@/features/integrity/components/StrictExamGate'
+import { useProctoring } from '@/features/integrity/hooks/useProctoring'
+import { useStrictExam } from '@/features/integrity/hooks/useStrictExam'
 import { QUESTION_TYPE_LABEL } from '@/features/quiz/constants'
-import type { AnswerFeedback, AnswerPayload, AttemptDetail, AttemptQuestion } from '../api/attemptApi'
+import {
+  attemptApi,
+  type AnswerFeedback,
+  type AnswerPayload,
+  type AttemptDetail,
+  type AttemptQuestion,
+} from '../api/attemptApi'
 import AnswerInput from '../components/AnswerInput'
 import AttemptTimer from '../components/AttemptTimer'
 import QuestionReview from '../components/QuestionReview'
 import { MODE_LABEL, STATUS_COLOR, STATUS_LABEL, formatDuration } from '../constants'
 import { useAnswerQuestion, useAttempt, useSubmitAttempt } from '../hooks/useAttemptQueries'
-import { useProctoring } from '@/features/integrity/hooks/useProctoring'
 import ProctoringNotice from '@/features/integrity/components/ProctoringNotice'
 
 const { Text, Paragraph, Title } = Typography
@@ -59,6 +67,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
   )
   /** Kết quả chấm ngay của chế độ luyện tập, theo từng câu. */
   const [feedback, setFeedback] = useState<Record<string, AnswerFeedback>>({})
+  const [dangTimCauSau, setDangTimCauSau] = useState(false)
 
   const question = questions[index]
   const answeredCount = questions.filter((q) => isAnswered(draft[q.questionId])).length
@@ -71,6 +80,31 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
   // đây là lớp thứ hai chứ không phải lớp duy nhất.
   useProctoring(attempt.id, !isPractice)
 
+  // FR-48. Dùng thẳng `attempt.strictExam` — KHÔNG tự nhân với `!isPractice` ở đây: server đã tính rồi, và
+  // tính lại ở client là mở đường cho hai bên nói khác nhau.
+  const { dangToanManHinh, vaoToanManHinh } = useStrictExam(attempt.strictExam)
+
+  /**
+   * Đã từng vào toàn màn hình cho bài này chưa.
+   *
+   * Phân biệt hai trạng thái mà nếu gộp lại thì giao diện sai ở một trong hai: **chưa bắt đầu** (che đề,
+   * hiện cửa vào) và **đã vào rồi nhưng vừa thoát ra** (hiện đề, chỉ nhắc). Chỉ nhìn `dangToanManHinh` thì
+   * người bấm nhầm Esc giữa bài bị che mất đề đang làm dở.
+   */
+  const [daVaoToanManHinh, setDaVaoToanManHinh] = useState(false)
+
+  const moToanManHinh = async () => {
+    const duoc = await vaoToanManHinh()
+    if (duoc) {
+      setDaVaoToanManHinh(true)
+    } else {
+      // Trình duyệt từ chối (Safari trên iPhone không có Fullscreen API cho phần tử thường). Cho làm bài
+      // chứ không chặn: chặn là biến một hạn chế của thiết bị thành mất quyền dự thi.
+      setDaVaoToanManHinh(true)
+      message.warning('Trình duyệt của bạn không vào được toàn màn hình. Bạn vẫn làm bài bình thường.')
+    }
+  }
+
   const commit = (payload: AnswerPayload) => {
     answerMutation.mutate(
       {
@@ -80,6 +114,35 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
       },
       { onSuccess: (data) => isPractice && setFeedback((prev) => ({ ...prev, [question.questionId]: data })) },
     )
+  }
+
+  /**
+   * Sang câu kế tiếp.
+   *
+   * Chế độ LUYỆN TẬP hỏi server câu nào nên hỏi tiếp (FR-32): sai hai câu liền thì gặp câu dễ hơn, đúng
+   * hai câu liền thì gặp câu khó hơn. **Bộ đề không đổi** — chỉ thứ tự đổi, nên điểm vẫn so được giữa
+   * các người học.
+   *
+   * Chế độ THI đi tuần tự: thi là để đo, mọi người phải làm cùng một đề theo cùng một thứ tự.
+   *
+   * Server hỏng hoặc trả null thì lùi về câu kế tiếp theo thứ tự — người đang làm bài không được kẹt lại
+   * vì một tính năng phụ trợ gặp sự cố.
+   */
+  const sangCauSau = async () => {
+    if (!isPractice) {
+      setIndex(index + 1)
+      return
+    }
+    setDangTimCauSau(true)
+    try {
+      const nextId = await attemptApi.nextQuestion(attempt.id)
+      const viTri = nextId ? questions.findIndex((q) => q.questionId === nextId) : -1
+      setIndex(viTri >= 0 ? viTri : index + 1)
+    } catch {
+      setIndex(index + 1)
+    } finally {
+      setDangTimCauSau(false)
+    }
   }
 
   const submit = () =>
@@ -114,6 +177,17 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
           không nói với người bị thu là làm sau lưng họ. Chỉ hiện ở chế độ thi vì luyện tập không thu gì. */}
       {!isPractice && <ProctoringNotice />}
 
+      {/* Đã thoát toàn màn hình giữa chừng: nhắc, KHÔNG che đề. Che đi là phạt người bấm nhầm Esc bằng
+          cách chặn họ làm tiếp, trong khi tín hiệu đã ghi rồi */}
+      {attempt.strictExam && !dangToanManHinh && daVaoToanManHinh && (
+        <StrictExamReminder onVao={() => void moToanManHinh()} />
+      )}
+
+      {/* Cửa vào: che đề cho tới khi người học chủ động vào toàn màn hình. Chỉ hiện một dải cảnh báo mà
+          bên dưới vẫn đọc được đề thì không ai bấm, và cả chế độ nghiêm ngặt thành dòng chữ trang trí */}
+      {attempt.strictExam && !daVaoToanManHinh ? (
+        <StrictExamGate dangToanManHinh={dangToanManHinh} onVao={() => void moToanManHinh()} />
+      ) : (
       <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
         <div className="flex flex-col gap-4">
           {locked ? (
@@ -130,6 +204,16 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
 
               <Paragraph className="mb-4! text-base font-bold!">{question.content}</Paragraph>
 
+              {/* FR-11. Giới hạn chiều cao thay vì để ảnh chiếm cả màn: người học cần thấy ảnh VÀ các
+                  lựa chọn cùng lúc, không phải cuộn qua lại giữa đề và đáp án khi đang tính giờ */}
+              {question.imageUrl && (
+                <img
+                  src={question.imageUrl}
+                  alt="Ảnh minh hoạ của câu hỏi"
+                  className="mb-4 max-h-72 w-auto max-w-full border border-line object-contain"
+                />
+              )}
+
               <AnswerInput
                 question={question}
                 value={draft[question.questionId] ?? EMPTY_ANSWER}
@@ -145,7 +229,8 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
             </Button>
             <Button
               disabled={index === questions.length - 1}
-              onClick={() => setIndex(index + 1)}
+              loading={dangTimCauSau}
+              onClick={() => void sangCauSau()}
             >
               Câu sau →
             </Button>
@@ -205,6 +290,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
           </div>
         </aside>
       </div>
+      )}
     </Space>
   )
 }

@@ -528,6 +528,47 @@ public class AttemptService {
      * Chuẩn hóa dữ liệu client gửi thành payload đúng với loại câu hỏi, đồng thời chặn
      * những id lựa chọn không thuộc câu hỏi này (client sửa request).
      */
+    /**
+     * Câu nên hỏi tiếp ở chế độ luyện tập (features/03, FR-32).
+     *
+     * <h4>Chỉ luyện tập, và server quyết định chứ không phải client</h4>
+     * Lượt thi trả về {@code null}: thi là để <b>đo</b>, nên mọi người phải làm cùng một đề theo cùng một
+     * thứ tự — thứ tự thích ứng biến thành một biến số ảnh hưởng tới điểm mà không ai kiểm soát.
+     * <p>
+     * Client có thể tự tính thứ tự vì nó đã có cả đề lẫn kết quả từng câu. Không làm vậy: khi ấy hai bản
+     * (web và một bản khác sau này) sẽ thích ứng khác nhau trên cùng dữ liệu, và không ai giải thích được
+     * vì sao hai người học cùng trình độ lại gặp thứ tự khác nhau.
+     *
+     * @return id câu kế tiếp, hoặc {@code null} khi đã làm hết / không phải chế độ luyện tập
+     */
+    @Transactional(readOnly = true)
+    public UUID nextQuestionId(UUID attemptId, JwtService.AuthenticatedUser current) {
+        QuizAttempt attempt = attemptRepository.findByIdWithAnswers(attemptId)
+                .orElseThrow(() -> BusinessException.notFound("Không tìm thấy bài làm"));
+
+        if (!attempt.getUser().getId().equals(current.id())) {
+            // 404 chứ không 403: bài của ai người ấy xem, và không tiết lộ rằng bài đó tồn tại
+            throw BusinessException.notFound("Không tìm thấy bài làm");
+        }
+        if (attempt.getMode() != AttemptMode.PRACTICE) {
+            return null;
+        }
+
+        List<AdaptiveNextPicker.Cau> cacCau = attempt.getAnswers().stream()
+                .sorted(Comparator.comparingInt(AttemptAnswer::getOrderIndex))
+                .map(a -> new AdaptiveNextPicker.Cau(
+                        a.getQuestion().getId(),
+                        a.getOrderIndex(),
+                        a.getQuestion().getDifficulty(),
+                        a.getCorrect(),
+                        a.getAnsweredAt()))
+                .toList();
+
+        return AdaptiveNextPicker.chonTiepTheo(cacCau)
+                .map(AdaptiveNextPicker.Cau::questionId)
+                .orElse(null);
+    }
+
     private AnswerPayload buildPayload(Question question, SubmitAnswerRequest request) {
         if (!question.getType().isChoiceBased()) {
             return AnswerPayload.ofText(request.text());

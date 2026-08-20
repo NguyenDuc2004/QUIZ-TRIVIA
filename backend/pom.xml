@@ -137,7 +137,8 @@
             <version>${tika.version}</version>
         </dependency>
 
-        <!-- Gửi email OTP đặt lại mật khẩu (features/01 FR-4) -->
+        <!-- Gửi email: OTP đặt lại mật khẩu (features/01 FR-4) và thông báo (features/16 FR-69).
+             FR-69 mặc định TẮT — không cấu hình `spring.mail.host` thì EmailSender không gửi gì. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
@@ -195,6 +196,22 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>neo4j</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!--
+            Máy chủ SMTP trong bộ nhớ, chỉ dùng cho test.
+
+            Có nó thì phần "soạn và gửi đúng" của FR-69 KIỂM ĐƯỢC THẬT: thư đi qua giao thức SMTP thật,
+            và test đọc lại đúng nội dung server nhận được. Mock một `JavaMailSender` chỉ chứng minh code
+            gọi đúng hàm, không chứng minh thư hợp lệ.
+
+            Vẫn KHÔNG kiểm được thư có vào inbox hay rơi vào spam — đó là chuyện của nhà cung cấp thư và
+            danh tiếng tên miền, nằm ngoài phạm vi đồ án. Ghi rõ giới hạn đó ở features/16.
+        -->
+        <dependency>
+            <groupId>com.icegreen</groupId>
+            <artifactId>greenmail-junit5</artifactId>
+            <version>2.1.3</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

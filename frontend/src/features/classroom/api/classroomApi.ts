@@ -120,4 +120,16 @@ export const classroomApi = {
 
   ketQua: (assignmentId: string) =>
     apiClient.get<AssignmentResults>(`/assignments/${assignmentId}/results`).then((res) => res.data),
+
+  /**
+   * Tải bảng điểm CSV (FR-58).
+   *
+   * Trả `Blob` chứ không phải JSON, và **để bên gọi tự tạo link tải**: gọi `window.open` ở đây thì request
+   * không mang header `Authorization`, server trả 401 và người dùng nhận một tab trắng không rõ vì sao.
+   */
+  taiBangDiemCsv: (assignmentId: string) =>
+    apiClient
+      .get<Blob>(`/assignments/${assignmentId}/results.csv`, { responseType: 'blob' })
+      .then((res) => res.data),
+
 }

@@ -30,7 +30,16 @@ export interface QuizSummary {
   aiGenerated: boolean
   thumbnailUrl: string | null
   timeLimitSec: number | null
+  /** Chế độ thi nghiêm ngặt (FR-48): yêu cầu toàn màn hình, khoá chuột phải. Chỉ áp cho lượt EXAM. */
+  strictExam: boolean
   questionCount: number
+  /**
+   * Số NGƯỜI đã làm xong quiz này — không phải số lượt.
+   *
+   * `0` nghĩa là CHƯA AI KỊP LÀM, không phải "quiz dở". Giao diện phải ẩn hẳn thay vì hiện "0 người đã
+   * làm": số 0 đọc như một lời chê và phạt oan mọi quiz mới.
+   */
+  learnerCount: number
   ownerId: string
   ownerDisplayName: string
   createdAt: string
@@ -49,6 +58,8 @@ export interface Question {
   type: QuestionType
   content: string
   explanation: string | null
+  /** Ảnh minh hoạ (FR-11); null = câu hỏi chỉ có chữ. Đường dẫn nội bộ /uploads/… */
+  imageUrl: string | null
   /** Tiêu chí chấm câu tự luận (features/06). */
   rubric: string | null
   difficulty: Difficulty
@@ -72,6 +83,7 @@ export interface QuizBody {
   difficulty?: Difficulty
   visibility?: Visibility
   timeLimitSec?: number | null
+  strictExam?: boolean
   thumbnailUrl?: string | null
 }
 
@@ -79,11 +91,13 @@ export interface QuestionBody {
   type: QuestionType
   content: string
   explanation?: string | null
+  imageUrl?: string | null
   rubric?: string | null
   difficulty?: Difficulty
   topic?: string | null
   points?: number | null
   timeLimitSec?: number | null
+  strictExam?: boolean
   options: { content: string; correct: boolean }[]
 }
 
@@ -109,6 +123,16 @@ export const categoryApi = {
   list: () => apiClient.get<Category[]>('/categories').then((res) => res.data),
 }
 
+/** Định dạng file mang đi được (FR-12). Không có id, chủ sở hữu hay số liệu thống kê. */
+export interface QuizPortableFile {
+  formatVersion: number
+  title: string
+  description: string | null
+  difficulty: Difficulty
+  timeLimitSec: number | null
+  questions: unknown[]
+}
+
 export const quizApi = {
   list: (params: QuizListParams) =>
     apiClient.get<PageResponse<QuizSummary>>('/quizzes', { params }).then((res) => res.data),
@@ -128,6 +152,18 @@ export const quizApi = {
   /** Thay toàn bộ danh sách câu hỏi — thứ tự mảng là thứ tự câu hỏi. */
   setQuestions: (id: string, questionIds: string[]) =>
     apiClient.put<QuizDetail>(`/quizzes/${id}/questions`, { questionIds }).then((res) => res.data),
+
+  /** Xuất quiz ra file JSON (FR-12) — chỉ chủ quiz. */
+  exportQuiz: (id: string) =>
+    apiClient.get<QuizPortableFile>(`/quizzes/${id}/export`).then((res) => res.data),
+
+  /**
+   * Nhập quiz từ file JSON (FR-12).
+   *
+   * LUÔN tạo quiz mới và luôn để riêng tư — không bao giờ ghi đè quiz có sẵn.
+   */
+  importQuiz: (file: QuizPortableFile) =>
+    apiClient.post<QuizSummary>('/quizzes/import', file).then((res) => res.data),
 }
 
 /** Một chủ đề trong ngân hàng, kèm số câu đang mang chủ đề đó. */
@@ -150,4 +186,5 @@ export const questionApi = {
     apiClient.put<Question>(`/questions/${id}`, body).then((res) => res.data),
 
   remove: (id: string) => apiClient.delete<void>(`/questions/${id}`).then((res) => res.data),
+
 }
