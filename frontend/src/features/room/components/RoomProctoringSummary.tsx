@@ -60,22 +60,25 @@ export default function RoomProctoringSummary({ roomCode }: { roomCode: string }
         <Tag className="mr-0!">chỉ bạn thấy bảng này</Tag>
       </div>
 
-      {/* Câu nhắc "không phải kết luận" đứng TRƯỚC mọi con số. Đặt sau bảng thì host đã đọc xong danh sách
-          và đã kết luận rồi mới thấy nó */}
-      <Alert
-        type={soBiGanCo > 0 ? 'warning' : 'info'}
-        showIcon
-        className="mb-3"
-        message={
-          soBiGanCo > 0
-            ? `${soBiGanCo} người có khuôn lặp đáng để hỏi lại`
-            : 'Không ai đạt tới khuôn lặp'
-        }
-        description={
-          'Tín hiệu do trình duyệt người chơi gửi lên nên chặn được và giả mạo được. Bảng này để bạn biết ' +
-          'nên hỏi ai, không phải để kết luận ai gian lận. Hệ thống không trừ điểm của bất kỳ ai.'
-        }
-      />
+      {/* Chỉ hiện khi CÓ người bị gắn cờ.
+
+          Câu nhắc "không phải kết luận" đứng TRƯỚC mọi con số — đặt sau bảng thì host đã đọc xong danh
+          sách và đã kết luận rồi mới thấy nó. Nhưng nó chỉ có việc để làm khi bảng đang chỉ vào một người
+          cụ thể: lúc không ai bị gắn cờ thì không có ai để kết luận oan, và một thẻ cảnh báo dài giải
+          thích chuyện giả mạo tín hiệu trở thành tiếng ồn ngay trên cùng — đọc như thể hệ thống đang có
+          điều muốn nói, trong khi nó chỉ đang nói "không có gì". */}
+      {soBiGanCo > 0 && (
+        <Alert
+          type="warning"
+          showIcon
+          className="mb-3"
+          message={`${soBiGanCo} người có khuôn lặp đáng để hỏi lại`}
+          description={
+            'Tín hiệu do trình duyệt người chơi gửi lên nên chặn được và giả mạo được. Bảng này để bạn ' +
+            'biết nên hỏi ai, không phải để kết luận ai gian lận. Hệ thống không trừ điểm của bất kỳ ai.'
+          }
+        />
+      )}
 
       <Table<RoomProctoringSummaryRow>
         rowKey="playerId"
