@@ -502,7 +502,19 @@ class ChatIntegrationTest {
 
         // Đọc thành byte rồi tự giải mã UTF-8, không dùng `ofString()`: hàm đó theo charset mà response
         // khai báo, và ở luồng SSE nó không phải UTF-8 — chữ có dấu sẽ ra "chÃ o".
-        byte[] raw = jdkClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofByteArray()).body();
+        //
+        // CLIENT MỚI CHO MỖI LẦN GỌI, không dùng chung một client cho cả lớp.
+        //
+        // `HttpClient` gộp kết nối theo keep-alive. Luồng SSE kết thúc bằng việc SERVER đóng stream, nên
+        // kết nối nằm lại trong bể ở trạng thái đã chết; lần gửi sau nhặt đúng nó và nhận
+        // "HTTP/1.1 header parser received no bytes". Đó là lý do lỗi chỉ nổ từ phép kiểm THỨ HAI trở đi
+        // và biến mất khi chạy riêng một phép kiểm.
+        //
+        // Không đặt được header `Connection: close` để chữa — JDK cấm client tự đặt header đó. Nên cách
+        // duy nhất là đừng có bể kết nối nào để mà cũ.
+        byte[] raw = newJdkClient()
+                .send(request, java.net.http.HttpResponse.BodyHandlers.ofByteArray())
+                .body();
 
         return parseSse(new String(raw, java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -536,10 +548,12 @@ class ChatIntegrationTest {
      * {@code HTTP_1_1} tường minh: luồng SSE của Tomcat là chunked HTTP/1.1, và để client tự thương lượng lên
      * HTTP/2 là thêm một biến số vào đúng chỗ vừa mất ba lần sửa.
      */
-    private final java.net.http.HttpClient jdkClient = java.net.http.HttpClient.newBuilder()
-            .version(java.net.http.HttpClient.Version.HTTP_1_1)
-            .connectTimeout(java.time.Duration.ofSeconds(10))
-            .build();
+    private static java.net.http.HttpClient newJdkClient() {
+        return java.net.http.HttpClient.newBuilder()
+                .version(java.net.http.HttpClient.Version.HTTP_1_1)
+                .connectTimeout(java.time.Duration.ofSeconds(10))
+                .build();
+    }
 
     /** Bóc từng khối {@code event: … / data: …} của định dạng SSE. */
     private List<Event> parseSse(String raw) {

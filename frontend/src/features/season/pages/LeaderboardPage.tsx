@@ -16,6 +16,17 @@ const { Text } = Typography
  * Chỉ có phạm vi toàn hệ thống: xếp hạng theo lớp cần tính năng 14 (chưa làm), còn "theo bạn bè" không tồn
  * tại ở bất kỳ đâu trong dự án. Không làm bộ lọc rỗng cho đủ mặt.
  */
+/**
+ * Màu ba hạng. Dùng token màu của Ant Design chứ không hardcode mã màu (ui-design-system.md §2).
+ *
+ * Vàng > Bạc > Đồng theo đúng thứ tự trực giác của huy chương, để người dùng không phải học một quy ước mới.
+ */
+const MAU_HANG: Record<'DONG' | 'BAC' | 'VANG', string> = {
+  VANG: 'gold',
+  BAC: 'default',
+  DONG: 'orange',
+}
+
 export default function LeaderboardPage() {
   const { data, isLoading } = useLeaderboard(20)
   const { data: history } = useSeasonHistory()
@@ -113,6 +124,22 @@ export default function LeaderboardPage() {
                     </Text>
                   </span>
                 ),
+              },
+              {
+                // FR-64. Cột này TRỐNG khi mùa chưa đủ 10 người — trống là đúng, không phải thiếu dữ liệu:
+                // trao huy hiệu Vàng cho người đứng đầu trong ba người làm mất giá đúng huy hiệu đó.
+                title: 'Hạng',
+                dataIndex: 'nhanHang',
+                width: 100,
+                align: 'center',
+                render: (nhan: string | null, row: LeaderboardRow) =>
+                  nhan ? (
+                    <Tag color={MAU_HANG[row.phanHang ?? 'DONG']} className="mr-0!">
+                      {nhan}
+                    </Tag>
+                  ) : (
+                    <Text className="text-ink-soft">—</Text>
+                  ),
               },
               {
                 title: 'Điểm mùa',

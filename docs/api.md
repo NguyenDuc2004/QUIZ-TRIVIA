@@ -519,6 +519,12 @@ GET    /api/v1/admin/integrity/flagged           Hàng chờ bài bị gắn c�
 - Hàng chờ sắp theo điểm rủi ro giảm dần, mặc định lọc `PENDING`, và **không kèm từng sự kiện** (`suKien: []`)
   — trang đó chỉ để chọn bài cần mở.
 
+### Phân hạng mùa (FR-64) ✅
+
+Không có endpoint mới. `LeaderboardResponse.Dong` trả kèm `phanHang` (`DONG`/`BAC`/`VANG`) và `nhanHang`
+(nhãn tiếng Việt). **Cả hai là `null` khi mùa chưa đủ 10 người** — phân hạng theo **vị trí tương đối**, nên
+"top 10% của 3 người" là câu vô nghĩa. Chi tiết ở [features/15](features/15-seasonal-leaderboard.md).
+
 ### Xuất / nhập quiz (FR-12) ✅
 ```
 GET  /api/v1/quizzes/{id}/export   Tải file JSON — chỉ chủ quiz      ✅

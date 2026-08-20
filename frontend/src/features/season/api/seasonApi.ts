@@ -6,6 +6,14 @@ export interface LeaderboardRow {
   displayName: string
   avatarUrl: string | null
   score: number
+  /**
+   * Đồng / Bạc / Vàng theo VỊ TRÍ TƯƠNG ĐỐI trong mùa (FR-64).
+   *
+   * `null` khi mùa chưa đủ người để việc phân hạng có nghĩa — "top 10% của 3 người" là câu vô nghĩa.
+   */
+  phanHang: 'DONG' | 'BAC' | 'VANG' | null
+  /** Nhãn tiếng Việt để hiện thẳng; null cùng lúc với `phanHang`. */
+  nhanHang: string | null
 }
 
 export interface Leaderboard {
