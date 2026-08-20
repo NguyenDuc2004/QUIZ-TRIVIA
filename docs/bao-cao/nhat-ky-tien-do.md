@@ -46,6 +46,7 @@
 
 | 20/08 | **Đổi dự phòng AI sang Groq** · **FR-48 thi nghiêm ngặt** (V21) · **FR-58 xuất bảng điểm CSV** · **FR-84 hạn mức AI** (V22) — 494 test BE / 67 FE · sửa 2 lỗi có sẵn | 13/13 | 🟢 xong — fallback đo thật, tìm & sửa 1 lỗi khi chạy thật |
 | 20/08 (chiều) | **Làm nốt 6 mục hoãn**: FR-11, FR-36, FR-32, FR-12, FR-64, FR-69 — hết mục ⏳ | 6/6 | 🟢 xong |
+| 20/08 (tối) | **Đánh bóng phần người dùng thấy**: số người đã học · sửa hồ sơ + ảnh đại diện · chân trang · hover thẻ quiz · **đăng ký Google nhận đúng vai trò** — 571 test BE / 67 FE | 5/5 | 🟢 xong — 2 lỗi thật do người dùng chỉ ra |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -3343,6 +3344,112 @@ luôn `mvnw clean` trước lần chạy đầy đủ.
   số" / "sẽ tốn hạn mức"), gỡ được bằng cách đổi cách đặt vấn đề chứ không bằng cách làm bừa*.
 - **Mục 3.4:** ba flake ở trên đều là *lỗi của phép kiểm, không phải của sản phẩm* — nhưng cái thứ ba lộ ra
   một tính chất thật của hệ thống (đồ thị gợi ý là view, nhất quán cuối cùng) nên đáng viết vào báo cáo.
+
+---
+
+## 📅 T5 — 20/08/2026 (tối) — Đánh bóng phần người dùng thấy, và một lựa chọn bị bỏ qua trong im lặng
+
+**Xong:** số **người** đã học dưới thẻ quiz · sửa hồ sơ + đổi ảnh đại diện · chân trang · hover thẻ quiz ·
+**đăng ký bằng Google nhận đúng vai trò**. Backend 553 → **571 test**, frontend 67.
+
+Hôm nay không thêm chức năng mới nào trong đặc tả. Toàn bộ đến từ việc **người dùng mở web ra bấm** — và hai
+trong số đó là lỗi thật mà 553 bài test không hề chạm tới.
+
+---
+
+### "Thêm số lượt làm và lượt đánh giá" — nhận một nửa, từ chối một nửa
+
+Yêu cầu ban đầu là hai con số. Em làm **một**.
+
+**Lượt đánh giá thì không có gì để hiển thị**: hệ thống chưa có bảng đánh giá, chưa có màn chấm sao, chưa có
+một dòng dữ liệu nào. Muốn thẻ quiz có "4.7 sao (243 đánh giá)" thì chỉ còn cách sinh số — đúng thứ CLAUDE.md §5
+cấm. Và ở đây nó tệ hơn "làm đẹp giao diện": điểm đánh giá là thứ người học **dựa vào để chọn học cái gì**,
+nên số bịa không phải trang trí sai, nó là **lời khuyên sai**.
+
+**Số lượt làm thì có thật** — nhưng em đổi sang đếm **người**, không đếm **lượt**. Một người ôn lại quiz 10 lần
+sẽ đọc thành "10 người đã học", và tính năng luyện tập lặp của chính dự án (flashcard SRS, làm lại để lấy điểm
+cao hơn) khiến chuyện đó là **bình thường chứ không phải ngoại lệ**. Nên `count(distinct user_id)`, và bài
+`IN_PROGRESS` không tính: mở đề ra xem rồi thoát không phải là đã học.
+
+Dùng `@Formula` thay vì cột đếm sẵn: cột đếm sẵn phải được cập nhật ở mọi đường ghi (nộp bài, phòng đấu, xoá
+tài khoản) và **sai lệch dần** khi quên một đường; `@Formula` không bao giờ lệch vì nó không lưu gì.
+
+### Ảnh đại diện: một ô nhập không kiểm tra, và nó nằm trên màn hình người khác
+
+Làm trang sửa hồ sơ mới nhìn ra: `avatarUrl` nhận **bất kỳ chuỗi nào**. Nghe như chuyện riêng của mỗi người —
+nhưng ảnh đại diện được render trên **màn hình người khác**: thanh điều hướng, bảng xếp hạng, danh sách lớp,
+thẻ người chơi trong phòng đấu. Dán một URL ngoài vào đó là đặt một **pixel theo dõi**: máy chủ lạ nhận được
+IP của mọi người vừa mở bảng xếp hạng.
+
+Nhưng chặn thẳng "chỉ nhận `/uploads/`" thì **hỏng đăng nhập Google**: ảnh của họ nằm ở `googleusercontent.com`,
+và người dùng chỉ cần bấm Lưu một lần ở trang hồ sơ là mất ảnh. Luật đúng là: **không đổi thì luôn cho phép,
+đổi thì phải là ảnh đã tải lên hệ thống**.
+
+`UploadedImagePath` (tách ra hôm chiều cho ảnh bìa + ảnh câu hỏi) dùng lại ở đây là chỗ thứ **ba**.
+
+### Chân trang: cùng một cái bẫy Ant Design, lần thứ hai
+
+Chân trang **không có** "Về chúng tôi / Điều khoản / Liên hệ" — hệ thống không có trang nào trong số đó, và một
+link chết ở chân trang tệ hơn chân trang trống vì nó hứa rồi để người bấm rơi vào 404. 16 link còn lại đều được
+soi ngược lại bảng route.
+
+*(Bộ kiểm link đầu tiên của em báo "chết" nhầm cho một loạt link: biểu thức tìm kiếm bắt buộc `<Route path=` nằm
+gọn một dòng, trong khi route bọc `<ProtectedRoute>` trải nhiều dòng. Suýt xoá đi những link đúng.)*
+
+**Lỗi người dùng chỉ ra:** ở trang nội dung ngắn, chân trang **trồi lên giữa màn hình**. Chẩn đoán đầu của em
+sai — em cho rằng phần nội dung không giãn ra và thêm `flex-1!`. Mở mã nguồn Ant Design ra mới thấy
+`.ant-layout-content { flex: auto }` đã có sẵn; thủ phạm là `.ant-layout { min-height: 0 }` **đè chết**
+`min-h-screen`.
+
+Đúng cái bẫy đã ghi thành bài học ở `ui-design-system.md §3`: Ant Design chèn CSS lúc chạy **ngoài** `@layer` của
+Tailwind, mà theo luật xếp tầng thì **ngoài layer luôn thắng**. Lần trước là `a { color }` nuốt màu link. Lần này
+là `min-height`. Sửa đúng một ký tự: `min-h-screen` thành `min-h-screen!`. `flex-1!` em thêm vào bị gỡ bỏ — nó
+không làm gì cả.
+
+Bài học: cái bẫy này **không tự nhận diện được từ triệu chứng**. Cả hai lần triệu chứng đều trông như "Tailwind
+không có tác dụng", và cả hai lần phản xạ đầu tiên của em là đi tìm nguyên nhân ở chỗ khác.
+
+---
+
+### Đăng ký bằng Google: ô chọn vai trò bị bỏ qua trong im lặng
+
+Người dùng hỏi một câu rất gọn: *"nếu tôi nhấn đăng ký bằng gg, và chọn phần role thì nó có ăn theo không"*.
+
+**Không.** Và cả **ba tầng** đều bỏ rơi lựa chọn đó: frontend không gửi `role`, backend đặt cứng `Role.LEARNER`,
+còn giao diện **vẫn hiện ô chọn vai trò đang sáng ngay phía trên nút Google**. Người chọn "Tạo quiz, sinh đề AI"
+rồi bấm Google sẽ vào hệ thống với vai trò Người học, không một dòng báo lỗi, và không hiểu vì sao không thấy
+mục soạn quiz đâu.
+
+**Lý do cũ trong code không đứng vững.** Chú thích ghi *"cho tự chọn vai trò là mở đường tự phong CREATOR"*.
+Nhưng **đăng ký thường vốn đã cho tự chọn CREATOR** — chỉ ADMIN bị hạ. Nên đó không phải một quyết định bảo mật,
+mà là một **mâu thuẫn nội bộ**: cùng một người, cùng một lựa chọn, ra hai kết quả khác nhau chỉ vì bấm nút nào.
+Ranh giới an ninh thật của dự án là ADMIN (`security.md §1`), và nó không bị đụng tới.
+
+**Ràng buộc trung tâm — vai trò chỉ áp khi TẠO MỚI.** `/auth/google` dùng chung cho **cả đăng nhập lẫn đăng ký**;
+Google không phân biệt hai việc đó, và không thể phân biệt được. Nếu áp vai trò ở mọi lần gọi thì bất kỳ ai cũng
+tự lên CREATOR bằng cách **đăng nhập lại một lần nữa** — tức là thay vì mở một cửa, nó tháo hẳn cánh cửa. Đường
+thứ hai còn kín hơn: một tài khoản LEARNER sẵn có chỉ cần **liên kết Google** là lên CREATOR. Có test riêng cho
+từng đường, vì đây mới là phần dễ làm hỏng chứ không phải phần đọc `role` ra.
+
+**Một cái bẫy ở frontend:** vai trò phải nằm trong `ref`. Google Identity Services đăng ký hàm callback **một
+lần** lúc `initialize`, nên đọc thẳng biến state sẽ **đóng băng ở giá trị của lần render đầu** — người dùng đổi
+lựa chọn rồi bấm Google sẽ gửi vai trò **cũ**. Lỗi đó im lặng hoàn toàn: không cảnh báo, không sai kiểu, chỉ ra
+kết quả sai đúng vào tình huống thật.
+
+Trang **đăng nhập** cố ý **không** truyền `role`: backend bỏ qua, nên gửi ở đó chỉ tạo ấn tượng sai rằng đăng
+nhập lại có thể đổi vai trò.
+
+### Ghi chú báo cáo
+
+- **Mục 2.3 / 2.4 (đặc tả UC "Đăng nhập bằng Google"):** đây là ví dụ sạch cho phần phân tích — *một endpoint
+  phục vụ hai use case khác nhau* (Đăng ký / Đăng nhập) mà bên ngoài không phân biệt được, nên ràng buộc phải
+  đặt vào **trạng thái dữ liệu** (tài khoản đã tồn tại hay chưa) chứ không vào lời gọi.
+- **"Khó khăn & cách giải quyết":** ba lỗi hôm nay đều thuộc loại **hỏng trong im lặng** — ô chọn vai trò bị bỏ
+  qua, ảnh đại diện không kiểm tra, `min-height` bị đè. Không cái nào làm test đỏ, cả ba đều lộ ra khi **mở web
+  ra bấm**. Đáng viết thành một đoạn: *bộ test xanh chứng minh những gì đã nghĩ tới là đúng, không chứng minh
+  đã nghĩ đủ*.
+- **Mục 3.3 (giao diện):** phần từ chối hiện điểm đánh giá dùng được làm ví dụ cho nguyên tắc "không bịa dữ
+  liệu" — và nói rõ được **vì sao** ở chỗ này nó nghiêm trọng hơn trang trí: số đánh giá là căn cứ chọn bài học.
 
 ---
 
