@@ -50,6 +50,16 @@ export const authApi = {
   me: () => apiClient.get<UserProfile>('/users/me').then((res) => res.data),
 
   /**
+   * Cập nhật hồ sơ: tên hiển thị và ảnh đại diện.
+   *
+   * `avatarUrl` phải là đường dẫn nội bộ do `POST /files/images` sinh ra, HOẶC đúng giá trị đang lưu.
+   * Ngoại lệ thứ hai là để người đăng nhập bằng Google giữ được ảnh từ CDN của Google — server ghi giá
+   * trị đó lúc đăng nhập, không phải người dùng gửi lên.
+   */
+  updateProfile: (body: { displayName: string; avatarUrl: string | null }) =>
+    apiClient.put<UserProfile>('/users/me', body).then((res) => res.data),
+
+  /**
    * Xin mã OTP đặt lại mật khẩu.
    * Backend luôn trả 204 dù email có tồn tại hay không — đừng dựng giao diện dựa vào việc
    * "email này có trong hệ thống", vì chính chỗ đó là lỗ hổng dò danh sách người dùng.

@@ -1,12 +1,15 @@
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Alert, Button, Descriptions, Space, Spin, Tag, Typography } from 'antd'
+import { Alert, Avatar, Button, Descriptions, Form, Input, Space, Spin, Tag, Typography, message } from 'antd'
+import { UserOutlined } from '@ant-design/icons'
 import { getApiErrorMessage } from '@/shared/api/client'
 import PageHeader from '@/shared/components/PageHeader'
+import ImageUploader from '@/shared/components/ImageUploader'
 import { authApi } from '../api/authApi'
 import { useAuthStore } from '../store/authStore'
 
-const { Paragraph } = Typography
+const { Paragraph, Text } = Typography
 
 const ROLE_LABEL: Record<string, string> = {
   LEARNER: 'Người học',
@@ -20,11 +23,21 @@ const ROLE_COLOR: Record<string, string> = {
   ADMIN: 'volcano',
 }
 
+/**
+ * Hồ sơ của tôi — xem và **sửa** tên hiển thị, ảnh đại diện.
+ *
+ * ## Ba thứ cố ý KHÔNG cho sửa ở đây
+ * | Không sửa | Vì sao |
+ * |---|---|
+ * | **Email** | Là danh tính đăng nhập. Đổi nó cần xác minh địa chỉ mới trước, nếu không một lần gõ nhầm là mất tài khoản vĩnh viễn |
+ * | **Vai trò** | Nằm trong token và quyết định quyền. Tự đổi vai trò là tự nâng quyền — việc của quản trị viên (features/10, FR-73) |
+ * | **Mật khẩu** | Đã có luồng riêng qua OTP (features/01). Làm thêm một đường đổi mật khẩu ở đây là hai chỗ cùng làm một việc, và chỗ nào cũng phải tự lo phần bảo mật |
+ */
 export default function ProfilePage() {
   const cachedUser = useAuthStore((state) => state.user)
   const setUser = useAuthStore((state) => state.setUser)
+  const queryClient = useQueryClient()
 
-  // Gọi /users/me bằng access token để xác nhận token thật sự dùng được
   const { data, isPending, error } = useQuery({
     queryKey: ['users', 'me'],
     queryFn: async () => {
@@ -37,9 +50,43 @@ export default function ProfilePage() {
   const user = data ?? cachedUser
   const canCreate = user?.role === 'CREATOR' || user?.role === 'ADMIN'
 
+  const [dangSua, setDangSua] = useState(false)
+  const [ten, setTen] = useState('')
+  const [anh, setAnh] = useState<string | null>(null)
+
+  // Nạp lại form mỗi khi hồ sơ đổi hoặc khi mở lại chế độ sửa: mở form với dữ liệu cũ là cách chắc chắn
+  // để người dùng lưu đè lên thay đổi họ vừa thực hiện ở tab khác.
+  useEffect(() => {
+    if (user) {
+      setTen(user.displayName)
+      setAnh(user.avatarUrl)
+    }
+  }, [user, dangSua])
+
+  const luu = useMutation({
+    mutationFn: () => authApi.updateProfile({ displayName: ten.trim(), avatarUrl: anh }),
+    onSuccess: (moi) => {
+      // Cập nhật store để thanh điều hướng đổi theo NGAY, không phải chờ tải lại trang — ảnh đại diện
+      // hiện ở đó, nên đổi ảnh mà góc phải vẫn ảnh cũ thì người dùng tưởng lưu hỏng.
+      setUser(moi)
+      queryClient.setQueryData(['users', 'me'], moi)
+      setDangSua(false)
+      message.success('Đã cập nhật hồ sơ')
+    },
+    onError: (e) => message.error(getApiErrorMessage(e)),
+  })
+
+  const tenHopLe = ten.trim().length > 0 && ten.trim().length <= 100
+
   return (
     <Space direction="vertical" size="large" className="w-full">
-      <PageHeader title="Hồ sơ của tôi" description="Thông tin tài khoản đang đăng nhập." />
+      <PageHeader
+        title="Hồ sơ của tôi"
+        description="Thông tin tài khoản đang đăng nhập."
+        actions={
+          user && !dangSua ? <Button onClick={() => setDangSua(true)}>Chỉnh sửa</Button> : undefined
+        }
+      />
 
       {error && <Alert type="error" showIcon message={getApiErrorMessage(error)} />}
 
@@ -47,24 +94,78 @@ export default function ProfilePage() {
         {isPending && !cachedUser ? (
           <Spin />
         ) : (
-          user && (
-            <Descriptions column={1} size="small" colon={false}>
-              <Descriptions.Item label={<span className="text-ink-soft">Tên hiển thị</span>}>
-                <span className="font-bold">{user.displayName}</span>
-              </Descriptions.Item>
-              <Descriptions.Item label={<span className="text-ink-soft">Email</span>}>
-                {user.email}
-              </Descriptions.Item>
-              <Descriptions.Item label={<span className="text-ink-soft">Vai trò</span>}>
-                <Tag color={ROLE_COLOR[user.role]} className="mr-0!">
-                  {ROLE_LABEL[user.role] ?? user.role}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label={<span className="text-ink-soft">Ngày tạo</span>}>
-                {new Date(user.createdAt).toLocaleString('vi-VN')}
-              </Descriptions.Item>
-            </Descriptions>
-          )
+          user &&
+          (dangSua ? (
+            <Form layout="vertical">
+              <Form.Item
+                label="Ảnh đại diện"
+                help="Không bắt buộc. Ảnh hiện ở thanh điều hướng, bảng xếp hạng và phòng đấu."
+              >
+                <div className="flex items-center gap-4">
+                  <Avatar size={64} src={anh ?? undefined} icon={<UserOutlined />} />
+                  <div className="min-w-0 flex-1">
+                    <ImageUploader value={anh} onChange={setAnh} />
+                  </div>
+                </div>
+              </Form.Item>
+
+              <Form.Item
+                label="Tên hiển thị"
+                validateStatus={tenHopLe ? undefined : 'error'}
+                help={
+                  tenHopLe
+                    ? 'Tên này hiện cho người khác thấy ở bảng xếp hạng và phòng đấu.'
+                    : 'Tên hiển thị không được để trống, tối đa 100 ký tự.'
+                }
+              >
+                <Input
+                  value={ten}
+                  maxLength={100}
+                  onChange={(e) => setTen(e.target.value)}
+                  placeholder="Ví dụ: Nguyễn Văn An"
+                />
+              </Form.Item>
+
+              <Space>
+                <Button
+                  type="primary"
+                  loading={luu.isPending}
+                  disabled={!tenHopLe}
+                  onClick={() => luu.mutate()}
+                >
+                  Lưu thay đổi
+                </Button>
+                <Button disabled={luu.isPending} onClick={() => setDangSua(false)}>
+                  Huỷ
+                </Button>
+              </Space>
+            </Form>
+          ) : (
+            <div className="flex flex-wrap items-start gap-5">
+              <Avatar size={80} src={user.avatarUrl ?? undefined} icon={<UserOutlined />} />
+
+              <Descriptions column={1} size="small" colon={false} className="min-w-60 flex-1">
+                <Descriptions.Item label={<span className="text-ink-soft">Tên hiển thị</span>}>
+                  <span className="font-bold">{user.displayName}</span>
+                </Descriptions.Item>
+                <Descriptions.Item label={<span className="text-ink-soft">Email</span>}>
+                  {/* Không sửa được ở đây — xem javadoc của trang */}
+                  <Space size={8}>
+                    {user.email}
+                    <Text className="text-ink-soft text-xs">(không đổi được)</Text>
+                  </Space>
+                </Descriptions.Item>
+                <Descriptions.Item label={<span className="text-ink-soft">Vai trò</span>}>
+                  <Tag color={ROLE_COLOR[user.role]} className="mr-0!">
+                    {ROLE_LABEL[user.role] ?? user.role}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label={<span className="text-ink-soft">Ngày tạo</span>}>
+                  {new Date(user.createdAt).toLocaleString('vi-VN')}
+                </Descriptions.Item>
+              </Descriptions>
+            </div>
+          ))
         )}
       </div>
 
