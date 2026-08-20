@@ -1,0 +1,127 @@
+@startuml
+
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #C99AAB
+skinparam ArrowFontColor #202020
+skinparam Padding 4
+skinparam ParticipantPadding 18
+skinparam BoxPadding 8
+skinparam SequenceMessageAlign center
+skinparam guillemet false
+
+skinparam usecase {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  FontColor #1a1a1a
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #404040
+  FontColor #1a1a1a
+}
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #808080
+}
+
+skinparam sequence {
+  ArrowColor #C99AAB
+  ArrowThickness 1
+  LifeLineBorderColor #C99AAB
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #FFFADC
+  ParticipantBorderColor #C99AAB
+  ParticipantFontColor #1a1a1a
+  ParticipantFontSize 12
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #404040
+  GroupBorderColor #C99AAB
+  GroupBackgroundColor #FFF5F8
+  BoxBorderColor #C99AAB
+}
+
+skinparam class {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  HeaderBackgroundColor #FFEFC4
+  AttributeFontColor #1a1a1a
+  FontColor #1a1a1a
+  ArrowColor #C99AAB
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam stereotype {
+  CBackgroundColor #FFF1A8
+  CBorderColor #C99AAB
+  EBackgroundColor #FFF1A8
+  EBorderColor #C99AAB
+  ABackgroundColor #FFF1A8
+  ABorderColor #C99AAB
+}
+
+title Biểu đồ trình tự — Use case Sinh đề bằng AI từ học liệu
+
+actor "Người tạo nội dung" as C
+boundary "MaterialsPage / GeneratePage" as B
+control "AiController" as AC
+control "MaterialService" as MS
+control "TextExtractor (Tika)" as TK
+control "TextChunker" as CH
+control "AiOrchestrator" as ORCH
+entity "MaterialChunkRepository" as MCR
+control "AiJobService" as JS
+control "QuestionGenerationService" as QG
+control "QuestionPromptBuilder" as PB
+control "QuestionJsonParser" as JP
+control "AiRequestLogger" as LOG
+
+group Pha 1 — Nạp học liệu (chạy nền)
+  C -> B : tải tệp PDF/DOCX/TXT
+  B -> AC : POST /api/v1/ai/materials/upload
+  AC -> MS : createFromFile(file)
+  MS -> TK : extract(file)
+  alt Tệp hỏng, vượt 10MB hoặc không bóc tách được
+    MS --> B : status = FAILED kèm lý do hiển thị
+  else Bóc tách được
+    TK --> MS : văn bản thuần
+    MS -> CH : chia đoạn có chồng lấp
+    CH --> MS : danh sách đoạn
+    loop mỗi đoạn
+      MS -> ORCH : embed(chunk)
+      ORCH --> MS : vector 768 chiều
+      MS -> MCR : lưu content + embedding
+    end
+    MS --> B : status = READY
+  end
+end
+
+group Pha 2 — Sinh đề
+  C -> B : chọn học liệu, chủ đề, độ khó, số lượng
+  B -> AC : POST /api/v1/ai/questions/generate
+  AC -> JS : enqueue(GENERATE_QUESTIONS)
+  JS --> AC : jobId
+  AC --> B : 202 Accepted kèm jobId
+  JS -> QG : run(job)
+  QG -> ORCH : embed(chủ đề yêu cầu)
+  QG -> MCR : searchSimilar(ownerId, embedding, topK)
+  MCR --> QG : các đoạn liên quan
+  QG -> PB : dựng prompt (chỉ dẫn + ngữ cảnh rào + lược đồ JSON)
+  QG -> ORCH : generate(prompt)
+  ORCH -> ORCH : gọi Gemini
+  alt Gemini lỗi tạm thời (429/5xx/timeout)
+    ORCH -> ORCH : chuyển sang Grok
+  end
+  ORCH -> LOG : ghi provider, token, độ trễ
+  ORCH --> QG : JSON câu hỏi
+  QG -> JP : parse và kiểm chứng
+  JP --> QG : loại câu sai cấu trúc
+  QG -> JS : lưu câu hỏi nháp kèm đoạn nguồn
+  C -> B : xem, sửa và DUYỆT từng câu
+  B -> AC : POST /api/v1/ai/questions/approve
+  AC --> B : câu đã duyệt vào ngân hàng
+end
+@enduml

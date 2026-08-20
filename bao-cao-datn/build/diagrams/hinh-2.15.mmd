@@ -1,0 +1,68 @@
+classDiagram
+  class User {
+    -UUID id
+    -String email
+    -Role role
+    -Status status
+    +matches(password) boolean
+  }
+  class Course {
+    -UUID id
+    -String name
+    -String enrollmentCode
+    +generateCode()
+  }
+  class Enrollment {
+    -Status status
+  }
+  class Question {
+    -UUID id
+    -QuestionType type
+    -String content
+    -Difficulty difficulty
+    -int points
+    +save()
+  }
+  class QuestionOption {
+    -String content
+    -boolean correct
+  }
+  class Document {
+    -UUID id
+    -String filename
+    -Status status
+  }
+  class DocumentChunk {
+    -String text
+    -vector embedding
+  }
+  class Exam {
+    -UUID id
+    -String title
+    -int durationMinutes
+    +schedule()
+  }
+  class ExamAttempt {
+    -Status status
+    -double score
+    +submit()
+  }
+  class Answer {
+    -String response
+    -Double score
+  }
+  class ProctoringEvent {
+    -String type
+    -Severity severity
+  }
+  User "1" --> "*" Course : sở hữu
+  User "1" --> "*" Enrollment
+  Course "1" --> "*" Enrollment
+  Course "1" --> "*" Question
+  Course "1" --> "*" Document
+  Course "1" --> "*" Exam
+  Question "1" --> "*" QuestionOption
+  Document "1" --> "*" DocumentChunk
+  Exam "1" --> "*" ExamAttempt
+  ExamAttempt "1" --> "*" Answer
+  ExamAttempt "1" --> "*" ProctoringEvent

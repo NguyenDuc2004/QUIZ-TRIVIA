@@ -1,0 +1,24 @@
+classDiagram
+  class LoginPage {
+    <<boundary>>
+    -email
+    -password
+    +submit()
+    +showError()
+  }
+  class AuthService {
+    <<control>>
+    +login(email, password) TokenResponse
+    +verify(password) boolean
+  }
+  class User {
+    <<entity>>
+    -id
+    -email
+    -passwordHash
+    -role
+    -status
+    +matches(password) boolean
+  }
+  LoginPage --> AuthService : gọi
+  AuthService --> User : truy vấn

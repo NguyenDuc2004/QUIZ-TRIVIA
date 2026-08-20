@@ -1,0 +1,84 @@
+@startuml
+
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #C99AAB
+skinparam ArrowFontColor #202020
+skinparam Padding 4
+skinparam ParticipantPadding 18
+skinparam BoxPadding 8
+skinparam SequenceMessageAlign center
+skinparam guillemet false
+
+skinparam usecase {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  FontColor #1a1a1a
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #404040
+  FontColor #1a1a1a
+}
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #808080
+}
+
+skinparam sequence {
+  ArrowColor #C99AAB
+  ArrowThickness 1
+  LifeLineBorderColor #C99AAB
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #FFFADC
+  ParticipantBorderColor #C99AAB
+  ParticipantFontColor #1a1a1a
+  ParticipantFontSize 12
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #404040
+  GroupBorderColor #C99AAB
+  GroupBackgroundColor #FFF5F8
+  BoxBorderColor #C99AAB
+}
+
+skinparam class {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  HeaderBackgroundColor #FFEFC4
+  AttributeFontColor #1a1a1a
+  FontColor #1a1a1a
+  ArrowColor #C99AAB
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam stereotype {
+  CBackgroundColor #FFF1A8
+  CBorderColor #C99AAB
+  EBackgroundColor #FFF1A8
+  EBorderColor #C99AAB
+  ABackgroundColor #FFF1A8
+  ABorderColor #C99AAB
+}
+
+left to right direction
+actor "Quản trị viên" as A
+rectangle "Chức năng dành cho quản trị viên" {
+  usecase "Quản lý tài khoản người dùng" as U1
+  usecase "Đổi vai trò người dùng" as U2
+  usecase "Quản lý toàn bộ nội dung\n(quiz, câu hỏi)" as U3
+  usecase "Quản lý danh mục" as U4
+  usecase "Cấu hình nhà cung cấp AI\n(thứ tự Gemini → Grok)" as U5
+  usecase "Giám sát nhật ký gọi AI" as U6
+  usecase "Giám sát chi phí và số token" as U7
+}
+A --> U1
+A --> U3
+A --> U4
+A --> U5
+A --> U6
+U1 ..> U2 : <<include>>
+U6 ..> U7 : <<include>>
+@enduml

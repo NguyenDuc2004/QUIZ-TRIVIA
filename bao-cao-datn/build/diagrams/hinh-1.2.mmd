@@ -1,0 +1,38 @@
+flowchart TB
+  classDef ing fill:#DCFCE7,stroke:#15803D,color:#14532D;
+  classDef ret fill:#DBEAFE,stroke:#1D4ED8,color:#1E3A8A;
+  classDef store fill:#EDE9FE,stroke:#6D28D9,color:#4C1D95;
+  classDef llm fill:#FEE2E2,stroke:#B91C1C,color:#7F1D1D;
+  classDef guard fill:#FEF9C3,stroke:#A16207,color:#713F12;
+
+  subgraph P1["Pha 1 — Nạp học liệu (chạy nền, một lần cho mỗi tài liệu)"]
+    F["Tệp PDF / DOCX / TXT<br/>hoặc văn bản dán tay"]:::ing
+    TK["Apache Tika<br/>bóc tách văn bản"]:::ing
+    CH["TextChunker<br/>chia đoạn, có chồng lấp,<br/>cắt theo ranh giới câu"]:::ing
+    EMB["Gemini embedding<br/>vector 768 chiều"]:::ing
+  end
+
+  VDB[("material_chunks (pgvector)<br/>content + embedding vector(768)")]:::store
+
+  subgraph P2["Pha 2 — Truy hồi và sinh (mỗi lần có yêu cầu)"]
+    Q["Câu hỏi của người dùng<br/>hoặc yêu cầu sinh đề"]:::ret
+    QE["Sinh vector cho truy vấn"]:::ret
+    FILT["Lọc quyền đọc TRƯỚC<br/>tài liệu của tôi HOẶC đã chia sẻ"]:::guard
+    SIM["Xếp theo khoảng cách cosine &lt;=&gt;<br/>lấy top-K = 5"]:::ret
+    THR["Loại đoạn vượt ngưỡng 0,75"]:::guard
+    PB["Dựng prompt: chỉ dẫn hệ thống<br/>+ ngữ cảnh rào trong khối dữ liệu"]:::ret
+  end
+
+  LLM["AiOrchestrator → Gemini (dự phòng Grok)"]:::llm
+  OUT1["Câu hỏi nháp + đoạn nguồn<br/>→ người tạo nội dung duyệt"]:::ing
+  OUT2["Câu trả lời theo luồng (SSE)<br/>+ danh sách tài liệu đã dựa vào"]:::ret
+  NONE["Không còn đoạn nào đủ liên quan<br/>→ trả lời 'không biết', KHÔNG suy đoán"]:::guard
+
+  F --> TK --> CH --> EMB --> VDB
+  Q --> QE --> FILT --> SIM --> THR
+  THR -->|"còn đoạn hợp lệ"| PB
+  THR -->|"rỗng"| NONE
+  VDB --> FILT
+  PB --> LLM
+  LLM --> OUT1
+  LLM --> OUT2

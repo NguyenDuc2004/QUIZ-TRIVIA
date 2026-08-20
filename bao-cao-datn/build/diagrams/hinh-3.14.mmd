@@ -1,0 +1,49 @@
+classDiagram
+  class ExamAttemptPage {
+    <<boundary>>
+    +hienThiCauHoi()
+    +autoSave()
+    +banner()
+  }
+  class FaceDetector {
+    <<boundary>>
+    +detect() FaceResult
+  }
+  class AttemptService {
+    <<control>>
+    +startAttempt(examId) ExamAttempt
+    +saveAnswer(id, qId, ans)
+    +submit(id)
+  }
+  class ProctoringService {
+    <<control>>
+    +reportEvent(event)
+  }
+  class GradingService {
+    <<control>>
+    +grade(attempt) double
+  }
+  class ExamAttempt {
+    <<entity>>
+    -status
+    -startedAt
+    -score
+  }
+  class Answer {
+    <<entity>>
+    -response
+    -score
+  }
+  class ProctoringEvent {
+    <<entity>>
+    -type
+    -severity
+    -ts
+  }
+  ExamAttemptPage --> AttemptService
+  ExamAttemptPage --> FaceDetector
+  ExamAttemptPage --> ProctoringService
+  AttemptService --> GradingService
+  AttemptService --> ExamAttempt
+  ExamAttempt "1" --> "*" Answer
+  ExamAttempt "1" --> "*" ProctoringEvent

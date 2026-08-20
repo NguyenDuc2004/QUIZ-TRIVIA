@@ -101,7 +101,7 @@ Pha truy hồi và sinh nhận câu hỏi hoặc yêu cầu của người dùng
 | Số đoạn truy hồi (top-K) | 5 | theo khoảng cách cosine `<=>` |
 | Ngưỡng khoảng cách | 0,75 | loại đoạn không đủ liên quan |
 | Phạm vi truy hồi | tài liệu của người gọi hoặc đã được chia sẻ | lọc quyền **trước** khi xếp hạng |
-| Mô hình sinh | Gemini (`gemini-3.6-flash`) | dự phòng xAI Grok |
+| Mô hình sinh | Gemini (`gemini-3.6-flash`) | dự phòng Groq (`openai/gpt-oss-120b`) |
 | Số câu sinh mỗi lần | tối đa 20 | giới hạn để kiểm soát chi phí |
 
 Hai biện pháp bảo đảm câu trả lời bám nguồn (grounding). Thứ nhất là **ngưỡng khoảng cách**: truy vấn vector luôn trả về đủ số đoạn được yêu cầu, kể cả khi không đoạn nào liên quan tới câu hỏi — đoạn "gần nhất" trong một kho toàn tài liệu Toán vẫn là một đoạn Toán khi người dùng hỏi về Lịch sử. Nếu không lọc, prompt sẽ chứa ngữ cảnh sai và mô hình sẽ cố trả lời từ đó; vì vậy hệ thống loại mọi đoạn vượt ngưỡng, và khi không còn đoạn nào thì prompt nói rõ là không có tài liệu liên quan để mô hình trả lời "không biết" thay vì đoán. Thứ hai là **trả kèm trích dẫn**: mỗi câu trả lời đi cùng danh sách tài liệu và đoạn văn bản đã dựa vào.

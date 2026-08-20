@@ -1,0 +1,44 @@
+flowchart TB
+  classDef layer fill:#FEF3C7,stroke:#B45309,color:#7C2D12;
+  classDef mod fill:#DBEAFE,stroke:#1D4ED8,color:#1E3A8A;
+  classDef shared fill:#E5E7EB,stroke:#4B5563,color:#1F2937;
+  classDef data fill:#EDE9FE,stroke:#6D28D9,color:#4C1D95;
+
+  subgraph L["Phân lớp — phụ thuộc một chiều"]
+    direction TB
+    C["Controller<br/>nhận yêu cầu, kiểm tra dữ liệu vào, trả DTO"]:::layer
+    S["Service<br/>toàn bộ logic nghiệp vụ"]:::layer
+    R["Repository<br/>JPA · JdbcTemplate (pgvector) · Neo4jClient"]:::layer
+    E["Domain<br/>Entity và Enum"]:::layer
+    C --> S --> R --> E
+  end
+
+  subgraph M["Mô-đun theo tính năng — com.datn.quizai"]
+    direction LR
+    M1["auth<br/>JWT, RBAC, OTP"]:::mod
+    M2["user<br/>hồ sơ"]:::mod
+    M3["quiz<br/>quiz, câu hỏi, danh mục"]:::mod
+    M4["attempt<br/>làm bài, chấm điểm"]:::mod
+    M5["realtime<br/>phòng đấu STOMP"]:::mod
+    M6["ai<br/>RAG, sinh đề, chấm tự luận"]:::mod
+    M7["chat<br/>trợ lý học tập (SSE)"]:::mod
+    M8["recommend<br/>gợi ý Neo4j"]:::mod
+    M9["analytics<br/>thống kê"]:::mod
+    M10["file<br/>tải ảnh lên"]:::mod
+  end
+
+  subgraph X["Không chia theo tầng — không phải tính năng nghiệp vụ"]
+    direction LR
+    CM["common<br/>BaseEntity · OwnershipGuard · ApiError · exception"]:::shared
+    CF["config<br/>SecurityConfig · WebSocketConfig · RedisPubSubConfig"]:::shared
+  end
+
+  DB[("PostgreSQL + pgvector")]:::data
+  NE[("Neo4j")]:::data
+  RE[("Redis")]:::data
+
+  M -->|"mỗi mô-đun chứa đủ 5 tầng bên trong"| L
+  L --> DB
+  L --> NE
+  L --> RE
+  X --- M

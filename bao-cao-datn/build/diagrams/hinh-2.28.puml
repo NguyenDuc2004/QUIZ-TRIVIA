@@ -1,0 +1,184 @@
+@startuml
+' Style sạch cho ERD (khác với phong cách HaUI hồng của VOPC)
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 11
+skinparam shadowing false
+skinparam roundCorner 4
+skinparam guillemet false
+hide circle
+skinparam classAttributeIconSize 0
+skinparam nodesep 25
+skinparam ranksep 45
+skinparam linetype ortho
+
+skinparam class {
+  BackgroundColor #F4F8FC
+  BorderColor #2E5984
+  HeaderBackgroundColor #C7DAEE
+  ArrowColor #2E5984
+  AttributeFontSize 10
+  FontSize 11
+}
+
+entity "users" as users {
+  * id : UUID <<PK>>
+  --
+  email : varchar
+  password_hash : varchar
+  full_name : varchar
+  role : varchar
+  status : varchar
+  must_change_password : bool
+  last_login_at : timestamptz
+}
+entity "departments" as departments {
+  * id : UUID <<PK>>
+  --
+  code : varchar
+  name : varchar
+}
+entity "subjects" as subjects {
+  * id : UUID <<PK>>
+  --
+  department_id : UUID <<FK>>
+  code : varchar
+  name : varchar
+  credits : int
+}
+entity "courses" as courses {
+  * id : UUID <<PK>>
+  --
+  teacher_id : UUID <<FK>>
+  subject_id : UUID <<FK>>
+  name : varchar
+  enrollment_code : varchar
+  semester : varchar
+  archived : bool
+}
+entity "enrollments" as enrollments {
+  * id : UUID <<PK>>
+  --
+  course_id : UUID <<FK>>
+  student_id : UUID <<FK>>
+  status : varchar
+  enrolled_at : timestamptz
+}
+entity "questions" as questions {
+  * id : UUID <<PK>>
+  --
+  course_id : UUID <<FK>>
+  created_by : UUID <<FK>>
+  type : varchar
+  content : text
+  difficulty : varchar
+  default_points : numeric
+  ai_generated : bool
+}
+entity "question_options" as question_options {
+  * id : UUID <<PK>>
+  --
+  question_id : UUID <<FK>>
+  content : text
+  is_correct : bool
+  display_order : int
+}
+entity "documents" as documents {
+  * id : UUID <<PK>>
+  --
+  course_id : UUID <<FK>>
+  uploaded_by : UUID <<FK>>
+  filename : varchar
+  mime_type : varchar
+  size_bytes : bigint
+  status : varchar
+}
+entity "document_chunks" as document_chunks {
+  * id : UUID <<PK>>
+  --
+  document_id : UUID <<FK>>
+  chunk_index : int
+  page_number : int
+  content : text
+  embedding : vector(768)
+}
+entity "exams" as exams {
+  * id : UUID <<PK>>
+  --
+  course_id : UUID <<FK>>
+  created_by : UUID <<FK>>
+  title : varchar
+  starts_at : timestamptz
+  ends_at : timestamptz
+  duration_minutes : int
+  selection_mode : varchar
+}
+entity "exam_questions" as exam_questions {
+  * id : UUID <<PK>>
+  --
+  exam_id : UUID <<FK>>
+  question_id : UUID <<FK>>
+  display_order : int
+  points : numeric
+}
+entity "exam_attempts" as exam_attempts {
+  * id : UUID <<PK>>
+  --
+  exam_id : UUID <<FK>>
+  student_id : UUID <<FK>>
+  status : varchar
+  started_at : timestamptz
+  submitted_at : timestamptz
+  score : numeric
+  violation_count : int
+}
+entity "answers" as answers {
+  * id : UUID <<PK>>
+  --
+  attempt_id : UUID <<FK>>
+  question_id : UUID <<FK>>
+  selected_option_ids : jsonb
+  text_answer : text
+  is_correct : bool
+  points_awarded : numeric
+}
+entity "proctoring_events" as proctoring_events {
+  * id : UUID <<PK>>
+  --
+  attempt_id : UUID <<FK>>
+  event_type : varchar
+  severity : varchar
+  occurred_at : timestamptz
+  metadata : jsonb
+  snapshot_path : varchar
+}
+entity "audit_logs" as audit_logs {
+  * id : bigserial <<PK>>
+  --
+  actor_id : UUID <<FK>>
+  actor_role : varchar
+  action : varchar
+  target_type : varchar
+  target_id : varchar
+  occurred_at : timestamptz
+}
+
+departments ||--o{ subjects
+subjects ||--o{ courses
+users ||--o{ courses
+users ||--o{ enrollments
+courses ||--o{ enrollments
+courses ||--o{ questions
+courses ||--o{ documents
+courses ||--o{ exams
+questions ||--o{ question_options
+questions ||--o{ exam_questions
+exams ||--o{ exam_questions
+documents ||--o{ document_chunks
+exams ||--o{ exam_attempts
+users ||--o{ exam_attempts
+exam_attempts ||--o{ answers
+questions ||--o{ answers
+exam_attempts ||--o{ proctoring_events
+users ||--o{ audit_logs
+@enduml

@@ -1,0 +1,93 @@
+@startuml
+
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #C99AAB
+skinparam ArrowFontColor #202020
+skinparam Padding 4
+skinparam ParticipantPadding 18
+skinparam BoxPadding 8
+skinparam SequenceMessageAlign center
+skinparam guillemet false
+
+skinparam usecase {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  FontColor #1a1a1a
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #404040
+  FontColor #1a1a1a
+}
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #808080
+}
+
+skinparam sequence {
+  ArrowColor #C99AAB
+  ArrowThickness 1
+  LifeLineBorderColor #C99AAB
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #FFFADC
+  ParticipantBorderColor #C99AAB
+  ParticipantFontColor #1a1a1a
+  ParticipantFontSize 12
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #404040
+  GroupBorderColor #C99AAB
+  GroupBackgroundColor #FFF5F8
+  BoxBorderColor #C99AAB
+}
+
+skinparam class {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  HeaderBackgroundColor #FFEFC4
+  AttributeFontColor #1a1a1a
+  FontColor #1a1a1a
+  ArrowColor #C99AAB
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam stereotype {
+  CBackgroundColor #FFF1A8
+  CBorderColor #C99AAB
+  EBackgroundColor #FFF1A8
+  EBorderColor #C99AAB
+  ABackgroundColor #FFF1A8
+  ABorderColor #C99AAB
+}
+
+left to right direction
+actor "Người học" as L
+actor "Khách" as G
+actor "Người tạo nội dung" as C
+rectangle "UC-06 — Tham gia phòng đấu thời gian thực" {
+  usecase "Tham gia phòng bằng mã PIN" as U1
+  usecase "Xác thực JWT tại\nkhung STOMP CONNECT" as U2
+  usecase "Nhận khóa phiên khách" as U3
+  usecase "Trả lời câu hỏi" as U4
+  usecase "Tính điểm theo tốc độ" as U5
+  usecase "Xem bảng xếp hạng trực tiếp" as U6
+  usecase "Mở phòng và điều khiển ván" as U7
+  usecase "Vào lại sau khi mất kết nối\n(giữ nguyên điểm)" as U8
+}
+L --> U1
+G --> U1
+C --> U7
+U1 ..> U2 : <<include>>
+U1 ..> U4 : <<include>>
+U4 ..> U5 : <<include>>
+U5 ..> U6 : <<include>>
+U3 .up.> U1 : <<extend>>
+U8 .up.> U1 : <<extend>>
+note bottom of U3
+  Chỉ khi chủ phòng bật
+  allow_guests
+end note
+@enduml

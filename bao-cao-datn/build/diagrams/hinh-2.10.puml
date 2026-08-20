@@ -1,0 +1,92 @@
+@startuml
+
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #C99AAB
+skinparam ArrowFontColor #202020
+skinparam Padding 4
+skinparam ParticipantPadding 18
+skinparam BoxPadding 8
+skinparam SequenceMessageAlign center
+skinparam guillemet false
+
+skinparam usecase {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  FontColor #1a1a1a
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #404040
+  FontColor #1a1a1a
+}
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #808080
+}
+
+skinparam sequence {
+  ArrowColor #C99AAB
+  ArrowThickness 1
+  LifeLineBorderColor #C99AAB
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #FFFADC
+  ParticipantBorderColor #C99AAB
+  ParticipantFontColor #1a1a1a
+  ParticipantFontSize 12
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #404040
+  GroupBorderColor #C99AAB
+  GroupBackgroundColor #FFF5F8
+  BoxBorderColor #C99AAB
+}
+
+skinparam class {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  HeaderBackgroundColor #FFEFC4
+  AttributeFontColor #1a1a1a
+  FontColor #1a1a1a
+  ArrowColor #C99AAB
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam stereotype {
+  CBackgroundColor #FFF1A8
+  CBorderColor #C99AAB
+  EBackgroundColor #FFF1A8
+  EBorderColor #C99AAB
+  ABackgroundColor #FFF1A8
+  ABorderColor #C99AAB
+}
+
+left to right direction
+actor "Người tạo nội dung" as C
+rectangle "UC-07 — Sinh đề bằng AI từ học liệu" {
+  usecase "Nạp học liệu" as U1
+  usecase "Bóc tách văn bản (Tika)" as U2
+  usecase "Chia đoạn và sinh vector nhúng" as U3
+  usecase "Sinh đề bằng AI" as U4
+  usecase "Truy hồi đoạn học liệu liên quan" as U5
+  usecase "Gọi mô hình sinh câu hỏi" as U6
+  usecase "Chuyển nhà cung cấp dự phòng" as U7
+  usecase "Kiểm chứng JSON trả về" as U8
+  usecase "Duyệt câu hỏi trước khi\nvào ngân hàng" as U9
+}
+C --> U1
+C --> U4
+C --> U9
+U1 ..> U2 : <<include>>
+U2 ..> U3 : <<include>>
+U4 ..> U5 : <<include>>
+U5 ..> U6 : <<include>>
+U6 ..> U8 : <<include>>
+U7 .up.> U6 : <<extend>>
+note right of U7
+  Khi Gemini lỗi tạm thời
+  (429 / 5xx / timeout)
+end note
+@enduml

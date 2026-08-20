@@ -1,0 +1,96 @@
+@startuml
+
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #C99AAB
+skinparam ArrowFontColor #202020
+skinparam Padding 4
+skinparam ParticipantPadding 18
+skinparam BoxPadding 8
+skinparam SequenceMessageAlign center
+skinparam guillemet false
+
+skinparam usecase {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  FontColor #1a1a1a
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #404040
+  FontColor #1a1a1a
+}
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #808080
+}
+
+skinparam sequence {
+  ArrowColor #C99AAB
+  ArrowThickness 1
+  LifeLineBorderColor #C99AAB
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #FFFADC
+  ParticipantBorderColor #C99AAB
+  ParticipantFontColor #1a1a1a
+  ParticipantFontSize 12
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #404040
+  GroupBorderColor #C99AAB
+  GroupBackgroundColor #FFF5F8
+  BoxBorderColor #C99AAB
+}
+
+skinparam class {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  HeaderBackgroundColor #FFEFC4
+  AttributeFontColor #1a1a1a
+  FontColor #1a1a1a
+  ArrowColor #C99AAB
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam stereotype {
+  CBackgroundColor #FFF1A8
+  CBorderColor #C99AAB
+  EBackgroundColor #FFF1A8
+  EBorderColor #C99AAB
+  ABackgroundColor #FFF1A8
+  ABorderColor #C99AAB
+}
+
+left to right direction
+actor "Người học" as L
+rectangle "Chức năng dành cho người học" {
+  usecase "Làm bài quiz cá nhân" as U1
+  usecase "Nộp bài và xem kết quả" as U2
+  usecase "Xem lời giải thích đáp án" as U3
+  usecase "Xem lịch sử làm bài" as U4
+  usecase "Xem tiến độ học theo chủ đề" as U5
+  usecase "Tham gia phòng đấu\nthời gian thực" as U6
+  usecase "Trả lời trong phòng đấu" as U7
+  usecase "Xem bảng xếp hạng trực tiếp" as U8
+  usecase "Hỏi trợ lý học tập" as U9
+  usecase "Xem hội thoại đã lưu" as U10
+  usecase "Nhận gợi ý quiz" as U11
+  usecase "Xem lộ trình học" as U12
+  usecase "Quản lý hồ sơ, đổi mật khẩu" as U13
+}
+L --> U1
+L --> U4
+L --> U5
+L --> U6
+L --> U9
+L --> U10
+L --> U11
+L --> U12
+L --> U13
+U1 ..> U2 : <<include>>
+U2 ..> U3 : <<include>>
+U6 ..> U7 : <<include>>
+U7 ..> U8 : <<include>>
+@enduml

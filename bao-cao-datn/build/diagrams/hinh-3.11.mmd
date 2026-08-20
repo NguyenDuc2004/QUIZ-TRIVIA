@@ -1,0 +1,18 @@
+sequenceDiagram
+  actor GV as Giảng viên
+  participant B as «boundary» ExamFormPage
+  participant C as «control» ExamService
+  participant Q as «entity» Question
+  participant E as «entity» Exam
+  GV->>B: nhập tên, thời gian, thời lượng
+  GV->>B: chọn nguồn câu hỏi
+  B->>C: createExam(dto)
+  C->>C: validate(dto)
+  alt ngẫu nhiên N câu
+    C->>Q: selectRandom(criteria, N)
+    Q-->>C: danh sách câu hỏi
+  end
+  C->>E: save(Exam + cấu hình giám sát)
+  E-->>C: Exam(id)
+  C-->>B: ExamDTO
+  B-->>GV: kỳ thi đã tạo

@@ -1,0 +1,22 @@
+flowchart LR
+  SV["Sinh viên"]
+  subgraph SYS["Hệ thống EduExam AI"]
+    a(["Đăng nhập / Đổi mật khẩu"])
+    b(["Tham gia / rời lớp bằng mã"])
+    c(["Xem danh sách kỳ thi"])
+    d(["Đồng ý quyền riêng tư"])
+    e(["Làm bài thi (auto-save)"])
+    f(["Xem điểm và kết quả"])
+    g(["Luyện tập / tự kiểm tra"])
+    h(["Ôn tập SM-2, bookmark"])
+    i(["Xem bảng xếp hạng"])
+  end
+  SV --- a
+  SV --- b
+  SV --- c
+  SV --- d
+  SV --- e
+  SV --- f
+  SV --- g
+  SV --- h
+  SV --- i

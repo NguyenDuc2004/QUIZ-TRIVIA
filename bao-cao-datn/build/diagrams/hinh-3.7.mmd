@@ -1,0 +1,18 @@
+sequenceDiagram
+  actor GV as Giảng viên
+  participant B as «boundary» QuestionFormPage
+  participant C as «control» QuestionService
+  participant DD as «control» DuplicateDetector
+  participant E as «entity» Question
+  GV->>B: nhập nội dung, đáp án, độ khó
+  B->>C: createQuestion(dto)
+  C->>C: validate(dto)
+  C->>DD: checkDuplicate(content)
+  DD-->>C: điểm tương đồng
+  alt khi vượt ngưỡng
+    C-->>B: cảnh báo trùng
+  end
+  C->>E: save(Question + options)
+  E-->>C: Question(id)
+  C-->>B: QuestionDTO
+  B-->>GV: hiển thị câu đã lưu

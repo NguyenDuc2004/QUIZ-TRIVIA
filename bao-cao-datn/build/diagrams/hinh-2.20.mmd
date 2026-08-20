@@ -1,0 +1,20 @@
+sequenceDiagram
+  actor GV as Giảng viên
+  participant B as «boundary» AIGeneratePage
+  participant C as «control» AIQuestionService
+  participant R as «control» ChunkRetriever
+  participant G as «control» GeminiClient
+  participant E as «entity» Question
+  GV->>B: chọn tài liệu, loại, số lượng, độ khó
+  B->>C: generate(request)
+  C->>G: embed(request)
+  G-->>C: query vector
+  C->>R: retrieveTopK(vector)
+  R-->>C: danh sách chunk
+  C->>G: generateContent(prompt + chunks)
+  G-->>C: JSON câu hỏi + trích dẫn
+  C->>C: validate(json)
+  C-->>B: danh sách câu hỏi đề xuất
+  GV->>B: duyệt câu chọn
+  B->>C: approve(selected)
+  C->>E: save()

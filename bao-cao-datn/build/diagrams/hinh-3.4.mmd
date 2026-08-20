@@ -1,0 +1,20 @@
+flowchart LR
+  AD["Quản trị viên"]
+  subgraph SYS["Hệ thống EduExam AI"]
+    a(["Quản lý tài khoản người dùng"])
+    b(["Khóa / mở khóa, reset mật khẩu"])
+    c(["Đổi vai trò"])
+    d(["Quản lý khoa và môn học"])
+    e(["Quản lý lớp - chỉ đọc + xóa"])
+    f(["Dashboard tổng quan"])
+    g(["Xem nhật ký kiểm toán"])
+    h(["Kiểm duyệt thư viện câu hỏi"])
+  end
+  AD --- a
+  AD --- b
+  AD --- c
+  AD --- d
+  AD --- e
+  AD --- f
+  AD --- g
+  AD --- h

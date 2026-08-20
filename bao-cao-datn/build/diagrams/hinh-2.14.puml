@@ -1,0 +1,99 @@
+@startuml
+
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #C99AAB
+skinparam ArrowFontColor #202020
+skinparam Padding 4
+skinparam ParticipantPadding 18
+skinparam BoxPadding 8
+skinparam SequenceMessageAlign center
+skinparam guillemet false
+
+skinparam usecase {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  FontColor #1a1a1a
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #404040
+  FontColor #1a1a1a
+}
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #808080
+}
+
+skinparam sequence {
+  ArrowColor #C99AAB
+  ArrowThickness 1
+  LifeLineBorderColor #C99AAB
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #FFFADC
+  ParticipantBorderColor #C99AAB
+  ParticipantFontColor #1a1a1a
+  ParticipantFontSize 12
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #404040
+  GroupBorderColor #C99AAB
+  GroupBackgroundColor #FFF5F8
+  BoxBorderColor #C99AAB
+}
+
+skinparam class {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  HeaderBackgroundColor #FFEFC4
+  AttributeFontColor #1a1a1a
+  FontColor #1a1a1a
+  ArrowColor #C99AAB
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam stereotype {
+  CBackgroundColor #FFF1A8
+  CBorderColor #C99AAB
+  EBackgroundColor #FFF1A8
+  EBorderColor #C99AAB
+  ABackgroundColor #FFF1A8
+  ABorderColor #C99AAB
+}
+
+title Biểu đồ trình tự — Use case Đăng nhập
+
+actor "Người dùng" as U
+boundary "LoginPage" as B
+control "AuthController" as CT
+control "AuthService" as S
+entity "UserRepository" as R
+control "JwtService" as J
+control "RefreshTokenService" as RT
+database "Redis" as RD
+
+U -> B : nhập email, mật khẩu
+B -> CT : POST /api/v1/auth/login
+CT -> S : login(request)
+S -> S : chuẩn hóa email về chữ thường
+S -> R : findByEmail(email)
+R --> S : User
+alt Không tìm thấy hoặc mật khẩu sai
+  S --> CT : BusinessException 401
+  CT --> B : cùng một thông báo cho cả hai trường hợp
+  B --> U : "Email hoặc mật khẩu không đúng"
+else Xác thực thành công
+  S -> S : so khớp BCrypt
+  S -> J : generateAccessToken(user)
+  J --> S : JWT (15 phút, chứa vai trò)
+  S -> RT : issue(userId)
+  RT -> RD : SET session:{token} TTL 14 ngày
+  RT -> RD : SADD user-sessions:{userId}
+  RT --> S : refreshToken
+  S --> CT : AuthResponse(user, tokens)
+  CT --> B : 200 OK
+  B --> U : vào trang chính, menu theo vai trò
+end
+@enduml

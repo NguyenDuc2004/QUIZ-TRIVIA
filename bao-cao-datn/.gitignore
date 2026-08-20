@@ -12,3 +12,16 @@ Testcase+TestPlan/
 # Ảnh chụp/thư mục kết quả do script capture và perf sinh ra
 capture/output/
 perf/results/
+
+# Kịch bản sinh hình KHÔNG được để mất.
+#
+# `.gitignore` ở gốc dự án có dòng `build/` (dành cho thư mục build của frontend), và nó nuốt luôn
+# `bao-cao-datn/build/` — nơi chứa toàn bộ định nghĩa của 44 hình trong báo cáo. Mất thư mục này thì
+# không sinh lại được hình nào, mà hình là thứ chiếm phần lớn công sức của bộ báo cáo.
+#
+# Ba dòng dưới đây mở lại đúng phần mã nguồn, vẫn bỏ qua thư viện và tệp nhị phân tải về được.
+!build/
+build/node_modules/
+build/plantuml.jar
+build/_test.*
+build/_sample/          # ảnh mẫu lấy từ báo cáo khác, không thuộc đề tài này
