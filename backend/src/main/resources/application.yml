@@ -32,6 +32,11 @@ spring:
       port: ${REDIS_PORT:6379}
 
   mail:
+    # Dùng cho CẢ HAI: OTP đặt lại mật khẩu (features/01, FR-4) và thông báo qua email (features/16, FR-69).
+    #
+    # ĐỂ TRỐNG `username` = TẮT cả hai. Lưu ý `host` có giá trị mặc định nên nó KHÔNG dùng được làm dấu
+    # hiệu bật/tắt — không có tài khoản gửi thì không gửi được gì, dù host trỏ đúng máy chủ Gmail.
+    #
     # Gmail SMTP. MAIL_PASSWORD phải là "App Password" 16 ký tự của Google,
     # KHÔNG phải mật khẩu đăng nhập Gmail — Google đã chặn đăng nhập bằng mật khẩu thường từ 2022.
     # Lấy tại: https://myaccount.google.com/apppasswords (cần bật xác minh 2 bước trước)

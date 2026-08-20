@@ -19,7 +19,7 @@ Mỗi tính năng có file đặc tả riêng. Mức ưu tiên: **[M]** Must · 
 | 13 | Gamification (XP, badge, streak, daily) | [13-gamification.md](13-gamification.md) | [S] | ➕ Gắn kết | ✅ xong (FR-53 trả ở tính năng 16) |
 | 14 | Lớp học & giao bài (Classroom) | [14-classroom.md](14-classroom.md) | [S] | ➕ Giáo dục | ✅ xong — kèm xuất bảng điểm CSV (không làm PDF) |
 | 15 | Bảng xếp hạng theo mùa | [15-seasonal-leaderboard.md](15-seasonal-leaderboard.md) | [S] | ➕ Redis | ✅ xong (phạm vi toàn hệ thống) |
-| 16 | Thông báo & nhắc ôn tập | [16-notifications.md](16-notifications.md) | [S] | ➕ SRS + Real-time | ✅ xong (hoãn email, bỏ quiet hours) |
+| 16 | Thông báo & nhắc ôn tập | [16-notifications.md](16-notifications.md) | [S] | ➕ SRS + Real-time | ✅ xong — kèm email (mặc định tắt); bỏ quiet hours |
 
 ## Mẫu cấu trúc mỗi file feature
 

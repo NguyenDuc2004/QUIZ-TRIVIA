@@ -141,7 +141,17 @@ class RecommendationIntegrationTest {
         setQuizQuestions(quizId, historyQ);
         graphSync.sync(UUID.fromString(attemptId));
 
-        assertThat(coveredTopics(quizId)).contains("Sử cũ").doesNotContain("Toán cũ");
+        // Chờ chủ đề cũ biến mất thay vì khẳng định ngay một lần.
+        //
+        // `takeQuiz()` nộp bài → phát sự kiện miền → một lần ĐỒNG BỘ NỀN chạy bất đồng bộ. Lần đó mang
+        // ảnh chụp đọc từ TRƯỚC khi câu Toán bị gỡ, nên nếu nó về đích sau lần `sync()` tường minh ở trên
+        // thì "Toán cũ" được ghi lại. Đây là hành vi chấp nhận được của sản phẩm — đồ thị là một VIEW,
+        // idempotent và dựng lại được, nên lần đồng bộ kế tiếp sẽ sửa. Nhưng nó làm phép kiểm đỏ ngẫu
+        // nhiên: xanh khi chạy riêng, đỏ khi máy bận và luồng nền về muộn.
+        assertThat(choChuDeBienMat(quizId, "Toán cũ"))
+                .as("chủ đề của câu đã gỡ phải rời khỏi đồ thị")
+                .isTrue();
+        assertThat(coveredTopics(quizId)).contains("Sử cũ");
     }
 
     @Test
@@ -683,6 +693,22 @@ class RecommendationIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(body).get("id").asText();
+    }
+
+    /**
+     * Chờ tới khi một chủ đề không còn trong đồ thị của quiz, tối đa 5 giây.
+     *
+     * Điểm đồng bộ cho các lần ghi nền còn đang bay — xem chú thích ở {@code shouldDropStaleTopicEdges}.
+     */
+    private boolean choChuDeBienMat(String quizId, String chuDe) throws Exception {
+        long han = System.currentTimeMillis() + 5_000;
+        while (System.currentTimeMillis() < han) {
+            if (!coveredTopics(quizId).contains(chuDe)) {
+                return true;
+            }
+            Thread.sleep(150);
+        }
+        return false;
     }
 
     private String questionWithTopic(String content, String topic) throws Exception {
