@@ -519,6 +519,15 @@ GET    /api/v1/admin/integrity/flagged           Hàng chờ bài bị gắn c�
 - Hàng chờ sắp theo điểm rủi ro giảm dần, mặc định lọc `PENDING`, và **không kèm từng sự kiện** (`suKien: []`)
   — trang đó chỉ để chọn bài cần mở.
 
+### Thứ tự thích ứng khi luyện tập (FR-32) ✅
+```
+GET /api/v1/attempts/{id}/next-question   Câu nên hỏi tiếp   ✅
+```
+Trả `{"questionId": "..."}`; **null** khi đã làm hết hoặc khi đây là lượt **thi** (thi không thích ứng thứ
+tự — mọi người phải làm cùng một đề theo cùng thứ tự để điểm so được).
+
+**Bộ đề không đổi, chỉ thứ tự đổi.** Chi tiết ở [features/03](features/03-gameplay.md).
+
 ### Giải thích gợi ý bằng AI (FR-36) ✅
 ```
 POST /api/v1/recommendations/{quizId}/explain   Nhờ AI nói rõ vì sao gợi ý   ✅

@@ -7,7 +7,13 @@ import StrictExamGate, { StrictExamReminder } from '@/features/integrity/compone
 import { useProctoring } from '@/features/integrity/hooks/useProctoring'
 import { useStrictExam } from '@/features/integrity/hooks/useStrictExam'
 import { QUESTION_TYPE_LABEL } from '@/features/quiz/constants'
-import type { AnswerFeedback, AnswerPayload, AttemptDetail, AttemptQuestion } from '../api/attemptApi'
+import {
+  attemptApi,
+  type AnswerFeedback,
+  type AnswerPayload,
+  type AttemptDetail,
+  type AttemptQuestion,
+} from '../api/attemptApi'
 import AnswerInput from '../components/AnswerInput'
 import AttemptTimer from '../components/AttemptTimer'
 import QuestionReview from '../components/QuestionReview'
@@ -61,6 +67,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
   )
   /** Kết quả chấm ngay của chế độ luyện tập, theo từng câu. */
   const [feedback, setFeedback] = useState<Record<string, AnswerFeedback>>({})
+  const [dangTimCauSau, setDangTimCauSau] = useState(false)
 
   const question = questions[index]
   const answeredCount = questions.filter((q) => isAnswered(draft[q.questionId])).length
@@ -107,6 +114,35 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
       },
       { onSuccess: (data) => isPractice && setFeedback((prev) => ({ ...prev, [question.questionId]: data })) },
     )
+  }
+
+  /**
+   * Sang câu kế tiếp.
+   *
+   * Chế độ LUYỆN TẬP hỏi server câu nào nên hỏi tiếp (FR-32): sai hai câu liền thì gặp câu dễ hơn, đúng
+   * hai câu liền thì gặp câu khó hơn. **Bộ đề không đổi** — chỉ thứ tự đổi, nên điểm vẫn so được giữa
+   * các người học.
+   *
+   * Chế độ THI đi tuần tự: thi là để đo, mọi người phải làm cùng một đề theo cùng một thứ tự.
+   *
+   * Server hỏng hoặc trả null thì lùi về câu kế tiếp theo thứ tự — người đang làm bài không được kẹt lại
+   * vì một tính năng phụ trợ gặp sự cố.
+   */
+  const sangCauSau = async () => {
+    if (!isPractice) {
+      setIndex(index + 1)
+      return
+    }
+    setDangTimCauSau(true)
+    try {
+      const nextId = await attemptApi.nextQuestion(attempt.id)
+      const viTri = nextId ? questions.findIndex((q) => q.questionId === nextId) : -1
+      setIndex(viTri >= 0 ? viTri : index + 1)
+    } catch {
+      setIndex(index + 1)
+    } finally {
+      setDangTimCauSau(false)
+    }
   }
 
   const submit = () =>
@@ -193,7 +229,8 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
             </Button>
             <Button
               disabled={index === questions.length - 1}
-              onClick={() => setIndex(index + 1)}
+              loading={dangTimCauSau}
+              onClick={() => void sangCauSau()}
             >
               Câu sau →
             </Button>

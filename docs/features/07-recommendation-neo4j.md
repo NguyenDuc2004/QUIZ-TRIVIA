@@ -14,7 +14,7 @@ Phân tích hành vi/sở thích người dùng bằng **cơ sở dữ liệu đ
 - **FR-34** [M] ✅ Gợi ý quiz dựa trên thuật toán đồ thị (tương đồng/collaborative).
 - **FR-35** [M] ✅ Đề xuất lộ trình học cá nhân hóa theo năng lực & điểm yếu.
 - **FR-36** [S] ✅ LLM giải thích lý do gợi ý bằng ngôn ngữ tự nhiên — **bấm mới gọi**, có cache. Xem mục riêng bên dưới.
-- **FR-32** [S] ⏳ Adaptive difficulty trong phiên làm bài (chọn câu theo chuỗi đúng/sai).
+- **FR-32** [S] ✅ Adaptive difficulty trong phiên làm bài — **đổi thứ tự, không đổi bộ đề**, chỉ ở chế độ luyện tập. Xem [features/03](03-gameplay.md).
 
 ## Hai thứ bản thiết kế đầu bỏ đi, và vì sao
 
@@ -270,6 +270,5 @@ Mô hình trả rỗng thì **giữ lý do mẫu**, không trả chuỗi trống
 không có căn cứ để tin hay bỏ qua.
 
 ## Chưa làm
-- **FR-32** Adaptive difficulty trong phiên làm bài.
 - Gỡ nút dùng `WHERE NOT id IN $ids` — với vài trăm bản ghi thì không sao, nhưng đây là phép so
   danh sách nên sẽ chậm dần; ngân hàng quiz lớn thì phải đổi sang đánh dấu theo lô.

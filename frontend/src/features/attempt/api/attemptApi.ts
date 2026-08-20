@@ -139,4 +139,19 @@ export const attemptApi = {
     apiClient
       .patch<AttemptDetail>(`/attempts/${attemptId}/answers/${answerId}/grade`, body)
       .then((res) => res.data),
+
+  /**
+   * Câu nên hỏi tiếp ở chế độ LUYỆN TẬP (FR-32).
+   *
+   * Server quyết định, không phải client — dù client có đủ dữ liệu để tự tính. Tính ở client thì hai bản
+   * (web và một bản khác sau này) sẽ thích ứng khác nhau trên cùng dữ liệu, và không ai giải thích được
+   * vì sao hai người học cùng trình độ gặp thứ tự khác nhau.
+   *
+   * `questionId` là null khi đã làm hết, hoặc khi đây là lượt thi (thi không thích ứng thứ tự).
+   */
+  nextQuestion: (attemptId: string) =>
+    apiClient
+      .get<{ questionId: string | null }>(`/attempts/${attemptId}/next-question`)
+      .then((res) => res.data.questionId),
+
 }
