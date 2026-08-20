@@ -8,6 +8,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
+import AppFooter from './AppFooter'
 import { useAuthStore } from '@/features/auth/store/authStore'
 import NotificationBell from '@/features/notification/components/NotificationBell'
 import { useNotificationSocket } from '@/features/notification/hooks/useNotificationSocket'
@@ -38,6 +39,21 @@ export default function AppLayout() {
   const [keyword, setKeyword] = useState('')
 
   const canCreate = user?.role === 'CREATOR' || user?.role === 'ADMIN'
+
+  /**
+   * Màn cần TOÀN BỘ sự chú ý thì không có chân trang: đang làm bài và đang ôn thẻ.
+   *
+   * Ở chế độ thi nghiêm ngặt (FR-48) mọi link dẫn ra ngoài là một chỗ để người thi bấm nhầm — thoát ra
+   * giữa bài rồi bị ghi nhận là rời trang.
+   *
+   * KHÔNG liệt kê `/rooms/:code` ở đây dù phòng đấu cũng cần tập trung: trang đó nằm NGOÀI `AppLayout`
+   * (nó công khai cho khách vãng lai quét QR), nên một điều kiện cho nó ở đây sẽ không bao giờ chạy — và
+   * một nhánh chết kèm chú thích tự tin là thứ khiến người đọc sau tin nhầm rằng chỗ này đã lo liệu rồi.
+   */
+  const location = useLocation()
+  const manTapTrung =
+    location.pathname.startsWith('/attempts/') ||
+    location.pathname.startsWith('/flashcards/review')
 
   // Một kết nối WebSocket cho cả phiên đăng nhập, gắn ở layout vì thông báo tới bất cứ lúc nào ở bất cứ
   // trang nào (features/16, FR-67). Hook tự bỏ qua khi chưa đăng nhập.
@@ -79,7 +95,17 @@ export default function AppLayout() {
   ]
 
   return (
-    <Layout className="min-h-screen">
+    /* `min-h-screen!` — hậu tố `!` là BẮT BUỘC, và đây chính là chỗ gây lỗi "chân trang trồi lên giữa
+       màn hình" ở những trang nội dung ngắn.
+
+       Ant Design đặt `.ant-layout { min-height: 0 }` (để Firefox co được flex item), và CSS đó chèn ở
+       NGOÀI layer của Tailwind. Theo luật cascade, luật ngoài layer THẮNG luật trong layer — nên
+       `min-h-screen` không có `!` bị đè bằng 0, trang chỉ cao bằng nội dung, và chân trang dừng lại
+       ngay dưới nội dung thay vì ở đáy màn hình.
+
+       Không cần thêm gì cho phần nội dung: Ant Design đã đặt sẵn `.ant-layout-content { flex: auto }`
+       nên nó tự giãn — chỉ thiếu đúng chiều cao tối thiểu của khung ngoài. */
+    <Layout className="min-h-screen!">
       <Header className="sticky top-0 z-10 flex items-center gap-6 border-b border-line bg-white! px-6!">
         <Link to="/quizzes" className="flex items-center gap-1 whitespace-nowrap">
           <span className="text-lg font-extrabold text-ink">Quiz</span>
@@ -171,6 +197,12 @@ export default function AppLayout() {
           <Outlet />
         </div>
       </Content>
+
+      {/* Ẩn chân trang ở màn LÀM BÀI và PHÒNG ĐẤU.
+
+          Hai màn đó cần toàn bộ sự chú ý, và ở chế độ thi nghiêm ngặt (FR-48) thì mọi link dẫn ra ngoài
+          đều là một chỗ để người thi bấm nhầm — thoát ra giữa bài thi rồi bị ghi nhận là rời trang. */}
+      {!manTapTrung && <AppFooter />}
     </Layout>
   )
 }

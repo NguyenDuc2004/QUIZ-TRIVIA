@@ -99,7 +99,10 @@ export default function RecommendedQuizzes() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {data.items.map((item) => (
-          <div key={item.quizId} className="flex flex-col overflow-hidden border border-line">
+          // Dùng CHUNG lớp `browse-card` với thẻ ở trang Khám phá. Trước đây chỗ này tự vẽ
+          // `border border-line` nên thẻ gợi ý là thứ duy nhất bấm được mà không có hover —
+          // cùng một thành phần, hai hành vi, và người dùng nhận ra ngay.
+          <div key={item.quizId} className="browse-card flex flex-col overflow-hidden">
             {/*
               Ảnh bìa 16:9, cùng khuôn với thẻ ở lưới Khám phá — một quiz phải trông như chính nó ở
               mọi chỗ nó xuất hiện. Chưa có ảnh thì vẽ khối màu bằng `coverOf` dùng chung, nên cùng

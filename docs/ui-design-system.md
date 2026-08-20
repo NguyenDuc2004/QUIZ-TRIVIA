@@ -80,8 +80,36 @@ Thanh ngang giữ **tối đa 5 mục**. Từng có 11 mục phẳng và nó tr�
 | `--color-badge` | `#eceb98` | Nhãn nổi bật kiểu "Bestseller" |
 | `--color-admin-bg` | `#000000` | Nền sidebar khu quản trị (`AdminLayout`) |
 | `--color-admin-line` | `#2b2f37` | Đường viền trên nền tối của khu quản trị |
+| `--color-footer-bg` | `#2b2d42` | Nền chân trang (xanh than) |
+| `--color-footer-line` | `#3d4059` | Đường kẻ trong chân trang |
+| `--color-footer-text` | `#c7c9d9` | Chữ phụ và link trong chân trang |
+
+**Chân trang dùng nền tối RIÊNG, không dùng lại nền đen của khu quản trị.** Đen tuyền ở khu quản trị là
+một **tín hiệu cảnh báo** (*"thao tác ở đây tác động lên người khác và không hoàn tác được"*); chân trang
+chỉ là điểm dừng của trang. Dùng lại đúng màu đó ở mọi trang sẽ làm tín hiệu kia loãng đi.
+
+Chữ trên nền chân trang **không dùng được** `--color-ink` (gần đen) hay `--color-ink-soft` (xám tối) — hai
+màu đó sinh ra cho nền sáng và sẽ chìm hẳn. Tiêu đề cột dùng trắng, chữ phụ và link dùng
+`--color-footer-text`, hover ra trắng. **Link không hover ra `--color-brand-strong`**: tím đậm đó dành cho
+nền sáng, đặt lên xanh than thì gần như không đọc được.
 
 **Quy tắc:** không hardcode mã màu trong file component. Chỉ dùng token Ant Design (`ConfigProvider`) hoặc class Tailwind sinh từ `@theme` (`bg-ink`, `text-ink-soft`, `border-line`…).
+
+### Ghi đè CSS của Ant Design: bắt buộc thêm hậu tố `!`
+
+Bẫy này đã cắn dự án **hai lần**, ở hai chỗ trông chẳng liên quan gì nhau — nên nó là luật chung, không
+phải mẹo riêng cho màu chữ:
+
+| Lần | Triệu chứng | Luật của antd đè lên |
+|---|---|---|
+| 1 | Cả 10 mục điều hướng ra màu tím, mất dấu hiệu "đang ở trang nào" | `a { color }` |
+| 2 | **Chân trang trồi lên giữa màn hình** ở trang nội dung ngắn, dưới là mảng trắng | `.ant-layout { min-height: 0 }` đè `min-h-screen` |
+
+Lần thứ hai khó thấy hơn hẳn: nhìn vào thì tưởng phần nội dung không giãn, nhưng antd **đã** đặt
+`.ant-layout-content { flex: auto }` rồi — thứ bị mất là **chiều cao tối thiểu của khung ngoài**. Sửa
+nhầm chỗ (thêm `flex-1` cho Content) sẽ không có tác dụng gì mà vẫn trông như đã xử lý.
+
+**Quy tắc: mọi utility Tailwind ghi đè lên một thuộc tính mà antd có đặt đều phải có `!`.**
 
 ### Đặt màu chữ cho thẻ `<a>`: bắt buộc thêm hậu tố `!`
 
@@ -118,7 +146,13 @@ Font: `Inter`, dự phòng `system-ui, sans-serif`.
 ## 4. Hình khối
 
 - **Bán kính bo góc: 4px** cho mọi thứ (nút, input, card, tag). Ant Design mặc định 6–8px → đã hạ trong theme.
-- **Viền 1px `--color-line`** thay cho đổ bóng. Chỉ dùng shadow nhẹ khi hover card: `0 2px 4px rgba(0,0,0,.08)`.
+- **Viền 1px `--color-line`** thay cho đổ bóng.
+- **Hover thẻ bấm được:** viền đậm lại thành `--color-ink-soft` **và** bóng nhẹ `0 2px 8px rgba(0,0,0,.12)`,
+  chuyển trong 0,15s. Dùng lớp `.browse-card`, đừng tự viết lại ở từng chỗ.
+  - Bản đầu chỉ có bóng `0 2px 4px rgba(0,0,0,.08)` — **gần như không nhìn thấy** trên nền trắng cạnh viền
+    sáng, tới mức người dùng báo "thẻ quiz không có hiệu ứng hover" trong khi CSS thì có.
+  - Đổi viền chứ không chỉ tăng bóng: **viền 1px là ngôn ngữ hình khối chính của dự án**, nên nói bằng viền
+    thì rõ hơn và hợp hệ thống hơn là đổ một cái bóng dày.
 - Chiều cao control: 40px (thường), 48px (nút CTA lớn).
 - Không dùng gradient trừ khối ảnh giả lập của card khi quiz chưa có ảnh bìa.
 

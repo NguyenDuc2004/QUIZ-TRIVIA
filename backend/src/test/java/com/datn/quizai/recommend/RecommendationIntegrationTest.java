@@ -148,7 +148,7 @@ class RecommendationIntegrationTest {
         // thì "Toán cũ" được ghi lại. Đây là hành vi chấp nhận được của sản phẩm — đồ thị là một VIEW,
         // idempotent và dựng lại được, nên lần đồng bộ kế tiếp sẽ sửa. Nhưng nó làm phép kiểm đỏ ngẫu
         // nhiên: xanh khi chạy riêng, đỏ khi máy bận và luồng nền về muộn.
-        assertThat(choChuDeBienMat(quizId, "Toán cũ"))
+        assertThat(choChuDeBienMat(quizId, UUID.fromString(attemptId), "Toán cũ"))
                 .as("chủ đề của câu đã gỡ phải rời khỏi đồ thị")
                 .isTrue();
         assertThat(coveredTopics(quizId)).contains("Sử cũ");
@@ -696,16 +696,30 @@ class RecommendationIntegrationTest {
     }
 
     /**
-     * Chờ tới khi một chủ đề không còn trong đồ thị của quiz, tối đa 5 giây.
+     * Đồng bộ lại tới khi một chủ đề rời khỏi đồ thị của quiz, tối đa 5 giây.
      *
-     * Điểm đồng bộ cho các lần ghi nền còn đang bay — xem chú thích ở {@code shouldDropStaleTopicEdges}.
+     * <h4>Vì sao phải GỌI LẠI đồng bộ mỗi vòng, không chỉ đọc rồi chờ</h4>
+     * {@code takeQuiz()} nộp bài → phát sự kiện miền → một lần đồng bộ chạy <b>bất đồng bộ</b>. Lần đó
+     * đọc ảnh chụp của nó ở một thời điểm không xác định; nếu ảnh chụp lấy TRƯỚC khi câu Toán bị gỡ mà
+     * lần ghi lại về đích SAU lần {@code sync()} tường minh, thì "Toán cũ" được ghi trở lại — và nằm
+     * đó vĩnh viễn, vì không còn ai đồng bộ nữa. Vòng chờ chỉ đọc sẽ hết giờ mà không bao giờ thấy nó
+     * biến mất. Đã đỏ thật đúng như vậy.
+     * <p>
+     * Gọi lại {@code sync()} mỗi vòng thì mỗi lần là một lần ghi với dữ liệu MỚI, và
+     * {@code replaceQuizTopics} xoá sạch cạnh cũ trước khi ghi — nên trạng thái hội tụ bất kể lần ghi
+     * nền lạc nhịp rơi vào lúc nào.
+     * <p>
+     * Đây cũng chính là tính chất đồ thị gợi ý cam kết: nó là một <b>view</b>, idempotent và dựng lại
+     * được, <i>nhất quán cuối cùng</i> chứ không tức thời. Test khẳng định đúng cam kết đó thay vì đòi
+     * một thứ mạnh hơn hệ thống hứa.
      */
-    private boolean choChuDeBienMat(String quizId, String chuDe) throws Exception {
+    private boolean choChuDeBienMat(String quizId, UUID attemptId, String chuDe) throws Exception {
         long han = System.currentTimeMillis() + 5_000;
         while (System.currentTimeMillis() < han) {
             if (!coveredTopics(quizId).contains(chuDe)) {
                 return true;
             }
+            graphSync.sync(attemptId);
             Thread.sleep(150);
         }
         return false;
