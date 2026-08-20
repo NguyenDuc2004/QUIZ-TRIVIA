@@ -5,7 +5,9 @@ import com.datn.quizai.realtime.dto.AvatarOption;
 import com.datn.quizai.realtime.dto.CreateRoomRequest;
 import com.datn.quizai.realtime.dto.GuestSessionResponse;
 import com.datn.quizai.realtime.dto.JoinAsGuestRequest;
+import com.datn.quizai.realtime.dto.RoomProctoringPlayerSummary;
 import com.datn.quizai.realtime.dto.RoomView;
+import com.datn.quizai.realtime.service.RoomProctoringService;
 import com.datn.quizai.realtime.service.RoomService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -41,9 +43,11 @@ import java.util.List;
 public class RoomController {
 
     private final RoomService roomService;
+    private final RoomProctoringService proctoringService;
 
-    public RoomController(RoomService roomService) {
+    public RoomController(RoomService roomService, RoomProctoringService proctoringService) {
         this.roomService = roomService;
+        this.proctoringService = proctoringService;
     }
 
     @PostMapping
@@ -86,5 +90,15 @@ public class RoomController {
                                       @PathVariable String roomCode) {
         roomService.leave(roomCode, current.id());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{roomCode}/proctoring")
+    @Operation(summary = "Tổng kết tín hiệu chống gian lận của phòng — CHỈ chủ phòng xem được. "
+            + "Liệt kê cả người có tín hiệu nhưng chưa đủ khuôn, để phân biệt "
+            + "'không ai làm gì' với 'không thu được gì'.")
+    public List<RoomProctoringPlayerSummary> proctoring(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
+            @PathVariable String roomCode) {
+        return proctoringService.tongKet(roomCode, current.id());
     }
 }

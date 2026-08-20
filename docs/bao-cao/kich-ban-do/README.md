@@ -29,6 +29,20 @@ docker exec -i quiz_postgres psql -U quiz -d quizdb -c "DELETE FROM users WHERE 
 
 ---
 
+## Kiểm chứng cảnh báo live phòng đấu — `kiemchung_canhbao_phongdau.mjs`
+
+Không phải phép **đo** mà là phép **kiểm** (features/12, cảnh báo live): chạy một ván thật với host, một học
+sinh và một khách vãng lai, rồi khẳng định 13 điều — trong đó hai điều quan trọng nhất là *cờ đỏ KHÔNG lên kênh
+phát chung* và *một câu duy nhất thì chưa gắn cờ*.
+
+```
+node ../docs/bao-cao/kich-ban-do/kiemchung_canhbao_phongdau.mjs
+```
+
+Dùng `@stomp/stompjs` + SockJS **giống y trình duyệt** nên nó nói đúng giao thức thật, không giả lập. Điểm đồng
+bộ là `GET /rooms/{code}/proctoring` chứ không phải một khoảng chờ đoán bừa — lý do ở
+[features/12](../../features/12-anti-cheat.md), mục "Một bài học về test".
+
 ## Đánh giá độ chính xác AI (mục 3.6) — `danhgia_ai.mjs`
 
 **Phải khởi động backend với số lần thử lại bằng 1**, nếu không chính phép đo sẽ đốt hết hạn mức nó

@@ -7,7 +7,7 @@ import { guestSession } from '../api/guestSession'
 
 export type SocketStatus = 'connecting' | 'connected' | 'disconnected'
 
-type RoomAction = 'start' | 'answer' | 'next' | 'ready' | 'avatar'
+type RoomAction = 'start' | 'answer' | 'next' | 'ready' | 'avatar' | 'proctoring' | 'warn'
 
 interface Options {
   roomCode: string | undefined

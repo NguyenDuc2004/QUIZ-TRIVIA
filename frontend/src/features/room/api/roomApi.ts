@@ -15,6 +15,8 @@ export type GameEventType =
   | 'QUESTION_CLOSED'
   | 'LEADERBOARD'
   | 'GAME_FINISHED'
+  | 'PROCTORING_FLAG'
+  | 'PROCTORING_WARNING'
 
 export interface RoomPlayer {
   rank: number
@@ -86,6 +88,37 @@ export interface QuestionClosed {
   leaderboard: RoomPlayer[]
 }
 
+/**
+ * Cờ đỏ chống gian lận — server chỉ gửi cho host, qua kênh riêng `/user/queue/room/{code}`
+ * (features/12, cảnh báo live).
+ */
+export interface ProctoringFlag {
+  playerId: string
+  displayName: string | null
+  guest: boolean
+  /** Số câu KHÁC NHAU có khuôn rời-rồi-về. Dùng làm khoá thay thế cờ cũ của cùng người chơi. */
+  soCauLap: number
+  /** Câu mô tả do server dựng — client KHÔNG tự ghép chuỗi từ con số. */
+  lyDo: string
+}
+
+/** Lời nhắc host gửi riêng cho một người chơi. */
+export interface ProctoringWarning {
+  message: string
+}
+
+/** Một dòng trong bản tổng kết host xem sau ván. */
+export interface RoomProctoringSummaryRow {
+  playerId: string
+  displayName: string | null
+  guest: boolean
+  /** Tổng số lần rời trang — chỉ để thấy độ ồn, KHÔNG phải căn cứ gắn cờ. */
+  soLanRoiTrang: number
+  /** Số câu có khuôn lặp — đây mới là căn cứ. */
+  soCauLap: number
+  biGanCo: boolean
+}
+
 /** Gói chung mọi thông điệp server đẩy xuống — phân nhánh theo `type`. */
 export interface GameEvent<T = unknown> {
   type: GameEventType
@@ -120,4 +153,10 @@ export const roomApi = {
 
   leave: (roomCode: string) =>
     apiClient.delete<void>(`/rooms/${roomCode}/players/me`).then((res) => res.data),
+
+  /** Tổng kết chống gian lận của phòng — server trả 403 cho người không phải host. */
+  proctoring: (roomCode: string) =>
+    apiClient
+      .get<RoomProctoringSummaryRow[]>(`/rooms/${roomCode}/proctoring`)
+      .then((res) => res.data),
 }

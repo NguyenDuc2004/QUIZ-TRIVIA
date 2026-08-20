@@ -24,11 +24,27 @@ Phát hiện và cảnh báo hành vi gian lận trong chế độ thi (bài thi
   - **Chủ quiz** — cột *Rủi ro* + dòng cảnh báo ở trang thống kê quiz, dẫn sang màn chấm bài. Không có cột này thì chủ quiz *có quyền* xem báo cáo nhưng phải mở từng bài mới tìm ra, nên với hàng trăm bài nộp thì trên thực tế chỉ Admin phát hiện được — còn người hiểu hoàn cảnh lớp mình nhất thì không thấy gì.
 - **FR-48** [C] ⏳ Chế độ thi nghiêm ngặt: bắt buộc fullscreen, khóa chuột phải, cảnh báo khi vi phạm.
 
-## Cảnh báo live trong phòng đấu — thiết kế đã chốt, làm sau tính năng 16
+## Cảnh báo live trong phòng đấu ✅ (đã làm)
 
-Phần chống gian lận này **chỉ áp cho bài thi cá nhân chế độ EXAM**. Phòng đấu (tính năng 04) hiện không có
-tín hiệu nào. Đây là lỗ thật, đã chốt hướng làm nhưng **hoãn tới sau tính năng 16 (Thông báo)** vì hạ tầng gửi
-thông báo tới một người là thứ phần này cần và tính năng 16 chính là nó.
+Trước lát cắt này, chống gian lận **chỉ áp cho bài thi cá nhân chế độ EXAM** và phòng đấu (tính năng 04)
+không có tín hiệu nào. Giờ phòng đấu có: người chơi báo tín hiệu rời trang, host thấy cờ đỏ trên kênh riêng và
+nhắc riêng được, và có bản tổng kết sau ván.
+
+### Một câu trong thiết kế ban đầu KHÔNG thực hiện được
+
+Bản chốt đầu ghi *"sau ván: dùng lại cơ chế `PENDING → VALID/INVALID` kèm ghi chú đã có"*. Khi bắt tay làm thì
+câu đó **sai với schema thật**, ở cả hai đầu:
+
+| Ràng buộc của V17 | Phòng đấu |
+|---|---|
+| `proctoring_events.attempt_id NOT NULL` → `quiz_attempts` | Phòng đấu **không tạo dòng `quiz_attempts` nào** — điểm nằm ở `game_room_players` |
+| `proctoring_events.user_id NOT NULL` → `users` | **Khách vãng lai không có dòng `users`** — mà đó là nhóm người phòng đấu tồn tại để phục vụ |
+
+Nhồi một `attempt_id` giả để lách thì mọi truy vấn thống kê theo lượt thi sẽ đếm cả những dòng không thuộc lượt
+thi nào. Nên có **bảng riêng** `room_proctoring_events` (V20), khoá theo `player_id` phạm vi phòng.
+
+Và bảng đó **cố ý không có** cột trạng thái rà soát lẫn điểm rủi ro. Hai cột ấy chỉ có nghĩa khi có người quay
+lại kết luận; ván xong là phòng tan, không ai quay lại. Thêm chúng vào là hứa một quy trình xử lý không tồn tại.
 
 ### Host được làm gì, và không được làm gì
 
@@ -45,17 +61,37 @@ lận biết mình đang bị thấy, mà không phạt oan ai.
 
 Kick vẫn nên có, nhưng cho việc khác (phá phòng, biệt danh bậy) — đó là việc của tính năng 04.
 
-### Ba việc phải làm trước, không phải chi tiết
+### Ba việc phải làm trước — đã làm cả ba
 
-1. **Thêm kênh riêng cho host.** Hiện chỉ có **một** kênh phát `/topic/room/{code}` và *mọi người chơi đều
-   subscribe nó*. Đẩy cảnh báo lên đó là công bố tên người bị nghi cho cả phòng — làm nhục công khai dựa trên
-   tín hiệu giả mạo được. Phải dùng `convertAndSendToUser` tới đúng host.
-2. **Ngưỡng phải khác ngưỡng bài thi.** Phòng đấu nhiễu hơn nhiều: người chơi trên điện thoại, một tin nhắn
-   đến là một `visibilitychange`. Phòng 10 người × 10 câu thì gần như chắc chắn có người đạt 3 lần mà không
-   gian lận gì. Nên báo theo **khuôn lặp** (rời trang rồi quay lại đúng trước khi hết giờ câu, lặp ở nhiều câu)
-   chứ không đếm số lần — cùng bài học với trọng số giảm dần ở đây.
-3. **Khách vãng lai.** Phòng đấu cho khách vào bằng mã PIN, họ không có tài khoản nên log gắn với *khoá phiên*
-   chứ không phải `user_id`. Thông báo minh bạch vẫn phải hiện cho họ.
+1. **Kênh riêng cho host** ✅ — `PROCTORING_FLAG` đi qua `GameEventPublisher.toUser(..., hostId, ...)` tới
+   `/user/queue/room/{code}`, không lên `/topic/room/{code}`. Hạ tầng này đã có sẵn từ `ANSWER_RESULT`.
+2. **Ngưỡng khác bài thi** ✅ — `RoomFlagDetector` đếm **số câu khác nhau** có khuôn rời-rồi-về, ngưỡng 2 câu.
+   Không đếm số lần: bốn lần rời-về trong *cùng một câu* vẫn không gắn cờ, dù ở bài thi cá nhân thì chuỗi đó
+   vượt ngưỡng "chuyển tab 3 lần".
+3. **Khách vãng lai** ✅ — `room_proctoring_events.player_id` là danh tính phạm vi phòng, không có khoá ngoại
+   tới `users`. Khách nhận được lời nhắc vì `RoomParticipant` cài `AuthenticatedPrincipal` trả `playerId`, nên
+   `convertAndSendToUser` tìm đúng phiên WebSocket của họ mà không cần JWT.
+
+### Vì sao khuôn lặp tự loại được trường hợp vô hại
+
+Server đóng số thứ tự câu *đang mở* vào mỗi tín hiệu. Người bị gián đoạn thật — nghe một cuộc gọi 30 giây —
+lúc quay lại thì ván đã sang câu sau, và WebSocket vẫn mở nên client đã nhận câu mới trong lúc ẩn: tín hiệu
+`TAB_VISIBLE` của họ mang **số câu khác**. Câu bị rời chỉ có một nửa cặp, không thành khuôn.
+
+Người tra cứu ở tab khác thì phải quay lại *trước khi hết giờ* mới trả lời được, nên cả hai nửa cùng một số
+câu. Khuôn này không cần biết họ đi đâu; nó chỉ phân biệt *đi rồi về kịp để trả lời* với *đi và mất câu đó*.
+
+### Một bài học về test, không phải về sản phẩm
+
+Test tích hợp đầu tiên đỏ ba chỗ, và ba test phủ định **xanh rỗng** cùng lúc đó. Nguyên nhân: Spring xử lý
+message STOMP trên một **bể luồng**, nên hai frame gửi cách nhau vài milli-giây không có thứ tự đảm bảo — kể cả
+khi cùng một session. Cả bốn tín hiệu bị xử lý sau lệnh `next` của host nên cùng mang một số câu, và cờ không
+bao giờ sinh ra.
+
+Chờ một sự kiện quay về (`ANSWER_RESULT`) cũng không cứu được, vì nó cũng chỉ là một message khác trên cùng bể
+luồng đó. Điểm đồng bộ duy nhất đáng tin là **trạng thái đã ghi**: đọc `GET /rooms/{code}/proctoring` cho tới
+khi thấy đúng số liệu. Và mỗi test phủ định giờ kèm một **đối chứng dương** — chứng minh tín hiệu *đã* ghi đủ
+rồi hệ thống mới chủ động không gắn cờ; thiếu nó thì "không có cờ" vẫn xanh khi cả đường ghi bị hỏng.
 
 FR-44 vẫn không làm được (phòng đấu không lưu lựa chọn từng câu) nhưng cảnh báo live không cần dữ liệu đó, nên
 không đụng tới quyết định dưới đây.
@@ -118,18 +154,37 @@ POST   /api/v1/attempts/{id}/proctoring-events   Gửi sự kiện hành vi (bat
 GET    /api/v1/attempts/{id}/integrity           Báo cáo tính toàn vẹn (chủ quiz hoặc Admin)
 PUT    /api/v1/attempts/{id}/integrity/review    Đánh dấu hợp lệ/không hợp lệ (chủ quiz hoặc Admin)
 GET    /api/v1/admin/integrity/flagged           Hàng chờ bài bị gắn cờ (Admin), lọc theo review_status
+GET    /api/v1/rooms/{code}/proctoring          Tổng kết tín hiệu của phòng đấu — CHỈ host
+```
+Và hai kênh STOMP của phòng đấu:
+```
+SEND   /app/room/{code}/proctoring   Tín hiệu rời trang { type: TAB_HIDDEN | TAB_VISIBLE }
+SEND   /app/room/{code}/warn         Host nhắc riêng một người { playerId }
 ```
 **Đường dẫn rà soát không nằm dưới `/admin/`** như bản nháp ban đầu của tài liệu này: FR-47 nói rõ báo cáo dành
 cho *Creator/Admin*, nên tiền tố `/admin/` sẽ mâu thuẫn với chính yêu cầu đó — chủ quiz phải kết luận được bài
 của quiz mình mà không cần quyền quản trị. Chỉ **hàng chờ toàn hệ thống** là việc của Admin nên giữ `/admin/`.
 
-Kênh WebSocket `/app/room/{code}/proctoring` **không hiện thực** — nó chỉ cần cho FR-44, mà FR-44 đã bỏ. Tín
-hiệu đi bằng REST theo lô 10 giây một lần; đây là dữ liệu nền không cần độ trễ thấp, dùng WebSocket cho nó chỉ
-thêm một kênh phải trông.
+**Bài thi cá nhân dùng REST theo lô, phòng đấu dùng STOMP gửi ngay** — hai đường khác nhau vì hai mục đích
+khác nhau, không phải vì thiếu nhất quán:
 
-## Dữ liệu liên quan (bổ sung PostgreSQL) — `V17__anti_cheat.sql`
+| | Bài thi cá nhân | Phòng đấu |
+|---|---|---|
+| Đường đi | REST, gom lô 10 giây | STOMP, gửi ngay |
+| Vì sao | Tín hiệu chỉ dùng để tính điểm rủi ro *sau khi nộp*; trễ 10 giây không ai thấy, mà gom lô thì bớt request lúc người ta đang thi | Cờ phải tới host **trong lúc câu hỏi còn sống**; gom lô thì cờ đến sau khi ván đã sang câu khác và host chẳng còn gì làm với nó |
+| Loại tín hiệu | 6 loại, có cả `COPY`/`PASTE` | 2 loại, chỉ `TAB_HIDDEN`/`TAB_VISIBLE` — đáp án phòng đấu là nút bấm, không có gì để dán |
+
+## Dữ liệu liên quan (bổ sung PostgreSQL)
+
+`V17__anti_cheat.sql` — bài thi cá nhân:
 - `proctoring_events(id, attempt_id, user_id, event_type, detail jsonb, occurred_at)`
 - `attempt_integrity(id, attempt_id, risk_score, flags jsonb, ai_note text, review_status: PENDING/VALID/INVALID, reviewed_by, reviewed_at, review_note)`
+
+`V20__room_proctoring.sql` — phòng đấu:
+- `room_proctoring_events(id, room_id, player_id, player_name, is_guest, event_type, question_index, occurred_at)`
+
+**Không** có `risk_score` lẫn `review_status` ở bảng phòng đấu, và **không** có khoá ngoại tới `users`. Cả hai
+đều là quyết định, không phải thiếu sót — lý do ở mục "Cảnh báo live trong phòng đấu" phía trên.
 
 `detail` **chỉ chứa số** — độ dài đoạn dán, số giây. Không bao giờ chứa nội dung người dùng: server tự dựng
 lại trường này thay vì lưu nguyên gói tin của client.
@@ -140,6 +195,10 @@ lại trường này thay vì lưu nguyên gói tin của client.
 - AI phân tích qua AiOrchestrator (fallback Gemini→Grok); không gửi PII — prompt chỉ nhận **số đếm theo loại
   tín hiệu**, không có tên người, email hay nội dung bài làm.
 - ~~Phát hiện đáp án trùng dùng dữ liệu phòng ở Redis + đối chiếu sau ván.~~ Không áp dụng — FR-44 đã bỏ.
+- **Phòng đấu: quyền của host dừng ở nhắc riêng.** Không trừ điểm, không đuổi. Cùng nguyên tắc "không tự động
+  phạt" ở trên, nhưng ở phòng đấu nó nghiêm hơn một bậc: host chỉ có ba giây và không có đường lùi lại.
+- **Tín hiệu phòng đấu do server đóng số câu**, không nhận số câu từ client — nếu tin client thì một client sửa
+  đổi có thể dồn mọi tín hiệu vào một câu để không bao giờ thành khuôn lặp.
 - Là dữ liệu tốt cho phần **đánh giá** trong báo cáo (đo tỉ lệ phát hiện đúng/nhầm) — nhưng muốn có tỉ lệ thì
   cần một bộ bài thi **có nhãn** (biết trước bài nào gian lận). Chưa có bộ đó thì mục 3.6 chỉ ghi được nhận
   định định tính, không ghi số.

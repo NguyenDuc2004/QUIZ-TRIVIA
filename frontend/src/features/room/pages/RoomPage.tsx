@@ -5,6 +5,7 @@ import {
   Button,
   Checkbox,
   Input,
+  Modal,
   Radio,
   Skeleton,
   Space,
@@ -21,6 +22,8 @@ import {
   type AvatarOption,
   type GameEvent,
   type LiveQuestion,
+  type ProctoringFlag,
+  type ProctoringWarning,
   type QuestionClosed,
   type RoomPlayer,
   type RoomView,
@@ -28,9 +31,12 @@ import {
 import { guestSession } from '../api/guestSession'
 import AvatarPicker from '../components/AvatarPicker'
 import LobbyPlayerGrid from '../components/LobbyPlayerGrid'
+import ProctoringFlagPanel from '../components/ProctoringFlagPanel'
 import RoomCountdown from '../components/RoomCountdown'
 import RoomInviteCard from '../components/RoomInviteCard'
 import RoomLeaderboard from '../components/RoomLeaderboard'
+import RoomProctoringSummary from '../components/RoomProctoringSummary'
+import { useRoomProctoring } from '../hooks/useRoomProctoring'
 import { useRoomSocket } from '../hooks/useRoomSocket'
 
 const { Text, Paragraph, Title } = Typography
@@ -59,6 +65,9 @@ export default function RoomPage() {
   const [closed, setClosed] = useState<QuestionClosed | null>(null)
   const [finalRanking, setFinalRanking] = useState<RoomPlayer[] | null>(null)
   const [avatars, setAvatars] = useState<AvatarOption[]>([])
+  /** Cờ chống gian lận, CHỈ host nhận được. Gộp theo playerId để một người chỉ có một dòng. */
+  const [flags, setFlags] = useState<Record<string, ProctoringFlag>>({})
+  const [daNhac, setDaNhac] = useState<string[]>([])
 
   /** Nạp/đồng bộ lại toàn bộ trạng thái phòng từ REST. */
   const sync = useCallback(async () => {
@@ -129,6 +138,24 @@ export default function RoomPage() {
     onPrivateEvent: (event) => {
       if (event.type === 'ANSWER_RESULT') {
         setMyResult(event.data as AnswerResult)
+        return
+      }
+      if (event.type === 'PROCTORING_FLAG') {
+        // Ghi đè theo playerId thay vì xếp thêm: server gửi lại mỗi lần số câu tăng, nên xếp thêm sẽ
+        // thành nhiều dòng cho cùng một người và host tưởng có nhiều người bị gắn cờ
+        const flag = event.data as ProctoringFlag
+        setFlags((prev) => ({ ...prev, [flag.playerId]: flag }))
+        return
+      }
+      if (event.type === 'PROCTORING_WARNING') {
+        // Modal, không phải toast: toast tự tắt sau vài giây và người đang tập trung vào câu hỏi sẽ không
+        // thấy. Lời nhắc mà người bị nhắc không đọc được thì cả tính năng vô nghĩa.
+        const warning = event.data as ProctoringWarning
+        Modal.warning({
+          title: 'Nhắc nhở từ chủ phòng',
+          content: warning.message,
+          okText: 'Tôi đã hiểu',
+        })
       }
     },
     onError: (error) => message.error(error.message),
@@ -140,6 +167,10 @@ export default function RoomPage() {
       void sync()
     }
   }, [socketStatus, sync])
+
+  // Thu tín hiệu rời trang, CHỈ khi ván đang chạy. Ở phòng chờ, người vào sớm rồi đi làm việc khác là
+  // chuyện bình thường.
+  useRoomProctoring(send, room?.status === 'PLAYING')
 
   if (loadError) {
     return (
@@ -163,6 +194,12 @@ export default function RoomPage() {
   const isChoice = question
     ? ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE'].includes(question.type)
     : false
+
+  /** Host nhắc riêng một người bị gắn cờ. Không trừ điểm, không đuổi — xem ProctoringFlagPanel. */
+  const nhacRieng = (playerId: string) => {
+    send('warn', { playerId })
+    setDaNhac((prev) => (prev.includes(playerId) ? prev : [...prev, playerId]))
+  }
 
   const submitAnswer = () => {
     if (!question) return
@@ -208,6 +245,14 @@ export default function RoomPage() {
           )}
         </div>
       </header>
+
+      {isHost && room.status === 'PLAYING' && (
+        <ProctoringFlagPanel
+          flags={Object.values(flags)}
+          daNhac={daNhac}
+          onNhac={nhacRieng}
+        />
+      )}
 
       {room.status === 'WAITING' && (
         <>
@@ -380,6 +425,14 @@ export default function RoomPage() {
               title="Kết quả chung cuộc"
             />
           </aside>
+
+          {/* Chỉ host gọi được endpoint này; người khác nhận 403 và component tự ẩn. Không rẽ nhánh theo
+              `isHost` ở đây thôi là chưa đủ — `isHost` chỉ là suy đoán của client */}
+          {isHost && (
+            <div className="lg:col-span-2">
+              <RoomProctoringSummary roomCode={room.roomCode} />
+            </div>
+          )}
         </div>
       )}
     </div>

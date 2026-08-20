@@ -10,11 +10,11 @@ Phân tích hành vi/sở thích người dùng bằng **cơ sở dữ liệu đ
 - Learner xem lộ trình học tập đề xuất (chủ đề nên học tiếp).
 
 ## Yêu cầu chức năng
-- **FR-33** [M] Xây dựng đồ thị người dùng–chủ đề–quiz–câu hỏi từ hành vi.
-- **FR-34** [M] Gợi ý quiz dựa trên thuật toán đồ thị (tương đồng/collaborative).
-- **FR-35** [M] Đề xuất lộ trình học cá nhân hóa theo năng lực & điểm yếu.
-- **FR-36** [S] LLM giải thích lý do gợi ý bằng ngôn ngữ tự nhiên.
-- **FR-32** [S] Adaptive difficulty trong phiên làm bài (chọn câu theo chuỗi đúng/sai).
+- **FR-33** [M] ✅ Xây dựng đồ thị người dùng–chủ đề–quiz–câu hỏi từ hành vi.
+- **FR-34** [M] ✅ Gợi ý quiz dựa trên thuật toán đồ thị (tương đồng/collaborative).
+- **FR-35** [M] ✅ Đề xuất lộ trình học cá nhân hóa theo năng lực & điểm yếu.
+- **FR-36** [S] ⏳ LLM giải thích lý do gợi ý bằng ngôn ngữ tự nhiên.
+- **FR-32** [S] ⏳ Adaptive difficulty trong phiên làm bài (chọn câu theo chuỗi đúng/sai).
 
 ## Hai thứ bản thiết kế đầu bỏ đi, và vì sao
 

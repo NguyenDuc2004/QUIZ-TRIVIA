@@ -10,7 +10,7 @@ Gia sư ảo trả lời câu hỏi, giải thích khái niệm **dựa trên h�
 - Learner yêu cầu tạo nhanh vài câu hỏi ôn tập theo chủ đề.
 
 ## Yêu cầu chức năng
-- **FR-31** [M] Trợ lý RAG hỏi-đáp trên học liệu, hội thoại có ngữ cảnh.
+- **FR-31** [M] ✅ Trợ lý RAG hỏi-đáp trên học liệu, hội thoại có ngữ cảnh.
 - Phản hồi **streaming** (SSE) để trải nghiệm mượt.
 - Lưu lịch sử theo phiên chat.
 

@@ -460,6 +460,28 @@ class RoomFlowIntegrationTest {
             throw new AssertionError("Không nhận được sự kiện " + type + " trong phòng " + roomCode);
         }
 
+        /**
+         * Loại sự kiện này CHƯA TỪNG tới hàng đợi phát chung, tính trên những gì đã nhận được.
+         * <p>
+         * Dùng khi đã có một điểm đồng bộ khác chứng minh sự kiện đã được phát xong — khi đó không cần chờ
+         * thêm, và không có khoảng thời gian đoán bừa nào để làm test rung.
+         */
+        boolean chuaTungNhan(GameEventType type) {
+            return events.stream().noneMatch(e -> type.name().equals(e.get("type").asText()));
+        }
+
+        /** Chờ có giới hạn rồi khẳng định KHÔNG nhận được loại sự kiện này ở hàng đợi riêng. */
+        boolean khongNhanDuoc(GameEventType type, long millis) throws InterruptedException {
+            long deadline = System.currentTimeMillis() + millis;
+            while (System.currentTimeMillis() < deadline) {
+                JsonNode event = privateEvents.poll(200, TimeUnit.MILLISECONDS);
+                if (event != null && type.name().equals(event.get("type").asText())) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         @Override
         public void close() {
             session.disconnect();
@@ -592,6 +614,284 @@ class RoomFlowIntegrationTest {
         mockMvc.perform(post("/api/v1/rooms/" + roomCode + "/join")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + playerToken))
                 .andExpect(status().isConflict());
+    }
+
+    // ============================================================ cảnh báo live chống gian lận (features/12)
+
+    @Test
+    @DisplayName("Đủ khuôn lặp: cờ tới RIÊNG host, và KHÔNG lên kênh phát chung của phòng")
+    void shouldSendProctoringFlagOnlyToHost() throws Exception {
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken);
+        mockMvc.perform(post("/api/v1/rooms/{code}/join", roomCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + playerToken))
+                .andExpect(status().isOk());
+
+        try (Client host = connect(hostToken, roomCode);
+             Client player = connect(playerToken, roomCode)) {
+
+            host.session.send("/app/room/" + roomCode + "/start", null);
+            host.nextOfType(GameEventType.QUESTION);
+            player.nextOfType(GameEventType.QUESTION);
+
+            // Câu 0: rời rồi về — một câu chưa đủ khuôn
+            roiRoiVe(player, roomCode, 0, 0);
+
+            host.session.send("/app/room/" + roomCode + "/next", null);
+            host.nextOfType(GameEventType.QUESTION);
+            player.nextOfType(GameEventType.QUESTION);
+
+            // Câu 1: lặp lại ở một câu KHÁC, giờ mới thành khuôn
+            roiRoiVe(player, roomCode, 1, 1);
+
+            JsonNode co = host.nextPrivate(GameEventType.PROCTORING_FLAG);
+            assertThat(co.get("playerId").asText()).isEqualTo(playerId);
+            assertThat(co.get("soCauLap").asInt()).isEqualTo(2);
+            assertThat(co.get("lyDo").asText()).isNotBlank();
+
+            // Cờ đã chắc chắn được phát và chuyển tiếp xong (host vừa nhận được nó). Nếu nó đi qua kênh phát
+            // chung thì NGƯỜI BỊ NGHI cũng đã có nó trong hàng đợi topic của mình — đây là điểm đồng bộ tự
+            // nhiên, nên không cần chờ một khoảng thời gian đoán bừa để khẳng định điều phủ định.
+            assertThat(player.chuaTungNhan(GameEventType.PROCTORING_FLAG)).isTrue();
+            assertThat(host.chuaTungNhan(GameEventType.PROCTORING_FLAG)).isTrue();
+        }
+    }
+
+    @Test
+    @DisplayName("Rời rồi về ở MỘT câu duy nhất, kể cả bốn lần: không có cờ")
+    void shouldNotFlagWhenPatternHappensInOneQuestionOnly() throws Exception {
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken);
+        mockMvc.perform(post("/api/v1/rooms/{code}/join", roomCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + playerToken))
+                .andExpect(status().isOk());
+
+        try (Client host = connect(hostToken, roomCode);
+             Client player = connect(playerToken, roomCode)) {
+
+            host.session.send("/app/room/" + roomCode + "/start", null);
+            player.nextOfType(GameEventType.QUESTION);
+
+            // Bốn lần rời-về nhưng đều ở cùng câu 0. Ngưỡng của BÀI THI cá nhân là "chuyển tab 3 lần" nên
+            // chuỗi này bị gắn cờ ở đó; ở phòng đấu thì không, và đó chính là điều cần chứng minh.
+            // soCauLap giữ nguyên 1 từ cặp thứ hai trở đi — cùng một câu thì không thêm câu nào.
+            roiRoiVe(player, roomCode, 0, 0);
+            for (int lan = 1; lan < 4; lan++) {
+                guiTinHieu(player, roomCode, "TAB_HIDDEN");
+                choGhiXong(roomCode, lan + 1, 1);
+                guiTinHieu(player, roomCode, "TAB_VISIBLE");
+                choGhiXong(roomCode, lan + 1, 1);
+            }
+
+            assertThat(host.khongNhanDuoc(GameEventType.PROCTORING_FLAG, 1500)).isTrue();
+        }
+
+        // ĐỐI CHỨNG DƯƠNG — nếu thiếu, test trên vẫn xanh khi cả đường ghi tín hiệu bị hỏng, và "không có cờ"
+        // sẽ là kết luận đúng vì lý do hoàn toàn sai. Bản tổng kết phải chứng minh: tín hiệu ĐÃ ghi đủ 4 lần
+        // rời trang, đã tính được 1 câu có khuôn, và hệ thống CHỦ ĐỘNG không gắn cờ.
+        mockMvc.perform(get("/api/v1/rooms/{code}/proctoring", roomCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + hostToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].soLanRoiTrang").value(4))
+                .andExpect(jsonPath("$[0].soCauLap").value(1))
+                .andExpect(jsonPath("$[0].biGanCo").value(false));
+    }
+
+    @Test
+    @DisplayName("Host nhắc riêng: chỉ người bị nhắc nhận được, cả phòng không thấy gì")
+    void shouldDeliverWarningOnlyToWarnedPlayer() throws Exception {
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken);
+        mockMvc.perform(post("/api/v1/rooms/{code}/join", roomCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + playerToken))
+                .andExpect(status().isOk());
+
+        try (Client host = connect(hostToken, roomCode);
+             Client player = connect(playerToken, roomCode)) {
+
+            host.session.send("/app/room/" + roomCode + "/warn", Map.of("playerId", playerId));
+
+            JsonNode nhac = player.nextPrivate(GameEventType.PROCTORING_WARNING);
+            assertThat(nhac.get("message").asText()).isNotBlank();
+            // Lời nhắc MÔ TẢ điều hệ thống ghi nhận, không buộc tội: tín hiệu vẫn có cách giải thích vô hại
+            assertThat(nhac.get("message").asText()).doesNotContain("gian lận");
+
+            assertThat(player.chuaTungNhan(GameEventType.PROCTORING_WARNING)).isTrue();
+        }
+    }
+
+    @Test
+    @DisplayName("Người chơi thường bấm nhắc bị từ chối 403")
+    void shouldRejectWarnFromNonHost() throws Exception {
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken);
+        mockMvc.perform(post("/api/v1/rooms/{code}/join", roomCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + playerToken))
+                .andExpect(status().isOk());
+
+        try (Client player = connect(playerToken, roomCode)) {
+            player.subscribeErrors();
+            player.session.send("/app/room/" + roomCode + "/warn", Map.of("playerId", hostId));
+
+            JsonNode error = player.errors.poll(TIMEOUT_SEC, TimeUnit.SECONDS);
+            assertThat(error).isNotNull();
+            assertThat(error.get("status").asInt()).isEqualTo(403);
+        }
+    }
+
+    @Test
+    @DisplayName("Host tự chuyển tab không sinh cờ về chính mình")
+    void shouldIgnoreSignalsFromHost() throws Exception {
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken);
+
+        try (Client host = connect(hostToken, roomCode)) {
+            host.session.send("/app/room/" + roomCode + "/start", null);
+            host.nextOfType(GameEventType.QUESTION);
+            guiTinHieu(host, roomCode, "TAB_HIDDEN");
+            guiTinHieu(host, roomCode, "TAB_VISIBLE");
+
+            host.session.send("/app/room/" + roomCode + "/next", null);
+            host.nextOfType(GameEventType.QUESTION);
+            guiTinHieu(host, roomCode, "TAB_HIDDEN");
+            guiTinHieu(host, roomCode, "TAB_VISIBLE");
+
+            // Không chờ ghi xong được ở đây: đúng điều cần chứng minh là KHÔNG có gì được ghi cả.
+            assertThat(host.khongNhanDuoc(GameEventType.PROCTORING_FLAG, 1500)).isTrue();
+        }
+
+        // ĐỐI CHỨNG: bảng tổng kết RỖNG, tức tín hiệu của host bị bỏ ngay từ đầu chứ không phải được ghi rồi
+        // mới lọc khi hiển thị. Chỉ kiểm "không có cờ" thì không phân biệt được hai chuyện đó.
+        mockMvc.perform(get("/api/v1/rooms/{code}/proctoring", roomCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + hostToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("Khách vãng lai cũng bị gắn cờ và nhắc được, dù không có tài khoản")
+    void shouldFlagAndWarnGuestPlayer() throws Exception {
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken, true);
+
+        String body = mockMvc.perform(post("/api/v1/rooms/{code}/join-as-guest", roomCode)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(GUEST_BODY))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode phien = objectMapper.readTree(body);
+        String guestKey = phien.get("guestKey").asText();
+        String guestPlayerId = phien.get("playerId").asText();
+
+        try (Client host = connect(hostToken, roomCode);
+             Client guest = connectAsGuest(guestKey, roomCode)) {
+
+            host.session.send("/app/room/" + roomCode + "/start", null);
+            guest.nextOfType(GameEventType.QUESTION);
+            roiRoiVe(guest, roomCode, 0, 0);
+
+            host.session.send("/app/room/" + roomCode + "/next", null);
+            guest.nextOfType(GameEventType.QUESTION);
+            roiRoiVe(guest, roomCode, 1, 1);
+
+            JsonNode co = host.nextPrivate(GameEventType.PROCTORING_FLAG);
+            assertThat(co.get("playerId").asText()).isEqualTo(guestPlayerId);
+            assertThat(co.get("guest").asBoolean()).isTrue();
+            // Tên phải có: nó lấy từ trạng thái phòng, không lấy từ RoomParticipant.displayName()
+            assertThat(co.get("displayName").asText()).isNotBlank();
+
+            // Khách nhận lời nhắc dù không có JWT: danh tính phòng đủ để convertAndSendToUser tìm đúng phiên
+            host.session.send("/app/room/" + roomCode + "/warn", Map.of("playerId", guestPlayerId));
+            assertThat(guest.nextPrivate(GameEventType.PROCTORING_WARNING)).isNotNull();
+        }
+    }
+
+    @Test
+    @DisplayName("Tổng kết sau ván: host xem được, người chơi thường bị 403")
+    void shouldRestrictProctoringSummaryToHost() throws Exception {
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken);
+        mockMvc.perform(post("/api/v1/rooms/{code}/join", roomCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + playerToken))
+                .andExpect(status().isOk());
+
+        try (Client host = connect(hostToken, roomCode);
+             Client player = connect(playerToken, roomCode)) {
+
+            host.session.send("/app/room/" + roomCode + "/start", null);
+            player.nextOfType(GameEventType.QUESTION);
+            roiRoiVe(player, roomCode, 0, 0);
+
+            host.session.send("/app/room/" + roomCode + "/next", null);
+            player.nextOfType(GameEventType.QUESTION);
+            roiRoiVe(player, roomCode, 1, 1);
+
+            host.nextPrivate(GameEventType.PROCTORING_FLAG);
+        }
+
+        mockMvc.perform(get("/api/v1/rooms/{code}/proctoring", roomCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + hostToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].playerId").value(playerId))
+                .andExpect(jsonPath("$[0].biGanCo").value(true))
+                .andExpect(jsonPath("$[0].soCauLap").value(2))
+                .andExpect(jsonPath("$[0].soLanRoiTrang").value(2));
+
+        mockMvc.perform(get("/api/v1/rooms/{code}/proctoring", roomCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + playerToken))
+                .andExpect(status().isForbidden());
+    }
+
+    private void guiTinHieu(Client client, String roomCode, String loai) {
+        client.session.send("/app/room/" + roomCode + "/proctoring", Map.of("type", loai));
+    }
+
+    /**
+     * Gửi một cặp rời-rồi-về cho câu đang mở, <b>chờ từng nửa ghi xuống cơ sở dữ liệu xong</b> mới gửi nửa sau.
+     *
+     * <h3>Vì sao không thể chỉ gửi hai frame rồi đi tiếp</h3>
+     * Spring xử lý message STOMP trên một <b>bể luồng</b> ({@code clientInboundChannel}), nên hai frame gửi
+     * cách nhau vài milli-giây <i>không</i> có thứ tự đảm bảo — kể cả khi cùng một session. Có ba hệ quả, và
+     * cả ba đều làm test xanh/đỏ ngẫu nhiên:
+     * <ul>
+     *   <li>{@code TAB_VISIBLE} xử lý trước {@code TAB_HIDDEN} → cặp không thành khuôn;</li>
+     *   <li>tín hiệu xử lý sau lệnh {@code /next} của host → cả bốn tín hiệu mang cùng một chỉ số câu;</li>
+     *   <li>đợi một sự kiện quay về (như {@code ANSWER_RESULT}) cũng không cứu được, vì nó cũng chỉ là một
+     *       message khác trên cùng bể luồng đó.</li>
+     * </ul>
+     * Điểm đồng bộ duy nhất đáng tin là <b>trạng thái đã ghi</b>: đọc bản tổng kết cho tới khi thấy đúng số
+     * liệu mong đợi. Chậm hơn vài trăm milli-giây, nhưng không có chỗ nào để rung.
+     * <p>
+     * Thứ tự thật của người dùng cách nhau hàng giây nên chuyện này là chuyện của test, không phải của sản
+     * phẩm — nhưng nếu không xử lý thì test sẽ nói dối về sản phẩm.
+     *
+     * @param soLanTruoc số lần rời trang đã ghi TRƯỚC cặp này
+     * @param soCauTruoc số câu đã thành khuôn TRƯỚC cặp này
+     */
+    private void roiRoiVe(Client client, String roomCode, int soLanTruoc, int soCauTruoc) throws Exception {
+        guiTinHieu(client, roomCode, "TAB_HIDDEN");
+        choGhiXong(roomCode, soLanTruoc + 1, soCauTruoc);
+
+        guiTinHieu(client, roomCode, "TAB_VISIBLE");
+        choGhiXong(roomCode, soLanTruoc + 1, soCauTruoc + 1);
+    }
+
+    /** Đọc bản tổng kết của phòng tới khi đạt đúng số liệu, hoặc hết thời gian thì báo rõ nó đang là gì. */
+    private void choGhiXong(String roomCode, int soLanRoiTrang, int soCauLap) throws Exception {
+        long deadline = System.currentTimeMillis() + TIMEOUT_SEC * 1000;
+        String cuoiCung = "[]";
+
+        while (System.currentTimeMillis() < deadline) {
+            cuoiCung = mockMvc.perform(get("/api/v1/rooms/{code}/proctoring", roomCode)
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + hostToken))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+
+            JsonNode rows = objectMapper.readTree(cuoiCung);
+            if (!rows.isEmpty()
+                    && rows.get(0).get("soLanRoiTrang").asInt() == soLanRoiTrang
+                    && rows.get(0).get("soCauLap").asInt() == soCauLap) {
+                return;
+            }
+            Thread.sleep(100);
+        }
+        throw new AssertionError("Tín hiệu chưa ghi đủ (mong soLanRoiTrang=%d, soCauLap=%d) sau %ds. Đang là: %s"
+                .formatted(soLanRoiTrang, soCauLap, TIMEOUT_SEC, cuoiCung));
     }
 
     private String createRoom(String quizId, String token) throws Exception {

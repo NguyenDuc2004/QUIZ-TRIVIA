@@ -23,6 +23,16 @@ public interface GameRoomRepository extends JpaRepository<GameRoom, UUID> {
     Optional<GameRoom> findByRoomCode(@Param("roomCode") String roomCode);
 
     /**
+     * Chỉ lấy id từ mã phòng.
+     * <p>
+     * {@link #findByRoomCode} join-fetch cả host, quiz và chủ quiz — đúng cho màn thông tin phòng, nhưng
+     * quá nhiều cho đường ghi tín hiệu hành vi vốn chỉ cần khoá ngoại. Tín hiệu tới liên tục suốt ván nên
+     * chênh lệch này cộng dồn.
+     */
+    @Query("select r.id from GameRoom r where r.roomCode = :roomCode")
+    Optional<UUID> findIdByRoomCode(@Param("roomCode") String roomCode);
+
+    /**
      * Nạp phòng kèm danh sách người chơi — dùng khi kết thúc ván để ghi điểm cuối.
      * Chỉ fetch một collection nên không vướng MultipleBagFetchException.
      */
