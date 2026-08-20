@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Typography } from 'antd'
+import type { Role } from '../api/authApi'
 import { useGoogleLogin } from '../hooks/useAuthMutations'
 
 const { Text } = Typography
@@ -61,7 +62,19 @@ function loadGsi(): Promise<void> {
  * Thứ frontend nhận được là một <b>ID token</b>; nó được gửi thẳng cho backend xác minh chữ ký với
  * Google. Frontend không tự đọc token và cũng không tự khai người dùng là ai.
  */
-export default function GoogleLoginButton({ text = 'signin_with' }: { text?: 'signin_with' | 'signup_with' }) {
+export default function GoogleLoginButton({
+  text = 'signin_with',
+  role,
+}: {
+  text?: 'signin_with' | 'signup_with'
+  /**
+   * Vai trò mong muốn, CHỈ truyền ở trang đăng ký.
+   *
+   * Backend chỉ áp nó khi TẠO TÀI KHOẢN MỚI — tài khoản đã tồn tại giữ nguyên vai trò đang có. Truyền
+   * ở trang đăng nhập là tạo ấn tượng sai rằng đăng nhập lại đổi được vai trò, trong khi backend bỏ qua.
+   */
+  role?: Role
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [loadError, setLoadError] = useState(false)
   const googleLogin = useGoogleLogin()
@@ -69,6 +82,12 @@ export default function GoogleLoginButton({ text = 'signin_with' }: { text?: 'si
   // Giữ mutation mới nhất trong ref: GSI chỉ nhận callback một lần lúc initialize
   const loginRef = useRef(googleLogin)
   loginRef.current = googleLogin
+
+  // Vai trò cũng phải nằm trong ref, cùng lý do: callback được đăng ký MỘT LẦN lúc initialize, nên nếu
+  // đọc thẳng biến `role` thì nó bị đóng băng ở giá trị lúc render đầu — người dùng đổi lựa chọn rồi bấm
+  // Google sẽ gửi lên vai trò CŨ, và lỗi đó im lặng hoàn toàn.
+  const roleRef = useRef(role)
+  roleRef.current = role
 
   useEffect(() => {
     if (!CLIENT_ID) return
@@ -81,7 +100,8 @@ export default function GoogleLoginButton({ text = 'signin_with' }: { text?: 'si
 
         window.google.accounts.id.initialize({
           client_id: CLIENT_ID,
-          callback: (response) => loginRef.current.mutate(response.credential),
+          callback: (response) =>
+            loginRef.current.mutate({ idToken: response.credential, role: roleRef.current }),
         })
 
         window.google.accounts.id.renderButton(containerRef.current, {

@@ -13,6 +13,9 @@ export default function RegisterPage() {
   const {
     control,
     handleSubmit,
+    // `watch` để nút Google đọc được vai trò người dùng vừa chọn — nút đó nằm ngoài luồng submit của
+    // form nên không nhận được giá trị qua handleSubmit.
+    watch,
     formState: { errors },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
@@ -128,7 +131,9 @@ export default function RegisterPage() {
           <div className="h-px flex-1 bg-line" />
         </div>
 
-        <GoogleLoginButton text="signup_with" />
+        {/* Truyền vai trò người dùng vừa chọn ở trên. Trước đây không truyền, nên lựa chọn đó bị bỏ
+            qua trong im lặng: chọn "Tạo quiz, sinh đề AI" rồi bấm Google vẫn vào với vai trò Người học. */}
+        <GoogleLoginButton text="signup_with" role={watch('role')} />
 
         <div className="mt-6 border-t border-line pt-4 text-center text-sm">
           Đã có tài khoản?{' '}

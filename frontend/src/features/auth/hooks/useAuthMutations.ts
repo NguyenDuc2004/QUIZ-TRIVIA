@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { message } from 'antd'
 import { getApiErrorMessage } from '@/shared/api/client'
 import { tokenStorage } from '@/shared/api/tokenStorage'
-import { authApi, type LoginBody, type RegisterBody } from '../api/authApi'
+import { authApi, type LoginBody, type RegisterBody, type Role } from '../api/authApi'
 import { useAuthStore } from '../store/authStore'
 
 /**
@@ -48,7 +48,8 @@ export function useGoogleLogin() {
   const navigate = useNavigate()
 
   return useMutation({
-    mutationFn: (idToken: string) => authApi.loginWithGoogle(idToken),
+    mutationFn: ({ idToken, role }: { idToken: string; role?: Role }) =>
+      authApi.loginWithGoogle(idToken, role),
     onSuccess: (result) => {
       clearQueryCache(queryClient)
       setSession(result)

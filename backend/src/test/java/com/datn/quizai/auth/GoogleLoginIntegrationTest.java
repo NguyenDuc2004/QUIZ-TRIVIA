@@ -1,6 +1,7 @@
 package com.datn.quizai.auth;
 
 import com.datn.quizai.auth.service.GoogleTokenVerifier;
+import com.datn.quizai.user.domain.Role;
 import com.datn.quizai.user.domain.User;
 import com.datn.quizai.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -81,7 +82,7 @@ class GoogleLoginIntegrationTest {
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.user.email").value(email))
                 .andExpect(jsonPath("$.user.displayName").value("Người Mới"))
-                // Không cho tự phong vai trò qua đường Google
+                // Không gửi vai trò thì mặc định LEARNER, y như đăng ký thường bỏ trống trường đó
                 .andExpect(jsonPath("$.user.role").value("LEARNER"));
 
         User created = userRepository.findByEmail(email).orElseThrow();
@@ -164,10 +165,90 @@ class GoogleLoginIntegrationTest {
 
     // ===== Helper =====
 
+    // ============================================================ vai trò khi đăng ký bằng Google
+
+    @Test
+    @DisplayName("Tài khoản MỚI: nhận đúng vai trò CREATOR người dùng chọn ở trang đăng ký")
+    void shouldHonorRoleForNewAccount() throws Exception {
+        String email = "google-creator-" + UUID.randomUUID() + "@example.com";
+        googleReturns("sub-" + UUID.randomUUID(), email, "Người Tạo");
+
+        // Trước đây vai trò bị đặt cứng LEARNER, nên người dùng chọn "Tạo quiz, sinh đề AI" rồi bấm
+        // Google sẽ bị bỏ qua lựa chọn TRONG IM LẶNG — vào hệ thống mà không thấy mục soạn quiz đâu.
+        loginWithGoogle("CREATOR")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.role").value("CREATOR"));
+
+        assertThat(userRepository.findByEmail(email).orElseThrow().getRole())
+                .isEqualTo(Role.CREATOR);
+    }
+
+    @Test
+    @DisplayName("Tài khoản MỚI xin ADMIN: bị hạ xuống LEARNER — ranh giới an ninh thật nằm ở đây")
+    void shouldDowngradeAdminForNewAccount() throws Exception {
+        String email = "google-admin-" + UUID.randomUUID() + "@example.com";
+        googleReturns("sub-" + UUID.randomUUID(), email, "Kẻ Xin Quyền");
+
+        // Cùng luật với đăng ký thường (docs/security.md §1): ADMIN chỉ được cấp bởi Admin sẵn có.
+        // CREATOR thì không phải ranh giới — đăng ký bằng email vốn đã cho tự chọn.
+        loginWithGoogle("ADMIN")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.role").value("LEARNER"));
+    }
+
+    @Test
+    @DisplayName("ĐÃ CÓ tài khoản LEARNER: đăng nhập lại kèm role=CREATOR KHÔNG được nâng cấp")
+    void mustNotUpgradeExistingAccountOnLogin() throws Exception {
+        String email = "google-nangcap-" + UUID.randomUUID() + "@example.com";
+        String sub = "sub-" + UUID.randomUUID();
+
+        // Lần đầu: tạo tài khoản LEARNER
+        googleReturns(sub, email, "Người Học");
+        loginWithGoogle().andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.role").value("LEARNER"));
+
+        // Lần hai: CÙNG tài khoản đó, nhưng gửi kèm CREATOR.
+        //
+        // Đây là ranh giới quan trọng nhất của cả thay đổi này. Endpoint /auth/google dùng chung cho
+        // ĐĂNG NHẬP lẫn ĐĂNG KÝ — Google không phân biệt hai việc đó. Nếu áp vai trò ở mọi lần gọi thì
+        // bất kỳ ai cũng tự lên CREATOR bằng cách đăng nhập lại một lần nữa.
+        loginWithGoogle("CREATOR")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.role").value("LEARNER"));
+
+        assertThat(userRepository.findByEmail(email).orElseThrow().getRole())
+                .as("tài khoản đã tồn tại phải giữ nguyên vai trò")
+                .isEqualTo(Role.LEARNER);
+    }
+
+    @Test
+    @DisplayName("LIÊN KẾT vào tài khoản email sẵn có: giữ nguyên vai trò, bỏ qua role gửi kèm")
+    void mustNotUpgradeWhenLinkingExistingEmailAccount() throws Exception {
+        String email = "google-lienket-vaitro-" + UUID.randomUUID() + "@example.com";
+        register(email);   // tạo tài khoản LEARNER bằng email + mật khẩu
+
+        googleReturns("sub-" + UUID.randomUUID(), email, "Tên Từ Google");
+
+        // Liên kết KHÔNG phải tạo mới. Áp vai trò ở đây mở đúng đường tự nâng cấp mà thiết kế này tránh:
+        // một người dùng LEARNER chỉ cần liên kết Google là lên CREATOR.
+        loginWithGoogle("CREATOR")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.role").value("LEARNER"));
+    }
+
     private org.springframework.test.web.servlet.ResultActions loginWithGoogle() throws Exception {
+        return loginWithGoogle(null);
+    }
+
+    /** @param role vai trò gửi kèm; null = không gửi trường đó, đúng như trang ĐĂNG NHẬP làm */
+    private org.springframework.test.web.servlet.ResultActions loginWithGoogle(String role) throws Exception {
+        String body = role == null
+                ? "{\"idToken\":\"token-gia-lap\"}"
+                : "{\"idToken\":\"token-gia-lap\",\"role\":\"%s\"}".formatted(role);
+
         return mockMvc.perform(post("/api/v1/auth/google")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"idToken\":\"token-gia-lap\"}"));
+                .content(body));
     }
 
     private void register(String email) throws Exception {
