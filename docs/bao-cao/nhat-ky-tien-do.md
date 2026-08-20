@@ -45,6 +45,7 @@
 | 19/08 | **Cảnh báo gian lận live trong phòng đấu** (V20) — cờ riêng cho host, nhắc riêng, khuôn lặp thay vì đếm số lần, 30 test · phát hiện thiết kế đã chốt không khớp schema · sửa 1 test đỏ có sẵn trên `main` | 8/8 | 🟢 xong |
 
 | 20/08 | **Đổi dự phòng AI sang Groq** · **FR-48 thi nghiêm ngặt** (V21) · **FR-58 xuất bảng điểm CSV** · **FR-84 hạn mức AI** (V22) — 494 test BE / 67 FE · sửa 2 lỗi có sẵn | 13/13 | 🟢 xong — fallback đo thật, tìm & sửa 1 lỗi khi chạy thật |
+| 20/08 (chiều) | **Làm nốt 6 mục hoãn**: FR-11, FR-36, FR-32, FR-12, FR-64, FR-69 — hết mục ⏳ | 6/6 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -3244,6 +3245,104 @@ vẫn là 0, và vẫn còn đủ hạn mức thật.
 
 > Bài học: **500 test xanh không thay được một lần chạy thật.** Lỗi này nằm ở chỗ nối giữa hai tầng mà mỗi
 > tầng đều có test riêng và đều đúng.
+
+---
+
+## 📅 T5 — 20/08/2026 (chiều) — Làm nốt 6 mục còn hoãn: hết mục ⏳
+
+**Xong:** FR-11 ảnh câu hỏi (V23) · FR-36 AI giải thích gợi ý · FR-32 thứ tự thích ứng · FR-12 xuất/nhập
+quiz · FR-64 phân hạng · FR-69 email. Backend 514 → **553 test**, frontend 67.
+
+**Không còn mục `⏳` nào.** Sáu mục còn lại đều là *bỏ có lý do* hoặc *làm một phần có lý do*, ghi rõ trong
+đặc tả: FR-44 (bỏ), FR-87 (ngoài phạm vi), FR-12/FR-58 (JSON và CSV, không làm PDF), FR-62 (chỉ toàn hệ
+thống), FR-70 (bỏ quiet hours).
+
+---
+
+### Hai mục từng hoãn vì "sẽ phải bịa số" — cách gỡ giống nhau
+
+**FR-64 phân hạng.** Lý do hoãn: *"chọn ngưỡng khi chưa có dữ liệu thật thì chỉ là số bịa"*. Đúng — với
+ngưỡng **điểm tuyệt đối**. "1000 điểm là Vàng" không dựa trên gì, và sai theo **hai chiều cùng lúc**: mùa ít
+người thì không ai đạt, mùa đông người thì ai cũng đạt.
+
+Gỡ bằng **vị trí tương đối**: top 10% Vàng, 25% tiếp theo Bạc. Ngưỡng rút ra từ phân bố thật của mùa ấy —
+thứ luôn tồn tại. Điểm mấu chốt: hạng 5 trong 10 người là nửa dưới bảng, hạng 5 trong 100 người là top 5%;
+ngưỡng tuyệt đối không phân biệt được. Dưới 10 người thì **không phân hạng ai** — "top 10% của 3 người" là
+câu vô nghĩa, và trao Vàng cho người đứng đầu trong ba người làm mất giá đúng huy hiệu đó ở mùa đông.
+
+**FR-36 giải thích gợi ý.** Lý do hoãn: *"tốn hạn mức AI cho mỗi lần mở trang"*. Lý do đó **gắt hơn** sau khi
+làm FR-84 sáng cùng ngày: giờ nó tiêu vào hạn mức của **chính người học**, tức họ bị phạt vì một tính năng
+họ không chủ động dùng. Gỡ bằng: lý do dạng mẫu luôn có sẵn (không tốn gì), AI chỉ chạy khi **bấm hỏi**, và
+cache 24 giờ.
+
+### FR-32: đặc tả nói "adaptive difficulty", nhưng cách hiểu thông thường phá nhiều thứ
+
+Chọn một *tập câu khác nhau* cho từng người thì hai người có **điểm không so được** — mà bảng xếp hạng theo
+quiz, bảng theo dõi lớp và thống kê quiz đều dựa trên giả định ngược lại. Nó cũng phá bất biến *"chốt đề lúc
+bắt đầu"*.
+
+Nên: **đổi thứ tự, không đổi bộ đề**, và chỉ ở chế độ luyện tập. Mọi câu vẫn được hỏi.
+
+**Lỗi tự bắt được trong code của mình:** chú thích viết *"theo thứ tự người học đã làm"* nhưng code chỉ lọc
+danh sách, tức giữ **thứ tự đề**. Vì chính thuật toán đã đổi thứ tự ở các bước trước nên hai thứ đó khác
+nhau — chuỗi đọc ra sai hoàn toàn. Có test dựng riêng ví dụ mà hai cách đọc cho **hai hướng ngược nhau**.
+
+### FR-12: chọn định dạng theo hình dạng dữ liệu, không theo thói quen
+
+Đặc tả ghi "JSON/CSV". Quiz là dữ liệu **lồng nhau** nên chỉ làm JSON; bảng điểm lớp (FR-58) vốn **phẳng**
+nên dùng CSV. Cùng một đặc tả, hai lựa chọn ngược nhau, vì hai hình dạng dữ liệu khác nhau.
+
+File là **nội dung đề**, không phải bản sao một dòng CSDL: không id (nhập vào máy khác sẽ ghi đè nhầm quiz
+người khác), không thống kê (quiz mới "có 500 lượt học" mà chưa ai làm), không ảnh (trỏ vào `uploads/` máy cũ).
+
+### FR-11: chỗ dễ hỏng không phải phần lưu mà là phần hiển thị
+
+Lưu ảnh xong mà DTO không mang theo thì ảnh nằm trong CSDL và **người học không bao giờ thấy** — cả tính năng
+vô nghĩa. Nên thêm `imageUrl` vào cả `AttemptQuestionResponse` lẫn `LiveQuestionView`. Phòng đấu để ảnh thấp
+hơn (`max-h-56`): nó tính điểm theo **tốc độ**, nên đẩy nút đáp án xuống dưới màn hình là trực tiếp lấy mất
+điểm của người chơi màn hình nhỏ.
+
+Tách `UploadedImagePath` dùng chung với ảnh bìa quiz, vì *"chỉ nhận ảnh của hệ thống này"* là **luật an
+toàn**: nhân đôi nó nghĩa là lần sau ai đó nới ở một chỗ mà quên chỗ kia, và **chỗ bị quên chính là lỗ hổng**.
+
+### FR-69: em hỏi thừa một câu
+
+Trước khi làm, em hỏi xin thêm `spring-boot-starter-mail` vào stack — vì lý do hoãn trong đặc tả nói ba thứ
+cần thiết "không có trong tech-stack.md". **Sai**: thư viện đó cùng toàn bộ `spring.mail` và `app.mail.from`
+đã nằm trong dự án từ features/01 cho OTP đặt lại mật khẩu. Đáng lẽ phải mở `pom.xml` ra xem trước khi hỏi.
+
+Hệ quả trực tiếp: suýt khai thư viện đó **lần thứ hai**, và Maven cảnh báo `duplicate declaration`. Bản đầu
+cũng lấy `spring.mail.host` làm dấu hiệu bật/tắt — mà host **có giá trị mặc định**, nên tính năng sẽ luôn
+"đang bật" và hệ thống cố gửi thư ngay lần chạy đầu, đúng thứ "mặc định tắt" muốn tránh. Dấu hiệu đúng là
+**tài khoản gửi**.
+
+Test dùng **SMTP thật trong bộ nhớ**, không mock: mock chỉ chứng minh code gọi đúng hàm, vẫn xanh khi thư
+thiếu người nhận hay sai mã hoá tiếng Việt. Phải **giải mã quoted-printable** mới so được chuỗi — và chính
+điều đó chứng minh charset khai báo đúng.
+
+### Ba flake nữa, và một bài học lặp lại
+
+| Flake | Gốc |
+|---|---|
+| `ChatIntegrationTest` (lần thứ **năm**) | `HttpClient` gộp kết nối keep-alive, mà luồng SSE kết thúc bằng việc **server** đóng stream — kết nối chết nằm lại trong bể, lần gửi sau nhận EOF. Lần trước đổi WebClient sang JDK client chỉ **đổi triệu chứng**. Không đặt được `Connection: close` (JDK cấm), nên dựng client mới mỗi lần gọi |
+| `IntegrityIntegrationTest` | So `occurred_at <= now()` tức so **đồng hồ JVM** với **đồng hồ trong container** — lệch 276ms đo được trên máy này |
+| `RecommendationIntegrationTest` | Đồng bộ nền từ `takeQuiz()` mang ảnh chụp cũ, về đích **sau** lần sync tường minh |
+
+Cả ba đều **xanh khi chạy riêng**. Bài học lặp lại lần thứ tư: *chạy riêng một lớp test không đủ để kết luận
+nó đúng*.
+
+**Và một sai lầm của chính em:** `mvnw test` sau vài lần chạy có lọc `-Dtest=` để lại lớp tổng hợp cũ trong
+`target/classes` → `NoClassDefFoundError` ở những lớp không liên quan. Mất hai vòng chạy mới nhận ra. Từ đó
+luôn `mvnw clean` trước lần chạy đầy đủ.
+
+### Ghi chú báo cáo
+
+- **Mục 2.8:** thêm V23 (`questions.image_url`). V21–V23 đều là cột thêm vào bảng có sẵn, và mỗi cột có một
+  quyết định về `null`/mặc định với lý do khác nhau — dùng được làm ví dụ cho phần thiết kế CSDL.
+- **"Khó khăn & cách giải quyết":** FR-64 và FR-36 là cặp ví dụ tốt — *cùng một lời phản đối ("sẽ phải bịa
+  số" / "sẽ tốn hạn mức"), gỡ được bằng cách đổi cách đặt vấn đề chứ không bằng cách làm bừa*.
+- **Mục 3.4:** ba flake ở trên đều là *lỗi của phép kiểm, không phải của sản phẩm* — nhưng cái thứ ba lộ ra
+  một tính chất thật của hệ thống (đồ thị gợi ý là view, nhất quán cuối cùng) nên đáng viết vào báo cáo.
 
 ---
 
