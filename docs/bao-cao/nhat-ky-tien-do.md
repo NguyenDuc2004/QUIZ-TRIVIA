@@ -47,7 +47,7 @@
 | 20/08 | **Đổi dự phòng AI sang Groq** · **FR-48 thi nghiêm ngặt** (V21) · **FR-58 xuất bảng điểm CSV** · **FR-84 hạn mức AI** (V22) — 494 test BE / 67 FE · sửa 2 lỗi có sẵn | 13/13 | 🟢 xong — fallback đo thật, tìm & sửa 1 lỗi khi chạy thật |
 | 20/08 (chiều) | **Làm nốt 6 mục hoãn**: FR-11, FR-36, FR-32, FR-12, FR-64, FR-69 — hết mục ⏳ | 6/6 | 🟢 xong |
 | 20/08 (tối) | **Đánh bóng phần người dùng thấy**: số người đã học · sửa hồ sơ + ảnh đại diện · chân trang · hover thẻ quiz · **đăng ký Google nhận đúng vai trò** — 571 test BE / 67 FE | 5/5 | 🟢 xong — 2 lỗi thật do người dùng chỉ ra |
-| 21/08 | **Người học không đổi được ảnh đại diện (403)** — tách đường tải ảnh đại diện riêng, mỗi người một file — 578 test BE / 67 FE | 1/1 | 🟢 xong |
+| 21/08 | **Người học không đổi được ảnh đại diện (403)** — tách đường tải riêng, mỗi người một file · dọn phòng chờ: bỏ IP dưới QR, cho "sẵn sàng" có hậu quả — 578 test BE / 67 FE | 2/2 | 🟢 xong |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -3456,7 +3456,7 @@ nhập lại có thể đổi vai trò.
 
 ## 📅 T6 — 21/08/2026 — Một dòng phân quyền đúng lúc viết ra, sai từ lúc có trang hồ sơ
 
-**Xong:** người học đổi được ảnh đại diện. Backend 571 → **578 test**, frontend 67.
+**Xong:** người học đổi được ảnh đại diện · dọn phòng chờ. Backend 571 → **578 test**, frontend 67.
 
 Người dùng gửi ảnh chụp màn hình: đang ở vai trò Người học, mở trang **Hồ sơ của tôi**, bấm *"Chọn ảnh từ
 máy"* và nhận **"Bạn không có quyền thực hiện hành động này"** — ngay trên trang hồ sơ của chính mình.
@@ -3527,6 +3527,38 @@ hai thứ đó đang nằm trong thân `storeImage`. Đường mới sẽ nhận
 `UploadedImagePath`: **luật an toàn bị nhân đôi thì lần sau ai đó sửa một chỗ mà quên chỗ kia, và chỗ bị
 quên chính là lỗ hổng** — ở đây "ai đó" là em, và khoảng cách giữa hai lần chỉ một ngày.
 
+---
+
+### Phòng chờ: một dòng chữ đúng lúc dev, thừa lúc triển khai
+
+Dưới mã QR có in đường dẫn — `http://192.168.0.101:5173/join/320438`. Lý do ban đầu: *"người dùng thấy ngay
+QR đang trỏ đi đâu"*. Lý do đó **chỉ có nghĩa trên máy dev**, khi đường dẫn là một địa chỉ LAN thô mà chính
+người tạo phòng cũng cần nhìn để tin là QR không hỏng. Khi triển khai thật, nó chỉ là tên miền của đúng
+trang đang mở: không thêm thông tin gì, mà chiếm chỗ ngay dưới mã QR — thứ thường được chiếu lên máy chiếu
+cho cả lớp quét.
+
+Vẫn giữ đường dẫn ở **một chỗ**: thẻ cảnh báo khi backend không dò được địa chỉ LAN và QR trỏ về
+`localhost`. Ở đó nó không phải trang trí mà là **bằng chứng** giải thích vì sao điện thoại quét không vào
+được.
+
+### "Tôi đã sẵn sàng" — câu hỏi của người dùng đúng vào chỗ yếu
+
+Người dùng hỏi: *"ở ô tôi đã sẵn sàng, cái đó là tượng trưng đúng không?"*
+
+Nửa đúng, và nửa sai đó mới đáng nói. Trạng thái này là **dữ liệu thật**: lưu trong `RoomState` (Redis),
+phát cho cả phòng qua `PLAYER_READY`, đếm lại ở `readyCount` — con số hiện trên màn hình không bịa. Nhưng
+`RoomService.start` **không hề kiểm** nó: chủ phòng bấm là vào ván ngay, dù không ai sẵn sàng. Nên người
+chơi bấm nút mà **không có gì thay đổi**, và một nút như vậy thì đúng là trang trí.
+
+Không chặn cứng theo `readyCount`, vì như thế **một người bỏ máy đi lấy nước là đủ giữ cả lớp lại vô thời
+hạn**, mà chủ phòng chỉ còn cách đuổi họ ra — hình phạt nặng hơn hẳn cái lỗi. Thay vào đó chủ phòng bị
+**hỏi lại** khi còn người chưa sẵn sàng, với hai lựa chọn *Vẫn bắt đầu* / *Chờ thêm*.
+
+Điểm đáng ghi: hành vi cũ **không sai với đặc tả** — đặc tả chỉ nói "bấm Sẵn sàng, danh sách cập nhật
+real-time", không nói gì về việc nó có chặn hay không. Nó **im lặng ở đúng chỗ quan trọng**, và khoảng im
+lặng đó được lấp bằng cách dễ nhất là không làm gì cả. Giờ đặc tả đã ghi rõ *"tín hiệu cho chủ phòng, không
+phải khoá"* kèm lý do, để lần sau không ai đọc nó rồi tưởng là thiếu sót mà đi chặn.
+
 ### Ghi chú báo cáo
 
 - **"Khó khăn & cách giải quyết":** đây là ví dụ tốt nhất từ trước tới giờ cho ý *bộ test xanh không chứng
@@ -3535,6 +3567,8 @@ quên chính là lỗ hổng** — ở đây "ai đó" là em, và khoảng các
 - **Mục 2.3 (yêu cầu phi chức năng) / 3.4:** bảng hai đường tải ảnh ở trên minh hoạ được *phân quyền nên
   bám vào rủi ro cụ thể, không bám vào vai trò cho tiện* — cùng một hành động "tải ảnh lên", hai mức quyền
   khác nhau vì một bên không giới hạn số lượng còn một bên chặn ở một file.
+- **Mục 2.4 (đặc tả use case "Chơi phòng đấu"):** chuyện nút "Sẵn sàng" là ví dụ cho *đặc tả im lặng cũng
+  là một loại thiếu sót* — không có dòng nào sai, nhưng chỗ không nói tới thì bị lấp bằng cách dễ nhất.
 
 ---
 

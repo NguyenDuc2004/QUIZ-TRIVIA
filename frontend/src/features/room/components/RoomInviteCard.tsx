@@ -82,10 +82,18 @@ export default function RoomInviteCard({
             <QRCodeSVG value={url} size={180} level="M" />
           </div>
           <Text className="text-ink-soft text-xs">Quét để vào phòng</Text>
-          {/* Hiện thẳng đường dẫn: người dùng thấy ngay QR đang trỏ đi đâu */}
-          <Text className="max-w-60 truncate text-center text-ink-soft text-xs" title={url}>
-            {url}
-          </Text>
+          {/* KHÔNG in đường dẫn ra dưới mã QR.
+
+              Bản đầu có in, với lý do "người dùng thấy ngay QR đang trỏ đi đâu". Lý do đó chỉ có nghĩa
+              lúc chạy trên máy dev: khi ấy đường dẫn là một địa chỉ LAN thô (192.168.x.x:5173) mà chính
+              người tạo phòng cũng cần nhìn để tin là QR không hỏng.
+
+              Khi triển khai thật thì đường dẫn chỉ là tên miền của trang đang mở — in ra không cho ai
+              thêm thông tin gì, mà lại chiếm chỗ ngay dưới mã QR, thứ thường được chiếu lên máy chiếu
+              cho cả lớp quét. Ai cần đường dẫn thì đã có nút Sao chép link ngay bên dưới.
+
+              Riêng trường hợp QR HỎNG (địa chỉ localhost) thì đường dẫn vẫn hiện, ở thẻ cảnh báo phía
+              trên: ở đó nó là bằng chứng giải thích vì sao điện thoại quét không vào được. */}
           <Button size="small" onClick={copy}>
             Sao chép link
           </Button>

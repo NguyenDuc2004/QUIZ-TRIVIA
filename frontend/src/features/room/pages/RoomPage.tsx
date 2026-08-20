@@ -195,6 +195,33 @@ export default function RoomPage() {
     ? ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE'].includes(question.type)
     : false
 
+  /**
+   * Chủ phòng bấm "Bắt đầu ván".
+   *
+   * Trạng thái "sẵn sàng" là **tín hiệu cho chủ phòng, không phải khoá**. Backend cố tình không chặn
+   * `start` theo `readyCount` (`RoomService.start`), và đó là quyết định đúng: một người bỏ máy đi lấy
+   * nước là đủ để giữ cả lớp lại vô thời hạn, còn chủ phòng thì không có cách nào gỡ.
+   *
+   * Nhưng nếu bấm là vào ván luôn thì cái nút "Tôi đã sẵn sàng" chẳng dẫn tới đâu — người chơi bấm nó mà
+   * không có gì thay đổi. Nên chỗ này **hỏi lại** khi còn người chưa sẵn sàng: tín hiệu có tác dụng thật
+   * (chủ phòng biết mình đang bỏ lại ai), mà quyền quyết định vẫn nằm ở chủ phòng.
+   */
+  const batDauVan = () => {
+    const chuaSanSang = players.length - room.readyCount
+    if (chuaSanSang <= 0) {
+      send('start')
+      return
+    }
+
+    Modal.confirm({
+      title: `Còn ${chuaSanSang}/${players.length} người chưa bấm sẵn sàng`,
+      content: 'Bắt đầu bây giờ thì họ vào ván ngay ở câu hỏi đầu tiên, không kịp chuẩn bị.',
+      okText: 'Vẫn bắt đầu',
+      cancelText: 'Chờ thêm',
+      onOk: () => send('start'),
+    })
+  }
+
   /** Host nhắc riêng một người bị gắn cờ. Không trừ điểm, không đuổi — xem ProctoringFlagPanel. */
   const nhacRieng = (playerId: string) => {
     send('warn', { playerId })
@@ -233,7 +260,7 @@ export default function RoomPage() {
             <Button
               type="primary"
               disabled={socketStatus !== 'connected'}
-              onClick={() => send('start')}
+              onClick={batDauVan}
             >
               Bắt đầu ván
             </Button>
