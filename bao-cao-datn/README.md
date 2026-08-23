@@ -17,7 +17,9 @@ Nhờ vậy sửa nội dung là sửa file `.md` rồi build lại, không ph�
 
 | `03-chuong-3.md` | Chương 3 — Thực nghiệm và đánh giá (số liệu 3.5 và 3.6 đã đo thật) |
 
-**Chưa có:** `04-ket-luan.md`. `build.js` tự bỏ qua file chưa tồn tại nên vẫn build được.
+| `04-ket-luan.md` | Kết luận — kết quả đạt được, hạn chế, bài học, hướng phát triển |
+
+Bộ nội dung đã **đủ**. `build.js` vẫn tự bỏ qua file chưa tồn tại nên thêm/bớt phần đều không làm đổ build.
 
 **17 hình của Chương 3 (3.1–3.17) chưa có ảnh** — chúng là ảnh chụp màn hình sản phẩm và một biểu đồ,
 không sinh được từ định nghĩa text. `build.js` chèn khung xám thay chỗ. Script `capture/capture.mjs`
