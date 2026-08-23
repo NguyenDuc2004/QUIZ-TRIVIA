@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Alert, Button, Radio, Skeleton, Space, Table, Tag, Typography } from 'antd'
+import { Alert, Button, Checkbox, Radio, Skeleton, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { getApiErrorMessage } from '@/shared/api/client'
 import EmptyState from '@/shared/components/EmptyState'
@@ -8,6 +8,7 @@ import PageHeader from '@/shared/components/PageHeader'
 import { DIFFICULTY_COLOR, DIFFICULTY_LABEL } from '@/features/quiz/constants'
 import { useQuizSummary } from '@/features/quiz/hooks/useQuizQueries'
 import { useAuthStore } from '@/features/auth/store/authStore'
+import ProctoringNotice from '@/features/integrity/components/ProctoringNotice'
 import type { AttemptMode, AttemptSummary, LeaderboardEntry } from '../api/attemptApi'
 import { MODE_HINT, MODE_LABEL, STATUS_COLOR, STATUS_LABEL, formatDuration } from '../constants'
 import { useAttemptHistory, useLeaderboard, useStartAttempt } from '../hooks/useAttemptQueries'
@@ -27,6 +28,11 @@ export default function QuizIntroPage() {
   const startAttempt = useStartAttempt()
 
   const [mode, setMode] = useState<AttemptMode>('EXAM')
+
+  // Xác nhận đã đọc thông báo ghi nhận hành vi. KHÔNG nhớ lại giữa các lần: mục đích của ô này là người thi
+  // đọc trước LẦN THI NÀY, không phải một lần duy nhất trong đời rồi thôi. Bỏ qua sau lần đầu thì nó thành
+  // một hộp thoại người ta bấm cho xong, đúng thứ mà việc báo trước cần tránh.
+  const [daHieu, setDaHieu] = useState(false)
 
   if (error) {
     return <Alert type="error" showIcon message={getApiErrorMessage(error)} />
@@ -178,6 +184,24 @@ export default function QuizIntroPage() {
           </Radio.Group>
           <Paragraph className="mb-4! text-ink-soft text-xs">{MODE_HINT[mode]}</Paragraph>
 
+          {/* Nói luật TRƯỚC khi đồng hồ chạy.
+
+              Thông báo này vốn đã có, nhưng nằm ở màn LÀM BÀI — tức người thi chỉ đọc được sau khi bài đã
+              bắt đầu và giờ đã chạy. Đọc lúc đó thì không còn lựa chọn nào: không đóng bớt tab được, không
+              đổi chỗ ngồi được, và lần rời trang đầu tiên rất có thể xảy ra ngay trong lúc đang đọc chính
+              dòng chữ giải thích rằng rời trang sẽ bị ghi lại.
+
+              Ô xác nhận bên dưới là thứ biến "có dán thông báo" thành "người thi đã đọc". Chỉ áp cho chế độ
+              Thi, vì luyện tập không ghi nhận gì. */}
+          {mode === 'EXAM' && (
+            <div className="mb-4 flex flex-col gap-3">
+              <ProctoringNotice />
+              <Checkbox checked={daHieu} onChange={(e) => setDaHieu(e.target.checked)}>
+                <span className="text-sm">Tôi đã đọc và hiểu những tín hiệu được ghi nhận</span>
+              </Checkbox>
+            </div>
+          )}
+
           {/* FR-48. Nói TRƯỚC khi bấm bắt đầu, không phải lúc màn hình đã đổi: người học cần biết mình sắp
               vào toàn màn hình để còn chọn thời điểm — đóng bớt tab, ngồi vào chỗ yên tĩnh. Bật lên đột ngột
               giữa lúc họ chưa sẵn sàng thì lần thoát ra đầu tiên là do MÌNH gây ra, mà nó vẫn bị ghi lại.
@@ -196,7 +220,7 @@ export default function QuizIntroPage() {
             type="primary"
             size="large"
             block
-            disabled={quiz.questionCount === 0}
+            disabled={quiz.questionCount === 0 || (mode === 'EXAM' && !daHieu)}
             loading={startAttempt.isPending}
             onClick={() => quizId && startAttempt.mutate({ quizId, mode })}
           >

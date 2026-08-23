@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { integrityApi, type ProctoringEvent, type ProctoringEventType } from '../api/integrityApi'
 
 /** Gom tín hiệu rồi gửi mỗi 10 giây. Gửi từng sự kiện là tự tạo tải ngay lúc người dùng đang thi. */
@@ -23,11 +23,35 @@ const TOI_DA_MOI_LO = 50
  * Mọi lời gọi API đều bọc trong `catch` và im lặng: người đang thi không nên thấy một thông báo lỗi vì cơ chế
  * giám sát gặp sự cố. Tín hiệu mất thì điểm rủi ro thấp hơn thực tế — chấp nhận được, vì hệ thống này chỉ
  * cảnh báo chứ không kết luận.
+ *
+ * ## Trả về số lần đã ghi nhận, để người thi nhìn thấy
+ * Trước đây hook không trả gì: tín hiệu được thu hoàn toàn im lặng, và người thi bị tính điểm rủi ro mà
+ * không biết mình đang bị tính cái gì. Bị đánh giá theo một tiêu chí không ai nói cho biết là bất công, kể
+ * cả khi tiêu chí đó đúng.
+ *
+ * Đếm **theo nhóm người dùng hiểu được**, không theo loại sự kiện kỹ thuật: rời trang gộp cả chuyển tab lẫn
+ * mất tiêu điểm cửa sổ, vì với người thi đó là **một** hành động chứ không phải hai.
+ *
+ * Con số này là *số lần đã ghi nhận*, **không phải** số lần vi phạm — xem `ProctoringLiveCount`.
  */
+/** Số lần đã ghi nhận, gom theo nhóm mà người thi hiểu được. */
+export interface SoLanGhiNhan {
+  roiTrang: number
+  dan: number
+  thoatToanManHinh: number
+}
+
+const KHONG_CO: SoLanGhiNhan = { roiTrang: 0, dan: 0, thoatToanManHinh: 0 }
+
 export function useProctoring(attemptId: string | undefined, enabled: boolean) {
   const buffer = useRef<ProctoringEvent[]>([])
-  // Giữ trong ref, không trong state: mỗi lần state đổi là một lần render, và tín hiệu có thể tới liên tục.
-  // Đây là dữ liệu nền, giao diện không hiện gì từ nó.
+  // Buffer giữ trong ref, không trong state: nó là mảng, mỗi lần thêm phần tử mà đổi state là dựng lại mảng
+  // rồi render lại cả màn làm bài. Đây là dữ liệu nền, giao diện không hiện gì từ chính buffer.
+
+  // Bộ đếm thì NGƯỢC LẠI — phải ở state vì người thi cần thấy nó đổi ngay. Đây là ba số nguyên, không phải
+  // mảng, và mọi tín hiệu ở đây đều do người dùng chủ động gây ra (chuyển tab, dán, thoát toàn màn hình) nên
+  // tần suất tính bằng lần mỗi phút, không phải lần mỗi khung hình.
+  const [soLan, setSoLan] = useState<SoLanGhiNhan>(KHONG_CO)
 
   useEffect(() => {
     if (!enabled || !attemptId) {
@@ -39,6 +63,24 @@ export function useProctoring(attemptId: string | undefined, enabled: boolean) {
         return   // chặn phình bộ nhớ nếu mạng chết lâu; server cũng có chặn trên riêng
       }
       buffer.current.push({ type, occurredAt: new Date().toISOString(), ...extra })
+
+      // Gộp TAB_HIDDEN và WINDOW_BLUR thành một nhóm: với người thi, chuyển tab và bấm sang cửa sổ khác là
+      // cùng một hành động "rời khỏi bài thi". Tách ra chỉ làm con số trông đáng sợ hơn thực tế.
+      setSoLan((truoc) => {
+        if (type === 'TAB_HIDDEN' || type === 'WINDOW_BLUR') {
+          return { ...truoc, roiTrang: truoc.roiTrang + 1 }
+        }
+        if (type === 'PASTE') {
+          return { ...truoc, dan: truoc.dan + 1 }
+        }
+        if (type === 'FULLSCREEN_EXIT') {
+          return { ...truoc, thoatToanManHinh: truoc.thoatToanManHinh + 1 }
+        }
+        // COPY và ANSWER_TOO_FAST cố ý KHÔNG đếm ra màn hình. Sao chép đề bài là việc bình thường của người
+        // học nghiêm túc, còn "trả lời nhanh bất thường" là một suy đoán của hệ thống chứ không phải một
+        // hành động người thi tự biết mình vừa làm — hiện nó lên chỉ gây hoang mang mà không giúp họ sửa gì.
+        return truoc
+      })
     }
 
     const onVisibility = () => {
@@ -94,4 +136,6 @@ export function useProctoring(attemptId: string | undefined, enabled: boolean) {
       void guiLo()
     }
   }, [attemptId, enabled])
+
+  return soLan
 }

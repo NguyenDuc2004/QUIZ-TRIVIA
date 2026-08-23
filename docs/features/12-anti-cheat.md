@@ -23,6 +23,55 @@ Phát hiện và cảnh báo hành vi gian lận trong chế độ thi (bài thi
   - **Admin** — hàng chờ toàn hệ thống `/admin/integrity`, lọc theo trạng thái rà soát.
   - **Chủ quiz** — cột *Rủi ro* + dòng cảnh báo ở trang thống kê quiz, dẫn sang màn chấm bài. Không có cột này thì chủ quiz *có quyền* xem báo cáo nhưng phải mở từng bài mới tìm ra, nên với hàng trăm bài nộp thì trên thực tế chỉ Admin phát hiện được — còn người hiểu hoàn cảnh lớp mình nhất thì không thấy gì.
 - **FR-48** [C] ✅ Chế độ thi nghiêm ngặt: yêu cầu toàn màn hình, khoá chuột phải, cảnh báo khi thoát. *Chủ quiz bật ở form soạn quiz; chỉ áp cho lượt EXAM.* Xem "Vì sao gọi là ma sát chứ không phải khoá" bên dưới.
+- **FR-88** [S] ✅ **Minh bạch với người thi:** nói luật *trước* khi bắt đầu (có ô xác nhận đã đọc), và hiện số lần đã ghi nhận *ngay trong lúc thi*. Xem mục riêng bên dưới.
+
+## FR-88 — người thi phải biết mình đang bị ghi nhận cái gì
+
+Bản đầu của tính năng này thu tín hiệu **hoàn toàn im lặng**. Thông báo `ProctoringNotice` có tồn tại, nhưng
+nằm ở màn *làm bài* — tức người thi chỉ đọc được **sau khi đồng hồ đã chạy**. Đọc lúc đó thì không còn lựa
+chọn nào: không đóng bớt tab được, không đổi chỗ ngồi được, và lần rời trang đầu tiên rất có thể xảy ra ngay
+trong lúc đang đọc chính dòng chữ giải thích rằng rời trang sẽ bị ghi lại.
+
+Hệ quả: người thi bị tính điểm rủi ro mà không biết mình đang bị tính cái gì. **Bị đánh giá theo một tiêu chí
+không ai nói cho biết là bất công, kể cả khi tiêu chí đó đúng.**
+
+### Ba thay đổi
+
+| Thay đổi | Vì sao |
+|---|---|
+| **Thông báo đầy đủ chuyển sang trang giới thiệu quiz**, kèm ô "Tôi đã đọc và hiểu" chặn nút Bắt đầu | Biến *"có dán thông báo"* thành *"người thi đã đọc"*. Ô này **không nhớ giữa các lần**: mục đích là đọc trước **lần thi này**, không phải một lần duy nhất rồi thôi |
+| Màn làm bài giữ **bản rút gọn một dòng** | Người làm tiếp bài đang dở vào thẳng màn làm bài, không qua trang giới thiệu — bỏ hẳn thì đúng nhóm đó không được nhắc gì |
+| **Dòng đếm số lần đã ghi nhận**, cập nhật ngay trong lúc thi | Ngăn ngừa có giá trị hơn bắt lỗi: một con số thấy ngay răn đe mạnh hơn một báo cáo sau bài mà người thi không bao giờ đọc. Nó cũng lọc bớt báo động giả — phần lớn tín hiệu là vô tình, thấy ngay thì người thi tự điều chỉnh |
+
+### Vì sao KHÔNG phải hộp cảnh báo đỏ
+
+Ba lựa chọn trình bày dưới đây đều có chủ ý, bỏ cái nào cũng hỏng mục đích:
+
+- **Không popup.** Một hộp nhảy ra giữa bài thi phá đúng thứ FR-48 đang bảo vệ: sự tập trung. Và nó làm người
+  trung thực hoảng nhiều hơn người gian lận — người gian lận vốn đã biết mình đang làm gì.
+- **Không màu đỏ.** Đỏ là ngôn ngữ của lỗi. Rời tab không phải lỗi.
+- **Chữ "đã ghi nhận", không phải "vi phạm".** Đây là điểm quan trọng nhất. Cả tính năng dựng trên nguyên tắc
+  *hệ thống đưa dữ kiện, con người kết luận*, và báo cáo phía giáo viên in thẳng câu đó ra. Hiện chữ *"bạn
+  đang vi phạm"* là hệ thống tự phán — **mâu thuẫn với chính dòng chữ nó in ra ở đầu bên kia**. Có một phép
+  kiểm riêng đọc câu chữ của thành phần này để bắt kiểu mâu thuẫn đó.
+
+### Hai loại tín hiệu cố ý KHÔNG đếm ra màn hình
+
+`COPY` và `ANSWER_TOO_FAST` vẫn được ghi nhận về máy chủ nhưng không hiện cho người thi:
+
+- **Sao chép đề bài** là việc bình thường của người học nghiêm túc (chép câu hỏi ra giấy nháp).
+- **"Trả lời nhanh bất thường"** là một *suy đoán của hệ thống*, không phải một hành động người thi tự biết
+  mình vừa làm. Hiện nó lên chỉ gây hoang mang mà không giúp họ sửa được gì.
+
+Ngược lại, chuyển tab và mất tiêu điểm cửa sổ được **gộp làm một** nhóm "rời trang": với người thi đó là một
+hành động chứ không phải hai, tách ra chỉ làm con số trông đáng sợ hơn thực tế.
+
+### Lo ngại đã cân nhắc rồi bác bỏ
+
+*"Cho người thi thấy thì họ biết ngưỡng mà né."* Tín hiệu do **chính trình duyệt của họ** gửi lên, nên họ
+chặn được và giả mạo được — giao diện báo cáo đã nói thẳng điều đó với giáo viên. Giấu ngưỡng là bảo mật bằng
+che giấu, mà lớp che giấu ấy vốn đã thủng sẵn. Đổi lại là mất tính công bằng với **toàn bộ** người thi trung
+thực, để phòng một nhóm vốn có cách khác dễ hơn.
 
 ## Cảnh báo live trong phòng đấu ✅ (đã làm)
 

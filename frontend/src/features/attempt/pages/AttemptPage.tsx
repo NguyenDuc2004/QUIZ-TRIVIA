@@ -20,6 +20,7 @@ import QuestionReview from '../components/QuestionReview'
 import { MODE_LABEL, STATUS_COLOR, STATUS_LABEL, formatDuration } from '../constants'
 import { useAnswerQuestion, useAttempt, useSubmitAttempt } from '../hooks/useAttemptQueries'
 import ProctoringNotice from '@/features/integrity/components/ProctoringNotice'
+import ProctoringLiveCount from '@/features/integrity/components/ProctoringLiveCount'
 
 const { Text, Paragraph, Title } = Typography
 
@@ -78,7 +79,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
   // Thu tín hiệu hành vi CHỈ ở chế độ thi (features/12). Luyện tập không bị theo dõi — và người dùng được
   // nói rõ điều đó ngay trên màn hình, xem khối thông báo bên dưới. Server cũng từ chối lượt PRACTICE, nên
   // đây là lớp thứ hai chứ không phải lớp duy nhất.
-  useProctoring(attempt.id, !isPractice)
+  const soLanGhiNhan = useProctoring(attempt.id, !isPractice)
 
   // FR-48. Dùng thẳng `attempt.strictExam` — KHÔNG tự nhân với `!isPractice` ở đây: server đã tính rồi, và
   // tính lại ở client là mở đường cho hai bên nói khác nhau.
@@ -175,7 +176,8 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
 
       {/* Minh bạch là ràng buộc của features/12, không phải chi tiết trang trí: thu tín hiệu hành vi mà
           không nói với người bị thu là làm sau lưng họ. Chỉ hiện ở chế độ thi vì luyện tập không thu gì. */}
-      {!isPractice && <ProctoringNotice />}
+      {!isPractice && <ProctoringNotice compact />}
+      {!isPractice && <ProctoringLiveCount soLan={soLanGhiNhan} />}
 
       {/* Đã thoát toàn màn hình giữa chừng: nhắc, KHÔNG che đề. Che đi là phạt người bấm nhầm Esc bằng
           cách chặn họ làm tiếp, trong khi tín hiệu đã ghi rồi */}

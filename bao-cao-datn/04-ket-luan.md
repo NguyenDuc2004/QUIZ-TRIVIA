@@ -2,7 +2,7 @@
 
 ## 1. Những kết quả đạt được
 
-Đồ án đã xây dựng hoàn chỉnh một ứng dụng web Quiz/Trivia tích hợp trí tuệ nhân tạo, hiện thực **16 nhóm chức năng** với 87 yêu cầu chức năng, chạy trên kiến trúc ba hệ quản trị dữ liệu và có **645 phép kiểm thử tự động đều đạt**. Bốn trọng tâm đặt ra ở phần Mở đầu đều có sản phẩm và số liệu đối chứng.
+Đồ án đã xây dựng hoàn chỉnh một ứng dụng web Quiz/Trivia tích hợp trí tuệ nhân tạo, hiện thực **16 nhóm chức năng** với 87 yêu cầu chức năng, chạy trên kiến trúc ba hệ quản trị dữ liệu và có **649 phép kiểm thử tự động đều đạt**. Bốn trọng tâm đặt ra ở phần Mở đầu đều có sản phẩm và số liệu đối chứng.
 
 **Trọng tâm thứ nhất — phòng đấu nhiều người chơi theo thời gian thực với độ trễ thấp.** Hệ thống đồng bộ trạng thái qua Spring WebSocket với giao thức STOMP, phát tán sự kiện qua Redis Pub/Sub, tính điểm theo tốc độ trả lời và cập nhật bảng xếp hạng trực tiếp sau mỗi câu. Người chơi vào phòng bằng mã PIN sáu số hoặc quét mã QR, và khách chưa có tài khoản cũng chơi được khi chủ phòng cho phép. Kết quả đo (mục 3.5): **100 người mỗi phòng với P95 là 216 ms và không mất một sự kiện nào** ở mọi mức tải đã thử tới 200 người. Kiến trúc chạy được trên nhiều tiến trình máy chủ với chi phí khoảng **2 ms** cho mỗi sự kiện đi vòng qua Redis.
 

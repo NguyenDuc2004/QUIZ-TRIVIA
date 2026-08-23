@@ -151,6 +151,7 @@ Bảng 3.2 trình bày các kịch bản tiêu biểu, chọn theo tiêu chí **
 | 27 | Xếp hạng mùa | Mùa có dưới mười người tham gia | 3 người | **Không** phân hạng cho ai | Đạt |
 | 28 | Thông báo | Công việc nhắc ôn chạy lại trong ngày | Khởi động lại máy chủ | Không gửi trùng | Đạt |
 | 29 | Chống gian lận | Gửi tín hiệu cho lượt **luyện tập** | Lượt không tính điểm | Máy chủ từ chối ghi nhận | Đạt |
+| 29b | Chống gian lận | Câu chữ hiện cho người thi | Đã ghi nhận 5 lần rời trang | **Không** chứa chữ mang nghĩa buộc tội; nói rõ giáo viên là người kết luận | Đạt |
 | 30 | Chống gian lận | Mốc thời gian ở tương lai | Đồng hồ máy khách sai | Cắt về thời điểm hiện tại của máy chủ | Đạt |
 
 ### 3.4.3. Kết quả kiểm thử
@@ -160,8 +161,8 @@ Bảng 3.2 trình bày các kịch bản tiêu biểu, chọn theo tiêu chí **
 | Tầng | Công cụ | Số lớp | Số phép kiểm | Đạt | Hỏng |
 |------|---------|-------:|-------------:|----:|-----:|
 | Máy chủ — đơn vị và tích hợp | JUnit 5, Mockito, Testcontainers | 52 | **578** | 578 | 0 |
-| Giao diện | Vitest, Testing Library | 10 | **67** | 67 | 0 |
-| **Tổng** | | **62** | **645** | **645** | **0** |
+| Giao diện | Vitest, Testing Library | 11 | **71** | 71 | 0 |
+| **Tổng** | | **63** | **649** | **649** | **0** |
 
 Bộ kiểm thử máy chủ chạy sau lệnh dọn sạch thư mục biên dịch để loại trừ ảnh hưởng của những lần chạy có lọc trước đó.
 
@@ -431,7 +432,7 @@ Phát biểu đúng phạm vi là: **nhà cung cấp dự phòng đã phục v�
 
 ---
 
-**Tóm kết chương 3.** Chương này đã trình bày hệ thống ở trạng thái hoàn chỉnh: 16 nhóm chức năng hiện thực xong, chạy trên môi trường ba hệ quản trị dữ liệu dựng bằng Docker, với **645 phép kiểm tự động đều đạt** trên 62 lớp kiểm thử.
+**Tóm kết chương 3.** Chương này đã trình bày hệ thống ở trạng thái hoàn chỉnh: 16 nhóm chức năng hiện thực xong, chạy trên môi trường ba hệ quản trị dữ liệu dựng bằng Docker, với **649 phép kiểm tự động đều đạt** trên 63 lớp kiểm thử.
 
 Hai phép đo bắt buộc theo phiếu giao đề tài đều cho kết quả cụ thể. Về hiệu năng thời gian thực, hệ thống phục vụ **100 người mỗi phòng với P95 là 216 ms và không mất sự kiện nào**, đồng thời xác định được nghẽn nằm ở kênh xử lý đáp án gửi lên chứ không ở khâu phát tán — kết luận chỉ rút ra được nhờ tách hai nguồn ra đo riêng. Về độ chính xác AI, chức năng chấm tự luận có sai lệch trung bình **0,13 trên thang 10**, chặn được cả hai kiểu tấn công tiêm chỉ thị, sinh đề đạt **10/10** câu đúng chuẩn cấu trúc, và trợ lý học tập **không suy đoán** khi câu hỏi nằm ngoài học liệu.
 
