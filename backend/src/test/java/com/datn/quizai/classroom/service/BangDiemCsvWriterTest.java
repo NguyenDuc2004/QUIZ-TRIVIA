@@ -45,7 +45,7 @@ class BangDiemCsvWriterTest {
     void shouldLeaveScoreBlankWhenNotSubmitted() {
         String csv = BangDiemCsvWriter.dung(ketQua(
                 new AssignmentResultRow(UUID.randomUUID(), "Trần Thị Bình", null, null, null, null,
-                        TrangThaiBaiTap.CHUA_LAM, "Chưa làm")));
+                        TrangThaiBaiTap.CHUA_LAM, "Chưa làm", null, null)));
 
         String dongDuLieu = BangDiemCsvWriter.cacDong(csv).getLast();
         // Ghi 0 là nói sai về một người chưa làm bài, và mọi phép trung bình trên cột đó sẽ sai theo
@@ -124,7 +124,7 @@ class BangDiemCsvWriterTest {
 
     private static AssignmentResultRow dong(String ten, int diem, TrangThaiBaiTap trangThai) {
         return new AssignmentResultRow(UUID.randomUUID(), ten, UUID.randomUUID(), diem, 10,
-                OffsetDateTime.of(2026, 8, 20, 14, 30, 0, 0, ZoneOffset.UTC), trangThai, "Đã nộp");
+                OffsetDateTime.of(2026, 8, 20, 14, 30, 0, 0, ZoneOffset.UTC), trangThai, "Đã nộp", null, null);
     }
 
     private static AssignmentResultsResponse ketQua(AssignmentResultRow... rows) {

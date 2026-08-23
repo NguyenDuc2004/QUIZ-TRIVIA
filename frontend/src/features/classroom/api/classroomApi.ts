@@ -60,6 +60,17 @@ export interface AssignmentResultRow {
   nopLuc: string | null
   trangThai: TrangThaiBaiTap
   trangThaiNhan: string
+  /**
+   * Điểm rủi ro của lượt thi — **chỉ khác null khi bài vượt ngưỡng gắn cờ**.
+   *
+   * Máy chủ không gửi điểm của bài dưới ngưỡng, nên `null` ở đây nghĩa là *không có gì đáng xem*, không
+   * phải *chưa tính*. Cùng luật với cột Rủi ro ở trang thống kê quiz: hai màn hình hiện cùng một con số
+   * mà hiện theo hai điều kiện khác nhau thì giáo viên thấy một bài bị cờ ở chỗ này, sạch ở chỗ kia, và
+   * không biết tin cái nào.
+   */
+  riskScore: number | null
+  /** Chỉ khác null khi `riskScore` khác null. */
+  reviewStatus: 'PENDING' | 'VALID' | 'INVALID' | null
 }
 
 export interface AssignmentResults {

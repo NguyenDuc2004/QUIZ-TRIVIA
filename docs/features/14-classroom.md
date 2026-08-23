@@ -14,7 +14,7 @@ Biến ứng dụng thành công cụ giáo dục thật: Creator (giáo viên) 
 - **FR-54** [S] ✅ CRUD lớp học; tham gia bằng **mã lớp 6 ký tự**; quản lý thành viên.
 - **FR-55** [S] ✅ Giao **bài tập** (gắn quiz cho lớp) với thời gian mở và hạn nộp, cả hai đều tuỳ chọn.
 - **FR-56** [S] ✅ Học sinh xem bài được giao & trạng thái (5 trạng thái, xem bảng dưới).
-- **FR-57** [S] ✅ **Bảng theo dõi lớp:** ai đã nộp, điểm, số nộp muộn, điểm trung bình. *Câu sai nhiều* đã có ở [features/09](09-analytics.md) cho từng quiz — không làm lại bản theo lớp vì nó trả lời cùng một câu hỏi trên cùng một tập dữ liệu.
+- **FR-57** [S] ✅ **Bảng theo dõi lớp:** ai đã nộp, điểm, số nộp muộn, điểm trung bình, **điểm rủi ro của bài bị gắn cờ** kèm nút mở bài ([tính năng 12](12-anti-cheat.md) FR-47). *Câu sai nhiều* đã có ở [features/09](09-analytics.md) cho từng quiz — không làm lại bản theo lớp vì nó trả lời cùng một câu hỏi trên cùng một tập dữ liệu.
 - **FR-58** [C] 🟡 Xuất bảng điểm — **CSV đã làm**, PDF không làm, lý do bên dưới.
 - **FR-59** [C] ✅ Vai trò trong lớp: chủ nhiệm / trợ giảng.
 

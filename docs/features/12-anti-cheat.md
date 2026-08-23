@@ -19,9 +19,10 @@ Phát hiện và cảnh báo hành vi gian lận trong chế độ thi (bài thi
 - **FR-44** [S] ⛔ Phát hiện **đáp án trùng bất thường** giữa các người chơi trong cùng phòng real-time — **bỏ**, xem "Vì sao bỏ FR-44" bên dưới.
 - **FR-45** [S] ✅ Tính **risk score** & gắn cờ (flags) cho mỗi lần làm bài; lưu nhật ký sự kiện.
 - **FR-46** [S] ✅ **AI phân tích hành vi:** LLM tổng hợp chuỗi sự kiện + số liệu thành nhận định mức độ nghi ngờ + giải thích.
-- **FR-47** [S] ✅ Báo cáo tính toàn vẹn cho Creator/Admin; cho phép đánh dấu hợp lệ/không hợp lệ. Có **hai** đường vào, và thiếu một trong hai thì yêu cầu này chỉ đúng nửa vời:
+- **FR-47** [S] ✅ Báo cáo tính toàn vẹn cho Creator/Admin; cho phép đánh dấu hợp lệ/không hợp lệ. Có **ba** đường vào, và thiếu một đường nào thì yêu cầu này chỉ đúng với một nhóm người dùng:
   - **Admin** — hàng chờ toàn hệ thống `/admin/integrity`, lọc theo trạng thái rà soát.
   - **Chủ quiz** — cột *Rủi ro* + dòng cảnh báo ở trang thống kê quiz, dẫn sang màn chấm bài. Không có cột này thì chủ quiz *có quyền* xem báo cáo nhưng phải mở từng bài mới tìm ra, nên với hàng trăm bài nộp thì trên thực tế chỉ Admin phát hiện được — còn người hiểu hoàn cảnh lớp mình nhất thì không thấy gì.
+  - **Giáo viên chủ nhiệm** — cột *Rủi ro* + nút *Xem bài* ở **bảng theo dõi bài tập của lớp** ([tính năng 14](14-classroom.md)). Đường này thiếu suốt một thời gian, và đó là chỗ thiếu nặng nhất: bài tập giao cho lớp **chạy ở chế độ thi** nên có thu tín hiệu hành vi, nhưng giáo viên mở đúng màn hình đó chứ không mở trang thống kê quiz. Tín hiệu được ghi mà không ai thấy thì bằng không ghi.
 - **FR-48** [C] ✅ Chế độ thi nghiêm ngặt: yêu cầu toàn màn hình, khoá chuột phải, cảnh báo khi thoát. *Chủ quiz bật ở form soạn quiz; chỉ áp cho lượt EXAM.* Xem "Vì sao gọi là ma sát chứ không phải khoá" bên dưới.
 - **FR-88** [S] ✅ **Minh bạch với người thi:** nói luật *trước* khi bắt đầu (có ô xác nhận đã đọc), và hiện số lần đã ghi nhận *ngay trong lúc thi*. Xem mục riêng bên dưới.
 

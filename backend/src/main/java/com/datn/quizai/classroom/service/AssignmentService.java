@@ -15,6 +15,10 @@ import com.datn.quizai.classroom.dto.TrangThaiBaiTap;
 import com.datn.quizai.classroom.repository.AssignmentRepository;
 import com.datn.quizai.classroom.repository.ClassroomMemberRepository;
 import com.datn.quizai.common.OwnershipGuard;
+import com.datn.quizai.integrity.domain.AttemptIntegrity;
+import com.datn.quizai.integrity.domain.ReviewStatus;
+import com.datn.quizai.integrity.repository.AttemptIntegrityRepository;
+import com.datn.quizai.integrity.service.RiskScorer;
 import com.datn.quizai.common.exception.BusinessException;
 import com.datn.quizai.quiz.domain.Quiz;
 import com.datn.quizai.quiz.repository.QuizRepository;
@@ -29,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Giao bài và theo dõi kết quả (features/14, FR-55 → FR-57).
@@ -55,19 +60,22 @@ public class AssignmentService {
     private final QuizRepository quizRepository;
     private final QuizAttemptRepository attemptRepository;
     private final AttemptService attemptService;
+    private final AttemptIntegrityRepository integrityRepository;
 
     public AssignmentService(AssignmentRepository assignmentRepository,
                              ClassroomMemberRepository memberRepository,
                              ClassroomService classroomService,
                              QuizRepository quizRepository,
                              QuizAttemptRepository attemptRepository,
-                             AttemptService attemptService) {
+                             AttemptService attemptService,
+                             AttemptIntegrityRepository integrityRepository) {
         this.assignmentRepository = assignmentRepository;
         this.memberRepository = memberRepository;
         this.classroomService = classroomService;
         this.quizRepository = quizRepository;
         this.attemptRepository = attemptRepository;
         this.attemptService = attemptService;
+        this.integrityRepository = integrityRepository;
     }
 
     // ------------------------------------------------------------------ giáo viên
@@ -126,6 +134,13 @@ public class AssignmentService {
      * Có <b>một dòng cho mỗi thành viên</b>, kể cả người chưa làm — đó chính là câu hỏi giáo viên cần trả lời.
      * Chỉ liệt kê người đã nộp thì bảng "theo dõi" biến thành bảng "điểm", và *ai chưa làm* không có chỗ nào
      * nói.
+     *
+     * <h4>Kèm điểm rủi ro (FR-47)</h4>
+     * Bảng này là <b>đường vào thứ ba</b> của báo cáo tính toàn vẹn, bên cạnh hàng chờ của Admin và trang
+     * thống kê quiz. Thiếu nó thì yêu cầu chỉ đúng trên giấy: bài tập giao cho lớp <i>chạy ở chế độ thi</i>
+     * nên có thu tín hiệu hành vi, mà giáo viên chủ nhiệm — người hiểu hoàn cảnh lớp mình nhất — lại mở
+     * đúng màn hình này chứ không mở trang thống kê quiz. Tín hiệu được ghi nhận nhưng không ai thấy thì
+     * bằng không ghi.
      */
     @Transactional(readOnly = true)
     public AssignmentResultsResponse ketQua(UUID assignmentId, JwtService.AuthenticatedUser current) {
@@ -136,9 +151,18 @@ public class AssignmentService {
         // Một truy vấn lấy hết lượt của bài tập, rồi tra theo người — thay vì hỏi cơ sở dữ liệu một lần cho
         // mỗi học sinh. Lớp 40 người thì đó là 40 truy vấn cho một trang, và nó không lộ ra khi thử lớp 3 người.
         Map<UUID, QuizAttempt> theoNguoi = new HashMap<>();
+        List<UUID> luotIds = new ArrayList<>();
         for (QuizAttempt luot : attemptRepository.findByAssignmentId(assignmentId)) {
             theoNguoi.put(luot.getUser().getId(), luot);
+            luotIds.add(luot.getId());
         }
+
+        // Một truy vấn cho cả bảng, cùng lý do với vòng lặp trên: gọi trong vòng lặp thì lớp 40 người thành
+        // 40 truy vấn cho một cột hiển thị, và điều đó không lộ ra khi thử với lớp 3 người.
+        Map<UUID, AttemptIntegrity> toanVen = luotIds.isEmpty()
+                ? Map.of()
+                : integrityRepository.findByAttemptIdIn(luotIds).stream()
+                        .collect(Collectors.toMap(AttemptIntegrity::getAttemptId, tv -> tv));
 
         OffsetDateTime now = OffsetDateTime.now();
         List<AssignmentResultRow> danhSach = new ArrayList<>();
@@ -159,6 +183,16 @@ public class AssignmentService {
                 soNopTre++;
             }
 
+            // Hai biến rời thay vì hai biểu thức ba ngôi: chúng phải cùng có hoặc cùng không, và viết
+            // thành một khối if thì không có cách nào lệch nhau về sau. Giống hệt AnalyticsService.
+            Integer diemRuiRo = null;
+            ReviewStatus trangThaiRaSoat = null;
+            AttemptIntegrity tv = luot == null ? null : toanVen.get(luot.getId());
+            if (tv != null && tv.getRiskScore() >= RiskScorer.NGUONG_GAN_CO) {
+                diemRuiRo = tv.getRiskScore();
+                trangThaiRaSoat = tv.getReviewStatus();
+            }
+
             danhSach.add(new AssignmentResultRow(
                     thanhVien.getUser().getId(),
                     thanhVien.getUser().getDisplayName(),
@@ -167,7 +201,9 @@ public class AssignmentService {
                     luot == null ? null : luot.getMaxScore(),
                     luot == null ? null : luot.getSubmittedAt(),
                     trangThai,
-                    trangThai.nhan()));
+                    trangThai.nhan(),
+                    diemRuiRo,
+                    trangThaiRaSoat));
         }
 
         // Trung bình tính trên BÀI ĐÃ NỘP. Coi người chưa làm là 0 điểm thì con số này nói về tỉ lệ nộp chứ
