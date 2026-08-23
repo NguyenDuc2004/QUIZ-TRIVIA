@@ -73,9 +73,14 @@ cd backend && ./mvnw spring-boot:run  # chạy BE (http://localhost:8080)
 cd backend && ./mvnw test             # chạy test BE
 cd frontend && npm run dev            # chạy FE (http://localhost:5173)
 cd frontend && npm test               # chạy test FE (vitest, chạy một lượt rồi thoát)
-cd frontend && npm run build          # tsc -b + vite build — CHẠY CẢ LỆNH NÀY sau khi đổi cấu hình
+cd frontend && npm run build          # oxlint + tsc -b + vite build — CHẠY CẢ LỆNH NÀY sau khi đổi cấu hình
 node scripts/seed-demo.mjs            # nạp dữ liệu demo (cần BE đang chạy); chạy lại không nhân đôi
 ```
+
+> **`npm run build` chạy `oxlint` trước khi biên dịch.** Luật `react/rules-of-hooks` đã bật từ đầu và bắt
+> đúng lỗi "gọi hook sau lệnh return sớm" — nhưng nó chỉ chạy khi ai đó gõ `npm run lint`, mà không ai gõ.
+> Hệ quả: một lỗi loại đó nằm trong mã nguồn cho tới khi người dùng bấm vào và nhận màn hình trắng. Gắn vào
+> `build` để nó chạy ở nơi chắc chắn có người chạy.
 
 > Cấu hình vitest nằm ở `frontend/vitest.config.ts` **riêng**, không gộp vào `vite.config.ts`: vitest 3
 > chưa hỗ trợ Vite 8 nên nó tự cài một bản vite riêng, hai bộ type plugin không khớp và gộp lại sẽ làm
