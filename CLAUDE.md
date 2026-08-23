@@ -74,6 +74,7 @@ cd backend && ./mvnw test             # chạy test BE
 cd frontend && npm run dev            # chạy FE (http://localhost:5173)
 cd frontend && npm test               # chạy test FE (vitest, chạy một lượt rồi thoát)
 cd frontend && npm run build          # tsc -b + vite build — CHẠY CẢ LỆNH NÀY sau khi đổi cấu hình
+node scripts/seed-demo.mjs            # nạp dữ liệu demo (cần BE đang chạy); chạy lại không nhân đôi
 ```
 
 > Cấu hình vitest nằm ở `frontend/vitest.config.ts` **riêng**, không gộp vào `vite.config.ts`: vitest 3
