@@ -88,6 +88,8 @@ class RecommendReasonDataTest {
                                                 long peers, long attempts) {
         return new RecommendedQuizResponse(
                 UUID.randomUUID(), "Ôn tập Giải tích 1", null, source,
-                "lý do mẫu", weakTopics, peers, attempts);
+                // Danh mục chỉ dùng để chọn màu khối bìa ở giao diện, không vào phần dữ kiện gửi cho mô
+                // hình — nên để null ở đây là đúng phạm vi của lớp test này.
+                "lý do mẫu", weakTopics, peers, attempts, null);
     }
 }

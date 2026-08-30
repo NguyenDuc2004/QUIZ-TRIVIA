@@ -98,8 +98,9 @@ public interface QuizRepository extends JpaRepository<Quiz, UUID> {
      * Id không còn trong bảng thì <b>không có dòng tương ứng</b>: chỗ gọi dựa vào đó để loại quiz
      * đã xoá ra khỏi danh sách.
      */
-    @Query("select q.id as id, q.title as title, q.thumbnailUrl as thumbnailUrl "
-            + "from Quiz q where q.id in :ids")
+    @Query("select q.id as id, q.title as title, q.thumbnailUrl as thumbnailUrl, "
+            + "c.name as categoryName "
+            + "from Quiz q left join q.category c where q.id in :ids")
     List<QuizCardRow> findCardsByIds(@Param("ids") Collection<UUID> ids);
 
     /**
@@ -119,5 +120,16 @@ public interface QuizRepository extends JpaRepository<Quiz, UUID> {
         String getTitle();
 
         String getThumbnailUrl();
+
+        /**
+         * Tên danh mục — giao diện dùng nó để chọn màu và biểu tượng của khối bìa khi quiz chưa có ảnh.
+         * <p>
+         * Cần ở đây chứ không suy ở phía giao diện: cùng một quiz phải ra <b>cùng một màu</b> ở lưới Khám
+         * phá và ở thẻ Gợi ý. Thiếu trường này thì thẻ gợi ý phải đoán màu từ tiêu đề, và người dùng thấy
+         * hai thẻ khác màu mà không nhận ra đó là một quiz.
+         * <p>
+         * {@code null} khi quiz chưa phân loại — {@code left join} chứ không phải {@code join}.
+         */
+        String getCategoryName();
     }
 }

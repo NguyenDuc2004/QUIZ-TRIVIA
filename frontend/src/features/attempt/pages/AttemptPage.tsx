@@ -22,7 +22,7 @@ import { useAnswerQuestion, useAttempt, useSubmitAttempt } from '../hooks/useAtt
 import ProctoringNotice from '@/features/integrity/components/ProctoringNotice'
 import ProctoringLiveCount from '@/features/integrity/components/ProctoringLiveCount'
 
-const { Text, Paragraph, Title } = Typography
+const { Text, Paragraph } = Typography
 
 const EMPTY_ANSWER: AnswerPayload = {}
 
@@ -312,6 +312,29 @@ function mergeFeedback(question: AttemptQuestion, fb: AnswerFeedback): AttemptQu
 
 // --------------------------------------------------------------------- kết quả
 
+/**
+ * Nền khối công bố điểm, đổi theo tỉ lệ đúng.
+ *
+ * Bốn mức thay vì hai: chỉ "đạt / không đạt" thì một bài 51% và một bài 99% trông y hệt nhau, mà đó là
+ * hai kết quả rất khác nhau với người vừa làm xong.
+ *
+ * Mức thấp nhất dùng **xám đá, không dùng đỏ**. Đỏ ở đây đọc thành một lời phán xét, trong khi một bài
+ * luyện tập điểm thấp chỉ có nghĩa là còn chỗ để ôn — và ôn tiếp mới là việc hệ thống muốn người học làm.
+ */
+function tongDiemTone(percent: number): string {
+  if (percent >= 90) return 'result-hero-excellent'
+  if (percent >= 70) return 'result-hero-good'
+  if (percent >= 50) return 'result-hero-pass'
+  return 'result-hero-low'
+}
+
+function nhanKetQua(percent: number): string {
+  if (percent >= 90) return 'Xuất sắc'
+  if (percent >= 70) return 'Khá'
+  if (percent >= 50) return 'Đạt'
+  return 'Cần ôn thêm'
+}
+
 function AttemptResult({ detail }: { detail: AttemptDetail }) {
   const { attempt, questions } = detail
 
@@ -353,11 +376,29 @@ function AttemptResult({ detail }: { detail: AttemptDetail }) {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-4">
-        <Stat label="Điểm" value={`${attempt.totalScore}/${attempt.maxScore}`} highlight />
-        <Stat label="Tỷ lệ" value={`${percent}%`} />
-        <Stat label="Số câu đúng" value={`${attempt.correctCount}/${attempt.questionCount}`} />
-        <Stat label="Thời gian làm" value={formatDuration(attempt.durationSec)} />
+      {/* Khối công bố điểm.
+
+          Trước đây bốn ô thống kê trắng như nhau, trong đó điểm số — thứ người học chờ suốt cả bài —
+          nằm ngang hàng với "thời gian làm". Đây là khoảnh khắc cảm xúc nhất của cả luồng học, nên nó
+          được một khối riêng, và MÀU ĐỔI THEO KẾT QUẢ: người học biết mình làm thế nào trước cả khi
+          đọc con số.
+
+          Màu vẫn đi kèm chữ ("Xuất sắc", "Đạt"…) chứ không thay chữ: người mù màu phải đọc được cùng
+          một thông tin, và một mảng màu không tự nói được nó nghĩa là gì. */}
+      <div className={`flex flex-wrap items-end justify-between gap-4 p-6 ${tongDiemTone(percent)}`}>
+        <div>
+          <div className="text-sm font-bold text-white/85">{nhanKetQua(percent)}</div>
+          <div className="text-5xl leading-tight font-bold text-white">
+            {attempt.totalScore}
+            <span className="text-2xl text-white/70">/{attempt.maxScore}</span>
+          </div>
+          <div className="text-sm text-white/85">
+            Đúng {attempt.correctCount}/{attempt.questionCount} câu · {percent}%
+          </div>
+        </div>
+        <div className="text-sm text-white/85">
+          Thời gian làm: <b className="text-white">{formatDuration(attempt.durationSec)}</b>
+        </div>
       </div>
 
       {pendingAi > 0 && (
@@ -397,16 +438,5 @@ function AttemptResult({ detail }: { detail: AttemptDetail }) {
         ))}
       </div>
     </Space>
-  )
-}
-
-function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div className="border border-line bg-white p-4">
-      <Text className="text-ink-soft text-xs">{label}</Text>
-      <Title level={3} className={`mb-0! ${highlight ? 'text-brand-strong!' : ''}`}>
-        {value}
-      </Title>
-    </div>
   )
 }

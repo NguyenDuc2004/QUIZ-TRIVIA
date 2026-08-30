@@ -344,15 +344,28 @@ class NotificationIntegrationTest {
     void shouldNotifyAgainForADifferentAchievement() {
         UUID user = taoNguoiDung("thongbao-huyhieu-moi@example.com");
 
-        // Bài 1: 35 XP — mở huy hiệu PERFECT_ATTEMPTS ngưỡng 1, chưa tới ngưỡng XP 50
+        // Bài 1 hoàn hảo — mở huy hiệu PERFECT_1
         gamificationListener.onAttemptSubmitted(
                 new AttemptSubmittedEvent(taoBaiLam(user, 10, 10), user));
         long sauBai1 = demThongBao(user, NotificationType.ACHIEVEMENT);
         assertThat(sauBai1).isPositive();
 
-        // Bài 2: 70 XP — vượt ngưỡng XP 50, mở một huy hiệu KHÁC
-        gamificationListener.onAttemptSubmitted(
-                new AttemptSubmittedEvent(taoBaiLam(user, 10, 10), user));
+        // Làm đủ 10 bài hoàn hảo để mở PERFECT_10 — một huy hiệu CHẮC CHẮN chưa thể có trước đó.
+        //
+        // Bản cũ chỉ nộp thêm một bài và trông chờ tổng XP vượt ngưỡng 50 của huy hiệu FIRST_STEPS.
+        // Phép tính đó bỏ sót một nguồn XP thứ hai: cùng sự kiện nộp bài còn ghi tiến độ THỬ THÁCH HẰNG
+        // NGÀY, và thử thách được chọn theo *số ngày trong năm* (`DailyChallengeService`).
+        //
+        // Hệ quả: những ngày mà mẫu thử thách rơi vào "Làm đúng 100% một bài quiz" (thưởng 80 XP), bài 1
+        // đã được 35 + 80 = 115 XP và mở luôn FIRST_STEPS — nên bài 2 không còn huy hiệu nào mới và test
+        // đỏ. Ba ngày còn lại trong chu kỳ bốn ngày thì xanh. Một phép kiểm **xanh 3 ngày, đỏ 1 ngày**
+        // theo đúng nghĩa đen, và không có gì trong thông báo lỗi chỉ ra nguyên nhân là cuốn lịch.
+        //
+        // PERFECT_10 đếm số bài hoàn hảo, không đếm XP, nên nó nằm ngoài tầm với của mọi nguồn XP phụ.
+        for (int i = 0; i < 9; i++) {
+            gamificationListener.onAttemptSubmitted(
+                    new AttemptSubmittedEvent(taoBaiLam(user, 10, 10), user));
+        }
 
         // Khoá chống trùng là `badge:{mã}`, nên huy hiệu khác mã thì phải qua được — chống trùng
         // KHÔNG có nghĩa là "mỗi người một thông báo thành tích".

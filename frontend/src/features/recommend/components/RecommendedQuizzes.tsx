@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Skeleton, Tag, Typography, message } from 'antd'
 import { getApiErrorMessage } from '@/shared/api/client'
-import { coverOf } from '@/features/quiz/coverGradient'
+import { boMatCua } from '@/features/quiz/coverGradient'
 import { recommendApi, type RecommendationSource } from '../api/recommendApi'
 import { useRecommendedQuizzes } from '../hooks/useRecommendQueries'
 
@@ -116,7 +116,14 @@ export default function RecommendedQuizzes() {
                 className="aspect-video w-full object-cover"
               />
             ) : (
-              <div className="aspect-video w-full" style={{ background: coverOf(item.title) }} />
+              <div
+                className="flex aspect-video w-full items-center justify-center"
+                style={{ background: boMatCua(item.categoryName, item.title).nen }}
+              >
+                <span aria-hidden className="select-none text-4xl opacity-90">
+                  {boMatCua(item.categoryName, item.title).icon}
+                </span>
+              </div>
             )}
 
             <div className="flex flex-1 flex-col p-4">

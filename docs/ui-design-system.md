@@ -154,7 +154,45 @@ Font: `Inter`, dự phòng `system-ui, sans-serif`.
   - Đổi viền chứ không chỉ tăng bóng: **viền 1px là ngôn ngữ hình khối chính của dự án**, nên nói bằng viền
     thì rõ hơn và hợp hệ thống hơn là đổ một cái bóng dày.
 - Chiều cao control: 40px (thường), 48px (nút CTA lớn).
-- Không dùng gradient trừ khối ảnh giả lập của card khi quiz chưa có ảnh bìa.
+- **Gradient: chỉ ở KHOẢNH KHẮC, không ở KHUNG CHỨC NĂNG.** Xem mục 4.1.
+
+### 4.1. Gradient dùng ở đâu, và vì sao không dùng rộng hơn
+
+Bản đầu của tài liệu này cấm gradient trừ khối ảnh giả lập. Cấm sạch thì an toàn nhưng làm mất một thứ:
+tài liệu chia sẵn **ba bộ mặt** (mục 1) mà trên thực tế cả ba trông như nhau — phòng đấu tính điểm theo
+tốc độ, huy hiệu, phân hạng Vàng/Bạc/Đồng đều được vẽ bằng đúng bộ quy tắc của một bảng quản trị.
+
+Ranh giới không phải *"bao nhiêu"* mà là *"ở đâu"*:
+
+| Dùng gradient | Không dùng |
+|---|---|
+| Khối bìa quiz chưa có ảnh (`boMatCua`) | Nút bấm |
+| Khối mở đầu trang Khám phá (`.browse-hero`) | Bảng, biểu mẫu, ô nhập |
+| Bốn phương án trong phòng đấu (`.room-option-*`) | Thanh điều hướng |
+| Khối công bố điểm ở màn kết quả (`.result-hero-*`) | **Màn đang làm bài** |
+| Thẻ cấp độ, huy hiệu đã mở (`.achievement-hero`, `.badge-earned`) | **Toàn bộ khu quản trị** |
+| Huy chương top 3 (`.podium-*`) | |
+
+Ba lý do cụ thể cho cột phải:
+
+1. **Chữ trên nền chuyển màu có độ tương phản không đoán được** — chỗ đọc được, chỗ không.
+2. **Nút gradient lặp trên mọi trang làm giao diện trông như một mẫu tải về.** Nút chính màu đen chính là
+   thứ đang giữ cho 16 nhóm chức năng trông như *một* sản phẩm chứ không phải 16 trang rời.
+3. **Màn làm bài và khu quản trị có lý do riêng.** Màn làm bài cần sự tập trung — đó là lý do nó ẩn cả
+   chân trang (mục 1). Nền đen của khu quản trị là một *tín hiệu cảnh báo*; tô màu vào đó là làm loãng
+   tín hiệu.
+
+Đối chiếu với sản phẩm cùng loại thì ranh giới này quen thuộc: Kahoot rực rỡ ở **màn chơi**, còn bảng
+quản lý câu hỏi của họ vẫn trắng-xám bình thường.
+
+**Màu phải mang thông tin, không chỉ trang trí.** Màu khối bìa buộc vào **danh mục** chứ không vào tiêu
+đề — bản đầu chọn bằng `title.charCodeAt(0)`, nên hai quiz cùng "Toán học" ra hai màu khác nhau và mắt
+người dùng học một quy luật *không tồn tại*. Cùng nguyên tắc: màu phương án trong phòng đấu buộc vào **vị
+trí** (ổn định suốt một câu), và màu khối kết quả buộc vào **mức điểm**.
+
+**Chuyển động phải tôn trọng `prefers-reduced-motion`.** Nhịp đập của ngọn lửa chuỗi ngày học tắt hẳn với
+người đặt hệ điều hành ở chế độ giảm chuyển động — một biểu tượng nhấp nháy liên tục là thứ gây khó chịu
+thật, và đó là trang người học mở thường xuyên.
 
 ## 5. Nút
 

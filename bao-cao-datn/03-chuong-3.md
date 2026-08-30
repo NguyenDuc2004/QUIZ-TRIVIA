@@ -202,6 +202,27 @@ Phần này ghi lại một kết quả **âm tính** đáng chú ý: trong quá
 | Người học bấm đổi ảnh đại diện trên trang hồ sơ của chính mình nhận lỗi *không có quyền* | Có hẳn một phép kiểm khẳng định người học **không** được tải ảnh lên, và nó vẫn đạt. Phép kiểm đúng với đặc tả **tại thời điểm viết** — khi đó đường tải ảnh chỉ phục vụ ảnh bìa quiz. Đặc tả mới là thứ hết hạn, không phải phép kiểm |
 | Ô chọn vai trò ở trang đăng ký bị bỏ qua khi người dùng bấm đăng ký bằng Google | Cả ba tầng đều nhất quán với nhau: giao diện không gửi, máy chủ đặt cứng vai trò người học, phép kiểm khẳng định đúng hành vi đó. Chỉ có **ô chọn vai trò vẫn hiển thị trên màn hình** là mâu thuẫn — mà giao diện thì không có phép kiểm nào đối chiếu với chính nó |
 | Chân trang trồi lên giữa màn hình ở những trang có nội dung ngắn | Lỗi thuộc về **thứ tự xếp tầng CSS**: thư viện giao diện chèn quy tắc lúc chạy ở ngoài lớp của công cụ tạo kiểu, nên quy tắc của lớp ngoài thắng. Không có công cụ kiểm thử tự động nào trong dự án nhìn thấy kết quả bố cục thật |
+| Màn hình trắng khi giao bài cho lớp chưa có bài tập nào | Gọi hook sau một lệnh `return` sớm: lớp chưa có bài thì hook không chạy, vừa giao xong một bài thì nó chạy — số hook giữa hai lần render khác nhau. Luật tĩnh bắt được lỗi này **đã bật sẵn** trong cấu hình, nhưng chỉ chạy khi gõ đúng một lệnh mà không nằm trong quy trình nào |
+
+### Một phép kiểm xanh ba ngày, đỏ một ngày
+
+Bộ kiểm thử còn chứa một phép kiểm **phụ thuộc vào ngày trong năm**, phát hiện muộn trong quá trình làm.
+
+Phép kiểm đó dựng kịch bản: nộp bài thứ nhất được 35 điểm kinh nghiệm (chưa tới ngưỡng 50 của một huy
+hiệu), nộp bài thứ hai thì vượt ngưỡng và mở huy hiệu mới. Phép tính này bỏ sót **một nguồn điểm thứ
+hai**: cùng sự kiện nộp bài còn ghi tiến độ *thử thách hằng ngày*, mà thử thách được chọn theo **số ngày
+trong năm**.
+
+Hệ quả: những ngày mẫu thử thách rơi vào *"làm đúng 100% một bài quiz"* (thưởng 80 điểm), bài thứ nhất đã
+được 115 điểm và mở luôn huy hiệu — nên bài thứ hai không còn gì mới và phép kiểm đỏ. Ba ngày còn lại
+trong chu kỳ bốn ngày thì xanh.
+
+Điều đáng nói không phải bản thân lỗi mà là **hình dạng của nó**: một phép kiểm hỏng theo lịch, thông báo
+lỗi chỉ nói *"3 không lớn hơn 3"*, và không có gì trong đó chỉ ra rằng nguyên nhân nằm ở cuốn lịch. Chạy
+lại vào hôm sau là nó tự xanh — đúng kiểu khiến người ta kết luận nhầm "chắc do máy".
+
+Đã sửa bằng cách đổi mốc kiểm sang một huy hiệu **đếm số bài hoàn hảo thay vì đếm điểm**, nên nó nằm ngoài
+tầm với của mọi nguồn điểm phụ.
 
 Kết luận rút ra: **một bộ kiểm thử toàn đạt chứng minh những gì đã nghĩ tới là đúng, không chứng minh đã nghĩ đủ.** Ba lỗi trên đều thuộc loại *hỏng trong im lặng* — không có ngoại lệ, không có mã lỗi, chỉ có hành vi sai. Đó cũng là lý do quy trình của đồ án đặt bước **chạy thật và nhờ người dùng xác nhận trên trình duyệt** thành một bước bắt buộc, ngang hàng với bước chạy kiểm thử.
 

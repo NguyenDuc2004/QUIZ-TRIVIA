@@ -26,7 +26,8 @@ public record RecommendedQuizResponse(
         String reason,
         List<String> weakTopics,
         long peerCount,
-        long attemptCount
+        long attemptCount,
+        String categoryName
 ) {
     /**
      * Thay tiêu đề và ảnh bìa bằng bản mới nhất đọc từ PostgreSQL.
@@ -34,10 +35,11 @@ public record RecommendedQuizResponse(
      * Đồ thị chỉ nên giữ <b>quan hệ</b>; mọi thứ để hiển thị lấy từ nguồn sự thật. Nhân bản thêm
      * ảnh bìa sang Neo4j thì mỗi lần chủ quiz đổi ảnh, thẻ gợi ý lại trỏ vào file cũ đã bị xoá.
      */
-    public RecommendedQuizResponse withDisplayData(String freshTitle, String freshThumbnailUrl) {
+    public RecommendedQuizResponse withDisplayData(String freshTitle, String freshThumbnailUrl,
+                                                  String freshCategoryName) {
         return new RecommendedQuizResponse(
                 quizId, freshTitle == null ? title : freshTitle, freshThumbnailUrl,
-                source, reason, weakTopics, peerCount, attemptCount);
+                source, reason, weakTopics, peerCount, attemptCount, freshCategoryName);
     }
 
     /** Vì sao quiz này lọt vào danh sách — để giao diện nhóm và để đánh giá chất lượng gợi ý. */

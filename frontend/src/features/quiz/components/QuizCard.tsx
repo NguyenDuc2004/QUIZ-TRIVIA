@@ -1,7 +1,7 @@
 import { Tag, Typography } from 'antd'
 import type { QuizSummary } from '../api/quizApi'
 import { DIFFICULTY_COLOR, DIFFICULTY_LABEL } from '../constants'
-import { coverOf } from '../coverGradient'
+import { boMatCua } from '../coverGradient'
 
 const { Text } = Typography
 
@@ -13,6 +13,7 @@ const { Text } = Typography
  */
 export default function QuizCard({ quiz, onClick }: { quiz: QuizSummary; onClick?: () => void }) {
   const minutes = quiz.timeLimitSec ? Math.round(quiz.timeLimitSec / 60) : null
+  const boMat = boMatCua(quiz.categoryName, quiz.title)
 
   return (
     <article
@@ -34,8 +35,19 @@ export default function QuizCard({ quiz, onClick }: { quiz: QuizSummary; onClick
           </span>
         </div>
       ) : (
-        <div className="flex aspect-video items-end p-3" style={{ background: coverOf(quiz.title) }}>
-          <span className="text-xs font-bold text-white/90">
+        /* Khối bìa thay ảnh: biểu tượng lớn ở giữa, tên danh mục ở đáy.
+           Bản đầu chỉ có nền màu và một dòng chữ nhỏ ở góc, nên phần lớn diện tích thẻ là một mảng màu
+           trống. Biểu tượng lấp đúng khoảng đó và nhận ra được khi lướt nhanh mà chưa kịp đọc chữ. */
+        <div
+          className="relative flex aspect-video items-center justify-center overflow-hidden"
+          style={{ background: boMat.nen }}
+        >
+          {/* `select-none` để kéo chọn chữ trên lưới không tô xanh cả loạt biểu tượng.
+              Hơi mờ để nó là nền chứ không tranh chỗ với tiêu đề quiz ngay bên dưới. */}
+          <span aria-hidden className="select-none text-5xl opacity-90 drop-shadow-sm">
+            {boMat.icon}
+          </span>
+          <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/45 to-transparent p-3 text-xs font-bold text-white">
             {quiz.categoryName ?? 'Chưa phân loại'}
           </span>
         </div>

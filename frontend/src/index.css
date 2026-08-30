@@ -80,6 +80,150 @@ body {
     border-color 0.15s ease;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   Phần trò chơi hoá — ba lớp dưới đây là NGOẠI LỆ có kiểm soát của
+   ui-design-system.md §4 ("không dùng gradient").
+
+   Lý do: tài liệu chia sẵn ba bộ mặt — khu học tập, phòng đấu, khu
+   quản trị — nhưng trên thực tế cả ba đang trông như nhau. Cấp độ,
+   huy hiệu và chuỗi ngày học là *phần thưởng*; trình bày chúng bằng
+   đúng bộ quy tắc của một bảng quản trị thì chúng thôi là phần thưởng.
+
+   Ngoại lệ dừng đúng ở đây: màn LÀM BÀI và khu QUẢN TRỊ giữ nguyên.
+   Màn làm bài cần sự tập trung (đó là lý do nó ẩn cả chân trang), còn
+   nền đen của khu quản trị là một tín hiệu cảnh báo — tô màu vào đó
+   là làm loãng tín hiệu.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Khối mở đầu trang Khám phá — màn hình đầu tiên người dùng thấy sau khi đăng nhập */
+.browse-hero {
+  background: linear-gradient(135deg, #5624d0 0%, #a435f0 55%, #c084fc 100%);
+  border-radius: 4px;
+}
+
+/* ── Phòng đấu: mỗi phương án một màu theo VỊ TRÍ ────────────────
+   Bốn ô trắng xếp dọc là hình ảnh của một biểu mẫu, không phải của một trò chơi tính điểm
+   theo tốc độ. Cho mỗi vị trí một màu giúp người chơi nhắm được ô mình muốn bấm TRƯỚC KHI
+   kịp đọc hết chữ — đúng thứ một trò hỏi đáp cần.
+
+   Nền nhạt chứ không đặc: chữ câu trả lời phải đọc được, và ô đang chọn của Ant Design cũng
+   cần nhìn ra trên nền này. */
+.room-option {
+  border-radius: 4px;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.room-option:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.room-option-a {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+.room-option-b {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+.room-option-c {
+  border-color: #eab308;
+  background: #fefce8;
+}
+.room-option-d {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+
+/* ── Khối công bố điểm ở màn kết quả ─────────────────────────────
+   Bốn mức thay vì hai: chỉ "đạt / không đạt" thì một bài 51% và một bài 99% trông y hệt nhau,
+   mà đó là hai kết quả rất khác nhau với người vừa làm xong. */
+.result-hero-excellent,
+.result-hero-good,
+.result-hero-pass,
+.result-hero-low {
+  border-radius: 4px;
+}
+
+.result-hero-excellent {
+  background: linear-gradient(135deg, #047857, #10b981);
+}
+.result-hero-good {
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+}
+.result-hero-pass {
+  background: linear-gradient(135deg, #b45309, #f59e0b);
+}
+/* Mức thấp nhất dùng XÁM ĐÁ, không dùng đỏ: đỏ ở đây đọc thành một lời phán xét, trong khi một
+   bài điểm thấp chỉ có nghĩa là còn chỗ để ôn — và ôn tiếp mới là việc hệ thống muốn người học làm. */
+.result-hero-low {
+  background: linear-gradient(135deg, #475569, #64748b);
+}
+
+/* ── Huy chương top 3 của bảng xếp hạng mùa ──────────────────────
+   Trước đây hạng 1 vàng còn hạng 2 và 3 dùng chung một màu xám, nên vị trí thứ nhì và thứ ba
+   nhìn không khác gì nhau — trong khi cả bảng xếp hạng tồn tại để phân biệt đúng những khác
+   biệt đó. */
+.podium {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.podium-1 {
+  background: linear-gradient(135deg, #b45309, #fbbf24);
+}
+.podium-2 {
+  background: linear-gradient(135deg, #64748b, #cbd5e1);
+  color: #1c1d1f;
+}
+.podium-3 {
+  background: linear-gradient(135deg, #7c2d12, #d97706);
+}
+
+/* Thẻ cấp độ ở trang Thành tích */
+.achievement-hero {
+  background: linear-gradient(135deg, #5624d0, #a435f0);
+}
+
+/* Huy hiệu ĐÃ mở khoá — vàng, để phân biệt tức thì với nhóm chưa mở (xám mờ) */
+.badge-earned {
+  border-color: #eab308;
+  background: linear-gradient(160deg, #fefce8, #fef9c3);
+}
+
+/* Ngọn lửa của chuỗi ngày học, chỉ khi chuỗi còn được giữ trong hôm nay */
+.streak-alight {
+  animation: streak-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes streak-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.85;
+  }
+}
+
+/* Người dùng đặt hệ điều hành ở chế độ giảm chuyển động thì tắt hẳn nhịp đập.
+   Một biểu tượng nhấp nháy liên tục là thứ gây khó chịu thật với một số người, và đây là
+   trang họ mở thường xuyên. */
+@media (prefers-reduced-motion: reduce) {
+  .streak-alight {
+    animation: none;
+  }
+}
+
 .browse-card:hover {
   /* Đậm hơn bản đầu (4px / 8%) vì bản đó gần như không nhìn thấy trên nền trắng cạnh viền sáng —
      người dùng báo "thẻ quiz không có hiệu ứng hover" trong khi CSS thì có.
