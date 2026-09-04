@@ -324,6 +324,57 @@ Khung ngoài có thêm `overflow-x-clip` làm **chốt cuối**, không phải g
 `hidden`: `overflow-hidden` biến phần tử thành khối cuộn và làm hỏng `position: sticky` của thanh điều
 hướng ngay bên trong.
 
+## 4.3. Bảng danh sách
+
+**Cột thao tác: một hành động chính, phần còn lại vào menu ba chấm** (`RowActions`).
+
+Bảng "Quiz của tôi" trước đây có sáu liên kết chữ dàn ngang trên mỗi hàng — *Soạn câu hỏi · Làm thử ·
+Thống kê · Xuất · Sửa · Xóa*. Ba vấn đề, cái thứ ba nghiêm trọng nhất:
+
+1. Sáu chữ chiếm 260px, ép cột nội dung — thứ người dùng thật sự đọc — hẹp lại.
+2. Trên màn hẹp chúng xuống dòng, một hàng cao gấp ba hàng khác.
+3. **Xóa** — thao tác không hoàn tác được — nằm cách *Soạn câu hỏi* vài chục pixel, và lại là chữ đỏ nên
+   hút mắt nhất trong sáu chữ.
+
+Trong menu, thao tác phá hoại đặt **sau vạch ngăn** và tô đỏ. Cột thao tác chỉ có một hành động thì dùng
+**nút viền có icon**, không dùng chữ trần: hành động phải nhận ra được là hành động từ hình dáng, không
+chỉ từ màu.
+
+**Hộp xác nhận phải là `Modal`, không phải `Popconfirm`.** `Popconfirm` bám vào phần tử kích hoạt, mà phần
+tử đó giờ là một mục trong menu — menu đóng ngay khi bấm nên hộp xác nhận mất điểm neo và **không hiện**.
+
+**Nhãn trạng thái dùng `<Pill>`**, không dùng `<Tag>`:
+
+| Loại nhãn | Cách thể hiện |
+|---|---|
+| Thang **có thứ tự** (độ khó, trạng thái xử lý) | Chấm màu dẫn đầu — ba chấm xanh/vàng/đỏ đọc thành một thang ngay |
+| Phân loại **không thứ tự** (nguồn, hiển thị) | Biểu tượng dẫn đầu (✨ cho AI sinh, 🌐/🔒 cho hiển thị) |
+
+**Chấm màu, không phải nền màu đậm:** nền đậm ở mỗi ô làm bảng loang lổ và tranh chỗ với nội dung. Và
+**màu không bao giờ là nguồn thông tin duy nhất** — chữ luôn đứng cạnh chấm, nên người mù màu đọc được
+đúng thứ người khác đọc.
+
+**Hàng bảng** có `padding` dọc 14px thay cho mặc định: nhiều bảng ở đây có ô hai dòng (nội dung + dòng
+phụ), nên hàng dính sát nhau và khó dò theo hàng ngang.
+
+## 4.4. Công thức toán — `<MathText>`
+
+Nội dung có công thức dựng bằng **KaTeX**, đánh dấu bằng `$...$`.
+
+**Bắt buộc phải có mốc `$`, hệ thống KHÔNG tự nhận diện.** KaTeX chỉ dựng được LaTeX, còn nội dung câu hỏi
+là văn bản thường do người dùng hoặc mô hình viết — `y = 2^(x^2 - x)` là chữ, không phải LaTeX. Muốn dựng
+nó thì phải *đoán* chỗ nào là toán, và đoán sai là làm hỏng chính câu chữ của người dùng: một câu Tin học
+nhắc `a/b`, một câu Tiếng Anh có dấu `^` sẽ bị bóp thành ký hiệu vô nghĩa.
+
+**Luật tuyệt đối: không sửa một ký tự nào của chữ thường.** Một `$` chỉ mở công thức khi có `$` đóng phía
+sau **và** phần ở giữa không rỗng. `100$$ một tháng` giữ đủ hai dấu; `Chi phí $50` giữ nguyên. Bản đầu gộp
+`$$` thành một `$` để "thoát" ký tự — đó cũng là sửa chữ của người dùng, chỉ theo hướng khác.
+
+**Công thức sai cú pháp hiện lại chữ gốc**, không ném lỗi: người học không sửa được LaTeX của người ra đề.
+
+**Prompt sinh đề đã được cập nhật** để mô hình xuất LaTeX trong `$...$`. Câu hỏi tạo trước thay đổi này
+vẫn là chữ thường và hiện nguyên xi — đúng như thiết kế, vì hệ thống không tự suy diễn.
+
 ## 5. Nút
 
 | Loại | Thể hiện | Code |

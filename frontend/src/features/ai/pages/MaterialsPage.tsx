@@ -6,17 +6,18 @@ import {
   Form,
   Input,
   Modal,
-  Popconfirm,
   Space,
   Switch,
   Table,
-  Tag,
   Typography,
   Upload,
 } from 'antd'
+import { DeleteOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
+import Pill from '@/shared/components/Pill'
+import RowActions from '@/shared/components/RowActions'
 import type { Material, MaterialStatus } from '../api/aiApi'
 import {
   useAiStatus,
@@ -36,16 +37,31 @@ const STATUS_LABEL: Record<MaterialStatus, string> = {
   FAILED: 'Lỗi',
 }
 
-const STATUS_COLOR: Record<MaterialStatus, string> = {
-  PROCESSING: 'processing',
-  READY: 'green',
-  FAILED: 'red',
+/**
+ * Tông viên thuốc và chấm màu cho trạng thái xử lý học liệu.
+ *
+ * Trạng thái này là một **tiến trình** (đang xử lý → xong / hỏng), nên nó dùng chấm màu giống độ khó:
+ * ba chấm xanh dương–xanh lá–đỏ đọc được thành tiến trình ngay, còn ba biểu tượng khác nhau thì không.
+ */
+const STATUS_PILL: Record<MaterialStatus, 'xanhDuong' | 'xanhLa' | 'do'> = {
+  PROCESSING: 'xanhDuong',
+  READY: 'xanhLa',
+  FAILED: 'do',
+}
+
+const STATUS_DOT: Record<MaterialStatus, string> = {
+  PROCESSING: '#3b82f6',
+  READY: '#22c55e',
+  FAILED: '#ef4444',
 }
 
 /** Kho học liệu cho RAG — bộ mặt bảng điều khiển (docs/ui-design-system.md §1). */
 export default function MaterialsPage() {
   const [page, setPage] = useState(0)
   const [pasteOpen, setPasteOpen] = useState(false)
+  /* Cùng lý do với hai bảng kia: `Popconfirm` bám vào phần tử kích hoạt, mà nó giờ là mục trong menu —
+     menu đóng ngay khi bấm nên hộp xác nhận mất điểm neo. */
+  const [xoaHocLieu, setXoaHocLieu] = useState<Material | null>(null)
 
   const { data: aiStatus } = useAiStatus()
   const { data, isFetching } = useMaterials({ page, size: 10 })
@@ -71,7 +87,11 @@ export default function MaterialsPage() {
       title: 'Nguồn',
       dataIndex: 'sourceType',
       width: 90,
-      render: (value: string) => <Tag className="mr-0!">{value === 'TEXT' ? 'Dán tay' : value}</Tag>,
+      render: (value: string) => (
+        <Pill icon={value === 'TEXT' ? <EditOutlined /> : <FileTextOutlined />}>
+          {value === 'TEXT' ? 'Dán tay' : value}
+        </Pill>
+      ),
     },
     {
       title: 'Trạng thái',
@@ -79,9 +99,9 @@ export default function MaterialsPage() {
       width: 190,
       render: (value: MaterialStatus, row) => (
         <Space direction="vertical" size={0}>
-          <Tag color={STATUS_COLOR[value]} className="mr-0!">
+          <Pill mau={STATUS_PILL[value]} chamMau={STATUS_DOT[value]}>
             {STATUS_LABEL[value]}
-          </Tag>
+          </Pill>
           {row.errorMessage && (
             <Text className="text-xs text-urgent">{row.errorMessage}</Text>
           )}
@@ -128,20 +148,23 @@ export default function MaterialsPage() {
     {
       title: '',
       key: 'actions',
-      width: 80,
+      width: 70,
+      align: 'right',
       render: (_, row) => (
-        <Popconfirm
-          title="Xoá học liệu này?"
-          description="Toàn bộ vector của tài liệu cũng bị xoá."
-          okText="Xoá"
-          cancelText="Hủy"
-          okButtonProps={{ danger: true }}
-          onConfirm={() => deleteMaterial.mutate(row.id)}
-        >
-          <Button type="link" size="small" danger>
-            Xoá
-          </Button>
-        </Popconfirm>
+        /* Bảng này chỉ có MỘT thao tác, và nó là thao tác xoá. Không có hành động chính nào để hiện
+           ra ngoài, nên menu ba chấm đứng một mình — vẫn đúng ý đồ: việc không hoàn tác được thì
+           không nằm sẵn dưới con trỏ. */
+        <RowActions
+          items={[
+            {
+              key: 'xoa',
+              icon: <DeleteOutlined />,
+              label: 'Xoá học liệu',
+              danger: true,
+              onClick: () => setXoaHocLieu(row),
+            },
+          ]}
+        />
       ),
     },
   ]
@@ -217,6 +240,25 @@ export default function MaterialsPage() {
       </div>
 
       <PasteMaterialModal open={pasteOpen} onClose={() => setPasteOpen(false)} />
+
+      {/* Nói rõ hệ quả: xoá học liệu là xoá luôn vector, tức trợ lý mất khả năng trả lời trên tài
+          liệu đó. Người dùng không nhìn thấy vector nên phải nói bằng lời. */}
+      <Modal
+        open={xoaHocLieu !== null}
+        title={`Xoá học liệu “${xoaHocLieu?.title ?? ''}”?`}
+        okText="Xoá"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true, loading: deleteMaterial.isPending }}
+        onCancel={() => setXoaHocLieu(null)}
+        onOk={() => {
+          if (xoaHocLieu) {
+            deleteMaterial.mutate(xoaHocLieu.id, { onSuccess: () => setXoaHocLieu(null) })
+          }
+        }}
+      >
+        Toàn bộ vector của tài liệu cũng bị xoá — trợ lý học tập sẽ không trả lời được trên tài liệu này
+        nữa.
+      </Modal>
     </Space>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Progress, Space, Table, Tag, Typography } from 'antd'
+import { Button, Progress, Space, Table, Tag, Typography } from 'antd'
+import { EyeOutlined, PlayCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
@@ -80,8 +81,16 @@ export default function MyAttemptsPage() {
       key: 'actions',
       width: 90,
       render: (_, row) => (
-        <Link to={`/attempts/${row.id}`} className="text-xs font-bold">
-          {row.status === 'IN_PROGRESS' ? 'Làm tiếp' : 'Xem lại'}
+        <Link to={`/attempts/${row.id}`}>
+          <Button
+            size="small"
+            /* Bài đang làm dở là nút chính: đó là việc người dùng cần làm tiếp, không phải việc xem
+               lại. Hai trạng thái, hai mức nhấn mạnh. */
+            type={row.status === 'IN_PROGRESS' ? 'primary' : 'default'}
+            icon={row.status === 'IN_PROGRESS' ? <PlayCircleOutlined /> : <EyeOutlined />}
+          >
+            {row.status === 'IN_PROGRESS' ? 'Làm tiếp' : 'Xem lại'}
+          </Button>
         </Link>
       ),
     },
