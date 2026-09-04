@@ -169,6 +169,7 @@ export default function QuestionBankPage() {
         </div>
 
         <Table<Question>
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           size="middle"
           loading={isFetching}

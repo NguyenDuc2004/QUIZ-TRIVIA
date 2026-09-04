@@ -194,6 +194,31 @@ trí** (ổn định suốt một câu), và màu khối kết quả buộc vào
 người đặt hệ điều hành ở chế độ giảm chuyển động — một biểu tượng nhấp nháy liên tục là thứ gây khó chịu
 thật, và đó là trang người học mở thường xuyên.
 
+## 4.2. Màn hình hẹp
+
+**Điện thoại là thiết bị chính, không phải thiết bị phụ.** Kịch bản dùng chính của phòng đấu là quét mã QR
+trong lớp học — người chơi vào bằng điện thoại, chủ phòng chiếu máy chiếu. Một giao diện chỉ chạy tốt trên
+màn hình rộng là một giao diện hỏng ở đúng chỗ đông người dùng nhất.
+
+Ba ngưỡng dùng trong dự án, không tự đặt thêm: `sm` 640px, `md` 768px, `lg` 1024px.
+
+| Thành phần | Dưới ngưỡng |
+|---|---|
+| Thanh điều hướng | Dàn menu ngang ẩn từ dưới `lg`, thay bằng **ngăn kéo** mở bằng nút ba gạch |
+| Ô tìm kiếm ở thanh trên | Ẩn dưới `md`, thay bằng nút kính lúp dẫn sang trang Khám phá (nơi đã có ô tìm kiếm đầy đủ) |
+| Mọi `<Table>` | **Bắt buộc** `scroll={{ x: 'max-content' }}` — bảng cuộn ngang trong khung của chính nó, không đẩy cả trang tràn ra |
+| Lưới thẻ quiz | 1 cột → `sm` 2 cột → `lg` 4 cột |
+| Sidebar khu quản trị | Tự thu còn 72px (chỉ biểu tượng) từ `lg` xuống, **không ẩn hẳn** |
+| Ô điều hướng câu khi làm bài | 8 cột → `sm` 10 → `lg` 5 |
+
+**Ngăn kéo dựng lại đủ mục của dàn menu ngang, không rút gọn.** Một menu "bản mobile" thiếu mục là cách
+nhanh nhất để một chức năng trở nên vô hình với nửa số người dùng.
+
+**`scroll={{ x: 'max-content' }}` chứ không phải một số cứng:** số cứng thì bảng ít cột cũng bị ép rộng ra
+và sinh thanh cuộn vô cớ.
+
+**Vùng chạm tối thiểu 44px** cho mục trong ngăn kéo và các nút chính trên màn hẹp.
+
 ## 5. Nút
 
 | Loại | Thể hiện | Code |

@@ -254,6 +254,7 @@ export default function MyQuizzesPage() {
         </div>
 
         <Table<QuizSummary>
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           size="middle"
           loading={isFetching}

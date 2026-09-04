@@ -88,6 +88,7 @@ export default function LeaderboardPage() {
           />
         ) : (
           <Table<LeaderboardRow>
+            scroll={{ x: 'max-content' }}
             rowKey="userId"
             dataSource={data.top}
             pagination={false}
@@ -160,6 +161,7 @@ export default function LeaderboardPage() {
       {(history?.length ?? 0) > 0 && (
         <Card title="Mùa đã kết thúc">
           <Table<SeasonHistoryItem>
+            scroll={{ x: 'max-content' }}
             rowKey="seasonId"
             dataSource={history}
             pagination={false}

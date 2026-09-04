@@ -215,6 +215,7 @@ function BangBaiTap({
 
   return (
     <Table<Assignment>
+      scroll={{ x: 'max-content' }}
       rowKey="id"
       dataSource={baiTaps}
       pagination={{ pageSize: 20, hideOnSinglePage: true }}
@@ -309,6 +310,7 @@ function BangThanhVien({
 
   return (
     <Table<Member>
+      scroll={{ x: 'max-content' }}
       rowKey="userId"
       dataSource={thanhVien}
       pagination={{ pageSize: 50, hideOnSinglePage: true }}

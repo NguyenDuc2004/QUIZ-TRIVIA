@@ -158,6 +158,7 @@ export default function AdminAiUsagePage() {
       <div>
         <Text className="mb-2 block text-sm font-bold">Theo chức năng</Text>
         <Table<AiUsageByFeature>
+          scroll={{ x: 'max-content' }}
           rowKey="chucNang"
           size="small"
           columns={featureColumns}
@@ -169,6 +170,7 @@ export default function AdminAiUsagePage() {
       <div>
         <Text className="mb-2 block text-sm font-bold">Theo nhà cung cấp</Text>
         <Table<AiUsageByProvider>
+          scroll={{ x: 'max-content' }}
           rowKey="nhaCungCap"
           size="small"
           columns={providerColumns}

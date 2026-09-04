@@ -57,6 +57,7 @@ export default function AdminIntegrityPage() {
         <Skeleton active paragraph={{ rows: 6 }} />
       ) : (
         <Table<IntegrityReport>
+          scroll={{ x: 'max-content' }}
           rowKey="attemptId"
           dataSource={data?.content}
           pagination={{

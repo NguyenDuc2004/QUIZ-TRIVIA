@@ -81,6 +81,7 @@ export default function RoomProctoringSummary({ roomCode }: { roomCode: string }
       )}
 
       <Table<RoomProctoringSummaryRow>
+        scroll={{ x: 'max-content' }}
         rowKey="playerId"
         size="small"
         dataSource={rows}

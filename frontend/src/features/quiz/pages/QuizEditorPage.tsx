@@ -180,6 +180,7 @@ export default function QuizEditorPage() {
         </div>
 
         <Table<Question>
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           size="middle"
           loading={isPending}

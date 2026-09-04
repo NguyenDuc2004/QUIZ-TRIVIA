@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Avatar, Button, Dropdown, Input, Layout, Space, Tag, Typography } from 'antd'
+import { Avatar, Button, Drawer, Dropdown, Input, Layout, Space, Tag, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   DownOutlined,
   LogoutOutlined,
+  MenuOutlined,
+  SearchOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
@@ -37,6 +39,7 @@ export default function AppLayout() {
   const logout = useLogout()
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
+  const [moMenu, setMoMenu] = useState(false)
 
   const canCreate = user?.role === 'CREATOR' || user?.role === 'ADMIN'
 
@@ -106,17 +109,36 @@ export default function AppLayout() {
        Không cần thêm gì cho phần nội dung: Ant Design đã đặt sẵn `.ant-layout-content { flex: auto }`
        nên nó tự giãn — chỉ thiếu đúng chiều cao tối thiểu của khung ngoài. */
     <Layout className="min-h-screen!">
-      <Header className="sticky top-0 z-10 flex items-center gap-6 border-b border-line bg-white! px-6!">
+      {/* `gap-3` trên màn hẹp, `gap-6` từ `lg` trở lên: khoảng cách 24px giữa bảy phần tử là quá rộng
+          khi chỉ còn 360px chiều ngang. */}
+      <Header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-white! px-4! lg:gap-6 lg:px-6!">
+        {/* Nút mở ngăn kéo điều hướng — chỉ hiện dưới `lg`, đúng chỗ dàn menu ngang bị ẩn đi */}
+        <Button
+          type="text"
+          aria-label="Mở menu"
+          icon={<MenuOutlined />}
+          className="lg:hidden!"
+          onClick={() => setMoMenu(true)}
+        />
+
         <Link to="/quizzes" className="flex items-center gap-1 whitespace-nowrap">
           <span className="text-lg font-extrabold text-ink">Quiz</span>
           <span className="text-lg font-extrabold text-brand">AI</span>
         </Link>
 
-        {/* Ô tìm kiếm dạng viên thuốc, gửi từ khoá sang trang Khám phá quiz */}
+        {/* Ô tìm kiếm dạng viên thuốc, gửi từ khoá sang trang Khám phá quiz.
+
+            Ẩn dưới `md` và thay bằng một nút kính lúp: ô tìm kiếm chiếm nhiều chiều ngang nhất trong
+            thanh này, mà trên điện thoại chiều ngang là thứ khan hiếm nhất. Nút vẫn đưa người dùng tới
+            đúng trang Khám phá, nơi đã có sẵn một ô tìm kiếm đầy đủ — không mất chức năng nào. */}
+        <Link to="/quizzes" className="md:hidden">
+          <Button type="text" aria-label="Tìm quiz" icon={<SearchOutlined />} />
+        </Link>
+
         <Input.Search
           allowClear
           placeholder="Tìm quiz theo tiêu đề"
-          className="max-w-xl flex-1"
+          className="hidden max-w-xl flex-1 md:block"
           style={{ borderRadius: 9999 }}
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
@@ -125,7 +147,10 @@ export default function AppLayout() {
           }
         />
 
-        <nav className="flex items-center gap-5">
+        {/* Dàn menu ngang: chỉ từ `lg` trở lên. Dưới ngưỡng đó nó nằm trong ngăn kéo bên dưới —
+            năm mục cộng ô tìm kiếm cộng nút cộng chuông cộng avatar trên một hàng thì tràn hẳn ra
+            ngoài màn hình điện thoại. */}
+        <nav className="hidden items-center gap-5 lg:flex">
           <NavLink to="/quizzes" className={navLinkClass}>
             Khám phá
           </NavLink>
@@ -191,6 +216,50 @@ export default function AppLayout() {
           )}
         </Space>
       </Header>
+
+      {/* Ngăn kéo điều hướng cho màn hẹp.
+
+          Dựng lại đúng các mục của dàn menu ngang chứ không rút gọn: người dùng điện thoại cần tới
+          đúng những trang đó, và một menu "bản mobile" thiếu mục là cách nhanh nhất để một chức năng
+          trở nên vô hình với nửa số người dùng.
+
+          Tự đóng sau mỗi lần chọn — `location` đổi thì đóng, xử lý luôn cả trường hợp bấm vào mục
+          đang đứng. */}
+      <Drawer
+        open={moMenu}
+        onClose={() => setMoMenu(false)}
+        placement="left"
+        width={280}
+        title="Điều hướng"
+        styles={{ body: { padding: 0 } }}
+      >
+        <div className="flex flex-col py-2">
+          <MucNganKeo to="/quizzes" onChon={() => setMoMenu(false)}>
+            Khám phá
+          </MucNganKeo>
+          <MucNganKeo to="/rooms" onChon={() => setMoMenu(false)}>
+            Phòng đấu
+          </MucNganKeo>
+          <MucNganKeo to="/assistant" onChon={() => setMoMenu(false)}>
+            Trợ lý AI
+          </MucNganKeo>
+
+          <NhomNganKeo label="Học tập" items={MUC_HOC_TAP} onChon={() => setMoMenu(false)} />
+          {canCreate && (
+            <NhomNganKeo label="Thư viện" items={MUC_THU_VIEN} onChon={() => setMoMenu(false)} />
+          )}
+
+          {canCreate && (
+            <div className="border-line mt-2 border-t px-4 pt-4">
+              <Link to="/ai/generate" onClick={() => setMoMenu(false)}>
+                <Button type="primary" block icon={<span aria-hidden>✨</span>}>
+                  Sinh đề AI
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
+      </Drawer>
 
       <Content className="px-6 py-8">
         <div className="mx-auto max-w-6xl">
@@ -279,5 +348,58 @@ function NavGroup({ label, items }: { label: string; items: MucMenu[] }) {
         <DownOutlined className="text-[10px]" />
       </button>
     </Dropdown>
+  )
+}
+
+/** Một mục trong ngăn kéo. Cao 44px — đủ cho ngón tay, theo khuyến nghị vùng chạm tối thiểu. */
+function MucNganKeo({
+  to,
+  onChon,
+  children,
+}: {
+  to: string
+  onChon: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <NavLink
+      to={to}
+      onClick={onChon}
+      className={({ isActive }) =>
+        `px-4 py-3 text-sm no-underline! ${
+          isActive ? 'text-brand-strong! bg-surface-subtle font-bold' : 'text-ink!'
+        }`
+      }
+    >
+      {children}
+    </NavLink>
+  )
+}
+
+/**
+ * Một nhóm mục trong ngăn kéo — trải phẳng, không xổ xuống.
+ *
+ * Trên thanh ngang các nhóm này là menu xổ xuống vì chiều ngang có hạn. Trong ngăn kéo thì chiều DỌC
+ * mới là thứ dư dả, nên bắt người dùng bấm thêm một lần để mở nhóm là thêm một thao tác không đổi lại
+ * được gì.
+ */
+function NhomNganKeo({
+  label,
+  items,
+  onChon,
+}: {
+  label: string
+  items: MucMenu[]
+  onChon: () => void
+}) {
+  return (
+    <div className="mt-2">
+      <div className="text-ink-soft px-4 py-1 text-xs font-bold uppercase">{label}</div>
+      {items.map((m) => (
+        <MucNganKeo key={m.to} to={m.to} onChon={onChon}>
+          {m.label}
+        </MucNganKeo>
+      ))}
+    </div>
   )
 }

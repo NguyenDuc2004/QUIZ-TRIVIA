@@ -220,6 +220,7 @@ export default function QuizStatsPage() {
               />
             ) : (
               <Table
+                scroll={{ x: 'max-content' }}
                 rowKey="questionId"
                 size="small"
                 columns={hardColumns}
@@ -232,6 +233,7 @@ export default function QuizStatsPage() {
           <div>
             <Text className="mb-2 block font-bold">Bài làm ({attempts?.length ?? 0})</Text>
             <Table
+              scroll={{ x: 'max-content' }}
               rowKey="attemptId"
               size="small"
               columns={attemptColumns}

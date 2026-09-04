@@ -96,6 +96,7 @@ export default function MyAttemptsPage() {
 
       <div className="border border-line bg-white">
         <Table<AttemptSummary>
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           size="middle"
           loading={isFetching}

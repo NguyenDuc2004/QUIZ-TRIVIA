@@ -116,6 +116,7 @@ export default function QuizIntroPage() {
               <Text className="font-bold!">Bảng xếp hạng</Text>
             </div>
             <Table<LeaderboardEntry>
+              scroll={{ x: 'max-content' }}
               rowKey="userId"
               size="middle"
               pagination={false}
@@ -144,6 +145,7 @@ export default function QuizIntroPage() {
               </Link>
             </div>
             <Table<AttemptSummary>
+              scroll={{ x: 'max-content' }}
               rowKey="id"
               size="middle"
               pagination={false}

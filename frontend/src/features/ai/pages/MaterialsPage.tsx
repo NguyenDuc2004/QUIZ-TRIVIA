@@ -181,6 +181,7 @@ export default function MaterialsPage() {
 
       <div className="border border-line bg-white">
         <Table<Material>
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           size="middle"
           loading={isFetching}

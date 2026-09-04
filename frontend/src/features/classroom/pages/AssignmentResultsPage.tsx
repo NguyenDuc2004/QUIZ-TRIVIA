@@ -110,6 +110,7 @@ export default function AssignmentResultsPage() {
       </div>
 
       <Table<AssignmentResultRow>
+        scroll={{ x: 'max-content' }}
         rowKey="userId"
         dataSource={data.danhSach}
         pagination={{ pageSize: 50, hideOnSinglePage: true }}

@@ -38,6 +38,7 @@ export default function AdminRoomsPage() {
       )}
 
       <Table<LiveRoom>
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         loading={isLoading}
         dataSource={data}

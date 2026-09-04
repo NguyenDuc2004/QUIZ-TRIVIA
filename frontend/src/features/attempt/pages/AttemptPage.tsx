@@ -268,7 +268,11 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
               {answeredCount}/{questions.length} câu đã trả lời
             </Text>
 
-            <div className="mt-3 grid grid-cols-5 gap-1">
+            {/* Nhiều cột hơn ở màn hẹp, ít cột lại ở màn rộng — nghe ngược nhưng đúng: từ `lg` trở
+                lên khối này nằm trong cột phụ rộng 260px, còn dưới `lg` nó xuống dòng và giãn hết
+                chiều ngang màn hình. Giữ 5 cột ở đó thì mỗi nút rộng gần 70px, thưa thớt và đẩy danh
+                sách câu dài xuống quá xa. */}
+            <div className="mt-3 grid grid-cols-8 gap-1 sm:grid-cols-10 lg:grid-cols-5">
               {questions.map((q, i) => {
                 const done = isAnswered(draft[q.questionId])
                 return (

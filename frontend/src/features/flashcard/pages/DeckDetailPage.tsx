@@ -123,6 +123,7 @@ export default function DeckDetailPage() {
         <Skeleton active paragraph={{ rows: 5 }} />
       ) : (
         <Table<Flashcard>
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           dataSource={cards}
           pagination={false}
