@@ -3707,10 +3707,12 @@ một lựa chọn thiết kế*. Nó chỉ lộ ra khi có một chỗ lệch *
 
 ### Vướng mắc
 
-- **`` trong text block của Java là ký tự FORM-FEED.** Ví dụ trong prompt viết `$rac{a}{b}$` một
+- **`\f` trong text block của Java là ký tự FORM-FEED.** Ví dụ trong prompt viết `$\frac{a}{b}$` một
   dấu chéo, nên thứ gửi tới mô hình là `<FF>rac{a}{b}` — không gây lỗi, chỉ lặng lẽ dạy mô hình bằng
   một ví dụ hỏng, đúng ở chỗ đang dặn nó viết cho chuẩn. Rồi **chính script Python đi sửa cũng mắc lại
-  đúng cái bẫy đó**, vì `\` bị co thành `\`. Phải dùng `chr(92)` để tránh hẳn dấu chéo trong lệnh.
+  đúng cái bẫy đó**, vì `\\` trong lệnh bị co thành `\` trước khi Python đọc tới. Phải dùng
+  `chr(92)` để tránh hẳn dấu chéo trong chuỗi lệnh. Lần thứ BA gặp cùng một bẫy trong một ngày — lần
+  thứ ba xảy ra ngay trong đoạn văn đang viết về chính nó.
 - **Script sửa `RoomLobbyPage` thiếu dòng ghi file** — nó đổi chuỗi trong bộ nhớ rồi thoát, mà vẫn in
   "xong" bốn lần, và mình đã tin dòng chữ đó. Chỉ 4 test đỏ mới lộ ra; truy tiếp thì thấy
   `quizApi.get` chưa hề được gọi. Nếu chỉ chạy `build` thì việc này lọt qua hoàn toàn.
