@@ -15,6 +15,7 @@ import {
 } from '@ant-design/icons'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
 import AppFooter from './AppFooter'
+import ThemeToggle from './ThemeToggle'
 import { useAuthStore } from '@/features/auth/store/authStore'
 import { useThemeStore, type CheDoMau } from '@/shared/theme/themeStore'
 import NotificationBell from '@/features/notification/components/NotificationBell'
@@ -274,6 +275,11 @@ export default function AppLayout() {
               </Button>
             </Link>
           )}
+          {/* Nút đổi giao diện đứng trước chuông. Nó là thiết lập hiển thị, không phải thông báo hay
+              tài khoản, nên tách khỏi cả hai — và đặt ở đây thì nó có mặt trên mọi trang của khu học
+              tập mà không chiếm chỗ của nội dung. */}
+          <ThemeToggle />
+
           {/* Chuông đứng TRƯỚC avatar: thông báo là thứ người dùng nhìn thường xuyên hơn menu tài khoản,
               và đặt sau avatar thì nó rơi ra sát mép phải màn hình */}
           {user && <NotificationBell />}

@@ -18,6 +18,7 @@ import {
 } from '@ant-design/icons'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
 import { useAuthStore } from '@/features/auth/store/authStore'
+import ThemeToggle from '@/shared/components/ThemeToggle'
 
 const { Sider, Header, Content } = Layout
 const { Text } = Typography
@@ -159,6 +160,14 @@ export default function AdminLayout() {
           </button>
           <Text className="text-sm font-bold">Quản trị hệ thống</Text>
 
+          {/* Nút đổi giao diện — cùng nút với khu học tập.
+
+              Đặt NGOÀI khối `{user && ...}`: đây là thiết lập hiển thị, không phụ thuộc việc đã tải
+              xong thông tin người dùng hay chưa. `ml-auto` để nó cùng khối tài khoản dạt sang phải. */}
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
+
           {user && (
             <Dropdown
               menu={{ items: accountMenuItems }}
@@ -168,7 +177,7 @@ export default function AdminLayout() {
               {/* Cả khối avatar + tên + thẻ vai trò là một đích bấm, không phải ba đích cạnh nhau */}
               <button
                 type="button"
-                className="hover:bg-surface-subtle ml-auto flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-1.5 transition-colors"
+                className="hover:bg-surface-subtle flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-1.5 transition-colors"
               >
                 <Avatar size={26} src={user.avatarUrl ?? undefined}>
                   {user.displayName?.charAt(0).toUpperCase()}

@@ -195,5 +195,35 @@ export const darkTheme: ThemeConfig = {
       defaultBg: darkColors.surfaceSubtle,
       defaultColor: darkColors.ink,
     },
+    /*
+     * BẮT BUỘC phải khai lại. `darkTheme` kế thừa `...appTheme.components`, mà trong đó `Layout` đặt
+     * cứng `headerBg: '#ffffff'` và `bodyBg: '#ffffff'`. Kế thừa nguyên vẹn nghĩa là nền thanh trên và
+     * nền thân trang vẫn TRẮNG ở chế độ tối, dù `colorBgLayout` đã đổi — token riêng của component
+     * thắng token toàn cục.
+     *
+     * Đây là mảng trắng cuối cùng còn lại sau khi đổi toàn bộ `bg-white` sang token: nó không đến từ
+     * Tailwind mà từ chính bảng token của Ant Design.
+     */
+    Layout: {
+      ...appTheme.components?.Layout,
+      headerBg: darkColors.surface,
+      bodyBg: darkColors.surfaceSubtle,
+    },
+    /* Bảng: nền tiêu đề cột và nền khi rê chuột phải tối theo, nếu không thì hàng tiêu đề sáng trưng */
+    Table: {
+      ...appTheme.components?.Table,
+      headerBg: darkColors.surfaceSubtle,
+      headerColor: darkColors.ink,
+      rowHoverBg: '#2a2b31',
+      borderColor: darkColors.line,
+    },
+    /* Menu xổ xuống và ngăn kéo dùng `colorBgElevated`, nhưng mục đang chọn cần nền riêng */
+    Menu: {
+      ...appTheme.components?.Menu,
+      itemSelectedBg: '#2a2b31',
+      itemHoverBg: '#26272c',
+      itemColor: darkColors.ink,
+      itemSelectedColor: darkColors.brand,
+    },
   },
 }

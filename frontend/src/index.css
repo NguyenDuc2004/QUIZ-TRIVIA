@@ -132,6 +132,30 @@ body {
   color: var(--color-ink);
 }
 
+/* ── Chuyển màu mềm khi đổi giao diện ────────────────────────────
+   Đổi tức thì làm cả trang "nhảy", nhất là màn nhiều thẻ. 180ms là đủ để mắt theo được mà
+   không thành hiệu ứng chậm rãi gây sốt ruột.
+
+   Chỉ chuyển `background-color`, `border-color` và `color` — KHÔNG dùng `transition: all`.
+   `all` sẽ kéo theo cả `transform`, `width`, `opacity`… của mọi phần tử, làm menu xổ xuống và
+   modal của Ant Design mở ra chậm chạp và giật, tức là hỏng đúng thứ đang muốn làm mượt.
+
+   `!important` là bắt buộc để thắng CSS của Ant Design (§3), nhưng chỉ áp cho ba thuộc tính
+   màu nên không đụng vào bố cục của component nào. */
+:root * {
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+/* Người đặt hệ điều hành ở chế độ giảm chuyển động thì đổi thẳng, không chuyển dần. */
+@media (prefers-reduced-motion: reduce) {
+  :root * {
+    transition: none;
+  }
+}
+
 /* ── Ba màu NGỮ NGHĨA phải đảo theo chế độ ───────────────────────
    Trước đây viết thẳng `bg-green-50` / `bg-red-50` / `text-red-600` — màu tuyệt đối. Ở chế độ
    tối nền xanh-nhạt và đỏ-nhạt vẫn sáng trưng, mà `--color-ink` lúc đó đã là màu SÁNG, nên chữ

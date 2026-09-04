@@ -141,6 +141,28 @@ cả máy đang ở chế độ tối thì trang này là thứ duy nhất chói
 Đặt trong `useEffect` là quá muộn — trang vẽ xong một khung sáng rồi mới nhảy sang tối, và cái nháy trắng
 đó đúng là thứ người bật chế độ tối muốn tránh nhất.
 
+**Hai lối vào, có lý do:**
+
+| Nơi | Làm được gì |
+|---|---|
+| **Nút `ThemeToggle`** trên thanh điều hướng | Lật Sáng ⇄ Tối bằng **một** lần bấm. Có ở khu học tập, khu quản trị, và cả bốn trang khách |
+| Menu tài khoản → *Giao diện* | Chọn cả **ba** trạng thái, gồm *theo hệ thống* |
+
+Nút chỉ hai chiều vì một nút không diễn tả được ba trạng thái. Bản đầu chỉ có menu con — ba lần bấm cho
+một thao tác làm hằng ngày, ở chỗ không ai nghĩ tới.
+
+**Icon trên nút cho biết BẤM SẼ RA GÌ, không phải đang ở đâu:** đang sáng thì hiện 🌙, đang tối thì hiện
+☀️. Nút mô tả *hành động*, không mô tả *trạng thái*; chú thích khi rê chuột nói rõ bằng chữ.
+
+**Bốn trang khách** (`/login`, `/register`, `/forgot-password`, `/join/:code`) nằm ngoài cả hai layout nên
+phải gắn nút riêng — không có nó thì người chưa đăng nhập không có đường nào đổi giao diện, mà trang đăng
+nhập lại đúng là trang đầu tiên họ thấy.
+
+**Chuyển màu 180ms**, và chỉ cho ba thuộc tính `background-color`, `border-color`, `color`. **Không dùng
+`transition: all`**: `all` kéo theo `transform`, `width`, `opacity` của mọi phần tử, làm menu xổ xuống và
+modal của Ant Design mở ra chậm và giật — hỏng đúng thứ đang muốn làm mượt. Tắt hẳn với
+`prefers-reduced-motion`.
+
 **Hai nơi khai màu, bắt buộc cùng giá trị:** `:root[data-theme='dark']` trong `index.css` (cho Tailwind) và
 `darkColors` trong `antdTheme.ts` (cho Ant Design). Hai hệ nhận màu theo hai đường khác nhau; lệch nhau thì
 thẻ của Ant Design và thẻ dựng bằng Tailwind đứng cạnh nhau sẽ khác màu nền.
@@ -162,6 +184,10 @@ thẻ của Ant Design và thẻ dựng bằng Tailwind đứng cạnh nhau sẽ
    `bg-green-50`, `bg-red-50`, `text-red-600`.
 3. **Lớp trang trí ở §4.1.** Mỗi lớp phải có bản `:root[data-theme='dark']` tương ứng; chỉ đổi **độ
    sáng**, giữ nguyên tông màu để người dùng vẫn nhận ra đỏ là A, xanh dương là B.
+4. **Token riêng của component Ant Design.** `appTheme.components.Layout` đặt cứng `headerBg: '#ffffff'`
+   và `bodyBg: '#ffffff'`; `darkTheme` kế thừa cả khối `components`, nên **phải khai lại** — token riêng
+   của component **thắng** token toàn cục, và đây là mảng trắng cuối cùng còn sót sau khi đã đổi hết
+   `bg-white`. Cùng lý do với `Table` (nền hàng tiêu đề) và `Menu` (nền mục đang chọn).
 
 **Ngoại lệ duy nhất được phép dùng `bg-white`:** nền của **mã QR**. Camera đọc mã bằng tương phản đen trên
 trắng — đó là ràng buộc vật lý của máy quét, không phải lựa chọn thẩm mỹ.

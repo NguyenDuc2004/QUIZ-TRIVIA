@@ -5,6 +5,7 @@ import { Alert, Button, Form, Input, Typography } from 'antd'
 import GoogleLoginButton from '../components/GoogleLoginButton'
 import { useLogin } from '../hooks/useAuthMutations'
 import { loginSchema, type LoginForm } from '../schema'
+import ThemeToggle from '@/shared/components/ThemeToggle'
 
 const { Title, Paragraph } = Typography
 
@@ -25,7 +26,15 @@ export default function LoginPage() {
   })
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-subtle p-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-surface-subtle p-4">
+      {/* Nút đổi giao diện cho trang khách.
+
+          Bốn trang này nằm NGOÀI cả hai layout nên không có thanh điều hướng, tức trước bản này người
+          chưa đăng nhập không có đường nào đổi giao diện — và trang đăng nhập lại đúng là trang đầu
+          tiên họ thấy. Đặt ở góc trên phải, `absolute` để không đẩy khối nội dung đang căn giữa. */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-md border border-line bg-surface p-8">
         <div className="mb-1 flex items-center justify-center gap-1">
           <span className="text-2xl font-extrabold text-ink">Quiz</span>
