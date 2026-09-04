@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { TrophyOutlined } from '@ant-design/icons'
 import { Alert, Button, Checkbox, Radio, Skeleton, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { getApiErrorMessage } from '@/shared/api/client'
@@ -253,10 +254,21 @@ export default function QuizIntroPage() {
 
 const LEADERBOARD_COLUMNS: ColumnsType<LeaderboardEntry> = [
   {
+    // Dùng lại đúng huy chương của bảng xếp hạng mùa (`.podium-*` trong index.css), không vẽ lại kiểu
+    // khác: hai bảng xếp hạng trong cùng một sản phẩm mà hạng nhất trông khác nhau thì người dùng phải
+    // học hai lần cùng một thứ.
     title: '#',
     dataIndex: 'rank',
-    width: 60,
-    render: (rank: number) => <Text className="font-bold!">{rank}</Text>,
+    width: 70,
+    render: (rank: number) =>
+      rank <= 3 ? (
+        <span className={`podium podium-${rank}`}>
+          <TrophyOutlined />
+          <span className="font-bold">{rank}</span>
+        </span>
+      ) : (
+        <Text className="text-ink-soft">{rank}</Text>
+      ),
   },
   { title: 'Người chơi', dataIndex: 'displayName' },
   {

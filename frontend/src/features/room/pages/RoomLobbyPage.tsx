@@ -56,14 +56,33 @@ export default function RoomLobbyPage() {
 
   return (
     <Space direction="vertical" size="large" className="w-full">
+      {/* Khối mở đầu của sảnh phòng đấu.
+
+          Phòng đấu là một trong ba bộ mặt được phép rực (ui-design-system.md §1 và §4.1), nhưng sảnh
+          vào phòng lại đang trông y hệt một trang quản lý: hai hộp trắng viền xám. Đây là màn hình
+          người dùng đứng NGAY TRƯỚC lúc chơi, nên nó nên báo trước rằng thứ sắp tới là một trò chơi.
+
+          Không bỏ `PageHeader` bên dưới: nó vẫn là tiêu đề trang thật, và khối này chỉ là phần mở đầu
+          đặt trên nó. */}
+      <div className="room-hero flex flex-col gap-1 p-6 sm:p-8">
+        <div className="text-3xl font-bold text-white sm:text-4xl">Đấu trí cùng bạn bè</div>
+        <div className="max-w-2xl text-sm text-white/85 sm:text-base">
+          Mọi người nhận cùng một câu hỏi cùng lúc. Trả lời đúng và nhanh hơn thì điểm cao hơn, bảng xếp
+          hạng cập nhật ngay sau mỗi câu.
+        </div>
+      </div>
+
       <PageHeader
         title="Phòng đấu trí"
         description="Mở phòng rồi chia sẻ mã cho bạn bè, hoặc nhập mã để vào phòng có sẵn."
       />
 
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="border border-line bg-white p-5">
-          <Text className="font-bold!">Mở phòng mới</Text>
+        {/* Hai thẻ, hai việc ngược nhau — chủ phòng và người vào. Viền màu để phân biệt ngay ở khoảng
+            cách một mét, thay vì phải đọc tiêu đề mới biết bên nào là bên nào. Chỉ tô viền và tiêu đề,
+            KHÔNG tô nền: bên trong là biểu mẫu, và nền màu làm ô nhập với chữ khó đọc. */}
+        <div className="room-card room-card-host bg-white p-5">
+          <Text className="room-card-title font-bold!">🎬 Mở phòng mới</Text>
           <Paragraph className="mt-1! mb-4! text-ink-soft text-xs">
             Bạn sẽ là chủ phòng: điều khiển lúc bắt đầu và chuyển câu.
           </Paragraph>
@@ -103,8 +122,8 @@ export default function RoomLobbyPage() {
           </Space>
         </div>
 
-        <div className="border border-line bg-white p-5">
-          <Text className="font-bold!">Vào phòng bằng mã</Text>
+        <div className="room-card room-card-join bg-white p-5">
+          <Text className="room-card-title font-bold!">🔑 Vào phòng bằng mã</Text>
           <Paragraph className="mt-1! mb-4! text-ink-soft text-xs">
             Mã phòng gồm 6 chữ số, hoặc quét mã QR chủ phòng chiếu lên.
           </Paragraph>

@@ -101,6 +101,39 @@ body {
   border-radius: 4px;
 }
 
+/* ── Sảnh phòng đấu ──────────────────────────────────────────────
+   Màn hình người dùng đứng NGAY TRƯỚC lúc chơi, nên nó nên báo trước rằng thứ sắp tới là
+   một trò chơi. Trước đây nó trông y hệt một trang quản lý: hai hộp trắng viền xám. */
+.room-hero {
+  background: linear-gradient(120deg, #4c1d95 0%, #7c3aed 45%, #db2777 100%);
+  border-radius: 4px;
+}
+
+/* Hai thẻ, hai việc ngược nhau — chủ phòng và người vào.
+
+   Chỉ tô VIỀN và TIÊU ĐỀ, không tô nền: bên trong là biểu mẫu có ô chọn và ô nhập, mà nền
+   màu làm chữ trong đó khó đọc. Viền 2px thay vì 1px — đây là chỗ duy nhất trong dự án cần
+   phân biệt hai khối ngang hàng bằng màu, và 1px màu nhạt thì gần như không thấy. */
+.room-card {
+  border-radius: 4px;
+  border-width: 2px;
+  border-style: solid;
+}
+
+.room-card-host {
+  border-color: #a435f0;
+}
+.room-card-host .room-card-title {
+  color: #6b21a8 !important;
+}
+
+.room-card-join {
+  border-color: #0ea5e9;
+}
+.room-card-join .room-card-title {
+  color: #0369a1 !important;
+}
+
 /* ── Phòng đấu: mỗi phương án một màu theo VỊ TRÍ ────────────────
    Bốn ô trắng xếp dọc là hình ảnh của một biểu mẫu, không phải của một trò chơi tính điểm
    theo tốc độ. Cho mỗi vị trí một màu giúp người chơi nhắm được ô mình muốn bấm TRƯỚC KHI

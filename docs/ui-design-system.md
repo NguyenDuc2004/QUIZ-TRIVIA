@@ -171,7 +171,8 @@ Ranh giới không phải *"bao nhiêu"* mà là *"ở đâu"*:
 | Bốn phương án trong phòng đấu (`.room-option-*`) | Thanh điều hướng |
 | Khối công bố điểm ở màn kết quả (`.result-hero-*`) | **Màn đang làm bài** |
 | Thẻ cấp độ, huy hiệu đã mở (`.achievement-hero`, `.badge-earned`) | **Toàn bộ khu quản trị** |
-| Huy chương top 3 (`.podium-*`) | |
+| Huy chương top 3 (`.podium-*`) — dùng ở **cả hai** bảng xếp hạng | |
+| Sảnh phòng đấu: khối mở đầu và viền hai thẻ (`.room-hero`, `.room-card-*`) | |
 
 Ba lý do cụ thể cho cột phải:
 
@@ -189,6 +190,13 @@ quản lý câu hỏi của họ vẫn trắng-xám bình thường.
 đề — bản đầu chọn bằng `title.charCodeAt(0)`, nên hai quiz cùng "Toán học" ra hai màu khác nhau và mắt
 người dùng học một quy luật *không tồn tại*. Cùng nguyên tắc: màu phương án trong phòng đấu buộc vào **vị
 trí** (ổn định suốt một câu), và màu khối kết quả buộc vào **mức điểm**.
+
+**Cùng một khái niệm thì cùng một hình ảnh.** Hạng nhất ở bảng xếp hạng mùa và hạng nhất ở bảng xếp hạng
+của một quiz dùng **chung** lớp `.podium-*`. Vẽ hai kiểu khác nhau cho cùng một khái niệm bắt người dùng
+học hai lần cùng một thứ.
+
+**Tô viền, không tô nền, khi bên trong là biểu mẫu.** Hai thẻ ở sảnh phòng đấu phân biệt bằng viền 2px và
+màu tiêu đề; nền giữ trắng vì bên trong có ô chọn và ô nhập, mà nền màu làm chữ trong đó khó đọc.
 
 **Chuyển động phải tôn trọng `prefers-reduced-motion`.** Nhịp đập của ngọn lửa chuỗi ngày học tắt hẳn với
 người đặt hệ điều hành ở chế độ giảm chuyển động — một biểu tượng nhấp nháy liên tục là thứ gây khó chịu
