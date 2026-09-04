@@ -3719,6 +3719,25 @@ một lựa chọn thiết kế*. Nó chỉ lộ ra khi có một chỗ lệch *
 - **Chạy `prettier` lần thứ hai vào cùng một file.** Dự án không có cấu hình prettier nên nó đổi hết
   sang nháy kép và dấu chấm phẩy — 174 dòng đổi cho một thay đổi 30 dòng.
 
+### Nợ / chuyển sang ngày sau
+
+- `[!]` **`ChatIntegrationTest` còn flake ~1/3 lượt** — `HTTP/1.1 header parser received no bytes` ở
+  helper `ask`, mỗi lượt đỏ một ca khác nhau. Đây là lỗi của **bộ test**, không phải của sản phẩm:
+  cùng luồng đó chạy tay trên máy thật đều đúng, và mọi ca đều xanh khi chạy riêng.
+
+  Đo cụ thể trước khi kết luận: sau khi đóng `HttpClient` bằng `try-with-resources` (04/09), lớp này
+  từ **đỏ một ca mỗi lượt** giảm còn **2 xanh / 1 đỏ trong 3 lượt**, và bộ đầy đủ 590 ca có lượt xanh
+  hoàn toàn. Tức là đã đỡ hẳn nhưng chưa dứt.
+
+  **Chưa vá tiếp, và có lý do.** Chú thích sẵn trong tệp ghi lại ba vòng sửa trước cùng thứ đã thử và
+  vì sao hỏng — đáng chú ý nhất là `.retry(1)`: nó **tệ hơn** vì request này CÓ TÁC DỤNG PHỤ (tạo
+  phiên chat), nên lượt thử lại đẻ ra phiên thứ hai. Lỗi hiện tại là "không đọc được byte nào", tức
+  **không biết** server đã xử lý request hay chưa, nên retry vẫn không an toàn vì đúng lý do cũ.
+
+  Hướng còn lại nếu quyết dứt điểm: bỏ HTTP thật, dùng `MockMvc` + `asyncDispatch` cho các ca SSE.
+  Đổi lại mất phần kiểm "đường ống SSE chạy được trên Tomcat thật", vốn là lý do các ca này tồn tại.
+  Cần cân nhắc chứ không nên đổi cho hết đỏ.
+
 ### Ghi chú báo cáo
 
 - **Mục 2.3 / 3.4:** bộ ba lỗi #2, #4, #5 là ví dụ rất tốt cho ý *tiêu chuẩn tiếp cận phải ĐO, không
