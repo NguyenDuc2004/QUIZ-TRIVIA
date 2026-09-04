@@ -175,6 +175,44 @@ body {
   background: var(--color-canvas);
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   LỀ TRÊN CỦA TIÊU ĐỀ — hệ quả của việc KHÔNG nạp preflight
+
+   Dự án cố ý không nạp preflight của Tailwind (xem đầu tệp), nên `h1`–`h6` giữ nguyên lề mặc
+   định của trình duyệt: `margin-block-start` cỡ 0,83em–1,33em. Ant Design có token
+   `titleMarginTop: '0'` nhưng nó chỉ áp cho tiêu đề ĐỨNG SAU một phần tử khác, không áp cho
+   tiêu đề đứng một mình — phần đó AntD trông cậy vào preflight, thứ ở đây không có.
+
+   Hệ quả không nằm ở khoảng cách mà ở CĂN HÀNG. Trong một hàng flex, lề trên làm hộp của tiêu
+   đề cao hơn hẳn phần chữ của nó, nên:
+     - `PageHeader`: nút hành động bên phải nằm CAO HƠN tiêu đề, ở mọi trang.
+     - "Gợi ý cho bạn": dòng mô tả bên cạnh trôi lên trên, dù hàng đã đặt `items-center`.
+
+   Người dùng chỉ ra chỗ thứ hai. Chỗ thứ nhất có ở mọi trang mà không ai để ý, vì lệch đều thì
+   trông giống một lựa chọn thiết kế.
+
+   ── Đã đọc mã nguồn AntD để chắc, không suy đoán ──
+   `antd/es/typography/style/index.js` chỉ đặt `titleMarginTop` qua bộ chọn ANH-EM:
+   `& + h1.ant-typography`, và `div, p, h1… + h1…`. Tiêu đề đứng ĐẦU khối không khớp bộ chọn nào,
+   nên nó không nhận luật nào từ AntD — phần đó AntD giao cho preflight.
+
+   Luật dưới đây cố ý để điểm đặc hiệu THẤP (0,1,1). Hai bộ chọn anh-em của AntD là (0,2,1) nên
+   chúng vẫn thắng: khoảng cách 1,2em giữa hai tiêu đề xếp chồng được giữ nguyên, và chỉ trường
+   hợp đứng đầu khối mới bị đưa về 0. Đúng cái AntD định làm, không hơn.
+   ══════════════════════════════════════════════════════════════════ */
+h1.ant-typography,
+h2.ant-typography,
+h3.ant-typography,
+h4.ant-typography,
+h5.ant-typography,
+.ant-typography h1,
+.ant-typography h2,
+.ant-typography h3,
+.ant-typography h4,
+.ant-typography h5 {
+  margin-top: 0;
+}
+
 /* Tiêu đề card cắt 2 dòng như lưới khoá học của Udemy */
 .line-clamp-2-title {
   display: -webkit-box;

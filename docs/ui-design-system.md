@@ -286,6 +286,28 @@ nên phải sống trong hệ thống thiết kế. Component chỉ gọi tên l
 tiêu đề dính, phải bỏ lớp đó ra khỏi panel ấy** — `overflow: hidden` tạo một vùng cuộn mới và phần tử
 `position: sticky` bên trong sẽ chết.
 
+### Cạm bẫy: lề trên của tiêu đề (hệ quả của việc không nạp preflight)
+
+Dự án cố ý không nạp preflight của Tailwind, nên `h1`–`h6` giữ **lề trên mặc định của trình duyệt**.
+Ant Design có token `titleMarginTop` nhưng đọc mã nguồn thì nó chỉ áp qua bộ chọn **anh-em**
+(`& + h1.ant-typography`, `div, p, h1… + h1…`) — tiêu đề **đứng đầu khối** không khớp bộ chọn nào, và
+phần đó AntD giao cho preflight, thứ ở đây không có.
+
+Hậu quả không nằm ở khoảng cách mà ở **căn hàng**: trong một hàng flex, lề trên làm hộp của tiêu đề
+cao hơn hẳn phần chữ của nó, nên `items-center` căn theo hộp chứ không theo chữ.
+
+| Chỗ | Biểu hiện |
+|---|---|
+| `PageHeader` | Nút hành động bên phải nằm **cao hơn** tiêu đề — ở **mọi trang** |
+| "Gợi ý cho bạn" | Dòng mô tả bên cạnh trôi lên trên, dù hàng đã đặt `items-center` |
+
+Đã reset ở `index.css` với điểm đặc hiệu **thấp** (0,1,1) để hai bộ chọn anh-em của AntD (0,2,1) vẫn
+thắng — khoảng cách 1,2em giữa hai tiêu đề xếp chồng giữ nguyên, chỉ trường hợp đứng đầu khối về 0.
+
+**Hàng chỉ gồm chữ dùng `items-baseline`, không dùng `items-center`.** Căn tâm hộp giữa chữ 20px và
+chữ 12px vẫn lệch vài pixel vì hai hộp cao khác nhau; thứ mắt đọc là **đường chân chữ**. Hàng có lẫn
+phần tử dạng khối (thẻ nhãn, avatar, nút) thì vẫn `items-center`.
+
 ### Cạm bẫy: màu tuyệt đối ghép với màu token
 
 `--color-ink` là màu **chữ**, nên ở chế độ tối nó lật thành gần trắng. Ghép `bg-ink` với `text-white`

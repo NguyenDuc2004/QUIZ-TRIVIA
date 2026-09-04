@@ -72,7 +72,7 @@ export default function RecommendedQuizzes() {
   if (data.items.length === 0) {
   return (
       <section className="soft-panel p-5">
-        <div className="mb-2 flex flex-wrap items-center gap-3">
+        <div className="mb-2 flex flex-wrap items-baseline gap-3">
           <Title level={4} className="mb-0!">
             Gợi ý cho bạn
           </Title>
@@ -87,7 +87,7 @@ export default function RecommendedQuizzes() {
 
   return (
     <section className="soft-panel p-5">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-baseline gap-3">
         <Title level={4} className="mb-0!">
           Gợi ý cho bạn
         </Title>
