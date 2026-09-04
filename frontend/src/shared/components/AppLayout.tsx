@@ -108,7 +108,17 @@ export default function AppLayout() {
 
        Không cần thêm gì cho phần nội dung: Ant Design đã đặt sẵn `.ant-layout-content { flex: auto }`
        nên nó tự giãn — chỉ thiếu đúng chiều cao tối thiểu của khung ngoài. */
-    <Layout className="min-h-screen!">
+    /* `overflow-x-clip` là chốt cuối, không phải giải pháp chính.
+
+       Quy ước của dự án: nội dung rộng (bảng, sơ đồ, khối mã) phải tự cuộn trong khung của chính nó,
+       thân trang KHÔNG bao giờ cuộn ngang. Khi một phần tử nào đó lỡ rộng quá — và trên hàng trăm màn
+       hình thì sớm muộn sẽ có — hệ quả không dừng ở phần tử đó: cả trang bị đẩy sang phải, thanh điều
+       hướng và tiêu đề bị cắt mất bên trái, và người dùng không hiểu vì sao. Đúng lỗi trong hai ảnh
+       chụp mà người dùng gửi.
+
+       Dùng `clip` chứ không `hidden`: `overflow-hidden` biến phần tử thành khối cuộn, làm hỏng
+       `position: sticky` của thanh điều hướng ngay bên trong. */
+    <Layout className="min-h-screen! overflow-x-clip">
       {/* `gap-3` trên màn hẹp, `gap-6` từ `lg` trở lên: khoảng cách 24px giữa bảy phần tử là quá rộng
           khi chỉ còn 360px chiều ngang. */}
       <Header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-white! px-4! lg:gap-6 lg:px-6!">
@@ -131,14 +141,25 @@ export default function AppLayout() {
             Ẩn dưới `md` và thay bằng một nút kính lúp: ô tìm kiếm chiếm nhiều chiều ngang nhất trong
             thanh này, mà trên điện thoại chiều ngang là thứ khan hiếm nhất. Nút vẫn đưa người dùng tới
             đúng trang Khám phá, nơi đã có sẵn một ô tìm kiếm đầy đủ — không mất chức năng nào. */}
-        <Link to="/quizzes" className="md:hidden">
+        <Link to="/quizzes" className="md:hidden!">
           <Button type="text" aria-label="Tìm quiz" icon={<SearchOutlined />} />
         </Link>
 
         <Input.Search
           allowClear
           placeholder="Tìm quiz theo tiêu đề"
-          className="hidden max-w-xl flex-1 md:block"
+          /* Hậu tố `!` là BẮT BUỘC ở đây, và đây là lần thứ BA cái bẫy này xuất hiện trong dự án
+             (xem ui-design-system.md §3: `a { color }` nuốt màu link, rồi `.ant-layout { min-height: 0 }`
+             làm chân trang trồi lên).
+
+             Ant Design chèn `.ant-input-search { display: inline-block }` lúc chạy, ở NGOÀI layer của
+             Tailwind. Theo luật xếp tầng, luật ngoài layer thắng luật trong layer — nên `hidden`
+             (`display: none`) không có `!` bị đè, và ô tìm kiếm vẫn hiện trên điện thoại bên cạnh nút
+             kính lúp vừa thêm. Triệu chứng: hai ô tìm kiếm cạnh nhau, và cái thứ hai bị bóp gần bằng 0
+             nhưng vẫn chiếm chỗ, đẩy cả thanh rộng quá màn hình.
+
+             `md:block!` cũng cần `!` vì nó phải thắng lại chính `hidden!` ở trên. */
+          className="hidden! max-w-xl flex-1 md:block!"
           style={{ borderRadius: 9999 }}
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
@@ -150,7 +171,10 @@ export default function AppLayout() {
         {/* Dàn menu ngang: chỉ từ `lg` trở lên. Dưới ngưỡng đó nó nằm trong ngăn kéo bên dưới —
             năm mục cộng ô tìm kiếm cộng nút cộng chuông cộng avatar trên một hàng thì tràn hẳn ra
             ngoài màn hình điện thoại. */}
-        <nav className="hidden items-center gap-5 lg:flex">
+        {/* `min-w-0` để dàn menu CO ĐƯỢC khi cần: mặc định flex item không co nhỏ hơn nội dung, nên
+            năm mục chữ không xuống dòng sẽ ép cả thanh rộng ra thay vì tự nhường chỗ. Đó là nguyên
+            nhân thanh điều hướng vượt quá màn hình ở khoảng 1000–1200px, ngay trên ngưỡng `lg`. */}
+        <nav className="hidden min-w-0 items-center gap-5 lg:flex">
           <NavLink to="/quizzes" className={navLinkClass}>
             Khám phá
           </NavLink>
@@ -206,8 +230,22 @@ export default function AppLayout() {
                 >
                   {user.displayName?.trim().charAt(0).toUpperCase()}
                 </Avatar>
-                <Text className="text-ink! text-sm font-bold">{user.displayName}</Text>
-                <Tag color={ROLE_COLOR[user.role]} className="mr-0!">
+                {/* Tên và nhãn vai trò ẩn dưới `md`.
+
+                    Khối này là thứ chiếm nhiều chiều ngang nhất bên phải thanh — một tên dài cộng nhãn
+                    vai trò dễ tới 200px — và nó `shrink-0` nên không bao giờ nhường chỗ. Trên điện thoại
+                    đó là phần lớn màn hình dành cho một thông tin người dùng đã biết: họ đang đăng nhập
+                    bằng tài khoản của chính họ.
+
+                    Avatar và mũi nhọn thì giữ: avatar là đích bấm, mũi nhọn là dấu hiệu đây là menu.
+                    Tên và vai trò vẫn đọc được ngay khi mở menu tài khoản.
+
+                    Khu quản trị đã làm đúng việc này từ trước (`hidden sm:inline`); khu học tập thì
+                    chưa — hai khung giao diện lệch nhau ở cùng một chi tiết. */}
+                <Text className="text-ink! hidden text-sm font-bold md:inline">
+                  {user.displayName}
+                </Text>
+                <Tag color={ROLE_COLOR[user.role]} className="mr-0! hidden md:inline-block">
                   {ROLE_LABEL[user.role] ?? user.role}
                 </Tag>
                 <DownOutlined className="text-ink-soft text-[10px]" />

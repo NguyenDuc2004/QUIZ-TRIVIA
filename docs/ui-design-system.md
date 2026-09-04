@@ -219,6 +219,27 @@ và sinh thanh cuộn vô cớ.
 
 **Vùng chạm tối thiểu 44px** cho mục trong ngăn kéo và các nút chính trên màn hẹp.
 
+### Hai lỗi đã gặp khi làm phần này — đọc trước khi sửa thanh điều hướng
+
+**1. `hidden` của Tailwind KHÔNG ăn trên component Ant Design.** Đây là lần thứ **ba** cái bẫy ở §3 xuất
+hiện: Ant Design chèn `.ant-input-search { display: inline-block }` lúc chạy, ở ngoài layer của Tailwind,
+nên `hidden` không có `!` bị đè. Triệu chứng: ô tìm kiếm vẫn hiện trên điện thoại **bên cạnh** nút kính lúp
+vừa thêm — hai ô tìm kiếm cạnh nhau, cái thứ hai bị bóp gần bằng 0 nhưng vẫn chiếm chỗ. Phải viết
+`hidden! md:block!`; `md:block` cũng cần `!` để thắng lại chính `hidden!`.
+
+**2. Một phần tử rộng quá làm cả trang bị đẩy sang phải.** Hệ quả không dừng ở phần tử đó: thanh điều
+hướng và tiêu đề bị **cắt mất bên trái**, và không có gì trên màn hình cho biết vì sao. Hai nguyên nhân
+thật đã tìm được:
+
+- Khối tài khoản (avatar + tên đầy đủ + nhãn vai trò) đặt `shrink-0` nên không bao giờ nhường chỗ — dễ tới
+  200px cho một thông tin người dùng đã biết. Ẩn tên và nhãn dưới `md`, giữ avatar và mũi nhọn.
+- Dàn menu ngang thiếu `min-w-0`: mặc định flex item không co nhỏ hơn nội dung, nên năm mục chữ không
+  xuống dòng ép cả thanh rộng ra.
+
+Khung ngoài có thêm `overflow-x-clip` làm **chốt cuối**, không phải giải pháp chính. Dùng `clip` chứ không
+`hidden`: `overflow-hidden` biến phần tử thành khối cuộn và làm hỏng `position: sticky` của thanh điều
+hướng ngay bên trong.
+
 ## 5. Nút
 
 | Loại | Thể hiện | Code |
