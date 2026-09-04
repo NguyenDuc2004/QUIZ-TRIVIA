@@ -23,7 +23,6 @@ import {
 } from '@ant-design/icons'
 import Pill from '@/shared/components/Pill'
 import PageHeader from '@/shared/components/PageHeader'
-import { useAuthStore } from '@/features/auth/store/authStore'
 import { useUploadMaterial } from '@/features/ai/hooks/useAiQueries'
 import type { AskableMaterial, ChatMessage, ChatSession } from '../api/chatApi'
 import {
@@ -50,11 +49,6 @@ export default function AssistantPage() {
   const [draft, setDraft] = useState('')
   const [xoaPhien, setXoaPhien] = useState<ChatSession | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
-
-  // Người học không sở hữu học liệu (V10): họ chỉ hỏi trên tài liệu Creator đã bật chia sẻ. Nói
-  // "tài liệu của bạn" hay mời họ vào trang Học liệu đều là hứa thứ họ không có quyền chạm tới.
-  const role = useAuthStore((state) => state.user?.role)
-  const canCreate = role === 'CREATOR' || role === 'ADMIN'
 
   // null = hỏi trên mọi tài liệu đọc được; có giá trị = giới hạn trong đúng một tài liệu.
   // Hữu ích khi ôn đúng một chương và không muốn câu trả lời lẫn tài liệu khác.
@@ -176,31 +170,27 @@ export default function AssistantPage() {
             </div>
           ) : !materials || materials.length === 0 ? (
             <div className="px-1 pb-1">
-              {canCreate ? (
-                <Upload
-                  accept=".pdf,.docx,.doc,.txt"
-                  showUploadList={false}
-                  className="block"
-                  beforeUpload={(file) => {
-                    uploadMaterial.mutate({ file })
-                    return false
-                  }}
-                >
-                  <button type="button" className="chat-them-hoc-lieu">
-                    {uploadMaterial.isPending ? <Spin size="small" /> : <PlusOutlined />}
-                    <span className="text-xs font-bold">Thêm học liệu</span>
-                    <span className="text-[10px]">PDF, DOCX hoặc TXT</span>
-                  </button>
-                </Upload>
-              ) : (
-                // Người học KHÔNG có nút ở đây, và đó là chủ ý. Cả nhóm endpoint học liệu đứng sau
-                // `hasAnyRole('CREATOR','ADMIN')`, nên một nút "Thêm học liệu" ở màn hình của họ chỉ
-                // dẫn tới lỗi 403 — mời làm một việc rồi chặn lại là tệ hơn không mời.
-                <Text className="text-ink-soft block px-2 py-4 text-center text-xs">
-                  Chưa có học liệu nào được chia sẻ. Trợ lý sẽ nói là không biết cho tới khi người
-                  tạo nội dung chia sẻ tài liệu.
-                </Text>
-              )}
+              {/* Nút này hiện với MỌI vai trò kể từ 04/09/2026.
+
+                  Trước đó người học không nạp được tài liệu nào, và vì trợ lý chỉ trả lời dựa trên
+                  học liệu nên chức năng của họ chết hẳn khi chưa ai bấm nút chia sẻ — một điều kiện
+                  họ không tác động được. Nay họ nạp được tài liệu riêng (tối đa 10, backend cưỡng
+                  chế ở MaterialService). */}
+              <Upload
+                accept=".pdf,.docx,.doc,.txt"
+                showUploadList={false}
+                className="block"
+                beforeUpload={(file) => {
+                  uploadMaterial.mutate({ file })
+                  return false
+                }}
+              >
+                <button type="button" className="chat-them-hoc-lieu">
+                  {uploadMaterial.isPending ? <Spin size="small" /> : <PlusOutlined />}
+                  <span className="text-xs font-bold">Thêm học liệu</span>
+                  <span className="text-[10px]">PDF, DOCX hoặc TXT</span>
+                </button>
+              </Upload>
             </div>
           ) : (
             <ul className="m-0 list-none p-0">
@@ -251,7 +241,6 @@ export default function AssistantPage() {
               <Skeleton active paragraph={{ rows: 5 }} />
             ) : messages.length === 0 ? (
               <ManHinhChao
-                canCreate={canCreate}
                 goiY={goiY}
                 coHocLieu={Boolean(materials && materials.length > 0)}
                 onChon={send}
@@ -305,27 +294,24 @@ export default function AssistantPage() {
                 }}
               />
 
-              {/* Kẹp tệp chỉ có với người được nạp học liệu — cùng lý do với nút ở cột trái. */}
-              {canCreate && (
-                <Upload
-                  accept=".pdf,.docx,.doc,.txt"
-                  showUploadList={false}
-                  beforeUpload={(file) => {
-                    uploadMaterial.mutate({ file })
-                    return false
-                  }}
-                >
-                  <Tooltip title="Nạp thêm tài liệu vào kho — trợ lý dùng được sau khi xử lý xong">
-                    <Button
-                      type="text"
-                      shape="circle"
-                      loading={uploadMaterial.isPending}
-                      icon={<PaperClipOutlined />}
-                      aria-label="Nạp thêm tài liệu"
-                    />
-                  </Tooltip>
-                </Upload>
-              )}
+              <Upload
+                accept=".pdf,.docx,.doc,.txt"
+                showUploadList={false}
+                beforeUpload={(file) => {
+                  uploadMaterial.mutate({ file })
+                  return false
+                }}
+              >
+                <Tooltip title="Nạp thêm tài liệu vào kho — trợ lý dùng được sau khi xử lý xong">
+                  <Button
+                    type="text"
+                    shape="circle"
+                    loading={uploadMaterial.isPending}
+                    icon={<PaperClipOutlined />}
+                    aria-label="Nạp thêm tài liệu"
+                  />
+                </Tooltip>
+              </Upload>
 
               {isStreaming ? (
                 <Tooltip title="Dừng thì phần đã trả lời vẫn được lưu">
@@ -349,14 +335,7 @@ export default function AssistantPage() {
             </div>
             <Text className="text-ink-soft mt-2 block text-xs">
               Trợ lý chỉ dựa trên học liệu. Chưa có tài liệu nào phù hợp thì nó sẽ nói thẳng là không
-              biết, thay vì đoán.{' '}
-              {canCreate ? (
-                <>
-                  Nạp thêm tài liệu ở <Link to="/ai/materials">trang Học liệu</Link>.
-                </>
-              ) : (
-                'Học liệu do người tạo nội dung nạp và chia sẻ.'
-              )}
+              biết, thay vì đoán. Nạp thêm tài liệu ở <Link to="/ai/materials">trang Học liệu</Link>.
             </Text>
           </div>
         </section>
@@ -400,12 +379,10 @@ export default function AssistantPage() {
  * chip nào — chỗ đó dành cho việc nạp tài liệu, là việc duy nhất có ích lúc ấy.
  */
 function ManHinhChao({
-  canCreate,
   goiY,
   coHocLieu,
   onChon,
 }: {
-  canCreate: boolean
   goiY: string[]
   coHocLieu: boolean
   onChon: (cauHoi: string) => void
@@ -419,9 +396,7 @@ function ManHinhChao({
       <Text className="text-ink-soft max-w-md text-xs">
         {coHocLieu
           ? 'Trợ lý đọc học liệu trong kho rồi trả lời kèm đoạn đã dựa vào, để bạn đối chiếu lại.'
-          : canCreate
-            ? 'Kho chưa có tài liệu nào. Nạp một tài liệu trước, trợ lý mới có căn cứ để trả lời.'
-            : 'Kho chưa có tài liệu nào được chia sẻ. Trợ lý sẽ nói là không biết cho tới khi người tạo nội dung chia sẻ tài liệu.'}
+          : 'Kho chưa có tài liệu nào. Nạp một tài liệu trước, trợ lý mới có căn cứ để trả lời.'}
       </Text>
 
       {goiY.length > 0 && (

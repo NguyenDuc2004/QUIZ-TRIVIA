@@ -48,6 +48,7 @@
 | 20/08 (chiều) | **Làm nốt 6 mục hoãn**: FR-11, FR-36, FR-32, FR-12, FR-64, FR-69 — hết mục ⏳ | 6/6 | 🟢 xong |
 | 20/08 (tối) | **Đánh bóng phần người dùng thấy**: số người đã học · sửa hồ sơ + ảnh đại diện · chân trang · hover thẻ quiz · **đăng ký Google nhận đúng vai trò** — 571 test BE / 67 FE | 5/5 | 🟢 xong — 2 lỗi thật do người dùng chỉ ra |
 | 21/08 | **Người học không đổi được ảnh đại diện (403)** — tách đường tải riêng, mỗi người một file · dọn phòng chờ: bỏ IP dưới QR, cho "sẵn sàng" có hậu quả — 578 test BE / 67 FE | 2/2 | 🟢 xong |
+| 04/09 | **Trợ lý học tập vô dụng với người học đơn lẻ** — mở quyền nạp học liệu cho Learner (tách `MaterialController`, trần 10 tài liệu) · kho rỗng thì không gọi mô hình · 2 ca test cũ khẳng định luật đã hết hạn | 6/6 | 🟢 xong — do người dùng chỉ ra |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -3569,6 +3570,83 @@ phải khoá"* kèm lý do, để lần sau không ai đọc nó rồi tưởng 
   khác nhau vì một bên không giới hạn số lượng còn một bên chặn ở một file.
 - **Mục 2.4 (đặc tả use case "Chơi phòng đấu"):** chuyện nút "Sẵn sàng" là ví dụ cho *đặc tả im lặng cũng
   là một loại thiếu sót* — không có dòng nào sai, nhưng chỗ không nói tới thì bị lấp bằng cách dễ nhất.
+
+---
+
+## 📅 T6 — 04/09/2026 — Một câu hỏi của người dùng làm lộ chức năng chết
+
+**Mục tiêu hôm nay:** dựng lại màn Trợ lý học tập theo lối hội thoại hiện đại — và trả lời cho ra ngô
+ra khoai câu hỏi *"thế nếu không ai chia sẻ thì người học coi như chức năng đó phế?"*
+
+### Nhiệm vụ
+- [x] Màn Trợ lý: màn hình chào có chip gợi ý, khung soạn tin nổi, cột trái nền chìm, nút thêm học liệu
+- [x] Truy nguyên câu hỏi của người dùng về tận `ChatPromptBuilder`
+- [x] Mở quyền nạp học liệu cho người học, kèm chốt chặn chi phí thay cho chốt chặn vai trò
+- [x] Kho rỗng thì không gọi mô hình
+- [x] Cập nhật `docs/api.md`, `docs/security.md`, `docs/features/08`
+- [x] Test: 4 unit + 5 integration mới; sửa 2 ca cũ khẳng định luật đã hết hạn
+
+### Đã làm được
+
+**Chức năng chết, không phải chức năng xấu.** Người dùng hỏi một câu rất ngắn và nó chỉ đúng chỗ:
+người học không sở hữu học liệu nào, nên nếu chưa ai bật `shared` thì truy hồi ra 0 đoạn, và
+`ChatPromptBuilder` bắt mô hình nói "chưa có tài liệu để dựa vào". **Mọi** câu hỏi họ gõ đều nhận cùng
+một lời từ chối. Đặc tả features/08 đã tự nhận ra lỗ này từ 13/08 và chữa bằng cột `shared` — nhưng cột
+đó chỉ *chuyển* sự phụ thuộc: chức năng của người học nằm trong tay việc người khác có bấm nút hay
+không, một điều kiện họ không tác động được.
+
+**Vai trò là công cụ tồi để canh chi phí.** Javadoc của `AiController` nói rõ lý do khoá cả cụm
+`/ai/**`: "mỗi lời gọi đều tốn tiền API". Lý do đúng, nhưng cái chặn thì sai đại lượng — nó chặn sạch
+người cần dùng, và không chặn gì ở người đã có quyền. Thay bằng **trần 10 tài liệu/người học**, ghép
+với giới hạn 10MB/tệp sẵn có thành một chặn trên thật. Việc tách quyền làm bằng **một controller
+riêng** chứ không mở lẻ vài phương thức trong lớp đang khoá cả cụm — đúng tiền lệ `ChatController` và
+`FlashcardController` đã đặt, và đúng lý do ghi trong chính đặc tả: cấm cả cụm rồi mở ngoại lệ bên
+trong là cách chắc chắn để sau này có người mở quyền quá tay.
+
+**Hạn mức ngày không đỡ được phần này.** `AiQuotaService` **cố ý** không tính lượt nhúng học liệu — một
+tài liệu chia 50 đoạn là 50 lời gọi cho *một* hành động, tính vào thì hạn mức 20 lượt hết ngay ở tài
+liệu đầu tiên. Nên đường nạp học liệu trước nay không có ai canh chi phí ngoài luật vai trò, và trần
+mới là chốt duy nhất.
+
+**Hai lời gọi tốn tiền cho một kết quả biết trước.** Kho rỗng thì đường đi cũ vẫn nhúng câu hỏi rồi vẫn
+gọi mô hình, chỉ để nghe nó nói đúng cái câu mà prompt đã bắt nó nói. Với người học chưa nạp gì, đó là
+*mọi* câu hỏi họ gõ. `prepare` nay kiểm `hasAskable` trước và trả thẳng câu dựng sẵn.
+
+### Vướng mắc
+
+- **`REQUIRES_NEW` suýt làm câu trả lời biến mất không tiếng động.** Bản đầu lưu câu dựng sẵn qua
+  `ChatMessageWriter.saveAnswer`. Hàm đó là `REQUIRES_NEW` — nó mở transaction riêng, mà phiên vừa tạo
+  còn nằm trong transaction chưa commit của `prepare`. Transaction mới không thấy phiên, rồi **nuốt lỗi
+  theo đúng thiết kế của nó**, để lại một phiên chỉ chứa câu hỏi. Sửa: lưu thẳng bằng
+  `messageRepository` trong chính transaction đó.
+- **`EXIT=$?` sau một pipe là mã của lệnh cuối, không phải của Maven.** Đã ba lần báo "compile sạch"
+  trong khi `mvnw` đang đỏ, vì `./mvnw ... | tail` nuốt mất mã lỗi. Chỉ lộ ra khi một lớp không khởi
+  tạo được lúc chạy test, với thông báo `Unresolved compilation problem`. Từ đây ghi ra file rồi mới
+  đọc mã trả về.
+- **Chạy `prettier` lần thứ hai vào cùng một file.** Dự án không có cấu hình prettier, nên nó đổi hết
+  sang nháy kép và dấu chấm phẩy — 174 dòng đổi cho một thay đổi 30 dòng. Khôi phục rồi sửa tay.
+- **Thêm 5 phép kiểm làm lộ một chỗ cạn tài nguyên trong chính bộ test.** `ChatIntegrationTest` xanh
+  sạch ở 20 ca, nhưng lên 25 thì đỏ đúng **một** ca mỗi lượt chạy — và mỗi lượt một ca khác nhau, với
+  `HTTP/1.1 header parser received no bytes`. Đã dựng mốc so sánh bằng cách `git stash` rồi chạy trên
+  `main` để chắc chắn đây là chuyện do thay đổi này gây ra, không phải lỗi có sẵn.
+
+  Nguyên nhân: helper `ask` tạo `HttpClient` mới cho mỗi lượt (để không ai nhặt phải kết nối chết của
+  lượt trước) nhưng **không đóng** nó. Mỗi client giữ kết nối và luồng chọn riêng cho tới khi bị thu
+  gom, nên số kết nối còn mở tới Tomcat lớn dần theo số phép kiểm. Chú thích sẵn có ở đó nói "cách duy
+  nhất là đừng có bể kết nối nào để mà cũ" — đúng một nửa: phải đóng client nữa. Sửa bằng
+  `try-with-resources` (`HttpClient` là `AutoCloseable` từ JDK 21); hai lượt liên tiếp 25/25 xanh.
+
+### Ghi chú báo cáo
+
+- **Mục 2.3 / 3.4:** đây là ví dụ mạnh cho ý *phân quyền phải bám vào rủi ro cụ thể, không bám vào vai
+  trò cho tiện*. Rủi ro thật là **chi phí**, và vai trò chỉ là một biến gần đúng cho nó — gần đúng đến
+  mức làm chết một trong bốn trụ cột của đề tài với đúng nhóm người dùng mà nó phục vụ. Cặp đôi rất tốt
+  với bảng hai đường tải ảnh hôm 20/08 (cùng một hành động, hai mức quyền, vì hai mức rủi ro).
+- **Mục 3.4 (kiểm thử):** hai ca test cũ phải sửa vì chúng *đúng với đặc tả lúc viết* và đặc tả mới là
+  thứ hết hạn — lần thứ hai trong đồ án gặp đúng dạng này (lần đầu 21/08). Bổ sung được cho ý *bộ test
+  xanh không chứng minh hệ thống đúng*: ở đây bộ test xanh còn đang **bảo vệ** một hành vi sai.
+- **Mục 3.6 / kết luận:** ca `ChatKhoRongTest` cho một lập luận cụ thể về chi phí — bỏ được hai lời gọi
+  mô hình cho mỗi câu hỏi trong tình huống kho rỗng, mà không đánh đổi gì.
 
 ---
 

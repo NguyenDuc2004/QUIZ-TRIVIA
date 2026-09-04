@@ -252,7 +252,10 @@ export default function AppLayout() {
 
           {/* Gom các mục cá nhân của người học vào một menu. Bảy mục phẳng trước đây tràn hàng trên màn
               hình hẹp, và chúng vốn thuộc hai việc khác nhau: học và soạn nội dung. */}
-          <NavGroup label="Học tập" items={MUC_HOC_TAP} />
+          <NavGroup
+            label="Học tập"
+            items={canCreate ? MUC_HOC_TAP : [...MUC_HOC_TAP, MUC_HOC_LIEU_CUA_TOI]}
+          />
 
           {/* Nhóm công cụ soạn nội dung, chỉ hiện với CREATOR và ADMIN */}
           {canCreate && <NavGroup label="Thư viện" items={MUC_THU_VIEN} />}
@@ -352,7 +355,11 @@ export default function AppLayout() {
             Trợ lý AI
           </MucNganKeo>
 
-          <NhomNganKeo label="Học tập" items={MUC_HOC_TAP} onChon={() => setMoMenu(false)} />
+          <NhomNganKeo
+            label="Học tập"
+            items={canCreate ? MUC_HOC_TAP : [...MUC_HOC_TAP, MUC_HOC_LIEU_CUA_TOI]}
+            onChon={() => setMoMenu(false)}
+          />
           {canCreate && (
             <NhomNganKeo label="Thư viện" items={MUC_THU_VIEN} onChon={() => setMoMenu(false)} />
           )}
@@ -401,6 +408,19 @@ const MUC_HOC_TAP: MucMenu[] = [
   { to: '/my-progress', label: 'Tiến độ', moTa: 'Điểm theo thời gian, mạnh yếu theo chủ đề' },
   // "Lịch sử làm bài" đã chuyển sang menu tài khoản (dưới avatar) — xem `accountMenuItems`.
 ]
+
+/**
+ * Học liệu đứng ở hai nhóm khác nhau tuỳ vai trò, và đó là chủ ý.
+ *
+ * Với Creator nó là **nguồn để soạn nội dung** (sinh đề bám tài liệu), nên nằm cùng "Quiz của tôi" và
+ * "Ngân hàng câu hỏi" ở nhóm Thư viện. Với người học nó là **tài liệu của chính mình để hỏi trợ lý**,
+ * không liên quan gì tới soạn nội dung — xếp nó vào nhóm Thư viện sẽ nói sai về việc họ đang làm gì.
+ */
+const MUC_HOC_LIEU_CUA_TOI: MucMenu = {
+  to: '/ai/materials',
+  label: 'Học liệu của tôi',
+  moTa: 'Tài liệu bạn nạp lên để hỏi trợ lý AI',
+}
 
 const MUC_THU_VIEN: MucMenu[] = [
   { to: '/my-quizzes', label: 'Quiz của tôi', moTa: 'Đề đã soạn và thống kê từng đề' },

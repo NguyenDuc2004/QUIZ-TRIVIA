@@ -11,6 +11,7 @@ import com.datn.quizai.ai.repository.MaterialChunkRepository;
 import com.datn.quizai.auth.service.JwtService;
 import com.datn.quizai.common.dto.PageResponse;
 import com.datn.quizai.common.exception.BusinessException;
+import com.datn.quizai.user.domain.Role;
 import com.datn.quizai.user.domain.User;
 import com.datn.quizai.user.repository.UserRepository;
 import org.springframework.context.ApplicationEventPublisher;
@@ -34,6 +35,28 @@ public class MaterialService {
 
     /** Tài liệu lớn hơn mức này sinh ra hàng nghìn lời gọi embedding, chặn từ đầu. */
     private static final long MAX_FILE_BYTES = 10L * 1024 * 1024;
+
+    /**
+     * Trần số tài liệu của một người học.
+     *
+     * <h4>Vì sao trần này thay cho luật vai trò cũ</h4>
+     * Trước 04/09/2026 người học không nạp được tài liệu nào, với lý do ghi trong javadoc của
+     * {@code AiController}: "mỗi lời gọi đều tốn tiền API". Lý do đúng, nhưng vai trò là công cụ tồi
+     * để canh chi phí — nó chặn sạch người cần dùng và không chặn gì ở người đã có quyền. Cái chặn
+     * phải đo đúng đại lượng cần đo, nên nó là số tài liệu.
+     *
+     * <h4>Vì sao đếm TÀI LIỆU chứ không đếm lượt nhúng</h4>
+     * Hạn mức AI theo ngày cố ý <b>không</b> tính lượt nhúng học liệu (xem {@code AiQuotaService}):
+     * một tài liệu chia 50 đoạn là 50 lời gọi cho <i>một</i> hành động, tính vào thì hạn mức 20 lượt
+     * hết ngay ở tài liệu đầu tiên. Nên phần chi phí này vốn không có ai canh, và trần ở đây là chốt
+     * duy nhất. Ghép với {@code MAX_FILE_BYTES} thì thành một chặn trên thật: 10 tài liệu x 10MB.
+     *
+     * <h4>Vì sao chỉ áp cho LEARNER</h4>
+     * Creator soạn nội dung cho nhiều lớp và nhiều đề — 10 tài liệu là con số vô lý với họ, và họ vốn
+     * đã nạp không giới hạn từ trước. Siết thêm ở đây là đổi hành vi của một nhóm không liên quan gì
+     * tới thay đổi này.
+     */
+    static final int MAX_MATERIALS_PER_LEARNER = 10;
 
     private final LearningMaterialRepository materialRepository;
     private final MaterialChunkRepository chunkRepository;
@@ -65,7 +88,10 @@ public class MaterialService {
 
     /** Nạp học liệu từ văn bản dán trực tiếp. */
     @Transactional
-    public MaterialResponse createFromText(CreateMaterialRequest request, UUID ownerId) {
+    public MaterialResponse createFromText(CreateMaterialRequest request,
+                                           JwtService.AuthenticatedUser current) {
+        requireDuoiTran(current);
+        UUID ownerId = current.id();
         LearningMaterial material = save(ownerId, request.title(), request.topic(),
                 MaterialSourceType.TEXT, null);
 
@@ -77,7 +103,10 @@ public class MaterialService {
 
     /** Nạp học liệu từ file PDF/DOCX/TXT — Tika trích text ngay để báo lỗi sớm nếu file hỏng. */
     @Transactional
-    public MaterialResponse createFromFile(MultipartFile file, String title, String topic, UUID ownerId) {
+    public MaterialResponse createFromFile(MultipartFile file, String title, String topic,
+                                           JwtService.AuthenticatedUser current) {
+        requireDuoiTran(current);
+        UUID ownerId = current.id();
         if (file == null || file.isEmpty()) {
             throw BusinessException.badRequest("Chưa chọn file học liệu");
         }
@@ -138,6 +167,29 @@ public class MaterialService {
     }
 
     // ------------------------------------------------------------------ nội bộ
+
+    /**
+     * Chặn người học vượt trần số tài liệu.
+     * <p>
+     * Kiểm <b>trước</b> khi trích text và trước khi ghi dòng nào: quá trần mà vẫn để Tika chạy xong
+     * rồi mới báo lỗi là bắt người dùng chờ vài giây cho một câu từ chối đã biết trước, và với file
+     * 10MB thì đó là vài giây thật.
+     * <p>
+     * Thông báo nói luôn cách gỡ. "Đã đạt giới hạn" mà không cho biết giới hạn là bao nhiêu và phải
+     * làm gì thì người dùng chỉ còn cách thử lại cho tới khi bỏ cuộc.
+     */
+    private void requireDuoiTran(JwtService.AuthenticatedUser current) {
+        if (current.role() != Role.LEARNER) {
+            return;
+        }
+        long dangCo = materialRepository.countByOwnerId(current.id());
+        if (dangCo >= MAX_MATERIALS_PER_LEARNER) {
+            throw BusinessException.conflict(
+                    "Bạn đang có " + dangCo + " học liệu, đã đạt giới hạn "
+                            + MAX_MATERIALS_PER_LEARNER + " tài liệu. Xoá bớt một tài liệu cũ "
+                            + "để nạp thêm.");
+        }
+    }
 
     private LearningMaterial save(UUID ownerId, String title, String topic,
                                   MaterialSourceType sourceType, String fileUrl) {

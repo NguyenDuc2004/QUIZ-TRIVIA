@@ -309,9 +309,22 @@ POST   /api/v1/ai/jobs/{jobId}/approve   Duyệt câu hỏi đã chọn → ngâ
 PATCH  /api/v1/ai/materials/{id}/shared  Bật/tắt chia sẻ học liệu cho người học       ✅
 ```
 
-**Quyền:** các endpoint trên yêu cầu vai trò **CREATOR/ADMIN** (Learner → 403, Guest → 401). Đây là
-công cụ soạn nội dung và mỗi lời gọi đều tốn tiền API, nên không mở cho mọi tài khoản.
-Học liệu và job là **dữ liệu riêng**: của người khác trả **404**.
+**Quyền** (đổi 04/09/2026 — nhóm học liệu tách sang `MaterialController`):
+
+| Nhóm | Ai gọi được | Vì sao |
+|---|---|---|
+| `GET/POST/DELETE /ai/materials*` | **mọi tài khoản đã đăng nhập** | Người học phải nạp được tài liệu của chính họ, không thì trợ lý học tập chết hẳn với người học đơn lẻ — xem features/08 |
+| `PATCH /ai/materials/{id}/shared` | **CREATOR/ADMIN** | Bật `shared` là đẩy tài liệu vào trợ lý của *mọi* người học: một hành vi xuất bản, và một bề mặt kiểm duyệt |
+| `/ai/generate-questions`, `/ai/jobs/*`, `/ai/status` | **CREATOR/ADMIN** | Công cụ soạn nội dung, giữ nguyên luật cũ |
+
+Học liệu và job là **dữ liệu riêng**: của người khác trả **404**. Mở quyền *nạp* không kéo theo mở
+quyền *đọc* — mọi phương thức của `MaterialService` vẫn đi qua `requireOwned`.
+
+**Trần cho người học: 10 tài liệu** (`MaterialService.MAX_MATERIALS_PER_LEARNER`), vượt trả **409**.
+Trần này thay cho luật vai trò cũ trong vai trò canh chi phí: vai trò chặn sạch người cần dùng và
+không chặn gì ở người đã có quyền, còn trần thì đo đúng đại lượng cần đo. Ghép với giới hạn 10MB/tệp
+thì thành một chặn trên thật. Hạn mức AI theo ngày **không** đỡ được việc này — nó cố ý không tính
+lượt nhúng học liệu (xem `AiQuotaService`).
 
 ### 6b. Trợ lý học tập (RAG chatbot) — `/ai/chat`
 ```

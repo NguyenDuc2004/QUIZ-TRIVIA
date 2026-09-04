@@ -16,6 +16,7 @@ import { DeleteOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icon
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
+import { useAuthStore } from '@/features/auth/store/authStore'
 import Pill from '@/shared/components/Pill'
 import RowActions from '@/shared/components/RowActions'
 import type { Material, MaterialStatus } from '../api/aiApi'
@@ -30,6 +31,16 @@ import {
 
 const { Text, Paragraph } = Typography
 const { TextArea } = Input
+
+/**
+ * Trần số học liệu của một người học — bản sao để hiển thị của `MaterialService.MAX_MATERIALS_PER_LEARNER`.
+ *
+ * Con số nằm ở hai nơi, và đó là đánh đổi có ý thức: **backend là nơi cưỡng chế**, thông báo lỗi của nó
+ * mang con số thật. Bản ở đây chỉ để nói trước cho người dùng biết trần là bao nhiêu — không nói trước thì
+ * họ nạp tới tài liệu thứ 11 mới biết là có giới hạn. Hai bên lệch nhau thì hậu quả là một dòng mô tả sai,
+ * không phải một lỗ hổng: người dùng vẫn bị chặn đúng chỗ backend chặn.
+ */
+const MAX_HOC_LIEU_NGUOI_HOC = 10
 
 const STATUS_LABEL: Record<MaterialStatus, string> = {
   PROCESSING: 'Đang xử lý',
@@ -68,6 +79,47 @@ export default function MaterialsPage() {
   const uploadMaterial = useUploadMaterial()
   const deleteMaterial = useDeleteMaterial()
   const setShared = useSetMaterialShared()
+
+  // Người học nạp được tài liệu của CHÍNH họ, nhưng không bật được chia sẻ: bật `shared` là đẩy tài liệu
+  // vào trợ lý của mọi người học khác — hành vi xuất bản, và một bề mặt kiểm duyệt. Backend chặn ở
+  // `MaterialController.setMaterialShared`; ẩn cột ở đây để họ không nhìn thấy một công tắc mà bấm vào
+  // chỉ nhận về lỗi 403.
+  const role = useAuthStore((state) => state.user?.role)
+  const canShare = role === 'CREATOR' || role === 'ADMIN'
+
+  /**
+   * Cột chia sẻ — chỉ dựng cho CREATOR/ADMIN.
+   *
+   * Phải nằm TRONG hàm: nó dùng `setShared`, là mutation của component. Tách khỏi mảng `columns` thay vì
+   * chèn thẳng một biểu thức điều kiện vào giữa: cột này dài hơn 25 dòng, nhét vào giữa mảng thì hai cột
+   * đứng cạnh nó bị đẩy thụt vào một mức khác hẳn và mảng đọc không ra hình dạng nữa.
+   */
+  const cotChiaSe: ColumnsType<Material> = [
+      {
+        title: 'Chia sẻ',
+        key: 'shared',
+        width: 210,
+        render: (_, row) => (
+          <Space direction="vertical" size={0}>
+            <Switch
+              size="small"
+              checked={row.shared}
+              // Chỉ bật được khi đã xử lý xong: tài liệu chưa có vector thì chia sẻ ra cũng không ai
+              // truy xuất được, và một công tắc bật rồi mà vô tác dụng thì tệ hơn là không cho bật
+              disabled={row.status !== 'READY' || setShared.isPending}
+              onChange={(shared) => setShared.mutate({ id: row.id, shared })}
+            />
+            <Text className="text-ink-soft text-xs">
+              {row.status !== 'READY'
+                ? 'Xử lý xong mới chia sẻ được'
+                : row.shared
+                  ? 'Người học hỏi được trên tài liệu này'
+                  : 'Chỉ bạn dùng được'}
+            </Text>
+          </Space>
+        ),
+      },
+  ]
 
   const columns: ColumnsType<Material> = [
     {
@@ -121,30 +173,7 @@ export default function MaterialsPage() {
           <Text className="text-ink-soft text-xs">—</Text>
         ),
     },
-    {
-      title: 'Chia sẻ',
-      key: 'shared',
-      width: 210,
-      render: (_, row) => (
-        <Space direction="vertical" size={0}>
-          <Switch
-            size="small"
-            checked={row.shared}
-            // Chỉ bật được khi đã xử lý xong: tài liệu chưa có vector thì chia sẻ ra cũng không ai
-            // truy xuất được, và một công tắc bật rồi mà vô tác dụng thì tệ hơn là không cho bật
-            disabled={row.status !== 'READY' || setShared.isPending}
-            onChange={(shared) => setShared.mutate({ id: row.id, shared })}
-          />
-          <Text className="text-ink-soft text-xs">
-            {row.status !== 'READY'
-              ? 'Xử lý xong mới chia sẻ được'
-              : row.shared
-                ? 'Người học hỏi được trên tài liệu này'
-                : 'Chỉ bạn dùng được'}
-          </Text>
-        </Space>
-      ),
-    },
+    ...(canShare ? cotChiaSe : []),
     {
       title: '',
       key: 'actions',
@@ -172,8 +201,12 @@ export default function MaterialsPage() {
   return (
     <Space direction="vertical" size="large" className="w-full">
       <PageHeader
-        title="Học liệu"
-        description="Tài liệu bạn nạp vào để AI sinh câu hỏi bám theo nội dung, thay vì bịa."
+        title={canShare ? 'Học liệu' : 'Học liệu của tôi'}
+        description={
+          canShare
+            ? 'Tài liệu bạn nạp vào để AI sinh câu hỏi bám theo nội dung, thay vì bịa.'
+            : `Tài liệu bạn nạp lên để hỏi trợ lý. Chỉ mình bạn hỏi được trên chúng, tối đa ${MAX_HOC_LIEU_NGUOI_HOC} tài liệu.`
+        }
         actions={
           <>
             <Button onClick={() => setPasteOpen(true)}>Dán văn bản</Button>
