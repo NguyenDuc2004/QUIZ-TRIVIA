@@ -83,7 +83,7 @@ export default function MaterialsPage() {
             {STATUS_LABEL[value]}
           </Tag>
           {row.errorMessage && (
-            <Text className="text-xs text-red-600">{row.errorMessage}</Text>
+            <Text className="text-xs text-urgent">{row.errorMessage}</Text>
           )}
         </Space>
       ),
@@ -179,7 +179,7 @@ export default function MaterialsPage() {
         />
       )}
 
-      <div className="border border-line bg-white">
+      <div className="border border-line bg-surface">
         <Table<Material>
           scroll={{ x: 'max-content' }}
           rowKey="id"
@@ -205,7 +205,7 @@ export default function MaterialsPage() {
         />
       </div>
 
-      <div className="border border-line bg-white p-5">
+      <div className="border border-line bg-surface p-5">
         <Text className="font-bold!">Tiếp theo</Text>
         <Paragraph className="mt-2! mb-3! text-ink-soft">
           Khi tài liệu đã ở trạng thái <b>Sẵn sàng</b>, sang trang Sinh đề bằng AI để tạo câu hỏi

@@ -113,10 +113,10 @@ export default function AdminAiUsagePage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="border border-line bg-white p-4">
+        <div className="border border-line bg-surface p-4">
           <Statistic title="Tổng lượt gọi" value={data.tongLuotGoi} />
         </div>
-        <div className="border border-line bg-white p-4">
+        <div className="border border-line bg-surface p-4">
           <Statistic
             title="Tỉ lệ thất bại"
             value={tiLeThatBai}
@@ -126,7 +126,7 @@ export default function AdminAiUsagePage() {
           />
           <Text className="text-ink-soft text-xs">{data.luotThatBai} / {data.tongLuotGoi} lượt</Text>
         </div>
-        <div className="border border-line bg-white p-4">
+        <div className="border border-line bg-surface p-4">
           <Statistic
             title="Tổng token"
             value={data.tongTokenVao + data.tongTokenRa}
@@ -136,7 +136,7 @@ export default function AdminAiUsagePage() {
             vào {data.tongTokenVao.toLocaleString('vi-VN')} · ra {data.tongTokenRa.toLocaleString('vi-VN')}
           </Text>
         </div>
-        <div className="border border-line bg-white p-4">
+        <div className="border border-line bg-surface p-4">
           <Statistic title="Độ trễ P95" value={ms(data.doTreP95Ms)} />
           <Text className="text-ink-soft text-xs">trung bình {ms(data.doTreTrungBinhMs)}</Text>
         </div>

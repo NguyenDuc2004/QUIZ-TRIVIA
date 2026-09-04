@@ -195,7 +195,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
           {locked ? (
             <QuestionReview question={mergeFeedback(question, feedback[question.questionId])} />
           ) : (
-            <div className="border border-line bg-white p-5">
+            <div className="border border-line bg-surface p-5">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <Text className="text-ink-soft text-xs font-bold">
                   Câu {index + 1}/{questions.length}
@@ -257,7 +257,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
             />
           )}
 
-          <div className="border border-line bg-white p-4">
+          <div className="border border-line bg-surface p-4">
             <Text className="text-ink-soft text-xs">Tiến độ</Text>
             <Progress
               percent={Math.round((answeredCount / questions.length) * 100)}
@@ -285,7 +285,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
                         ? 'border-ink bg-ink text-white'
                         : done
                           ? 'border-line bg-surface-subtle text-ink'
-                          : 'border-line bg-white text-ink-soft'
+                          : 'border-line bg-surface text-ink-soft'
                     }`}
                   >
                     {i + 1}

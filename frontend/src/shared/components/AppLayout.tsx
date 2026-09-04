@@ -3,16 +3,20 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { Avatar, Button, Drawer, Dropdown, Input, Layout, Space, Tag, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import {
+  DesktopOutlined,
   DownOutlined,
   HistoryOutlined,
   LogoutOutlined,
   MenuOutlined,
+  MoonOutlined,
   SearchOutlined,
+  SunOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
 import AppFooter from './AppFooter'
 import { useAuthStore } from '@/features/auth/store/authStore'
+import { useThemeStore, type CheDoMau } from '@/shared/theme/themeStore'
 import NotificationBell from '@/features/notification/components/NotificationBell'
 import { useNotificationSocket } from '@/features/notification/hooks/useNotificationSocket'
 
@@ -41,6 +45,8 @@ export default function AppLayout() {
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
   const [moMenu, setMoMenu] = useState(false)
+  const cheDoMau = useThemeStore((s) => s.cheDo)
+  const datCheDo = useThemeStore((s) => s.datCheDo)
 
   const canCreate = user?.role === 'CREATOR' || user?.role === 'ADMIN'
 
@@ -104,6 +110,40 @@ export default function AppLayout() {
     // giao diện thì lần sau đọc code sẽ tưởng Admin vẫn qua lại được giữa hai khu.
     { type: 'divider' },
     {
+      /*
+       * Chế độ màu là menu con, không phải một công tắc bật/tắt.
+       *
+       * Công tắc chỉ diễn tả được hai trạng thái, mà ở đây có ba — và trạng thái thứ ba mới là mặc
+       * định: "theo hệ thống" nghĩa là trang tự sáng ban ngày, tự tối ban đêm theo thiết lập máy.
+       * Ép nó vào một công tắc thì hoặc mất trạng thái đó, hoặc người dùng không hiểu công tắc đang
+       * ở đâu khi hệ thống vừa đổi.
+       */
+      key: 'theme',
+      icon: cheDoMau === 'dark' ? <MoonOutlined /> : <SunOutlined />,
+      label: 'Giao diện',
+      children: [
+        {
+          key: 'theme-light',
+          icon: <SunOutlined />,
+          label: cheDoMau === 'light' ? 'Sáng ✓' : 'Sáng',
+          onClick: () => datCheDo('light' as CheDoMau),
+        },
+        {
+          key: 'theme-dark',
+          icon: <MoonOutlined />,
+          label: cheDoMau === 'dark' ? 'Tối ✓' : 'Tối',
+          onClick: () => datCheDo('dark' as CheDoMau),
+        },
+        {
+          key: 'theme-system',
+          icon: <DesktopOutlined />,
+          label: cheDoMau === 'system' ? 'Theo hệ thống ✓' : 'Theo hệ thống',
+          onClick: () => datCheDo('system' as CheDoMau),
+        },
+      ],
+    },
+    { type: 'divider' },
+    {
       key: 'logout',
       icon: <LogoutOutlined />,
       label: 'Đăng xuất',
@@ -136,7 +176,7 @@ export default function AppLayout() {
     <Layout className="min-h-screen! overflow-x-clip">
       {/* `gap-3` trên màn hẹp, `gap-6` từ `lg` trở lên: khoảng cách 24px giữa bảy phần tử là quá rộng
           khi chỉ còn 360px chiều ngang. */}
-      <Header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-white! px-4! lg:gap-6 lg:px-6!">
+      <Header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-surface! px-4! lg:gap-6 lg:px-6!">
         {/* Nút mở ngăn kéo điều hướng — chỉ hiện dưới `lg`, đúng chỗ dàn menu ngang bị ẩn đi.
 
             Bọc trong `div` cùng lý do với ô tìm kiếm bên dưới: `<Button>` của Ant Design có luật

@@ -81,7 +81,7 @@ export default function RoomLobbyPage() {
         {/* Hai thẻ, hai việc ngược nhau — chủ phòng và người vào. Viền màu để phân biệt ngay ở khoảng
             cách một mét, thay vì phải đọc tiêu đề mới biết bên nào là bên nào. Chỉ tô viền và tiêu đề,
             KHÔNG tô nền: bên trong là biểu mẫu, và nền màu làm ô nhập với chữ khó đọc. */}
-        <div className="room-card room-card-host bg-white p-5">
+        <div className="room-card room-card-host bg-surface p-5">
           <Text className="room-card-title font-bold!">🎬 Mở phòng mới</Text>
           <Paragraph className="mt-1! mb-4! text-ink-soft text-xs">
             Bạn sẽ là chủ phòng: điều khiển lúc bắt đầu và chuyển câu.
@@ -122,7 +122,7 @@ export default function RoomLobbyPage() {
           </Space>
         </div>
 
-        <div className="room-card room-card-join bg-white p-5">
+        <div className="room-card room-card-join bg-surface p-5">
           <Text className="room-card-title font-bold!">🔑 Vào phòng bằng mã</Text>
           <Paragraph className="mt-1! mb-4! text-ink-soft text-xs">
             Mã phòng gồm 6 chữ số, hoặc quét mã QR chủ phòng chiếu lên.

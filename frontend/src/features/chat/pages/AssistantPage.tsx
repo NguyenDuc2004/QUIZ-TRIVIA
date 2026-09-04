@@ -97,7 +97,7 @@ export default function AssistantPage() {
       {/* Cột trái xếp hai khối (hội thoại, học liệu), khung hội thoại chiếm trọn chiều cao bên phải */}
       <div className="grid gap-4 lg:grid-cols-[260px_1fr] lg:grid-rows-[auto_1fr]">
         {/* Danh sách phiên */}
-        <aside className="border border-line bg-white lg:col-start-1 lg:row-start-1">
+        <aside className="border border-line bg-surface lg:col-start-1 lg:row-start-1">
           <div className="border-b border-line px-4 py-3">
             <Text className="text-xs font-bold">Hội thoại của bạn</Text>
           </div>
@@ -154,7 +154,7 @@ export default function AssistantPage() {
 
         {/* Học liệu hỏi được — trước đây người học không có cách nào biết kho có tài liệu gì, họ chỉ
             thấy tên một tài liệu SAU KHI tình cờ hỏi trúng nó qua khối trích dẫn */}
-        <aside className="border border-line bg-white lg:col-start-1 lg:row-start-2">
+        <aside className="border border-line bg-surface lg:col-start-1 lg:row-start-2">
           <div className="border-b border-line px-4 py-3">
             <Text className="text-xs font-bold">Học liệu hỏi được</Text>
           </div>
@@ -211,7 +211,7 @@ export default function AssistantPage() {
         </aside>
 
         {/* Khung hội thoại */}
-        <section className="flex min-h-[60vh] flex-col border border-line bg-white lg:col-start-2 lg:row-span-2 lg:row-start-1">
+        <section className="flex min-h-[60vh] flex-col border border-line bg-surface lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <div className="flex-1 overflow-y-auto p-4">
             {sessionId && messagesLoading ? (
               <Skeleton active paragraph={{ rows: 5 }} />

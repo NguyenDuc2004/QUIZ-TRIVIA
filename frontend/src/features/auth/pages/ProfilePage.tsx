@@ -90,7 +90,7 @@ export default function ProfilePage() {
 
       {error && <Alert type="error" showIcon message={getApiErrorMessage(error)} />}
 
-      <div className="border border-line bg-white p-5">
+      <div className="border border-line bg-surface p-5">
         {isPending && !cachedUser ? (
           <Spin />
         ) : (
@@ -169,7 +169,7 @@ export default function ProfilePage() {
         )}
       </div>
 
-      <div className="border border-line bg-white p-5">
+      <div className="border border-line bg-surface p-5">
         <Paragraph className="mb-3! font-bold!">Bắt đầu từ đâu</Paragraph>
         <Paragraph className="mb-4! text-ink-soft">
           {canCreate

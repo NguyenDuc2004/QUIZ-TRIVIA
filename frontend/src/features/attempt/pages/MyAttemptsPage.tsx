@@ -94,7 +94,7 @@ export default function MyAttemptsPage() {
         description="Toàn bộ các lần bạn làm quiz, kèm điểm và thời gian."
       />
 
-      <div className="border border-line bg-white">
+      <div className="border border-line bg-surface">
         <Table<AttemptSummary>
           scroll={{ x: 'max-content' }}
           rowKey="id"

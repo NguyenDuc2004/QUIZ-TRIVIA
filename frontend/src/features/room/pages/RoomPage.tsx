@@ -290,7 +290,7 @@ export default function RoomPage() {
             playerCount={players.length}
           />
 
-          <div className="border border-line bg-white p-5">
+          <div className="border border-line bg-surface p-5">
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <Text className="font-bold!">
                 Người chơi ({players.length}) · {room.readyCount} đã sẵn sàng
@@ -325,7 +325,7 @@ export default function RoomPage() {
 
       {room.status === 'PLAYING' && question && (
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          <div className="border border-line bg-white p-5">
+          <div className="border border-line bg-surface p-5">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <Text className="text-ink-soft text-xs font-bold">
                 Câu {question.index + 1}/{question.total}
@@ -441,7 +441,7 @@ export default function RoomPage() {
 
       {room.status === 'FINISHED' && (
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          <div className="border border-line bg-white p-8 text-center">
+          <div className="border border-line bg-surface p-8 text-center">
             <Title level={3} className="mb-2!">
               Ván đấu kết thúc
             </Title>
@@ -505,7 +505,7 @@ function optionTone(
     return MAU_VI_TRI[index % MAU_VI_TRI.length]
   }
   if (closed.correctOptionIds.includes(optionId)) {
-    return 'border-green-500 bg-green-50'
+    return 'border-green-500 bg-correct'
   }
-  return selected.includes(optionId) ? 'border-red-500 bg-red-50' : 'border-line'
+  return selected.includes(optionId) ? 'border-red-500 bg-wrong' : 'border-line'
 }

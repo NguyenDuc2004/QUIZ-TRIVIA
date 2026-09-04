@@ -71,7 +71,7 @@ export default function RecommendedQuizzes() {
 
   if (data.items.length === 0) {
   return (
-      <section className="border border-line bg-white p-5">
+      <section className="border border-line bg-surface p-5">
         <div className="mb-2 flex flex-wrap items-center gap-3">
           <Title level={4} className="mb-0!">
             Gợi ý cho bạn
@@ -86,7 +86,7 @@ export default function RecommendedQuizzes() {
   }
 
   return (
-    <section className="border border-line bg-white p-5">
+    <section className="border border-line bg-surface p-5">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Title level={4} className="mb-0!">
           Gợi ý cho bạn

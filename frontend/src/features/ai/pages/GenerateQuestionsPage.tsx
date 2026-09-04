@@ -100,7 +100,7 @@ export default function GenerateQuestionsPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
-        <aside className="h-fit border border-line bg-white p-5 lg:sticky lg:top-24">
+        <aside className="h-fit border border-line bg-surface p-5 lg:sticky lg:top-24">
           <Form layout="vertical">
             <Form.Item label="Chủ đề" help="Mô tả càng cụ thể, câu hỏi càng đúng trọng tâm">
               <Input
@@ -185,7 +185,7 @@ export default function GenerateQuestionsPage() {
 
         <div className="flex flex-col gap-4">
           {!jobId && (
-            <div className="border border-line bg-white">
+            <div className="border border-line bg-surface">
               <EmptyState
                 title="Chưa có kết quả"
                 hint="Chọn cấu hình bên trái rồi bấm Sinh câu hỏi. Mỗi lần mất khoảng 10–30 giây."
@@ -194,7 +194,7 @@ export default function GenerateQuestionsPage() {
           )}
 
           {running && (
-            <div className="flex flex-col items-center gap-3 border border-line bg-white p-10">
+            <div className="flex flex-col items-center gap-3 border border-line bg-surface p-10">
               <Spin size="large" />
               {/* Nói rõ đang chờ hạn mức hay đang soạn thật: cùng một vòng quay cho cả hai thì
                   người dùng đợi ba phút rồi đi tìm lỗi ở chỗ khác, dù hệ thống vẫn đang chạy. */}
@@ -218,7 +218,7 @@ export default function GenerateQuestionsPage() {
 
           {job?.status === 'SUCCEEDED' && job.result && (
             <>
-              <div className="flex flex-wrap items-center gap-3 border border-line bg-white p-4">
+              <div className="flex flex-wrap items-center gap-3 border border-line bg-surface p-4">
                 <Text className="font-bold!">{questions.length} câu hỏi nháp</Text>
                 <Tag className="mr-0!">{job.result.provider}</Tag>
                 <Text className="text-ink-soft text-xs">
@@ -297,7 +297,7 @@ function DraftQuestionCard({
   onToggle: () => void
 }) {
   return (
-    <div className={`border bg-white p-5 ${checked ? 'border-ink' : 'border-line'}`}>
+    <div className={`border bg-surface p-5 ${checked ? 'border-ink' : 'border-line'}`}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Checkbox checked={checked} onChange={onToggle} />
         <Text className="text-ink-soft text-xs font-bold">Câu {index + 1}</Text>
@@ -313,7 +313,7 @@ function DraftQuestionCard({
           <div
             key={i}
             className={`border p-2 text-sm ${
-              option.correct ? 'border-green-500 bg-green-50' : 'border-line'
+              option.correct ? 'border-green-500 bg-correct' : 'border-line'
             }`}
           >
             {option.content}

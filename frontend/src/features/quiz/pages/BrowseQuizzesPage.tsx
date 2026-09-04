@@ -37,7 +37,7 @@ export default function BrowseQuizzesPage() {
     `rounded border px-3 py-1.5 text-sm font-bold whitespace-nowrap ${
       active
         ? 'border-ink bg-ink text-white'
-        : 'border-line bg-white text-ink hover:border-ink'
+        : 'border-line bg-surface text-ink hover:border-ink'
     }`
 
   return (

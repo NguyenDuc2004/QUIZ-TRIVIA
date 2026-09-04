@@ -16,7 +16,7 @@ export default function ScoreDistributionChart({ buckets }: { buckets: ScoreBuck
   const peak = Math.max(...buckets.map((bucket) => bucket.attemptCount), 1)
 
   return (
-    <div className="border border-line bg-white p-4">
+    <div className="border border-line bg-surface p-4">
       <div className="flex h-40 items-end gap-1">
         {buckets.map((bucket) => (
           <div key={bucket.label} className="flex flex-1 flex-col items-center justify-end gap-1">

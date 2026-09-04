@@ -19,6 +19,15 @@
   --color-brand: #a435f0;
   --color-brand-strong: #5624d0;
   --color-line: #d1d7dc;
+
+  /*
+   * Nền của thẻ, bảng, khối nội dung — thứ trước đây viết thẳng là `bg-white` ở 57 chỗ.
+   *
+   * Phải là token thì chế độ tối mới đổi được. `bg-white` là màu tuyệt đối: ở chế độ tối nó vẫn trắng,
+   * và chữ sáng của Ant Design nằm lên nền trắng đó thành không đọc nổi. Đây là kiểu hỏng chỉ lộ ra khi
+   * mở từng màn hình ra nhìn, không phép kiểm nào bắt được.
+   */
+  --color-surface: #ffffff;
   --color-surface-subtle: #f7f9fa;
   --color-star: #e59819;
   --color-rating: #b4690e;
@@ -70,11 +79,92 @@ body {
   overflow: hidden;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   CHẾ ĐỘ TỐI
+
+   Chỉ định nghĩa lại giá trị của TOKEN, không đụng tới component nào. Nhờ vậy mọi chỗ đã
+   dùng `bg-surface`, `text-ink`, `border-line`… tự đổi theo mà không phải sửa.
+
+   Chọn `[data-theme='dark']` trên <html> chứ không dùng `@media (prefers-color-scheme)` một
+   mình: người dùng phải ĐỔI ĐƯỢC, không chỉ bị hệ điều hành quyết thay. Trạng thái "theo hệ
+   thống" xử lý ở JavaScript — nó đọc thiết lập hệ điều hành rồi đặt đúng thuộc tính này.
+
+   ── Vì sao nền tối KHÔNG dùng đen tuyền ──
+   Đen tuyền `#000` đã có nghĩa riêng trong dự án: nó là nền khu quản trị, một TÍN HIỆU CẢNH
+   BÁO (ui-design-system.md §1). Nếu chế độ tối cũng đen tuyền thì tín hiệu đó biến mất — admin
+   không còn phân biệt được mình đang ở khu quản trị hay chỉ đang bật chế độ tối. Nên nền tối ở
+   đây là xám than `#17181c`, và khu quản trị đen hơn hẳn để vẫn tách ra.
+   ══════════════════════════════════════════════════════════════════ */
+:root[data-theme='dark'] {
+  /* Đảo vai trò: `ink` là màu CHỮ, nên ở nền tối nó phải sáng */
+  --color-ink: #e8eaed;
+  --color-ink-soft: #9aa0a6;
+
+  /* Tím thương hiệu sáng lên một bậc: `--color-brand-strong` (#5624d0) là tím đậm dành cho nền
+     sáng, đặt lên nền tối thì gần như không đọc được — đúng lỗi đã gặp với link ở chân trang. */
+  --color-brand: #c084fc;
+  --color-brand-strong: #b07af0;
+
+  --color-line: #34363b;
+  --color-surface: #202126;
+  --color-surface-subtle: #17181c;
+
+  --color-star: #f0b429;
+  --color-rating: #e0a020;
+  --color-badge: #4a4a2a;
+
+  /* Khu quản trị vẫn phải TỐI HƠN nền chung để giữ vai trò tín hiệu cảnh báo */
+  --color-admin-bg: #000000;
+  --color-admin-line: #2b2f37;
+
+  /* Chân trang: ở chế độ tối nó gần như hoà vào nền, nên nhạt hơn nền một chút để vẫn thấy ranh
+     giới — ngược với chế độ sáng, nơi nó tối hơn nền. */
+  --color-footer-bg: #24252c;
+  --color-footer-line: #3d4059;
+  --color-footer-text: #b9bcc8;
+
+  color-scheme: dark;
+}
+
+/* Nền và màu chữ mặc định của cả trang. Không có hai dòng này thì vùng ngoài các thẻ vẫn trắng. */
+body {
+  background: var(--color-surface-subtle);
+  color: var(--color-ink);
+}
+
+/* ── Ba màu NGỮ NGHĨA phải đảo theo chế độ ───────────────────────
+   Trước đây viết thẳng `bg-green-50` / `bg-red-50` / `text-red-600` — màu tuyệt đối. Ở chế độ
+   tối nền xanh-nhạt và đỏ-nhạt vẫn sáng trưng, mà `--color-ink` lúc đó đã là màu SÁNG, nên chữ
+   trắng nằm trên nền xanh nhạt: không đọc nổi.
+
+   Ba lớp dưới đây giữ đúng ý nghĩa (đúng / sai / gấp) và tự đổi giá trị theo chế độ. */
+.bg-correct {
+  background-color: #f0fdf4;
+}
+.bg-wrong {
+  background-color: #fef2f2;
+}
+.text-urgent {
+  color: #dc2626;
+}
+
+:root[data-theme='dark'] .bg-correct {
+  /* Xanh rất tối, đủ để nhận ra là "đúng" mà chữ sáng vẫn đọc được trên đó */
+  background-color: #10291b;
+}
+:root[data-theme='dark'] .bg-wrong {
+  background-color: #2d1416;
+}
+:root[data-theme='dark'] .text-urgent {
+  /* Sáng hơn hẳn `red-600`: trên nền #202126 màu đó chỉ đạt khoảng 3,4:1 — sát ngưỡng đọc được */
+  color: #f87171;
+}
+
 /* Card ở trang browse: viền mảnh, chỉ nổi shadow khi hover */
 .browse-card {
   border: 1px solid var(--color-line);
   border-radius: 4px;
-  background: #fff;
+  background: var(--color-surface);
   transition:
     box-shadow 0.15s ease,
     border-color 0.15s ease;
@@ -168,6 +258,42 @@ body {
 .room-option-d {
   border-color: #22c55e;
   background: #f0fdf4;
+}
+
+/* ── Bản chế độ tối cho các lớp trang trí ────────────────────────
+   Những lớp bên trên dùng màu tuyệt đối vì chúng sinh ra khi chỉ có chế độ sáng. Ở nền tối
+   chúng hoặc chói loá (nền pastel), hoặc chìm hẳn (chữ tím đậm, xanh đậm). Chỉ đổi ĐỘ SÁNG,
+   giữ nguyên tông màu — người dùng vẫn nhận ra đỏ là A, xanh dương là B. */
+
+:root[data-theme='dark'] .room-option-a {
+  border-color: #b91c1c;
+  background: #2d1416;
+}
+:root[data-theme='dark'] .room-option-b {
+  border-color: #1d4ed8;
+  background: #131c31;
+}
+:root[data-theme='dark'] .room-option-c {
+  border-color: #a16207;
+  background: #2a2310;
+}
+:root[data-theme='dark'] .room-option-d {
+  border-color: #15803d;
+  background: #10291b;
+}
+
+/* Huy hiệu đã mở: vàng nhạt thành vàng tối, viền giữ vàng để vẫn "được thưởng" */
+:root[data-theme='dark'] .badge-earned {
+  border-color: #a16207;
+  background: linear-gradient(160deg, #2a2310, #332b12);
+}
+
+/* Tiêu đề hai thẻ ở sảnh phòng đấu: tím đậm và xanh đậm chìm hẳn trên nền tối */
+:root[data-theme='dark'] .room-card-host .room-card-title {
+  color: #d8b4fe !important;
+}
+:root[data-theme='dark'] .room-card-join .room-card-title {
+  color: #7dd3fc !important;
 }
 
 /* ── Khối công bố điểm ở màn kết quả ─────────────────────────────

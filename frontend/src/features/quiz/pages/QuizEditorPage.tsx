@@ -171,7 +171,7 @@ export default function QuizEditorPage() {
         <Alert type="warning" showIcon message="Danh sách câu hỏi đã thay đổi nhưng chưa lưu." />
       )}
 
-      <div className="border border-line bg-white">
+      <div className="border border-line bg-surface">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <Text className="font-bold!">Câu hỏi trong quiz</Text>
           <Text className="text-ink-soft text-xs">

@@ -130,6 +130,42 @@ Icon bên trong `<a>` cũng phải đặt màu **tường minh**: nó chỉ th�
 **Cách kiểm:** không tin vào class đã viết — đọc màu đã render (`getComputedStyle(el).color`). Lỗi này từng
 làm toàn bộ 10 mục trên thanh điều hướng khu học tập ra màu tím trong khi code ghi `text-ink`.
 
+## 2.1. Chế độ sáng / tối
+
+Ba trạng thái, chọn ở menu tài khoản: **Sáng · Tối · Theo hệ thống**. Mặc định là *theo hệ thống* — chỉ
+có hai lựa chọn thì lần đầu vào web người dùng bị áp một chế độ họ không chọn, và nếu đó là Sáng trong khi
+cả máy đang ở chế độ tối thì trang này là thứ duy nhất chói mắt. Đã chọn tay thì lựa chọn đó **thắng** hệ
+điều hành, kể cả khi hệ điều hành đổi sau.
+
+**Cách hoạt động:** thuộc tính `data-theme` trên `<html>`, đặt **trước khi React render** (`main.tsx`).
+Đặt trong `useEffect` là quá muộn — trang vẽ xong một khung sáng rồi mới nhảy sang tối, và cái nháy trắng
+đó đúng là thứ người bật chế độ tối muốn tránh nhất.
+
+**Hai nơi khai màu, bắt buộc cùng giá trị:** `:root[data-theme='dark']` trong `index.css` (cho Tailwind) và
+`darkColors` trong `antdTheme.ts` (cho Ant Design). Hai hệ nhận màu theo hai đường khác nhau; lệch nhau thì
+thẻ của Ant Design và thẻ dựng bằng Tailwind đứng cạnh nhau sẽ khác màu nền.
+
+### Bốn quyết định trong bảng màu tối
+
+| Quyết định | Vì sao |
+|---|---|
+| Nền tối là **xám than `#17181c`**, không phải đen tuyền | Đen tuyền đã có nghĩa riêng: nền khu quản trị, một *tín hiệu cảnh báo* (§1). Chế độ tối cũng đen tuyền thì tín hiệu đó biến mất — admin không phân biệt được đang ở khu quản trị hay chỉ đang bật chế độ tối |
+| **Nút chính đảo thành nền sáng chữ tối** | Ở chế độ sáng nền đen là thứ nổi nhất trên trang trắng; ở chế độ tối nút đen trên nền xám than gần như biến mất, và nút quan trọng nhất màn hình lại là thứ khó thấy nhất |
+| Tím thương hiệu **sáng lên một bậc** | `--color-brand-strong` (#5624d0) là tím đậm cho nền sáng, đặt lên nền tối gần như không đọc được — đúng lỗi đã gặp với link ở chân trang |
+| Chân trang **nhạt hơn** nền chung | Ở chế độ sáng nó tối hơn nền; ở chế độ tối nếu vẫn tối hơn thì nó hoà tan, không còn thấy ranh giới |
+
+### Ba loại màu KHÔNG được viết tuyệt đối
+
+1. **Nền thẻ.** Dùng `bg-surface`, không dùng `bg-white`. `bg-white` ở chế độ tối vẫn trắng, và chữ sáng
+   nằm lên đó thành không đọc nổi. Đã đổi **56 chỗ**.
+2. **Màu ngữ nghĩa đúng/sai/gấp.** Dùng `.bg-correct`, `.bg-wrong`, `.text-urgent` — không dùng
+   `bg-green-50`, `bg-red-50`, `text-red-600`.
+3. **Lớp trang trí ở §4.1.** Mỗi lớp phải có bản `:root[data-theme='dark']` tương ứng; chỉ đổi **độ
+   sáng**, giữ nguyên tông màu để người dùng vẫn nhận ra đỏ là A, xanh dương là B.
+
+**Ngoại lệ duy nhất được phép dùng `bg-white`:** nền của **mã QR**. Camera đọc mã bằng tương phản đen trên
+trắng — đó là ràng buộc vật lý của máy quét, không phải lựa chọn thẩm mỹ.
+
 ## 3. Kiểu chữ
 
 | Vai trò | Cỡ / Đậm |

@@ -52,7 +52,7 @@ export default function LearningPathPage() {
           )}
 
           {data && data.topics.length > 0 && (
-            <div className="border border-line bg-white">
+            <div className="border border-line bg-surface">
               {data.topics.map((item, index) => (
                 <div
                   key={item.topic}

@@ -1,3 +1,4 @@
+import { theme } from 'antd'
 import type { ThemeConfig } from 'antd'
 
 /**
@@ -14,6 +15,26 @@ export const colors = {
   star: '#e59819',
   rating: '#b4690e',
   badge: '#eceb98',
+} as const
+
+/**
+ * Màu cho chế độ tối. Giữ **cùng tên khoá** với `colors` ở trên để chỗ dùng không phải phân biệt.
+ *
+ * Giá trị khớp với khối `:root[data-theme='dark']` trong `index.css`. Hai nơi vì hai hệ khác nhau —
+ * Ant Design nhận màu qua JavaScript, Tailwind qua biến CSS — nhưng phải cùng giá trị, nếu không thẻ
+ * của Ant Design và thẻ dựng bằng Tailwind cạnh nhau sẽ khác màu nền.
+ */
+export const darkColors = {
+  ink: '#e8eaed',
+  inkSoft: '#9aa0a6',
+  brand: '#c084fc',
+  brandStrong: '#b07af0',
+  line: '#34363b',
+  surface: '#202126',
+  surfaceSubtle: '#17181c',
+  star: '#f0b429',
+  rating: '#e0a020',
+  badge: '#4a4a2a',
 } as const
 
 const FONT_FAMILY = "'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif"
@@ -112,6 +133,57 @@ export const appTheme: ThemeConfig = {
     },
     Modal: {
       titleFontSize: 19,
+    },
+  },
+}
+
+/**
+ * Cấu hình Ant Design cho **chế độ tối**.
+ *
+ * Dựng bằng cách chồng lên `appTheme` chứ không viết lại từ đầu: bo góc 4px, chiều cao control, kiểu chữ
+ * và toàn bộ phần `components` là quy ước của dự án, không liên quan tới sáng hay tối. Viết lại từ đầu
+ * nghĩa là hai bản sẽ trôi xa nhau ngay lần sửa quy ước tiếp theo.
+ *
+ * `darkAlgorithm` lo phần còn lại — hàng chục màu nội bộ mà dự án không khai (nền dropdown, màu chữ khi
+ * bị vô hiệu hoá, nền khi rê chuột…). Tự đặt tay từng cái là công việc không bao giờ xong.
+ */
+export const darkTheme: ThemeConfig = {
+  ...appTheme,
+  algorithm: theme.darkAlgorithm,
+  token: {
+    ...appTheme.token,
+    colorPrimary: darkColors.brand,
+    colorLink: darkColors.brandStrong,
+    colorLinkHover: darkColors.brand,
+    colorTextBase: darkColors.ink,
+    colorTextSecondary: darkColors.inkSoft,
+    colorBorder: darkColors.line,
+    colorBorderSecondary: darkColors.line,
+    colorBgLayout: darkColors.surfaceSubtle,
+    colorBgContainer: darkColors.surface,
+    colorBgElevated: darkColors.surface,
+  },
+  components: {
+    ...appTheme.components,
+    /**
+     * Nút hành động chính ở chế độ tối KHÔNG dùng nền đen.
+     *
+     * Ở chế độ sáng nền đen là thứ nổi bật nhất trên trang trắng. Ở chế độ tối thì ngược hẳn: nút đen
+     * trên nền xám than gần như biến mất, và nút quan trọng nhất màn hình lại là thứ khó thấy nhất.
+     * Đảo lại — nền sáng, chữ tối — giữ đúng ý đồ "nút chính là thứ tương phản mạnh nhất".
+     */
+    Button: {
+      ...appTheme.components?.Button,
+      colorPrimary: darkColors.ink,
+      colorPrimaryHover: '#ffffff',
+      colorPrimaryActive: '#c8ccd1',
+      primaryColor: '#17181c',
+      defaultColor: darkColors.ink,
+      defaultBorderColor: darkColors.line,
+    },
+    Tag: {
+      defaultBg: darkColors.surfaceSubtle,
+      defaultColor: darkColors.ink,
     },
   },
 }

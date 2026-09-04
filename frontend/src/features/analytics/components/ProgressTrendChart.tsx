@@ -26,7 +26,7 @@ export default function ProgressTrendChart({ trend }: { trend: AttemptScore[] })
   }))
 
   return (
-    <div className="border border-line bg-white p-4">
+    <div className="border border-line bg-surface p-4">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="h-40 w-full"

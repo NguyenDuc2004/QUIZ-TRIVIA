@@ -148,7 +148,7 @@ export default function AdminLayout() {
       </Sider>
 
       <Layout>
-        <Header className="border-line sticky top-0 z-10 flex h-14! items-center gap-3 border-b bg-white! px-4!">
+        <Header className="border-line sticky top-0 z-10 flex h-14! items-center gap-3 border-b bg-surface! px-4!">
           <button
             type="button"
             onClick={() => setThuGon((truoc) => !truoc)}
@@ -259,8 +259,8 @@ function NavItem({
             thuGon ? 'justify-center px-0' : 'px-3'
           } ${
             isActive
-              ? 'ring-brand/40 bg-white/12 font-bold text-white! ring-1'
-              : 'text-white! hover:bg-white/10'
+              ? 'ring-brand/40 bg-surface/12 font-bold text-white! ring-1'
+              : 'text-white! hover:bg-surface/10'
           }`
         }
       >

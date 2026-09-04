@@ -56,7 +56,7 @@ export default function QuestionReview({
   const isChoice = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE'].includes(question.type)
 
   return (
-    <div className="border border-line bg-white p-5">
+    <div className="border border-line bg-surface p-5">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Text className="text-ink-soft text-xs font-bold">Câu {question.orderIndex + 1}</Text>
         <Tag className="mr-0!">{QUESTION_TYPE_LABEL[question.type]}</Tag>
@@ -85,9 +85,9 @@ export default function QuestionReview({
             const isChosen = chosen.has(option.id)
             // Xanh = đáp án đúng; đỏ = người dùng chọn nhưng sai
             const tone = isCorrect
-              ? 'border-green-500 bg-green-50'
+              ? 'border-green-500 bg-correct'
               : isChosen
-                ? 'border-red-500 bg-red-50'
+                ? 'border-red-500 bg-wrong'
                 : 'border-line'
 
             return (
@@ -108,7 +108,7 @@ export default function QuestionReview({
             </Paragraph>
           </div>
           {question.options.length > 0 && (
-            <div className="border border-green-500 bg-green-50 p-3">
+            <div className="border border-green-500 bg-correct p-3">
               <Text className="text-ink-soft text-xs">
                 {question.type === 'FILL_BLANK' ? 'Đáp án được chấp nhận' : 'Đáp án mẫu'}
               </Text>
