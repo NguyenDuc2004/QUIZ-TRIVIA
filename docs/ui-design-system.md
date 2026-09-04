@@ -221,11 +221,25 @@ và sinh thanh cuộn vô cớ.
 
 ### Hai lỗi đã gặp khi làm phần này — đọc trước khi sửa thanh điều hướng
 
-**1. `hidden` của Tailwind KHÔNG ăn trên component Ant Design.** Đây là lần thứ **ba** cái bẫy ở §3 xuất
-hiện: Ant Design chèn `.ant-input-search { display: inline-block }` lúc chạy, ở ngoài layer của Tailwind,
-nên `hidden` không có `!` bị đè. Triệu chứng: ô tìm kiếm vẫn hiện trên điện thoại **bên cạnh** nút kính lúp
-vừa thêm — hai ô tìm kiếm cạnh nhau, cái thứ hai bị bóp gần bằng 0 nhưng vẫn chiếm chỗ. Phải viết
-`hidden! md:block!`; `md:block` cũng cần `!` để thắng lại chính `hidden!`.
+**1. ĐỪNG đặt lớp `display` (`hidden`, `block`, `flex`…) thẳng lên component Ant Design — hãy bọc nó
+trong một `div` của mình và đặt lên `div` đó.**
+
+Chuyện này đi qua hai bước sai liên tiếp, cả hai đều đáng ghi:
+
+- Bước sai thứ nhất: viết `className="hidden md:block"` lên `<Input.Search>`. Không ăn, vì Ant Design chèn
+  luật `display` cho `.ant-input-search` ở **ngoài** layer của Tailwind (đúng cái bẫy §3, lần thứ ba).
+  Triệu chứng: trên điện thoại có **hai** ô tìm kiếm cạnh nhau, cái thứ hai bị bóp gần bằng 0 nhưng vẫn
+  chiếm chỗ.
+- Bước sai thứ hai: thêm `!` để thắng — `hidden! md:block!`. Nó **thắng thật**, và đó chính là lúc bố cục
+  vỡ. `Input.Search` không phải một ô nhập mà là một **nhóm** gồm ô nhập và nút bấm, có bố cục nội bộ
+  riêng; ép `display: block !important` lên vỏ ngoài làm nhóm đó tách ra — ô nhập trôi lên trên thanh
+  điều hướng, nút kính lúp rơi xuống dòng dưới.
+
+Bài học: `!` cho phép **ghi đè** CSS của Ant Design, nhưng ghi đè được không có nghĩa là **nên** ghi đè.
+Với thuộc tính `display` của một component có bố cục nội bộ, ghi đè là phá. Bọc ngoài bằng `div` của mình
+thì lớp Tailwind ăn bình thường, không cần `!`, và không chạm gì vào bên trong component.
+
+`!` vẫn đúng và vẫn cần cho **màu sắc và kích thước** (xem §3) — chỉ riêng `display` là không.
 
 **2. Một phần tử rộng quá làm cả trang bị đẩy sang phải.** Hệ quả không dừng ở phần tử đó: thanh điều
 hướng và tiêu đề bị **cắt mất bên trái**, và không có gì trên màn hình cho biết vì sao. Hai nguyên nhân

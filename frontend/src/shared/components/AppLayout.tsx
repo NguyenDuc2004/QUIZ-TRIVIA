@@ -122,14 +122,20 @@ export default function AppLayout() {
       {/* `gap-3` trên màn hẹp, `gap-6` từ `lg` trở lên: khoảng cách 24px giữa bảy phần tử là quá rộng
           khi chỉ còn 360px chiều ngang. */}
       <Header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-white! px-4! lg:gap-6 lg:px-6!">
-        {/* Nút mở ngăn kéo điều hướng — chỉ hiện dưới `lg`, đúng chỗ dàn menu ngang bị ẩn đi */}
-        <Button
-          type="text"
-          aria-label="Mở menu"
-          icon={<MenuOutlined />}
-          className="lg:hidden!"
-          onClick={() => setMoMenu(true)}
-        />
+        {/* Nút mở ngăn kéo điều hướng — chỉ hiện dưới `lg`, đúng chỗ dàn menu ngang bị ẩn đi.
+
+            Bọc trong `div` cùng lý do với ô tìm kiếm bên dưới: `<Button>` của Ant Design có luật
+            `display` riêng, đặt lớp ẩn/hiện thẳng lên nó là can thiệp vào bố cục nội bộ của component.
+            Với `Button` thì hậu quả nhẹ hơn `Input.Search`, nhưng nguyên tắc thì giống nhau — và làm
+            đúng ở cả hai chỗ thì không phải nhớ chỗ nào an toàn chỗ nào không. */}
+        <div className="lg:hidden">
+          <Button
+            type="text"
+            aria-label="Mở menu"
+            icon={<MenuOutlined />}
+            onClick={() => setMoMenu(true)}
+          />
+        </div>
 
         <Link to="/quizzes" className="flex items-center gap-1 whitespace-nowrap">
           <span className="text-lg font-extrabold text-ink">Quiz</span>
@@ -141,32 +147,35 @@ export default function AppLayout() {
             Ẩn dưới `md` và thay bằng một nút kính lúp: ô tìm kiếm chiếm nhiều chiều ngang nhất trong
             thanh này, mà trên điện thoại chiều ngang là thứ khan hiếm nhất. Nút vẫn đưa người dùng tới
             đúng trang Khám phá, nơi đã có sẵn một ô tìm kiếm đầy đủ — không mất chức năng nào. */}
-        <Link to="/quizzes" className="md:hidden!">
+        <Link to="/quizzes" className="md:hidden">
           <Button type="text" aria-label="Tìm quiz" icon={<SearchOutlined />} />
         </Link>
 
-        <Input.Search
-          allowClear
-          placeholder="Tìm quiz theo tiêu đề"
-          /* Hậu tố `!` là BẮT BUỘC ở đây, và đây là lần thứ BA cái bẫy này xuất hiện trong dự án
-             (xem ui-design-system.md §3: `a { color }` nuốt màu link, rồi `.ant-layout { min-height: 0 }`
-             làm chân trang trồi lên).
+        {/* Ô tìm kiếm bọc trong một `div` của mình, và lớp ẩn/hiện đặt lên DIV chứ không lên
+            `Input.Search`.
 
-             Ant Design chèn `.ant-input-search { display: inline-block }` lúc chạy, ở NGOÀI layer của
-             Tailwind. Theo luật xếp tầng, luật ngoài layer thắng luật trong layer — nên `hidden`
-             (`display: none`) không có `!` bị đè, và ô tìm kiếm vẫn hiện trên điện thoại bên cạnh nút
-             kính lúp vừa thêm. Triệu chứng: hai ô tìm kiếm cạnh nhau, và cái thứ hai bị bóp gần bằng 0
-             nhưng vẫn chiếm chỗ, đẩy cả thanh rộng quá màn hình.
+            Đặt thẳng lên component Ant Design là sai, và sai theo kiểu khó đoán: `Input.Search` không
+            phải một ô nhập mà là một NHÓM gồm ô nhập và nút bấm, có bố cục nội bộ riêng. Ép
+            `display: block !important` lên vỏ ngoài của nhóm đó làm nhóm vỡ ra — ô nhập trôi lên trên
+            thanh, nút kính lúp rơi xuống dòng dưới. Đúng thứ nhìn thấy trên màn hình laptop.
+            (Bản trước còn thử thêm hậu tố `!` để thắng CSS của Ant Design; nó thắng thật, và đó chính
+            là lúc bố cục vỡ.)
 
-             `md:block!` cũng cần `!` vì nó phải thắng lại chính `hidden!` ở trên. */
-          className="hidden! max-w-xl flex-1 md:block!"
-          style={{ borderRadius: 9999 }}
-          value={keyword}
-          onChange={(event) => setKeyword(event.target.value)}
-          onSearch={(value) =>
-            navigate(value ? `/quizzes?q=${encodeURIComponent(value)}` : '/quizzes')
-          }
-        />
+            Div bọc ngoài là phần tử của mình, không có luật nào của Ant Design chạm tới, nên `hidden`
+            và `md:block` ăn bình thường mà không cần `!` và không phá gì. */}
+        <div className="hidden max-w-xl flex-1 md:block">
+          <Input.Search
+            allowClear
+            placeholder="Tìm quiz theo tiêu đề"
+            className="w-full"
+            style={{ borderRadius: 9999 }}
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+            onSearch={(value) =>
+              navigate(value ? `/quizzes?q=${encodeURIComponent(value)}` : '/quizzes')
+            }
+          />
+        </div>
 
         {/* Dàn menu ngang: chỉ từ `lg` trở lên. Dưới ngưỡng đó nó nằm trong ngăn kéo bên dưới —
             năm mục cộng ô tìm kiếm cộng nút cộng chuông cộng avatar trên một hàng thì tràn hẳn ra
