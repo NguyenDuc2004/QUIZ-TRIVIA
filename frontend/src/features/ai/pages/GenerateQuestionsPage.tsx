@@ -100,7 +100,7 @@ export default function GenerateQuestionsPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
-        <aside className="h-fit border border-line bg-surface p-5 lg:sticky lg:top-24">
+        <aside className="h-fit soft-panel p-5 lg:sticky lg:top-24">
           <Form layout="vertical">
             <Form.Item label="Chủ đề" help="Mô tả càng cụ thể, câu hỏi càng đúng trọng tâm">
               <Input
@@ -185,7 +185,7 @@ export default function GenerateQuestionsPage() {
 
         <div className="flex flex-col gap-4">
           {!jobId && (
-            <div className="border border-line bg-surface">
+            <div className="soft-panel">
               <EmptyState
                 title="Chưa có kết quả"
                 hint="Chọn cấu hình bên trái rồi bấm Sinh câu hỏi. Mỗi lần mất khoảng 10–30 giây."
@@ -194,7 +194,7 @@ export default function GenerateQuestionsPage() {
           )}
 
           {running && (
-            <div className="flex flex-col items-center gap-3 border border-line bg-surface p-10">
+            <div className="flex flex-col items-center gap-3 soft-panel p-10">
               <Spin size="large" />
               {/* Nói rõ đang chờ hạn mức hay đang soạn thật: cùng một vòng quay cho cả hai thì
                   người dùng đợi ba phút rồi đi tìm lỗi ở chỗ khác, dù hệ thống vẫn đang chạy. */}
@@ -218,7 +218,7 @@ export default function GenerateQuestionsPage() {
 
           {job?.status === 'SUCCEEDED' && job.result && (
             <>
-              <div className="flex flex-wrap items-center gap-3 border border-line bg-surface p-4">
+              <div className="flex flex-wrap items-center gap-3 soft-panel p-4">
                 <Text className="font-bold!">{questions.length} câu hỏi nháp</Text>
                 <Tag className="mr-0!">{job.result.provider}</Tag>
                 <Text className="text-ink-soft text-xs">

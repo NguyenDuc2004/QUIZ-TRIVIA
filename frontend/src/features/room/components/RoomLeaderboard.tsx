@@ -14,7 +14,7 @@ export default function RoomLeaderboard({
   title?: string
 }) {
   return (
-    <div className="border border-line bg-surface">
+    <div className="soft-panel">
       <div className="border-b border-line px-4 py-3">
         <Text className="font-bold!">{title}</Text>
       </div>

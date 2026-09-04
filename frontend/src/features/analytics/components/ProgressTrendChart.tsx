@@ -26,7 +26,7 @@ export default function ProgressTrendChart({ trend }: { trend: AttemptScore[] })
   }))
 
   return (
-    <div className="border border-line bg-surface p-4">
+    <div className="soft-panel p-4">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="h-40 w-full"
@@ -80,7 +80,7 @@ export default function ProgressTrendChart({ trend }: { trend: AttemptScore[] })
             key={item.submittedAt + item.quizTitle}
             title={`${item.quizTitle} — ${item.score}/${item.maxScore} điểm`}
           >
-            <span className="border border-line px-2 py-0.5">
+            <span className="border border-line rounded-card px-2 py-0.5">
               <Text className="text-xs">
                 {new Date(item.submittedAt).toLocaleDateString('vi-VN')} · {item.percent}%
               </Text>

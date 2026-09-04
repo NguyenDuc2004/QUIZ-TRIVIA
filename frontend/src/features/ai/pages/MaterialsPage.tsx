@@ -235,7 +235,7 @@ export default function MaterialsPage() {
         />
       )}
 
-      <div className="border border-line bg-surface">
+      <div className="soft-panel">
         <Table<Material>
           scroll={{ x: 'max-content' }}
           rowKey="id"
@@ -261,7 +261,7 @@ export default function MaterialsPage() {
         />
       </div>
 
-      <div className="border border-line bg-surface p-5">
+      <div className="soft-panel p-5">
         <Text className="font-bold!">Tiếp theo</Text>
         <Paragraph className="mt-2! mb-3! text-ink-soft">
           Khi tài liệu đã ở trạng thái <b>Sẵn sàng</b>, sang trang Sinh đề bằng AI để tạo câu hỏi

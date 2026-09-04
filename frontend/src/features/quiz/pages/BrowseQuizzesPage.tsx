@@ -33,10 +33,19 @@ export default function BrowseQuizzesPage() {
     difficulty,
   })
 
+  /**
+   * `text-canvas` chứ KHÔNG `text-white` cho chip đang chọn.
+   *
+   * `bg-ink` lật theo chế độ màu (`--color-ink` là màu CHỮ nên ở nền tối nó thành gần trắng), còn
+   * `text-white` thì tuyệt đối. Ghép hai thứ đó lại là chữ trắng trên nền gần trắng — chip đang chọn
+   * biến mất ở chế độ tối, đúng cái chip mà người dùng cần thấy nhất.
+   *
+   * `--color-canvas` lật cùng chiều với `--color-ink` nên cặp này tương phản ở cả hai chế độ.
+   */
   const chipClass = (active: boolean) =>
-    `rounded border px-3 py-1.5 text-sm font-bold whitespace-nowrap ${
+    `rounded-full border px-3 py-1.5 text-sm font-bold whitespace-nowrap ${
       active
-        ? 'border-ink bg-ink text-white'
+        ? 'border-ink bg-ink text-canvas'
         : 'border-line bg-surface text-ink hover:border-ink'
     }`
 

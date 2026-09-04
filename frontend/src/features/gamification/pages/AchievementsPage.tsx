@@ -169,7 +169,7 @@ function HuyHieu({ badge }: { badge: BadgeItem }) {
       }
     >
       <div
-        className={`flex w-40 flex-col items-center gap-1 rounded border px-3 py-3 text-center transition-transform duration-150 ${
+        className={`flex w-40 flex-col items-center gap-1 rounded-card border px-3 py-3 text-center transition-transform duration-150 ${
           daMo ? 'badge-earned hover:-translate-y-0.5' : 'border-line opacity-50'
         }`}
       >

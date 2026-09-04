@@ -14,11 +14,47 @@
  * KHÔNG hardcode mã màu trong component.
  */
 @theme {
-  --color-ink: #1c1d1f;
-  --color-ink-soft: #6a6f73;
+  --color-ink: #0f172a;
+  --color-ink-soft: #64748b;
   --color-brand: #a435f0;
   --color-brand-strong: #5624d0;
-  --color-line: #d1d7dc;
+
+  /*
+   * Viền SIÊU MỜ, không phải viền kẻ.
+   *
+   * Ngôn ngữ hình khối của dự án đổi ngày 05/09/2026: trước đây là "viền 1px thay cho đổ bóng", nay là
+   * "bóng mờ + viền gần như không thấy". Viền vẫn còn, và cố ý còn — bỏ hẳn thì trên màn hình chỉnh
+   * tương phản cao hoặc khi người dùng bật `forced-colors`, các thẻ mất hết ranh giới vì bóng đổ là thứ
+   * đầu tiên bị những chế độ đó loại bỏ.
+   */
+  --color-line: rgba(226, 232, 240, 0.6);
+
+  /*
+   * Viền ĐẬM HƠN cho ô nhập liệu, ô chọn, vùng bấm được.
+   *
+   * Không dùng chung `--color-line` với thẻ: một cái thẻ mất ranh giới thì chỉ hơi khó nhìn, còn một ô
+   * nhập mất ranh giới thì người dùng không biết bấm vào đâu để gõ. WCAG 1.4.11 đòi thành phần giao
+   * diện tương phản tối thiểu 3:1 với nền — `slate-200/60` trên nền trắng không đạt mức đó.
+   */
+  --color-line-strong: #e2e8f0;
+
+  /* Nền chung của trang — xám kem, không phải trắng tinh. Thẻ trắng nổi lên trên nền này. */
+  --color-canvas: #f8fafc;
+
+  /* ── Bo góc ──
+     Thang ba bậc thay cho "4px cho mọi thứ": khối lớn bo nhiều, thành phần điều khiển bo vừa, nhãn
+     trạng thái bo tròn hẳn. Bo góc trở thành thứ nói lên CẤP của phần tử, không còn là một hằng số. */
+  --radius-panel: 24px;
+  --radius-card: 16px;
+  --radius-control: 12px;
+  --radius-small: 8px;
+
+  /* ── Bóng đổ ──
+     Hai lớp: một lớp 1px sát mép cho ranh giới, một lớp toả rộng rất mờ cho cảm giác nổi. Chỉ một lớp
+     toả rộng thì thẻ trông như đang lơ lửng mà không có mép; chỉ một lớp sát mép thì nó chỉ là cái viền
+     đậm hơn. */
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 30px rgb(15 23 42 / 0.04);
+  --shadow-lifted: 0 2px 4px rgb(15 23 42 / 0.05), 0 12px 32px rgb(15 23 42 / 0.09);
 
   /*
    * Nền của thẻ, bảng, khối nội dung — thứ trước đây viết thẳng là `bg-white` ở 57 chỗ.
@@ -28,7 +64,7 @@
    * mở từng màn hình ra nhìn, không phép kiểm nào bắt được.
    */
   --color-surface: #ffffff;
-  --color-surface-subtle: #f7f9fa;
+  --color-surface-subtle: #f1f5f9;
   --color-star: #e59819;
   --color-rating: #b4690e;
   --color-badge: #eceb98;
@@ -58,6 +94,74 @@
   --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   KHỐI NỘI DUNG — `.soft-panel`
+
+   Thay cho tổ hợp `border border-line bg-surface` rải ở 58 chỗ. Gom lại một lớp chứ không sửa
+   tay từng nơi: bo góc và bóng đổ là quyết định của hệ thống thiết kế, để chúng nằm trong 58
+   chuỗi class nghĩa là lần đổi quy ước sau phải đi sửa đủ 58 chỗ và chắc chắn sót.
+
+   `overflow: hidden` để bảng bên trong bị cắt theo góc bo — không có nó thì bốn góc bảng vẫn
+   vuông và thò ra ngoài mép panel. Đã kiểm: không panel nào có phần tử `position: sticky` nằm
+   BÊN TRONG (mấy chỗ sticky là chính panel đó, và `overflow` của bản thân phần tử không ảnh
+   hưởng tới việc nó dính hay không). Nếu sau này thêm bảng có tiêu đề dính, phải bỏ lớp này ra
+   khỏi panel đó — `overflow: hidden` tạo ra một vùng cuộn mới và phần tử dính bên trong sẽ chết.
+   ══════════════════════════════════════════════════════════════════ */
+.soft-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   NHẤC LÊN KHI RÊ CHUỘT — `.soft-lift`
+
+   Dùng cho THẺ và Ô BẤM ĐƯỢC CỠ LỚN. Cố ý KHÔNG dùng cho hàng bảng: hàng bảng cao 50px và
+   xếp sát nhau, nhấc một hàng lên 2px làm cả cột chữ bên cạnh giật theo — và bảng là thứ
+   người dùng rà mắt theo hàng ngang, nên nhiễu ở đó đắt hơn nhiều so với ở một lưới thẻ.
+   Hàng bảng vẫn báo hiệu bằng đổi nền, đúng như trước.
+
+   Liệt kê từng thuộc tính thay vì `transition: all`. `all` kéo theo cả `width`, `opacity`,
+   `transform` của những thứ vốn không định chuyển động — dropdown và modal của Ant Design
+   giật cục vì đúng lý do đó (đã gặp khi làm chế độ tối).
+   ══════════════════════════════════════════════════════════════════ */
+/* Liệt kê cả ba selector trong MỘT luật thay vì để mỗi lớp tự chép lại cùng bộ giá trị.
+   `.browse-card` (thẻ quiz) và `.room-option` (ô đáp án phòng đấu) trước đây mỗi cái tự khai một
+   thời lượng và một độ nhấc riêng — 0,15s/1px và 0,12s/1px — nên hai thứ bấm được cạnh nhau phản
+   hồi khác nhau ở mức vừa đủ để thấy lạ mà không đủ để chỉ ra là lạ ở đâu. */
+.soft-lift,
+.browse-card,
+.room-option {
+  transition:
+    box-shadow 0.2s ease-out,
+    transform 0.2s ease-out,
+    border-color 0.2s ease-out;
+}
+
+.soft-lift:hover,
+.room-option:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lifted);
+}
+
+/* Người dùng đặt hệ điều hành ở chế độ giảm chuyển động thì bỏ phần dịch chuyển, giữ lại bóng —
+   bóng vẫn báo được "đang trỏ vào đây" mà không có gì trượt trên màn hình. */
+@media (prefers-reduced-motion: reduce) {
+  .soft-lift,
+  .browse-card,
+  .room-option {
+    transition: box-shadow 0.2s ease-out;
+  }
+
+  .soft-lift:hover,
+  .browse-card:hover,
+  .room-option:hover {
+    transform: none;
+  }
+}
+
 html,
 body,
 #root {
@@ -68,7 +172,7 @@ body,
 body {
   font-family: var(--font-sans);
   color: var(--color-ink);
-  background: #fff;
+  background: var(--color-canvas);
 }
 
 /* Tiêu đề card cắt 2 dòng như lưới khoá học của Udemy */
@@ -92,8 +196,11 @@ body {
    ── Vì sao nền tối KHÔNG dùng đen tuyền ──
    Đen tuyền `#000` đã có nghĩa riêng trong dự án: nó là nền khu quản trị, một TÍN HIỆU CẢNH
    BÁO (ui-design-system.md §1). Nếu chế độ tối cũng đen tuyền thì tín hiệu đó biến mất — admin
-   không còn phân biệt được mình đang ở khu quản trị hay chỉ đang bật chế độ tối. Nên nền tối ở
-   đây là xám than `#17181c`, và khu quản trị đen hơn hẳn để vẫn tách ra.
+   không còn phân biệt được mình đang ở khu quản trị hay chỉ đang bật chế độ tối.
+
+   Từ 05/09/2026 nền tối là họ xanh đá (`#0f172a` / `#1e293b`) thay cho xám than trung tính. Việc
+   này còn LÀM MẠNH THÊM tín hiệu kia: đen tuyền không chỉ tối hơn mà còn khác hẳn sắc — admin
+   phân biệt được ngay cả khi màn hình chỉnh sáng thấp, chỗ mà hai mức xám gần nhau thì không.
    ══════════════════════════════════════════════════════════════════ */
 :root[data-theme='dark'] {
   /* Đảo vai trò: `ink` là màu CHỮ, nên ở nền tối nó phải sáng */
@@ -105,9 +212,19 @@ body {
   --color-brand: #c084fc;
   --color-brand-strong: #b07af0;
 
-  --color-line: #34363b;
-  --color-surface: #202126;
-  --color-surface-subtle: #17181c;
+  /* Viền ở nền tối là MỘT VỆT SÁNG MỜ, không phải một đường xám.
+     Nền tối thì viền tối hơn nền là vô hình; thứ vẽ được mép ở đây là ánh sáng, không phải bóng. */
+  --color-line: rgba(255, 255, 255, 0.1);
+  --color-line-strong: rgba(255, 255, 255, 0.18);
+
+  --color-canvas: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-subtle: #172033;
+
+  /* Bóng đen trên nền tối gần như vô hình, nên đổ bóng ở đây chỉ giữ lại lớp sát mép để tách thẻ
+     khỏi nền; phần "nổi" do NỀN SÁNG HƠN một bậc đảm nhiệm (#1e293b trên #0f172a). */
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-lifted: 0 4px 16px rgb(0 0 0 / 0.5);
 
   --color-star: #f0b429;
   --color-rating: #e0a020;
@@ -283,14 +400,12 @@ body {
   padding-bottom: 14px !important;
 }
 
-/* Card ở trang browse: viền mảnh, chỉ nổi shadow khi hover */
+/* Card ở trang browse: nổi sẵn bằng bóng mờ, nhấc lên khi rê chuột */
 .browse-card {
   border: 1px solid var(--color-line);
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   background: var(--color-surface);
-  transition:
-    box-shadow 0.15s ease,
-    border-color 0.15s ease;
+  box-shadow: var(--shadow-soft);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -311,7 +426,7 @@ body {
 /* Khối mở đầu trang Khám phá — màn hình đầu tiên người dùng thấy sau khi đăng nhập */
 .browse-hero {
   background: linear-gradient(135deg, #5624d0 0%, #a435f0 55%, #c084fc 100%);
-  border-radius: 4px;
+  border-radius: var(--radius-panel);
 }
 
 /* ── Sảnh phòng đấu ──────────────────────────────────────────────
@@ -319,7 +434,7 @@ body {
    một trò chơi. Trước đây nó trông y hệt một trang quản lý: hai hộp trắng viền xám. */
 .room-hero {
   background: linear-gradient(120deg, #4c1d95 0%, #7c3aed 45%, #db2777 100%);
-  border-radius: 4px;
+  border-radius: var(--radius-panel);
 }
 
 /* Hai thẻ, hai việc ngược nhau — chủ phòng và người vào.
@@ -328,7 +443,7 @@ body {
    màu làm chữ trong đó khó đọc. Viền 2px thay vì 1px — đây là chỗ duy nhất trong dự án cần
    phân biệt hai khối ngang hàng bằng màu, và 1px màu nhạt thì gần như không thấy. */
 .room-card {
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   border-width: 2px;
   border-style: solid;
 }
@@ -355,15 +470,7 @@ body {
    Nền nhạt chứ không đặc: chữ câu trả lời phải đọc được, và ô đang chọn của Ant Design cũng
    cần nhìn ra trên nền này. */
 .room-option {
-  border-radius: 4px;
-  transition:
-    transform 0.12s ease,
-    box-shadow 0.12s ease;
-}
-
-.room-option:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-control);
 }
 
 .room-option-a {
@@ -426,7 +533,7 @@ body {
 .result-hero-good,
 .result-hero-pass,
 .result-hero-low {
-  border-radius: 4px;
+  border-radius: var(--radius-panel);
 }
 
 .result-hero-excellent {
@@ -507,13 +614,14 @@ body {
 }
 
 .browse-card:hover {
-  /* Đậm hơn bản đầu (4px / 8%) vì bản đó gần như không nhìn thấy trên nền trắng cạnh viền sáng —
-     người dùng báo "thẻ quiz không có hiệu ứng hover" trong khi CSS thì có.
+  transform: translateY(-2px);
+  /* Viền đậm lại MỘT BẬC bên cạnh bóng, không chỉ tăng bóng.
 
-     Thêm việc VIỀN ĐẬM LẠI, không chỉ tăng bóng: viền 1px là ngôn ngữ hình khối chính của dự án
-     (ui-design-system.md §4), nên nói bằng viền thì rõ hơn và hợp hệ thống hơn là đổ bóng dày. */
-  border-color: var(--color-ink-soft);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+     Lý do đã đổi cùng ngôn ngữ hình khối (05/09/2026): trước đây viền 1px là cách nói chính của dự
+     án nên hover nói bằng viền; nay bóng mới là cách nói chính, còn viền đậm lên chỉ để giữ ranh
+     giới cho người dùng bật tương phản cao — nhóm mà bóng đổ bị hệ điều hành loại bỏ hoàn toàn. */
+  border-color: var(--color-line-strong);
+  box-shadow: var(--shadow-lifted);
 }
 
 
@@ -534,10 +642,10 @@ body {
 /* ── Khung soạn tin nổi ── */
 .chat-composer {
   border: 1px solid var(--color-line);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   background: var(--color-surface);
   padding: 8px 8px 8px 14px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-soft);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -545,7 +653,7 @@ body {
    nhận focus là <textarea> bên trong, còn thứ cần đổi hình là cái khung bọc ngoài. */
 .chat-composer:focus-within {
   border-color: var(--color-ink-soft);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lifted);
 }
 
 :root[data-theme='dark'] .chat-composer {
@@ -594,7 +702,7 @@ body {
   text-align: left;
   cursor: pointer;
   border: 1px solid var(--color-line);
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   background: var(--color-surface);
   color: var(--color-ink);
   padding: 10px 14px;
@@ -614,7 +722,7 @@ body {
    không thêm đường nào. */
 .chat-rail {
   background: var(--color-surface-subtle);
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   padding: 8px;
 }
 
@@ -622,7 +730,7 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-small);
   padding: 8px 10px;
   transition: background 0.12s ease;
 }
@@ -667,8 +775,8 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  border: 1px dashed var(--color-line);
-  border-radius: 12px;
+  border: 1px dashed var(--color-line-strong);
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--color-ink-soft);
   padding: 18px 12px;

@@ -195,7 +195,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
           {locked ? (
             <QuestionReview question={mergeFeedback(question, feedback[question.questionId])} />
           ) : (
-            <div className="border border-line bg-surface p-5">
+            <div className="soft-panel p-5">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <Text className="text-ink-soft text-xs font-bold">
                   Câu {index + 1}/{questions.length}
@@ -212,7 +212,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
                 <img
                   src={question.imageUrl}
                   alt="Ảnh minh hoạ của câu hỏi"
-                  className="mb-4 max-h-72 w-auto max-w-full border border-line object-contain"
+                  className="mb-4 max-h-72 w-auto max-w-full border border-line rounded-card object-contain"
                 />
               )}
 
@@ -257,7 +257,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
             />
           )}
 
-          <div className="border border-line bg-surface p-4">
+          <div className="soft-panel p-4">
             <Text className="text-ink-soft text-xs">Tiến độ</Text>
             <Progress
               percent={Math.round((answeredCount / questions.length) * 100)}
@@ -280,9 +280,11 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
                     key={q.questionId}
                     type="button"
                     onClick={() => setIndex(i)}
-                    className={`h-8 border text-xs font-bold ${
+                    /* `text-canvas` chứ không `text-white`: xem chú thích ở `chipClass` của
+                       BrowseQuizzesPage. Ở đây hậu quả nặng hơn — ô biến mất là ô CÂU ĐANG LÀM. */
+                    className={`h-8 rounded-small border text-xs font-bold ${
                       i === index
-                        ? 'border-ink bg-ink text-white'
+                        ? 'border-ink bg-ink text-canvas'
                         : done
                           ? 'border-line bg-surface-subtle text-ink'
                           : 'border-line bg-surface text-ink-soft'

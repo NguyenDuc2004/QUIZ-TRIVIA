@@ -222,7 +222,7 @@ export default function AiGenerateCardsModal({
             {theNhap.map((the, i) => (
               <label
                 key={i}
-                className={`border-line flex cursor-pointer gap-3 rounded border p-3 ${
+                className={`border-line flex cursor-pointer gap-3 rounded-control border p-3 ${
                   daChon.includes(i) ? 'bg-surface-subtle' : ''
                 }`}
               >

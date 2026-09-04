@@ -64,7 +64,7 @@ export default function RoomInviteCard({
         />
       )}
 
-      <div className="flex flex-col items-center gap-4 border border-line bg-surface p-6 sm:flex-row sm:items-start sm:justify-center sm:gap-10">
+      <div className="flex flex-col items-center gap-4 soft-panel p-6 sm:flex-row sm:items-start sm:justify-center sm:gap-10">
         <div className="text-center">
           <Text className="text-ink-soft text-xs">Mã phòng</Text>
           <Title level={1} className="mt-1! mb-2! font-mono! tracking-[0.2em]">
@@ -83,7 +83,7 @@ export default function RoomInviteCard({
               Camera điện thoại đọc mã QR bằng tương phản đen trên trắng; ở chế độ tối `bg-surface`
               thành xám than và mã gần như không quét được. Đây là ràng buộc vật lý của máy quét, không
               phải lựa chọn thẩm mỹ, nên nó không đổi theo chế độ. */}
-          <div className="border border-line bg-white p-2">
+          <div className="border border-line rounded-card bg-white p-2">
             <QRCodeSVG value={url} size={180} level="M" />
           </div>
           <Text className="text-ink-soft text-xs">Quét để vào phòng</Text>

@@ -290,7 +290,7 @@ export default function RoomPage() {
             playerCount={players.length}
           />
 
-          <div className="border border-line bg-surface p-5">
+          <div className="soft-panel p-5">
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <Text className="font-bold!">
                 Người chơi ({players.length}) · {room.readyCount} đã sẵn sàng
@@ -325,7 +325,7 @@ export default function RoomPage() {
 
       {room.status === 'PLAYING' && question && (
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          <div className="border border-line bg-surface p-5">
+          <div className="soft-panel p-5">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <Text className="text-ink-soft text-xs font-bold">
                 Câu {question.index + 1}/{question.total}
@@ -349,7 +349,7 @@ export default function RoomPage() {
               <img
                 src={question.imageUrl}
                 alt="Ảnh minh hoạ của câu hỏi"
-                className="mb-4 max-h-56 w-auto max-w-full border border-line object-contain"
+                className="mb-4 max-h-56 w-auto max-w-full border border-line rounded-card object-contain"
               />
             )}
 
@@ -441,7 +441,7 @@ export default function RoomPage() {
 
       {room.status === 'FINISHED' && (
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          <div className="border border-line bg-surface p-8 text-center">
+          <div className="soft-panel p-8 text-center">
             <Title level={3} className="mb-2!">
               Ván đấu kết thúc
             </Title>

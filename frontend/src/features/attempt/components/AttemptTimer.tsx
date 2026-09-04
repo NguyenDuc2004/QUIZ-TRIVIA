@@ -46,7 +46,7 @@ export default function AttemptTimer({
   const urgent = remaining <= 60
 
   return (
-    <div className="flex flex-col items-center border border-line bg-surface px-4 py-3">
+    <div className="flex flex-col items-center soft-panel px-4 py-3">
       <Text className="text-ink-soft text-xs">Thời gian còn lại</Text>
       <span
         className={`font-mono text-2xl font-extrabold tabular-nums ${

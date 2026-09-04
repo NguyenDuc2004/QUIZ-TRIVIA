@@ -134,7 +134,7 @@ export default function QuestionBankPage() {
         }
       />
 
-      <div className="border border-line bg-surface">
+      <div className="soft-panel">
         <div className="flex flex-wrap gap-2 border-b border-line p-3">
           <Input.Search
             allowClear

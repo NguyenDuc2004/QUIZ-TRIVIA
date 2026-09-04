@@ -87,7 +87,7 @@ export default function AdminLayout() {
           >
             <Link to="/admin" className="flex items-center gap-2.5 overflow-hidden">
               {/* Khối chữ Q làm dấu nhận diện: khi thu gọn còn 72px thì đây là thứ duy nhất còn thấy */}
-              <span className="bg-brand flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-extrabold text-white">
+              <span className="bg-brand flex size-8 shrink-0 items-center justify-center rounded-control text-sm font-extrabold text-white">
                 Q
               </span>
               {!thuGon && (
@@ -154,7 +154,7 @@ export default function AdminLayout() {
             type="button"
             onClick={() => setThuGon((truoc) => !truoc)}
             aria-label={thuGon ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
-            className="text-ink-soft hover:text-ink hover:bg-surface-subtle flex size-8 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent transition-colors"
+            className="text-ink-soft hover:text-ink hover:bg-surface-subtle flex size-8 cursor-pointer items-center justify-center rounded-control border-0 bg-transparent transition-colors"
           >
             {thuGon ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           </button>
@@ -177,7 +177,7 @@ export default function AdminLayout() {
               {/* Cả khối avatar + tên + thẻ vai trò là một đích bấm, không phải ba đích cạnh nhau */}
               <button
                 type="button"
-                className="hover:bg-surface-subtle flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-1.5 transition-colors"
+                className="hover:bg-surface-subtle flex shrink-0 cursor-pointer items-center gap-2 rounded-control border-0 bg-transparent px-2 py-1.5 transition-colors"
               >
                 <Avatar size={26} src={user.avatarUrl ?? undefined}>
                   {user.displayName?.charAt(0).toUpperCase()}
@@ -264,7 +264,7 @@ function NavItem({
         to={to}
         end={end}
         className={({ isActive }) =>
-          `flex items-center gap-3 rounded-lg py-2.5 text-sm transition-colors ${
+          `flex items-center gap-3 rounded-control py-2.5 text-sm transition-colors ${
             thuGon ? 'justify-center px-0' : 'px-3'
           } ${
             isActive

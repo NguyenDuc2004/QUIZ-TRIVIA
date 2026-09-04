@@ -68,7 +68,7 @@ export default function JoinRoomPage() {
   if (loadError) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface-subtle p-4">
-        <div className="w-full max-w-md border border-line bg-surface p-8">
+        <div className="w-full max-w-md soft-panel p-8">
           <Alert type="error" showIcon message={loadError} />
           <Link to="/rooms">
             <Button className="mt-4" block>
@@ -98,7 +98,7 @@ export default function JoinRoomPage() {
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
-      <div className="w-full max-w-md border border-line bg-surface p-8">
+      <div className="w-full max-w-md soft-panel p-8">
         <div className="mb-1 flex items-center justify-center gap-1">
           <span className="text-2xl font-extrabold text-ink">Quiz</span>
           <span className="text-2xl font-extrabold text-brand">AI</span>

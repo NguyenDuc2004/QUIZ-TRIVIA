@@ -103,7 +103,7 @@ export default function MyAttemptsPage() {
         description="Toàn bộ các lần bạn làm quiz, kèm điểm và thời gian."
       />
 
-      <div className="border border-line bg-surface">
+      <div className="soft-panel">
         <Table<AttemptSummary>
           scroll={{ x: 'max-content' }}
           rowKey="id"

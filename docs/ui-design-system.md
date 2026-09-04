@@ -1,7 +1,9 @@
 # Chuẩn giao diện (UI Design System)
 
 > **Đây là nguồn sự thật về giao diện.** Mọi trang/component mới phải tuân theo tài liệu này.
-> Phong cách lấy cảm hứng từ Udemy: vuông vắn, viền mảnh, chữ nhỏ mà đậm, nút hành động chính màu đen, tím dùng để nhấn.
+> **Modern Soft UI** *(từ 05/09/2026)*: bo góc theo thang, thẻ trắng nổi trên nền kem bằng bóng mờ,
+> viền gần như không thấy, nhấc nhẹ khi rê chuột. Giữ lại từ bản Udemy trước đó: chữ nhỏ mà đậm,
+> nút hành động chính màu đen, tím chỉ dùng để nhấn. Chi tiết ở mục 4.
 >
 > Chỉ mô phỏng **phong cách**; không dùng logo, tên thương hiệu, hình ảnh hay nội dung của Udemy. Font Udemy Sans có bản quyền → dùng **Inter** (tự host qua `@fontsource-variable/inter`).
 
@@ -205,72 +207,97 @@ trắng — đó là ràng buộc vật lý của máy quét, không phải lự
 
 Font: `Inter`, dự phòng `system-ui, sans-serif`.
 
-## 4. Hình khối
+## 4. Hình khối — Modern Soft UI *(đổi 05/09/2026)*
 
-- **Bán kính bo góc: 4px** cho mọi thứ (nút, input, card, tag). Ant Design mặc định 6–8px → đã hạ trong theme.
-- **Viền 1px `--color-line`** thay cho đổ bóng.
-- **Hover thẻ bấm được:** viền đậm lại thành `--color-ink-soft` **và** bóng nhẹ `0 2px 8px rgba(0,0,0,.12)`,
-  chuyển trong 0,15s. Dùng lớp `.browse-card`, đừng tự viết lại ở từng chỗ.
-  - Bản đầu chỉ có bóng `0 2px 4px rgba(0,0,0,.08)` — **gần như không nhìn thấy** trên nền trắng cạnh viền
-    sáng, tới mức người dùng báo "thẻ quiz không có hiệu ứng hover" trong khi CSS thì có.
-  - Đổi viền chứ không chỉ tăng bóng: **viền 1px là ngôn ngữ hình khối chính của dự án**, nên nói bằng viền
-    thì rõ hơn và hợp hệ thống hơn là đổ một cái bóng dày.
+Ngôn ngữ hình khối của dự án **đã đổi**. Bản trước là *"bo góc 4px cho mọi thứ, viền 1px thay cho đổ
+bóng"* — vuông vắn kiểu Udemy. Bản này mềm và nổi: **bo góc theo thang ba bậc, bóng mờ toả rộng, viền
+gần như không thấy**. Ghi lại cả bản cũ ở đây để những chú thích trong mã còn nhắc tới nó vẫn đọc được.
+
+### Thang bo góc
+
+| Bậc | Giá trị | Dùng cho | Token |
+|---|---|---|---|
+| Panel | 24px | Khối mở đầu lớn, khối công bố điểm | `--radius-panel` / `shape.radiusPanel` |
+| Card | 16px | Thẻ, bảng, panel nội dung, modal, drawer, ảnh | `--radius-card` / `borderRadiusLG` |
+| Control | 12px | Nút, ô nhập, ô chọn, ô đáp án | `--radius-control` / `borderRadius` |
+| Small | 8px | Mục trong danh sách, ô số câu | `--radius-small` / `borderRadiusSM` |
+| Tròn | 9999px | Nhãn trạng thái `<Pill>`, `<Tag>`, chip lọc, nút hình tròn | — |
+
+Bo góc giờ nói lên **cấp** của phần tử, không còn là một hằng số. Nhờ vậy hai ngoại lệ của bản cũ
+(`<Pill>` và khung soạn tin trợ lý) **không còn là ngoại lệ** — chúng chỉ là hai bậc trong thang.
+
+### Viền và bóng
+
+- **`--color-line`** (`slate-200/60` sáng, `white/10` tối) — viền thẻ/panel, siêu mờ. Nó vẫn tồn tại
+  và cố ý tồn tại: bỏ hẳn thì trên màn hình tương phản cao hoặc khi người dùng bật `forced-colors`,
+  các thẻ mất hết ranh giới, vì **bóng đổ là thứ đầu tiên những chế độ đó loại bỏ**.
+- **`--color-line-strong`** — viền **ô nhập, ô chọn, vùng bấm được**. Đây là chỗ duy nhất cố ý đi
+  chệch khỏi "viền siêu mờ cho mọi thứ": một cái thẻ mờ ranh giới thì hơi khó nhìn, còn một ô nhập mờ
+  ranh giới thì người dùng **không biết bấm vào đâu để gõ**. WCAG 1.4.11 đòi thành phần giao diện
+  tương phản tối thiểu 3:1 với nền, mà `slate-200/60` trên nền trắng không đạt.
+- **`--shadow-soft`** — hai lớp: một lớp 1px sát mép cho ranh giới, một lớp toả rộng rất mờ cho cảm
+  giác nổi. Chỉ lớp toả rộng thì thẻ trông lơ lửng mà không có mép; chỉ lớp sát mép thì nó chỉ là cái
+  viền đậm hơn.
+- **Ở chế độ tối, bóng đổ gần như vô hình.** Thứ vẽ được mép ở đó là **ánh sáng**, không phải bóng:
+  nền thẻ sáng hơn nền trang một bậc (`#1e293b` trên `#0f172a`), và viền là một vệt trắng 10%.
+
+### Nền
+
+| | Sáng | Tối |
+|---|---|---|
+| Nền trang (`--color-canvas`) | `#f8fafc` | `#0f172a` |
+| Nền thẻ (`--color-surface`) | `#ffffff` | `#1e293b` |
+| Nền chìm (`--color-surface-subtle`) | `#f1f5f9` | `#172033` |
+
+Thẻ **trắng nổi trên nền kem** — chính chênh lệch này thay cho đường kẻ. Thanh điều hướng cũng vậy:
+nó trắng trên nền kem, nên nó nổi lên như một lớp riêng mà không cần viền dưới chân.
+
+**Nền tối đổi sang họ xanh đá làm MẠNH THÊM tín hiệu đen tuyền của khu quản trị** (§1): đen không chỉ
+tối hơn mà còn khác hẳn sắc, nên admin phân biệt được ngay cả khi màn hình chỉnh sáng thấp — chỗ mà
+hai mức xám gần nhau thì không.
+
+### Hiệu ứng vi tương tác
+
+- **`.soft-lift`** — nhấc 2px + bóng đậm hơn, `0,2s ease-out`. Dùng cho **thẻ và ô bấm được cỡ lớn**.
+- **KHÔNG dùng cho hàng bảng.** Hàng bảng cao 50px và xếp sát nhau; nhấc một hàng làm cột chữ bên cạnh
+  giật theo, mà bảng là thứ người dùng rà mắt theo hàng ngang nên nhiễu ở đó đắt hơn nhiều so với ở
+  một lưới thẻ. Hàng bảng vẫn báo hiệu bằng **đổi nền**.
+- **KHÔNG dùng `transition: all`.** `all` kéo theo cả `width`, `opacity`, `transform` của những thứ
+  vốn không định chuyển động — dropdown và modal của Ant Design giật cục vì đúng lý do đó. Liệt kê
+  từng thuộc tính.
+- **`prefers-reduced-motion`**: bỏ phần dịch chuyển, **giữ bóng**. Bóng vẫn báo được "đang trỏ vào
+  đây" mà không có gì trượt trên màn hình.
 - Chiều cao control: 40px (thường), 48px (nút CTA lớn).
 - **Gradient: chỉ ở KHOẢNH KHẮC, không ở KHUNG CHỨC NĂNG.** Xem mục 4.1.
 
-**Hai ngoại lệ của quy ước 4px, và ranh giới của chúng.** Cả hai được chấp nhận vì *hình dáng mang
-nghĩa*, không phải vì trông mềm mại hơn:
+### Lớp dùng chung — đừng viết lại trong component
 
-| Ngoại lệ | Bán kính | Vì sao | Ranh giới |
-|---|---|---|---|
-| Viên thuốc trạng thái `<Pill>` | tròn hoàn toàn | Nằm lẫn trong bảng dày chữ; hình viên thuốc tách nó khỏi chữ thường trước cả khi mắt đọc tới màu | Chỉ nhãn trạng thái. Nút, ô nhập, thẻ vẫn 4px |
-| Khung soạn tin trợ lý `.chat-composer`, chip gợi ý `.chat-chip` | 16px / 12px | Khung bo tròn nổi trên nền là hình dáng người dùng đã học từ mọi công cụ hội thoại khác — nó nói "gõ vào đây" trước cả khi đọc placeholder | Chỉ trong màn Trợ lý học tập, và chỉ ở khung soạn tin + chip |
+| Lớp | Là gì |
+|---|---|
+| `.soft-panel` | Nền thẻ + viền mờ + bo 16px + bóng mềm + `overflow: hidden`. Thay cho tổ hợp `border border-line bg-surface` từng rải ở **45 chỗ** |
+| `.soft-lift` | Nhấc lên khi rê chuột |
+| `.browse-card` | Thẻ quiz (đã gồm nền, viền, bóng, nhấc) |
 
-Cả hai sống ở `index.css` chứ **không** viết thẳng vào component: bán kính và bóng là quyết định của
-hệ thống thiết kế, nên chúng nằm trong hệ thống thiết kế. Component chỉ gọi tên lớp.
+Bán kính và bóng **không được hardcode trong component** — chúng là quyết định của hệ thống thiết kế
+nên phải sống trong hệ thống thiết kế. Component chỉ gọi tên lớp, hoặc dùng utility sinh từ token
+(`rounded-card`, `rounded-control`).
 
-### 4.5. Màn hội thoại: chỉ khung chat cuộn
+`.soft-panel` mang `overflow: hidden` để bảng bên trong bị cắt theo góc bo. **Nếu sau này thêm bảng có
+tiêu đề dính, phải bỏ lớp đó ra khỏi panel ấy** — `overflow: hidden` tạo một vùng cuộn mới và phần tử
+`position: sticky` bên trong sẽ chết.
 
-Trang Trợ lý ràng chiều cao bằng `.chat-trang` (`calc(100dvh - 136px)`, chỉ từ `lg`), rồi để **mỗi
-khối tự cuộn trong lòng nó**. Bản trước để khối chat `min-h-[60vh]` nên nó phình theo số tin nhắn và
-thứ cuộn là *cả trang*: đọc tới câu trả lời thứ ba thì tiêu đề và cột học liệu đã trôi mất, muốn đổi
-tài liệu phải cuộn ngược lên.
+### Cạm bẫy: màu tuyệt đối ghép với màu token
 
-Ba điều dễ sai khi dựng kiểu bố cục này:
+`--color-ink` là màu **chữ**, nên ở chế độ tối nó lật thành gần trắng. Ghép `bg-ink` với `text-white`
+cho ra **chữ trắng trên nền gần trắng** — phần tử biến mất, và biến mất đúng ở trạng thái *đang được
+chọn*, tức thứ người dùng cần thấy nhất.
 
-1. **`min-h-0` phải có ở MỌI mắt xích** từ khung ngoài tới vùng cuộn. Mặc định `min-height` của flex/
-   grid item là `auto` — nó nở đúng bằng nội dung và không bao giờ nhỏ hơn để mà phải cuộn. CSS không
-   báo gì; nó chỉ lặng lẽ cuộn cả trang.
-2. **Không bọc bằng `<Space>`.** `Space` đặt mỗi phần tử con vào một `.ant-space-item` riêng, nên
-   `flex-1` áp vào cái bọc chứ không tới được phần tử thật.
-3. **Chỉ áp từ `lg`.** Dưới ngưỡng đó bố cục xếp dọc; nhồi ba vùng cuộn vào màn hình điện thoại thì
-   mỗi vùng còn vài dòng, để cả trang cuộn như thường là đúng hơn.
+Lỗi này đã xuất hiện ở **hai** trang (chip danh mục ở Khám phá, ô số câu đang làm ở màn làm bài), nên
+nó không phải sơ suất một lần mà là cái bẫy có sẵn trong cách đặt tên token. Dùng **`text-canvas`** —
+nó lật cùng chiều với `--color-ink` nên cặp này tương phản ở cả hai chế độ.
 
-Con số 136px = 72px thanh điều hướng (token `Layout.headerHeight`) + 64px đệm dọc của `Content`.
-`dvh` chứ không `vh`: trên trình duyệt điện thoại `vh` tính theo khung lúc thanh địa chỉ ẩn, nên đáy
-trang — đúng chỗ đặt ô nhập — bị đẩy khỏi vùng nhìn thấy.
-
-**Ô nhập trong khung nổi phải tắt viền và vòng focus của Ant Design ở mọi trạng thái**, và thắng bằng
-cách thêm tên thẻ vào bộ chọn (`textarea.ant-input:focus` = (0,2,1)) chứ **không** bằng `!important`.
-AntD v6 sinh CSS lúc chạy và chèn sau tệp của dự án, nên bằng điểm đặc hiệu là nó thắng nhờ đứng sau;
-còn `!important` thì từng thắng đúng luật rồi làm vỡ bố cục nội bộ của `Input.Search` (§4.2). Dấu
-hiệu focus không mất — nó chuyển ra viền của cả khung qua `:focus-within`.
-
-### 4.6. Cột phụ: nền chìm thay cho lưới viền
-
-Cột danh sách đứng cạnh một khung nội dung chính (danh sách hội thoại, danh sách học liệu ở màn Trợ
-lý) dùng **một nền `--color-surface-subtle` bo 12px, không kẻ viền quanh từng khối và từng dòng**.
-
-Bản đầu của màn Trợ lý kẻ viền đủ cả hai: viền quanh khối, viền dưới mỗi dòng, viền quanh khung chat.
-Kết quả là một bàn cờ — mắt phải bỏ qua hàng chục đường kẻ mới đọc được tên hội thoại, trong khi thứ
-duy nhất cần phân biệt là "cột phụ" với "nội dung chính". Một nền chìm làm đúng việc đó mà không thêm
-đường nào.
-
-**Thao tác phá hoại trong danh sách kiểu này ẩn cho tới khi rê chuột** (`.chat-rail-xoa`) — nhưng ẩn
-bằng `opacity`, không bằng `display: none`, và phải hiện lại ở `:focus-within`. Phần tử ẩn bằng
-`display` không nhận được focus bàn phím, nên người dùng bàn phím sẽ Tab tới một nút vô hình mà không
-có cách nào biết mình đang đứng ở đâu. Trên thiết bị chạm (`@media (hover: none)`) nút luôn hiện: ở đó
-`:hover` hoặc không bao giờ đúng, hoặc dính lại sau khi chạm.
+Có phép kiểm chặn cả lớp lỗi này: `src/shared/theme/mauTuyetDoi.test.ts` quét toàn bộ `.tsx` tìm
+className vừa dùng nền token vừa dùng chữ trắng/đen tuyệt đối, và báo đúng `file:dòng`.
 
 ### 4.1. Gradient dùng ở đâu, và vì sao không dùng rộng hơn
 

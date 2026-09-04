@@ -6,15 +6,34 @@ import type { ThemeConfig } from 'antd'
  * Quy ước đầy đủ ở docs/ui-design-system.md. KHÔNG hardcode màu trong component.
  */
 export const colors = {
-  ink: '#1c1d1f',
-  inkSoft: '#6a6f73',
+  ink: '#0f172a',
+  inkSoft: '#64748b',
   brand: '#a435f0',
   brandStrong: '#5624d0',
-  line: '#d1d7dc',
-  surfaceSubtle: '#f7f9fa',
+  /** Viền thẻ/panel — siêu mờ. Xem chú thích cùng tên trong `index.css`. */
+  line: 'rgba(226, 232, 240, 0.6)',
+  /** Viền ô nhập/ô chọn — đậm hơn, vì mất ranh giới ở đây là mất chỗ để bấm vào mà gõ. */
+  lineStrong: '#e2e8f0',
+  canvas: '#f8fafc',
+  surface: '#ffffff',
+  surfaceSubtle: '#f1f5f9',
   star: '#e59819',
   rating: '#b4690e',
   badge: '#eceb98',
+} as const
+
+/**
+ * Thang bo góc và bóng đổ — giữ **cùng giá trị** với các token `--radius-*` / `--shadow-*` trong
+ * `index.css`. Hai nơi vì hai hệ khác nhau (Ant Design nhận qua JavaScript, Tailwind qua biến CSS),
+ * nhưng lệch nhau thì một thẻ Ant Design đứng cạnh một thẻ dựng bằng Tailwind sẽ bo khác nhau.
+ */
+export const shape = {
+  radiusPanel: 24,
+  radiusCard: 16,
+  radiusControl: 12,
+  radiusSmall: 8,
+  shadowSoft: '0 1px 2px rgb(15 23 42 / 0.04), 0 8px 30px rgb(15 23 42 / 0.04)',
+  shadowLifted: '0 2px 4px rgb(15 23 42 / 0.05), 0 12px 32px rgb(15 23 42 / 0.09)',
 } as const
 
 /**
@@ -29,9 +48,11 @@ export const darkColors = {
   inkSoft: '#9aa0a6',
   brand: '#c084fc',
   brandStrong: '#b07af0',
-  line: '#34363b',
-  surface: '#202126',
-  surfaceSubtle: '#17181c',
+  line: 'rgba(255, 255, 255, 0.1)',
+  lineStrong: 'rgba(255, 255, 255, 0.18)',
+  canvas: '#0f172a',
+  surface: '#1e293b',
+  surfaceSubtle: '#172033',
   star: '#f0b429',
   rating: '#e0a020',
   badge: '#4a4a2a',
@@ -46,25 +67,32 @@ export const appTheme: ThemeConfig = {
     colorLinkHover: colors.brand,
     colorTextBase: colors.ink,
     colorTextSecondary: colors.inkSoft,
-    colorBorder: colors.line,
+    colorBorder: colors.lineStrong,
     colorBorderSecondary: colors.line,
-    colorBgLayout: '#ffffff',
+    colorBgLayout: colors.canvas,
 
     fontFamily: FONT_FAMILY,
     fontSize: 14,
 
-    // Vuông vắn kiểu Udemy: mọi bo góc 4px
-    borderRadius: 4,
-    borderRadiusLG: 4,
-    borderRadiusSM: 2,
-    borderRadiusXS: 2,
+    /*
+     * Thang bo góc ba bậc (đổi 05/09/2026, thay cho "4px cho mọi thứ").
+     *
+     * `borderRadius` là bậc dùng cho THÀNH PHẦN ĐIỀU KHIỂN — nút, ô nhập, ô chọn, thẻ nhãn.
+     * `borderRadiusLG` là bậc dùng cho KHỐI CHỨA — card, modal, drawer, popover.
+     * Ant Design tự chọn bậc nào cho component nào, nên đặt đúng hai con số này là đủ cho cả thư viện.
+     */
+    borderRadius: shape.radiusControl,
+    borderRadiusLG: shape.radiusCard,
+    borderRadiusSM: shape.radiusSmall,
+    borderRadiusXS: 6,
 
     controlHeight: 40,
     controlHeightLG: 48,
 
-    // Dùng viền thay đổ bóng
-    boxShadow: 'none',
-    boxShadowSecondary: '0 2px 8px rgba(0, 0, 0, 0.08)',
+    // Bóng mờ toả rộng thay cho viền kẻ — xem `--shadow-soft` trong index.css
+    boxShadow: shape.shadowSoft,
+    boxShadowSecondary: shape.shadowLifted,
+    boxShadowTertiary: shape.shadowSoft,
   },
 
   components: {
@@ -92,10 +120,12 @@ export const appTheme: ThemeConfig = {
       defaultColor: colors.brand,
     },
     Layout: {
-      headerBg: '#ffffff',
+      /* Thanh trên vẫn TRẮNG, còn thân trang là nền kem: chính chênh lệch này làm thanh trên nổi lên
+         như một lớp riêng, thay cho đường kẻ dưới chân nó. */
+      headerBg: colors.surface,
       headerHeight: 72,
       headerPadding: '0 24px',
-      bodyBg: '#ffffff',
+      bodyBg: colors.canvas,
     },
     Menu: {
       itemBg: 'transparent',
@@ -110,22 +140,34 @@ export const appTheme: ThemeConfig = {
       headerColor: colors.ink,
       borderColor: colors.line,
       rowHoverBg: colors.surfaceSubtle,
+      headerBorderRadius: shape.radiusCard,
     },
     Card: {
       colorBorderSecondary: colors.line,
       paddingLG: 20,
+      boxShadowTertiary: shape.shadowSoft,
     },
+    /*
+     * Ô nhập và ô chọn dùng viền ĐẬM HƠN thẻ (`lineStrong`).
+     *
+     * Một cái thẻ mờ ranh giới thì chỉ hơi khó nhìn; một ô nhập mờ ranh giới thì người dùng không biết
+     * bấm vào đâu để gõ. WCAG 1.4.11 đòi thành phần giao diện tương phản tối thiểu 3:1 với nền, mà
+     * `slate-200/60` trên nền trắng không đạt — đây là chỗ duy nhất trong bản nâng cấp này cố ý đi
+     * chệch khỏi "viền siêu mờ cho mọi thứ".
+     */
     Input: {
-      colorBorder: colors.line,
+      colorBorder: colors.lineStrong,
       activeBorderColor: colors.brand,
       hoverBorderColor: colors.inkSoft,
     },
     Select: {
-      colorBorder: colors.line,
+      colorBorder: colors.lineStrong,
     },
+    /* Thẻ nhãn bo tròn hẳn, cùng hình dáng với `<Pill>` để hai thứ không đá nhau trên cùng một bảng */
     Tag: {
       defaultBg: colors.surfaceSubtle,
       defaultColor: colors.ink,
+      borderRadiusSM: 9999,
     },
     Typography: {
       titleMarginBottom: '0.4em',
@@ -168,10 +210,10 @@ export const darkTheme: ThemeConfig = {
     colorTextDescription: darkColors.inkSoft,
     colorBorder: darkColors.line,
     colorBorderSecondary: darkColors.line,
-    colorBgLayout: darkColors.surfaceSubtle,
+    colorBgLayout: darkColors.canvas,
     colorBgContainer: darkColors.surface,
     colorBgElevated: darkColors.surface,
-    colorBgBase: darkColors.surfaceSubtle,
+    colorBgBase: darkColors.canvas,
   },
   components: {
     ...appTheme.components,
@@ -207,21 +249,21 @@ export const darkTheme: ThemeConfig = {
     Layout: {
       ...appTheme.components?.Layout,
       headerBg: darkColors.surface,
-      bodyBg: darkColors.surfaceSubtle,
+      bodyBg: darkColors.canvas,
     },
     /* Bảng: nền tiêu đề cột và nền khi rê chuột phải tối theo, nếu không thì hàng tiêu đề sáng trưng */
     Table: {
       ...appTheme.components?.Table,
       headerBg: darkColors.surfaceSubtle,
       headerColor: darkColors.ink,
-      rowHoverBg: '#2a2b31',
+      rowHoverBg: '#243247',
       borderColor: darkColors.line,
     },
     /* Menu xổ xuống và ngăn kéo dùng `colorBgElevated`, nhưng mục đang chọn cần nền riêng */
     Menu: {
       ...appTheme.components?.Menu,
-      itemSelectedBg: '#2a2b31',
-      itemHoverBg: '#26272c',
+      itemSelectedBg: '#243247',
+      itemHoverBg: '#1f2b3e',
       itemColor: darkColors.ink,
       itemSelectedColor: darkColors.brand,
     },

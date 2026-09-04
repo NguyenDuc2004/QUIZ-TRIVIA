@@ -49,7 +49,7 @@ export default function ImageUploader({
     <div className="flex flex-col gap-2">
       {value ? (
         <div
-          className={`relative overflow-hidden border border-line ${laAnhDaiDien ? 'w-32' : 'w-full max-w-xs'}`}
+          className={`relative overflow-hidden border border-line rounded-card ${laAnhDaiDien ? 'w-32' : 'w-full max-w-xs'}`}
         >
           <img
             src={value}

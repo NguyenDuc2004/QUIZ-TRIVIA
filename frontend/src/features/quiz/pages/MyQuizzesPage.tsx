@@ -70,7 +70,7 @@ export default function MyQuizzesPage() {
               src={row.thumbnailUrl}
               alt=""
               loading="lazy"
-              className="h-10 w-16 shrink-0 border border-line object-cover"
+              className="h-10 w-16 shrink-0 border border-line rounded-card object-cover"
             />
           ) : (
             <div className="h-10 w-16 shrink-0 border border-dashed border-line bg-surface-subtle" />
@@ -258,7 +258,7 @@ export default function MyQuizzesPage() {
         }
       />
 
-      <div className="border border-line bg-surface">
+      <div className="soft-panel">
         <div className="flex flex-wrap gap-2 border-b border-line p-3">
           <Input.Search
             allowClear

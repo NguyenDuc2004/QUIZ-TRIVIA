@@ -44,7 +44,7 @@ export default function AnswerInput({
         >
           <Space direction="vertical" size={8} className="w-full">
             {question.options.map((option) => (
-              <Radio key={option.id} value={option.id} className="w-full border border-line p-3">
+              <Radio key={option.id} value={option.id} className="w-full border border-line rounded-card p-3">
                 {option.content}
               </Radio>
             ))}
@@ -62,7 +62,7 @@ export default function AnswerInput({
         >
           <Space direction="vertical" size={8} className="w-full">
             {question.options.map((option) => (
-              <Checkbox key={option.id} value={option.id} className="w-full border border-line p-3">
+              <Checkbox key={option.id} value={option.id} className="w-full border border-line rounded-card p-3">
                 {option.content}
               </Checkbox>
             ))}

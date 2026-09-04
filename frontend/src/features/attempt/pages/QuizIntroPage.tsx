@@ -99,11 +99,11 @@ export default function QuizIntroPage() {
             <img
               src={quiz.thumbnailUrl}
               alt=""
-              className="aspect-video w-full border border-line object-cover"
+              className="aspect-video w-full border border-line rounded-card object-cover"
             />
           )}
 
-          <div className="border border-line bg-surface p-5">
+          <div className="soft-panel p-5">
             <Text className="text-ink-soft text-xs font-bold">Giới thiệu</Text>
             <Paragraph className="mt-2! mb-0! whitespace-pre-wrap">
               {quiz.description?.trim() || (
@@ -112,7 +112,7 @@ export default function QuizIntroPage() {
             </Paragraph>
           </div>
 
-          <div className="border border-line bg-surface">
+          <div className="soft-panel">
             <div className="border-b border-line px-4 py-3">
               <Text className="font-bold!">Bảng xếp hạng</Text>
             </div>
@@ -138,7 +138,7 @@ export default function QuizIntroPage() {
             />
           </div>
 
-          <div className="border border-line bg-surface">
+          <div className="soft-panel">
             <div className="flex items-center justify-between border-b border-line px-4 py-3">
               <Text className="font-bold!">Lần làm gần đây của tôi</Text>
               <Link to="/my-attempts" className="text-xs font-bold">
@@ -160,7 +160,7 @@ export default function QuizIntroPage() {
         </div>
 
         {/* Khối hành động dính theo cuộn — chỗ Udemy đặt giá thì ở đây đặt nút bắt đầu */}
-        <aside className="h-fit border border-line bg-surface p-5 lg:sticky lg:top-24">
+        <aside className="h-fit soft-panel p-5 lg:sticky lg:top-24">
           <div className="mb-4 flex flex-col gap-1">
             <Text className="text-ink-soft text-xs">Nội dung</Text>
             <Text className="font-bold!">{quiz.questionCount} câu hỏi</Text>
