@@ -7,7 +7,8 @@ import type { ThemeConfig } from 'antd'
  */
 export const colors = {
   ink: '#0f172a',
-  inkSoft: '#64748b',
+  /** `slate-600`: `slate-500` không đạt AA trên nền chìm — xem chú thích trong index.css. */
+  inkSoft: '#475569',
   brand: '#a435f0',
   brandStrong: '#5624d0',
   /** Viền thẻ/panel — siêu mờ. Xem chú thích cùng tên trong `index.css`. */
@@ -16,6 +17,12 @@ export const colors = {
   lineStrong: '#e2e8f0',
   canvas: '#f8fafc',
   surface: '#ffffff',
+  /** Nút hành động chính. Xem chú thích ở `components.Button`. */
+  action: '#7c3aed',
+  actionHover: '#8b5cf6',
+  actionActive: '#6d28d9',
+  /** Chữ gợi ý trong ô nhập — mờ hơn chữ phụ, nhưng vẫn phải đọc được. */
+  placeholder: '#94a3b8',
   surfaceSubtle: '#f1f5f9',
   star: '#e59819',
   rating: '#b4690e',
@@ -44,14 +51,31 @@ export const shape = {
  * của Ant Design và thẻ dựng bằng Tailwind cạnh nhau sẽ khác màu nền.
  */
 export const darkColors = {
-  ink: '#e8eaed',
-  inkSoft: '#9aa0a6',
+  /*
+   * Bậc chữ ở chế độ tối, đo trên nền thẻ `#1e293b`:
+   *   ink       #f1f5f9  ~14:1   — chữ chính
+   *   inkSoft   #cbd5e1  ~8,9:1  — chữ phụ, mô tả, chú thích
+   *   placeholder #94a3b8 ~4,9:1 — chữ gợi ý trong ô nhập
+   *
+   * Bản trước dùng `#9aa0a6` cho chữ phụ (~5:1). Nó ĐẠT chuẩn AA nhưng người dùng vẫn báo khó đọc —
+   * đạt chuẩn là sàn tối thiểu, không phải mục tiêu. Nâng lên slate-300 mà vẫn giữ được ba bậc phân
+   * biệt rõ, nên chữ phụ sáng hơn hẳn mà không nuốt mất thứ bậc với chữ chính.
+   *
+   * Đồng thời đổi từ xám ẤM (`#9aa0a6`, `#e8eaed`) sang họ xanh đá cho khớp nền mới — xám ấm trên
+   * nền xanh đá ngả vàng nhẹ, thấy rõ nhất ở những khối chữ dài.
+   */
+  ink: '#f1f5f9',
+  inkSoft: '#cbd5e1',
+  placeholder: '#94a3b8',
   brand: '#c084fc',
   brandStrong: '#b07af0',
   line: 'rgba(255, 255, 255, 0.1)',
   lineStrong: 'rgba(255, 255, 255, 0.18)',
   canvas: '#0f172a',
   surface: '#1e293b',
+  action: '#7c3aed',
+  actionHover: '#8b5cf6',
+  actionActive: '#6d28d9',
   surfaceSubtle: '#172033',
   star: '#f0b429',
   rating: '#e0a020',
@@ -67,6 +91,7 @@ export const appTheme: ThemeConfig = {
     colorLinkHover: colors.brand,
     colorTextBase: colors.ink,
     colorTextSecondary: colors.inkSoft,
+    colorTextPlaceholder: colors.placeholder,
     colorBorder: colors.lineStrong,
     colorBorderSecondary: colors.line,
     colorBgLayout: colors.canvas,
@@ -97,15 +122,32 @@ export const appTheme: ThemeConfig = {
 
   components: {
     /**
-     * Nút hành động chính của Udemy là **nền đen**, còn tím chỉ dùng cho link/nhấn mạnh.
-     * Vì vậy ghi đè colorPrimary riêng cho Button, giữ colorPrimary toàn cục là tím.
+     * Nút hành động chính: **tím `violet-600`** (đổi 05/09/2026).
+     *
+     * ## Vì sao đổi khỏi nền đen
+     * Quy ước cũ "nút chính màu đen, tím chỉ cho link" đến từ bản giao diện lấy cảm hứng Udemy. Bản
+     * Modern Soft UI đã bỏ hẳn phong cách đó, và trên nền kem `#f8fafc` với thẻ bo tròn mềm thì một
+     * nút đen tuyền là thứ cứng nhất màn hình.
+     *
+     * ## Vì sao đổi TOÀN CỤC chứ không riêng vài nút
+     * Yêu cầu ban đầu chỉ nêu ba nút. Làm đúng ba nút thì trong cùng một trang sẽ có nút chính tím và
+     * nút chính đen — người dùng đọc hai màu đó thành hai MỨC quan trọng khác nhau, trong khi chúng
+     * ngang nhau. Một màu cho một vai trò, hoặc không đổi gì.
+     *
+     * ## Link vẫn phân biệt được
+     * Link giờ cùng họ tím với nút, nhưng chúng không bao giờ bị nhầm: link là chữ có gạch chân nằm
+     * trong dòng văn, nút là khối đặc có nền. Màu chưa bao giờ là thứ duy nhất tách hai cái đó.
+     *
+     * ## Tương phản
+     * Chữ trắng trên `#7c3aed` là ~5,9:1 — đạt AA cho chữ thường. Màu khi rê chuột `#8b5cf6` xuống
+     * ~4:1; chấp nhận vì đó là trạng thái tạm thời, còn trạng thái nghỉ mới là thứ người dùng đọc.
      */
     Button: {
-      colorPrimary: colors.ink,
-      colorPrimaryHover: '#3e4143',
-      colorPrimaryActive: '#000000',
+      colorPrimary: colors.action,
+      colorPrimaryHover: colors.actionHover,
+      colorPrimaryActive: colors.actionActive,
       defaultColor: colors.ink,
-      defaultBorderColor: colors.ink,
+      defaultBorderColor: colors.lineStrong,
       fontWeight: 700,
       primaryShadow: 'none',
       defaultShadow: 'none',
@@ -208,6 +250,7 @@ export const darkTheme: ThemeConfig = {
     colorTextHeading: darkColors.ink,
     colorTextSecondary: darkColors.inkSoft,
     colorTextDescription: darkColors.inkSoft,
+    colorTextPlaceholder: darkColors.placeholder,
     colorBorder: darkColors.line,
     colorBorderSecondary: darkColors.line,
     colorBgLayout: darkColors.canvas,
@@ -218,20 +261,19 @@ export const darkTheme: ThemeConfig = {
   components: {
     ...appTheme.components,
     /**
-     * Nút hành động chính ở chế độ tối KHÔNG dùng nền đen.
+     * Nút chính GIỮ NGUYÊN màu tím ở chế độ tối, không đảo sang nền sáng như bản trước.
      *
-     * Ở chế độ sáng nền đen là thứ nổi bật nhất trên trang trắng. Ở chế độ tối thì ngược hẳn: nút đen
-     * trên nền xám than gần như biến mất, và nút quan trọng nhất màn hình lại là thứ khó thấy nhất.
-     * Đảo lại — nền sáng, chữ tối — giữ đúng ý đồ "nút chính là thứ tương phản mạnh nhất".
+     * Bản trước phải đảo vì nút đen trên nền xám than gần như biến mất. Tím `violet-600` thì không
+     * gặp vấn đề đó — nó tách khỏi cả nền sáng lẫn nền tối, nên giữ một màu cho cả hai chế độ vừa
+     * đơn giản hơn vừa để người dùng nhận ra nút chính bằng cùng một tín hiệu ở cả hai nơi.
      */
     Button: {
       ...appTheme.components?.Button,
-      colorPrimary: darkColors.ink,
-      colorPrimaryHover: '#ffffff',
-      colorPrimaryActive: '#c8ccd1',
-      primaryColor: '#17181c',
+      colorPrimary: darkColors.action,
+      colorPrimaryHover: darkColors.actionHover,
+      colorPrimaryActive: darkColors.actionActive,
       defaultColor: darkColors.ink,
-      defaultBorderColor: darkColors.line,
+      defaultBorderColor: darkColors.lineStrong,
     },
     Tag: {
       defaultBg: darkColors.surfaceSubtle,

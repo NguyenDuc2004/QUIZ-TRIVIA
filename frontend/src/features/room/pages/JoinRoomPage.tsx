@@ -71,7 +71,9 @@ export default function JoinRoomPage() {
         <div className="w-full max-w-md soft-panel p-8">
           <Alert type="error" showIcon message={loadError} />
           <Link to="/rooms">
-            <Button className="mt-4" block>
+            {/* Lối ra duy nhất của màn báo lỗi. Để nó chìm thì người dùng đọc xong lỗi rồi không
+                thấy rõ phải bấm đâu. */}
+            <Button type="primary" className="mt-4" block>
               Về sảnh phòng đấu
             </Button>
           </Link>

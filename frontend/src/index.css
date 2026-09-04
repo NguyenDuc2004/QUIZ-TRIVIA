@@ -15,7 +15,15 @@
  */
 @theme {
   --color-ink: #0f172a;
-  --color-ink-soft: #64748b;
+  /*
+   * `slate-600`, KHÔNG phải `slate-500`.
+   *
+   * Đo thật: `#64748b` trên nền trắng là 4,76:1 (đạt), nhưng trên nền chìm `#f1f5f9` — nền của tiêu
+   * đề bảng và cột phụ màn Trợ lý — chỉ còn **4,27:1**, tức KHÔNG đạt AA. Chữ phụ ở đây thường là
+   * 12px nên không được hưởng ngoại lệ "chữ lớn". `#475569` đạt 6,78:1 trên nền chìm và 7,56:1 trên
+   * nền trắng, vẫn cách `--color-ink` đủ xa để đọc ra thứ bậc.
+   */
+  --color-ink-soft: #475569;
   --color-brand: #a435f0;
   --color-brand-strong: #5624d0;
 
@@ -40,6 +48,11 @@
 
   /* Nền chung của trang — xám kem, không phải trắng tinh. Thẻ trắng nổi lên trên nền này. */
   --color-canvas: #f8fafc;
+  --color-placeholder: #94a3b8;
+
+  /* Nút hành động chính — tím `violet-600`. Trước 05/09/2026 là nền đen (quy ước Udemy cũ);
+     xem chú thích đầy đủ ở `components.Button` trong antdTheme.ts. */
+  --color-action: #7c3aed;
 
   /* ── Bo góc ──
      Thang ba bậc thay cho "4px cho mọi thứ": khối lớn bo nhiều, thành phần điều khiển bo vừa, nhãn
@@ -241,9 +254,15 @@ h5.ant-typography,
    phân biệt được ngay cả khi màn hình chỉnh sáng thấp, chỗ mà hai mức xám gần nhau thì không.
    ══════════════════════════════════════════════════════════════════ */
 :root[data-theme='dark'] {
-  /* Đảo vai trò: `ink` là màu CHỮ, nên ở nền tối nó phải sáng */
-  --color-ink: #e8eaed;
-  --color-ink-soft: #9aa0a6;
+  /* Đảo vai trò: `ink` là màu CHỮ, nên ở nền tối nó phải sáng.
+
+     Ba bậc, đo trên nền thẻ #1e293b: ink ~14:1 · ink-soft ~8,9:1 · placeholder ~4,9:1.
+     Bản trước dùng #9aa0a6 cho chữ phụ (~5:1) — ĐẠT chuẩn AA nhưng người dùng vẫn báo khó đọc,
+     vì đạt chuẩn là sàn tối thiểu chứ không phải mục tiêu. Đồng thời đổi từ xám ẤM sang họ xanh
+     đá cho khớp nền mới: xám ấm trên nền xanh đá ngả vàng nhẹ, rõ nhất ở khối chữ dài. */
+  --color-ink: #f1f5f9;
+  --color-ink-soft: #cbd5e1;
+  --color-placeholder: #94a3b8;
 
   /* Tím thương hiệu sáng lên một bậc: `--color-brand-strong` (#5624d0) là tím đậm dành cho nền
      sáng, đặt lên nền tối thì gần như không đọc được — đúng lỗi đã gặp với link ở chân trang. */
@@ -256,6 +275,7 @@ h5.ant-typography,
   --color-line-strong: rgba(255, 255, 255, 0.18);
 
   --color-canvas: #0f172a;
+  --color-action: #7c3aed;
   --color-surface: #1e293b;
   --color-surface-subtle: #172033;
 

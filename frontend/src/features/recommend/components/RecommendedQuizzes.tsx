@@ -120,7 +120,9 @@ export default function RecommendedQuizzes() {
                 className="flex aspect-video w-full items-center justify-center"
                 style={{ background: boMatCua(item.categoryName, item.title).nen }}
               >
-                <span aria-hidden className="select-none text-4xl opacity-90">
+                {/* 54px — đúng gấp rưỡi bản cũ, và nhỏ hơn thẻ ở lưới Khám phá (72px) theo đúng tỉ
+                    lệ khối bìa của hai chỗ: thẻ gợi ý hẹp hơn nên icon cùng cỡ sẽ chạm mép. */}
+                <span aria-hidden className="select-none text-[54px] leading-none opacity-90">
                   {boMatCua(item.categoryName, item.title).icon}
                 </span>
               </div>
@@ -152,7 +154,8 @@ export default function RecommendedQuizzes() {
               )}
 
               <Link to={`/quizzes/${item.quizId}`} className="mt-auto">
-                <Button size="small" block>
+                {/* Hành động DUY NHẤT của thẻ gợi ý — không có gì để nó phải nhường chỗ cho */}
+                <Button type="primary" size="small" block>
                   Làm thử
                 </Button>
               </Link>

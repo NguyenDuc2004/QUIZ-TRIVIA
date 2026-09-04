@@ -141,7 +141,10 @@ export default function RoomLobbyPage() {
               onPressEnter={joinRoom}
               className="text-center font-mono text-lg tracking-widest"
             />
-            <Button block loading={joining} disabled={!code.trim()} onClick={joinRoom}>
+            {/* `type="primary"`: đây là hành động chính của thẻ này, ngang hàng với "Mở phòng" ở
+                thẻ bên cạnh. Để một bên nổi một bên chìm thì hai lựa chọn ngang nhau trông như một
+                lựa chọn chính và một lựa chọn phụ. */}
+            <Button type="primary" block loading={joining} disabled={!code.trim()} onClick={joinRoom}>
               Vào phòng
             </Button>
           </Space>

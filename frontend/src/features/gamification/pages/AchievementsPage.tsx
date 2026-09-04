@@ -170,7 +170,9 @@ function HuyHieu({ badge }: { badge: BadgeItem }) {
     >
       <div
         className={`flex w-40 flex-col items-center gap-1 rounded-card border px-3 py-3 text-center transition-transform duration-150 ${
-          daMo ? 'badge-earned hover:-translate-y-0.5' : 'border-line opacity-50'
+          // 60% chứ không 50%: huy hiệu chưa mở CỐ Ý mờ đi để phân biệt với huy hiệu đã mở, nhưng
+          // ở chế độ tối, 50% kéo chữ xuống ~4,1:1 — dưới ngưỡng đọc được. Vẫn mờ rõ ràng ở 60%.
+          daMo ? 'badge-earned hover:-translate-y-0.5' : 'border-line opacity-60'
         }`}
       >
         <span className={`text-3xl ${daMo ? '' : 'grayscale'}`} aria-hidden>

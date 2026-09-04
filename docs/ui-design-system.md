@@ -2,8 +2,8 @@
 
 > **Đây là nguồn sự thật về giao diện.** Mọi trang/component mới phải tuân theo tài liệu này.
 > **Modern Soft UI** *(từ 05/09/2026)*: bo góc theo thang, thẻ trắng nổi trên nền kem bằng bóng mờ,
-> viền gần như không thấy, nhấc nhẹ khi rê chuột. Giữ lại từ bản Udemy trước đó: chữ nhỏ mà đậm,
-> nút hành động chính màu đen, tím chỉ dùng để nhấn. Chi tiết ở mục 4.
+> viền gần như không thấy, nhấc nhẹ khi rê chuột, **nút hành động chính màu tím đặc** `violet-600`.
+> Giữ lại từ bản Udemy trước đó: chữ nhỏ mà đậm. Chi tiết ở mục 4 (hình khối) và mục 5 (nút).
 >
 > Chỉ mô phỏng **phong cách**; không dùng logo, tên thương hiệu, hình ảnh hay nội dung của Udemy. Font Udemy Sans có bản quyền → dùng **Inter** (tự host qua `@fontsource-variable/inter`).
 
@@ -53,7 +53,7 @@ Thanh ngang giữ **tối đa 5 mục**. Từng có 11 mục phẳng và nó tr�
 | Quy tắc | Vì sao |
 |---|---|
 | **Hành động không nằm trong menu điều hướng** | *Sinh đề AI* là việc người dùng **làm**, không phải nơi họ **đi tới**. Là link giữa những link khác thì nó chìm hoàn toàn. Chuyển thành `<Button type="primary">` đặt cạnh avatar |
-| Nút hành động đó **màu đen, không gradient** | §4 cấm gradient (trừ khối ảnh giả lập) và §5 quy định hành động chính màu đen. Làm một nút nổi bằng cách phá quy ước màu thì phần còn lại của giao diện trả giá; icon ✨ đủ để phân biệt nó với các nút đen khác |
+| Nút hành động đó **màu tím đặc, không gradient** | §4.1 cấm gradient ở khung chức năng. Làm một nút nổi bằng cách phá quy ước màu thì phần còn lại của giao diện trả giá; icon ✨ đủ để phân biệt nó với các nút chính khác. (Trước 05/09/2026 nút này màu đen, theo quy ước §5 khi đó.) |
 | **Nhãn nhóm phải tự sáng khi một trang con đang mở** | Menu xổ xuống *giấu mất* dấu hiệu "đang ở trang nào" — mở trang Thẻ ghi nhớ mà cả thanh menu không có gì sáng thì người dùng mất phương hướng. Mục con cũng được đánh dấu `selectedKeys` trong menu |
 | **Mỗi mục trong menu có một dòng mô tả** | Gom vào menu làm mất khả năng đọc hết mọi mục bằng một cái nhìn; dòng mô tả bù lại phần đó cho người chưa quen |
 | **Ẩn theo vai trò, không chỉ chặn khi bấm** | LEARNER không thấy nhóm *Thư viện* và không thấy nút *Sinh đề AI*. Hiện rồi báo 403 là bắt người dùng học bằng cách thất bại |
@@ -286,6 +286,28 @@ nên phải sống trong hệ thống thiết kế. Component chỉ gọi tên l
 tiêu đề dính, phải bỏ lớp đó ra khỏi panel ấy** — `overflow: hidden` tạo một vùng cuộn mới và phần tử
 `position: sticky` bên trong sẽ chết.
 
+### Bậc chữ và tương phản — đo, đừng ước lượng
+
+| Bậc | Sáng | Tối | Dùng cho |
+|---|---|---|---|
+| `--color-ink` | `#0f172a` | `#f1f5f9` | Chữ chính |
+| `--color-ink-soft` | `#475569` | `#cbd5e1` | Chữ phụ, mô tả, chú thích |
+| `--color-placeholder` | `#94a3b8` | `#94a3b8` | Chữ gợi ý trong ô nhập |
+
+**Đo trên nền CHÌM, không chỉ trên nền thẻ.** `slate-500` (`#64748b`) trên nền trắng là 4,76:1 — đạt.
+Nhưng trên `--color-surface-subtle` `#f1f5f9` (nền tiêu đề bảng và cột phụ màn Trợ lý) nó chỉ còn
+**4,27:1**, tức *không* đạt AA. Chữ phụ ở đây thường 12px nên không được hưởng ngoại lệ "chữ lớn". Vì
+vậy bậc này là `slate-600`.
+
+**Đạt AA là sàn, không phải mục tiêu.** Chữ phụ ở chế độ tối trước đây là `#9aa0a6` (~5:1) — đạt
+chuẩn, nhưng người dùng vẫn báo khó đọc. Nâng lên `slate-300` (~8,9:1) mà vẫn giữ ba bậc phân biệt rõ.
+
+**Dùng họ xanh đá cho cả ba bậc.** Xám ấm (`#9aa0a6`, `#e8eaed`) đặt trên nền xanh đá thì ngả vàng
+nhẹ — thấy rõ nhất ở những khối chữ dài.
+
+**Làm mờ bằng `opacity` cũng phải đo.** Huy hiệu chưa mở khoá cố ý mờ đi, nhưng `opacity-50` ở chế độ
+tối kéo chữ xuống ~4,1:1. Dùng `opacity-60`: vẫn mờ rõ ràng mà đọc được.
+
 ### Cạm bẫy: lề trên của tiêu đề (hệ quả của việc không nạp preflight)
 
 Dự án cố ý không nạp preflight của Tailwind, nên `h1`–`h6` giữ **lề trên mặc định của trình duyệt**.
@@ -342,8 +364,9 @@ Ranh giới không phải *"bao nhiêu"* mà là *"ở đâu"*:
 Ba lý do cụ thể cho cột phải:
 
 1. **Chữ trên nền chuyển màu có độ tương phản không đoán được** — chỗ đọc được, chỗ không.
-2. **Nút gradient lặp trên mọi trang làm giao diện trông như một mẫu tải về.** Nút chính màu đen chính là
-   thứ đang giữ cho 16 nhóm chức năng trông như *một* sản phẩm chứ không phải 16 trang rời.
+2. **Nút gradient lặp trên mọi trang làm giao diện trông như một mẫu tải về.** Một màu đặc duy nhất cho
+   nút chính (tím `violet-600` từ 05/09/2026, trước đó là đen) chính là thứ đang giữ cho 16 nhóm chức
+   năng trông như *một* sản phẩm chứ không phải 16 trang rời.
 3. **Màn làm bài và khu quản trị có lý do riêng.** Màn làm bài cần sự tập trung — đó là lý do nó ẩn cả
    chân trang (mục 1). Nền đen của khu quản trị là một *tín hiệu cảnh báo*; tô màu vào đó là làm loãng
    tín hiệu.
@@ -488,12 +511,38 @@ vẫn là chữ thường và hiện nguyên xi — đúng như thiết kế, v�
 
 | Loại | Thể hiện | Code |
 |---|---|---|
-| Hành động chính | **Nền đen, chữ trắng, đậm** | `<Button type="primary">` (theme đã đổi màu primary của Button sang đen) |
-| Hành động phụ | Viền đen 1px, chữ đen | `<Button>` |
+| Hành động chính | **Nền tím `violet-600` `#7c3aed`, chữ trắng, đậm** | `<Button type="primary">` |
+| Hành động phụ | Viền mờ, chữ theo `--color-ink` | `<Button>` |
 | Hành động nguy hiểm | Chữ/viền đỏ | `<Button danger>` |
 | Link | Chữ tím `brand-strong`, gạch chân khi hover | `<Button type="link">` hoặc `<Link>` |
 
-**Không** dùng nút tím đặc — tím chỉ để nhấn và làm link.
+**Đổi 05/09/2026: nút chính từ NỀN ĐEN sang TÍM.** Quy ước đen đến từ bản giao diện lấy cảm hứng
+Udemy; bản Modern Soft UI (§4) đã bỏ hẳn phong cách đó, và trên nền kem với thẻ bo tròn mềm thì một
+nút đen tuyền là thứ cứng nhất màn hình.
+
+Đổi **toàn cục**, không đổi lẻ vài nút: trong cùng một trang mà có nút chính tím và nút chính đen thì
+người dùng đọc hai màu đó thành hai **mức** quan trọng khác nhau, trong khi chúng ngang nhau. Một màu
+cho một vai trò, hoặc không đổi gì.
+
+Link giờ cùng họ tím với nút nhưng không bị nhầm: **link là chữ gạch chân nằm trong dòng văn, nút là
+khối đặc có nền** — màu chưa bao giờ là thứ duy nhất tách hai cái đó.
+
+Chữ trắng trên `#7c3aed` là ~5,9:1 (đạt AA). Màu khi rê chuột `#8b5cf6` xuống ~4:1 — chấp nhận vì đó
+là trạng thái tạm thời, còn trạng thái nghỉ mới là thứ người dùng đọc.
+
+**Nút chính giữ nguyên màu tím ở chế độ tối**, không đảo sang nền sáng như bản nền-đen phải làm.
+
+### Nút nào là "hành động chính"
+
+Là hành động chính của **khối chứa nó**, không phải của cả trang. Một thẻ chỉ có một hành động thì
+hành động đó là chính, dù thẻ nằm trong lưới bốn thẻ.
+
+| Đúng | Sai |
+|---|---|
+| Hai thẻ ngang hàng ("Mở phòng" / "Vào phòng") thì **cả hai** đều primary | Một bên primary một bên mặc định — hai lựa chọn ngang nhau trông thành chính/phụ |
+| Thẻ gợi ý chỉ có nút "Làm thử" → primary | Để mặc định vì "nó nhỏ" |
+| Màn báo lỗi chỉ có lối ra duy nhất → primary | Để chìm, người dùng đọc xong lỗi không thấy phải bấm đâu |
+| "Mở phòng đấu trí" ở trang giới thiệu quiz → **mặc định** | Primary — nó là lựa chọn *thay thế* cho "Bắt đầu làm bài" ngay phía trên, hai primary trong một khối thì không còn cái nào là chính |
 
 ## 6. Component dùng chung (bắt buộc dùng lại, không tự vẽ)
 

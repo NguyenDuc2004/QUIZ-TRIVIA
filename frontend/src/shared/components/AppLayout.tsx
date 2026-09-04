@@ -266,10 +266,11 @@ export default function AppLayout() {
             "Sinh đề AI" là HÀNH ĐỘNG, không phải điều hướng — nên nó là nút bấm, không nằm ngang hàng
             với các mục menu. Trước đây nó là một link giữa bảy link khác và chìm hoàn toàn.
 
-            Màu đen chứ KHÔNG gradient: `ui-design-system.md §5` quy định nút hành động chính màu đen
-            và tím chỉ dùng cho link. Một nút gradient ở đây sẽ là thứ duy nhất trong cả ứng dụng trông
-            như vậy, và làm nó nổi bằng cách phá quy ước màu thì phần còn lại của giao diện trả giá.
-            Icon ✨ đủ để nó khác mọi nút đen khác mà không cần đổi màu.
+            Tím ĐẶC chứ KHÔNG gradient: `ui-design-system.md §5` quy định nút hành động chính là một
+            màu đặc duy nhất. Một nút gradient ở đây sẽ là thứ duy nhất trong cả ứng dụng trông như
+            vậy, và làm nó nổi bằng cách phá quy ước màu thì phần còn lại của giao diện trả giá.
+            Icon ✨ đủ để nó khác mọi nút chính khác mà không cần đổi màu.
+            (Trước 05/09/2026 nút này màu đen, theo quy ước §5 khi đó.)
           */}
           {canCreate && (
             <Link to="/ai/generate" className="hidden sm:block">

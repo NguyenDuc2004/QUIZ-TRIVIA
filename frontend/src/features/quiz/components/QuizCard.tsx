@@ -44,7 +44,7 @@ export default function QuizCard({ quiz, onClick }: { quiz: QuizSummary; onClick
         >
           {/* `select-none` để kéo chọn chữ trên lưới không tô xanh cả loạt biểu tượng.
               Hơi mờ để nó là nền chứ không tranh chỗ với tiêu đề quiz ngay bên dưới. */}
-          <span aria-hidden className="select-none text-5xl opacity-90 drop-shadow-sm">
+          <span aria-hidden className="select-none text-7xl opacity-90 drop-shadow-sm">
             {boMat.icon}
           </span>
           <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/45 to-transparent p-3 text-xs font-bold text-white">
