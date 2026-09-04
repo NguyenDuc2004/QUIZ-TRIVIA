@@ -49,6 +49,7 @@
 | 20/08 (tối) | **Đánh bóng phần người dùng thấy**: số người đã học · sửa hồ sơ + ảnh đại diện · chân trang · hover thẻ quiz · **đăng ký Google nhận đúng vai trò** — 571 test BE / 67 FE | 5/5 | 🟢 xong — 2 lỗi thật do người dùng chỉ ra |
 | 21/08 | **Người học không đổi được ảnh đại diện (403)** — tách đường tải riêng, mỗi người một file · dọn phòng chờ: bỏ IP dưới QR, cho "sẵn sàng" có hậu quả — 578 test BE / 67 FE | 2/2 | 🟢 xong |
 | 04/09 | **Trợ lý học tập vô dụng với người học đơn lẻ** — mở quyền nạp học liệu cho Learner (tách `MaterialController`, trần 10 tài liệu) · kho rỗng thì không gọi mô hình · 2 ca test cũ khẳng định luật đã hết hạn | 6/6 | 🟢 xong — do người dùng chỉ ra |
+| 05/09 | **Modern Soft UI cho toàn bộ giao diện** — đổi ở tầng token nên cả trăm màn hình theo cùng lúc · nút chính sang tím · 3 lỗi người dùng chỉ ra + 3 lỗi tự phát hiện khi đo | 7/7 | 🟢 xong — 6 lỗi, 3 do người dùng chỉ ra |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -3647,6 +3648,88 @@ gọi mô hình, chỉ để nghe nó nói đúng cái câu mà prompt đã bắ
   xanh không chứng minh hệ thống đúng*: ở đây bộ test xanh còn đang **bảo vệ** một hành vi sai.
 - **Mục 3.6 / kết luận:** ca `ChatKhoRongTest` cho một lập luận cụ thể về chi phí — bỏ được hai lời gọi
   mô hình cho mỗi câu hỏi trong tình huống kho rỗng, mà không đánh đổi gì.
+
+---
+
+## 📅 T7 — 05/09/2026 — Đổi ngôn ngữ hình khối, và sáu lỗi lộ ra trên đường
+
+**Mục tiêu hôm nay:** chuyển giao diện sang **Modern Soft UI** theo yêu cầu, rồi vá những chỗ lệch mà
+người dùng chỉ ra khi dùng thật.
+
+### Nhiệm vụ
+- [x] Bo góc theo thang, viền siêu mờ + bóng mềm, nền kem, nhấc nhẹ khi rê chuột
+- [x] Nút hành động chính đổi sang tím đặc
+- [x] Nâng tương phản chữ phụ và placeholder ở cả hai chế độ
+- [x] KaTeX cho câu trả lời của trợ lý; chỉ khung chat cuộn
+- [x] Vá 3 lỗi người dùng chỉ ra + 3 lỗi tự phát hiện khi đo
+- [x] Cập nhật `ui-design-system.md`, `conventions.md`, `CLAUDE.md`
+- [x] Test: 92 phép kiểm frontend, build sạch
+
+### Đã làm được
+
+**Đổi ở tầng TOKEN, không rải class vào component.** Yêu cầu viết theo class Tailwind cụ thể
+(`bg-slate-50`, `border-slate-200/60`, `bg-[#0f172a]`). Làm đúng chữ đó thì hỏng nút sáng/tối, vì
+những class ấy là **màu tuyệt đối**. Đưa đúng các giá trị đó vào `--color-*` / `shape.*` thì cả trăm
+màn hình đổi theo mà không phải sửa file nào. Gom thêm `border border-line bg-surface` ở **45 chỗ /
+26 file** thành một lớp `.soft-panel`.
+
+**Ba chỗ cố ý KHÔNG làm theo yêu cầu, và lý do:**
+
+| Yêu cầu | Đã làm | Vì sao |
+|---|---|---|
+| Bỏ viền kẻ cứng nhắc | Viền vẫn còn, chỉ mờ đi | Bóng đổ là thứ **đầu tiên** bị loại khi người dùng bật tương phản cao hoặc `forced-colors`; bỏ viền thì với nhóm đó mọi thẻ mất sạch ranh giới |
+| `transition-all duration-200` | Liệt kê từng thuộc tính | `all` kéo theo `width`/`opacity`/`transform` — đúng thứ từng làm dropdown AntD giật cục hồi làm chế độ tối |
+| Nút chính nền tím **hoặc gradient** | Tím đặc | §4.1 cấm gradient ở khung chức năng, và nút chính có ở mọi trang thì nó chính là khung chức năng |
+
+**Nút chính đổi tím thì phải đổi TOÀN CỤC.** Yêu cầu chỉ nêu ba nút. Làm đúng ba nút thì trong cùng
+một trang sẽ có nút chính tím và nút chính đen — người dùng đọc hai màu đó thành hai *mức* quan trọng
+khác nhau, trong khi chúng ngang nhau.
+
+Đồng thời rà cả **9 nút `block`** trong ứng dụng: ba nút thật sự thiếu `type="primary"` (đó mới là lý
+do chúng "xám chìm"), và **hai nút cố ý giữ mặc định** — "Mở phòng đấu trí" ở trang giới thiệu quiz là
+lựa chọn *thay thế* cho "Bắt đầu làm bài" ngay trên nó, hai primary trong một khối thì không còn cái
+nào là chính.
+
+### Sáu lỗi, ba do người dùng chỉ ra
+
+| # | Lỗi | Nguyên nhân thật |
+|---|---|---|
+| 1 | Viền tím trong ô nhập của trợ lý | AntD vẽ viền + vòng focus riêng bên trong khung nổi. Thắng bằng cách thêm tên **thẻ** vào bộ chọn (`textarea.ant-input:focus` = (0,2,1)), **không** `!important` — cách đó từng làm vỡ bố cục `Input.Search` |
+| 2 | Chip danh mục mất chữ ở chế độ tối | `bg-ink text-white`: `--color-ink` là màu **chữ** nên nền tối nó lật thành gần trắng. Có ở **hai** trang, chỗ thứ hai là **ô số câu đang làm ở màn thi** |
+| 3 | "Gợi ý cho bạn" lệch hàng | Dự án không nạp preflight nên `h1`–`h6` giữ lề trên mặc định. Đọc mã AntD: `titleMarginTop` chỉ áp qua bộ chọn **anh-em**, tiêu đề đứng đầu khối không nhận luật nào |
+| 4 | Chữ phụ ở chế độ **sáng** không đạt AA | `slate-500` trên nền trắng 4,76:1 (đạt) nhưng trên nền chìm `#f1f5f9` chỉ 4,27:1. Không ai báo — tự phát hiện khi đo |
+| 5 | Huy hiệu chưa mở khoá `opacity-50` | Ở chế độ tối kéo chữ xuống ~4,1:1 |
+| 6 | "Mở phòng đấu trí" không mang theo quiz | Nút chỉ điều hướng tới `/rooms` trống. Kèm theo lộ ra một **lỗ có sẵn**: backend cho mở phòng từ quiz riêng tư của chính mình, nhưng danh sách trong sảnh chỉ lấy quiz `PUBLIC` — trước nay không có đường nào chọn được |
+
+Lỗi **#3** đáng ghi nhất: chỗ người dùng thấy là chỗ **thứ hai**. Chỗ thứ nhất là `PageHeader` — nút
+hành động bên phải nằm cao hơn tiêu đề **ở mọi trang**, mà không ai để ý, vì *lệch đều thì trông giống
+một lựa chọn thiết kế*. Nó chỉ lộ ra khi có một chỗ lệch **khác** những chỗ còn lại.
+
+### Vướng mắc
+
+- **`` trong text block của Java là ký tự FORM-FEED.** Ví dụ trong prompt viết `$rac{a}{b}$` một
+  dấu chéo, nên thứ gửi tới mô hình là `<FF>rac{a}{b}` — không gây lỗi, chỉ lặng lẽ dạy mô hình bằng
+  một ví dụ hỏng, đúng ở chỗ đang dặn nó viết cho chuẩn. Rồi **chính script Python đi sửa cũng mắc lại
+  đúng cái bẫy đó**, vì `\` bị co thành `\`. Phải dùng `chr(92)` để tránh hẳn dấu chéo trong lệnh.
+- **Script sửa `RoomLobbyPage` thiếu dòng ghi file** — nó đổi chuỗi trong bộ nhớ rồi thoát, mà vẫn in
+  "xong" bốn lần, và mình đã tin dòng chữ đó. Chỉ 4 test đỏ mới lộ ra; truy tiếp thì thấy
+  `quizApi.get` chưa hề được gọi. Nếu chỉ chạy `build` thì việc này lọt qua hoàn toàn.
+- **Chạy `prettier` lần thứ hai vào cùng một file.** Dự án không có cấu hình prettier nên nó đổi hết
+  sang nháy kép và dấu chấm phẩy — 174 dòng đổi cho một thay đổi 30 dòng.
+
+### Ghi chú báo cáo
+
+- **Mục 2.3 / 3.4:** bộ ba lỗi #2, #4, #5 là ví dụ rất tốt cho ý *tiêu chuẩn tiếp cận phải ĐO, không
+  ước lượng*. Đáng chú ý là hai thái cực gặp trong cùng một ngày: #4 **đạt** chuẩn AA trên nền thẻ
+  nhưng **không đạt** trên nền chìm — nên phải đo trên đúng nền thật; còn chữ phụ ở chế độ tối thì
+  *đạt* chuẩn mà người dùng vẫn báo khó đọc, tức **đạt chuẩn là sàn, không phải mục tiêu**.
+- **Mục 3.4:** lỗi #2 sinh ra một phép kiểm chặn **cả lớp lỗi** thay vì một trường hợp
+  (`mauTuyetDoi.test.ts` quét toàn bộ `.tsx`, báo đúng `file:dòng`). Đã kiểm ngược bằng cách cố tình
+  đưa lỗi trở lại — phép kiểm đỏ và chỉ đúng chỗ. Một phép kiểm chưa từng thấy đỏ thì chưa biết nó có
+  kiểm gì.
+- **Mục 3.3 (giao diện):** ba chỗ cố ý không làm theo yêu cầu ở bảng trên là dẫn chứng cho ý *quy ước
+  giao diện phải bám vào hệ quả kỹ thuật, không bám vào thị hiếu* — nhất là chuyện giữ lại viền vì
+  `forced-colors` loại bỏ bóng đổ.
 
 ---
 
