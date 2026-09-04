@@ -60,6 +60,15 @@ public final class ChatPromptBuilder {
                 - Không bịa số liệu, không bịa tên tài liệu, không bịa nguồn.
                 - Trả lời gọn: 2-5 đoạn ngắn hoặc một danh sách. Người học đang ôn bài, không đọc
                   luận văn.
+                - Công thức toán, hoá, vật lý viết bằng LaTeX đặt giữa hai dấu $, ví dụ $y = x^2$
+                  hoặc $\\frac{a}{b}$. Giao diện dựng phần trong dấu $ thành công thức thật; viết
+                  thô kiểu x^2 hay a/b thì người học đọc đúng chuỗi ký tự đó.
+                - Chữ thường KHÔNG đặt trong dấu $. Chỉ đánh dấu đúng phần là công thức.
+
+                (HAI dấu chéo trong \\frac là cố ý. Text block của Java VẪN xử lý chuỗi
+                 thoát, và \f là KÝ TỰ FORM-FEED — viết một dấu thì ví dụ gửi tới mô hình
+                 thành <FF>rac{a}{b}. Nó không gây lỗi, chỉ lặng lẽ dạy mô hình bằng một ví dụ
+                 hỏng, đúng chỗ đang dặn nó viết cho chuẩn.)
                 - Chỉ nhận câu hỏi thuộc phạm vi học tập. Câu ngoài phạm vi thì từ chối ngắn gọn một
                   câu và mời hỏi về nội dung đang học.
 

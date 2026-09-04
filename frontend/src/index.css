@@ -554,11 +554,34 @@ body {
   box-shadow: none;
 }
 
-/* Ô nhập bên trong khung: bỏ hết viền/nền riêng của Ant Design để nó hoà vào khung bọc, nếu
-   không sẽ thành hai lớp viền lồng nhau. */
-.chat-composer .ant-input {
+/* Ô nhập bên trong khung: bỏ hết viền/nền/vòng focus riêng của Ant Design để nó hoà vào khung bọc.
+
+   ── Vì sao phải liệt kê từng trạng thái, và vì sao gắn thêm `textarea` vào bộ chọn ──
+   Ant Design v6 sinh CSS lúc CHẠY và chèn vào <head> SAU tệp này, nên khi hai bộ chọn bằng điểm đặc
+   hiệu thì nó thắng nhờ đứng sau. Bộ chọn của nó cỡ `.ant-input-outlined:focus` — phần băm nằm trong
+   `:where()` nên không tính điểm — tức (0,2,0), y hệt `.chat-composer .ant-input`. Kết quả: viền và
+   vòng focus vẫn hiện, thành hai lớp viền lồng nhau, và vòng focus lại màu tím — trái quy ước §5
+   (tím chỉ dành cho link).
+
+   Cách thắng là thêm tên THẺ vào bộ chọn: `textarea.ant-input:focus` là (0,2,1), hơn hẳn mà không
+   cần `!important`. Điều này quan trọng — `!important` từng thắng đúng luật rồi làm vỡ bố cục nội bộ
+   của `Input.Search` (xem ui-design-system.md §4.2). Ở đây `textarea` là thẻ lá, không có bố cục
+   trong nó để mà vỡ.
+
+   Khung bọc `.chat-composer:focus-within` đã đổi viền khi con trỏ vào trong, nên dấu hiệu focus
+   không mất — nó chỉ chuyển từ vòng quanh ô nhập ra viền quanh cả khung, đúng thứ người dùng thấy ở
+   mọi công cụ hội thoại khác. */
+.chat-composer .ant-input,
+.chat-composer textarea.ant-input,
+.chat-composer textarea.ant-input:hover,
+.chat-composer textarea.ant-input:focus,
+.chat-composer textarea.ant-input-focused,
+.chat-composer .ant-input-affix-wrapper,
+.chat-composer .ant-input-affix-wrapper:hover,
+.chat-composer .ant-input-affix-wrapper:focus-within {
   background: transparent;
   border: 0;
+  outline: 0;
   box-shadow: none;
   padding: 4px 0;
   resize: none;
@@ -671,4 +694,25 @@ body {
   border: 1px solid var(--color-line);
   color: var(--color-brand);
   font-size: 26px;
+}
+
+/* ── Màn Trợ lý: chỉ khung hội thoại cuộn, phần còn lại đứng im ──
+
+   Bản trước để khối chat `min-h-[60vh]` nên nó phình theo số tin nhắn, và thứ cuộn là CẢ TRANG:
+   đọc tới câu trả lời thứ ba là tiêu đề trang và cột học liệu đã trôi mất, muốn đổi tài liệu phải
+   cuộn ngược lên. Ràng chiều cao trang lại thì mỗi khối tự cuộn trong lòng nó.
+
+   136px = 72px thanh điều hướng (token `Layout.headerHeight` trong antdTheme.ts) + 64px đệm dọc của
+   `<Content className="px-6 py-8">`. Hai con số này là kích thước thật của khung ứng dụng; đặt ở đây
+   kèm nguồn gốc để khi ai đổi chúng thì tìm ra được chỗ này.
+
+   `dvh` chứ không `vh`: trên trình duyệt điện thoại `vh` tính theo khung lúc thanh địa chỉ đang ẩn,
+   nên phần đáy — đúng chỗ đặt ô nhập — bị đẩy xuống dưới mép nhìn thấy.
+
+   CHỈ áp từ `lg` trở lên. Dưới ngưỡng đó bố cục xếp dọc, nhồi ba vùng cuộn vào một màn hình điện
+   thoại thì mỗi vùng còn vài dòng — ở đó để cả trang cuộn như thường là đúng hơn. */
+@media (width>=64rem) {
+  .chat-trang {
+    height: calc(100dvh - 136px);
+  }
 }

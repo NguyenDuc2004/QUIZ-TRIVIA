@@ -229,7 +229,34 @@ nghĩa*, không phải vì trông mềm mại hơn:
 Cả hai sống ở `index.css` chứ **không** viết thẳng vào component: bán kính và bóng là quyết định của
 hệ thống thiết kế, nên chúng nằm trong hệ thống thiết kế. Component chỉ gọi tên lớp.
 
-### 4.5. Cột phụ: nền chìm thay cho lưới viền
+### 4.5. Màn hội thoại: chỉ khung chat cuộn
+
+Trang Trợ lý ràng chiều cao bằng `.chat-trang` (`calc(100dvh - 136px)`, chỉ từ `lg`), rồi để **mỗi
+khối tự cuộn trong lòng nó**. Bản trước để khối chat `min-h-[60vh]` nên nó phình theo số tin nhắn và
+thứ cuộn là *cả trang*: đọc tới câu trả lời thứ ba thì tiêu đề và cột học liệu đã trôi mất, muốn đổi
+tài liệu phải cuộn ngược lên.
+
+Ba điều dễ sai khi dựng kiểu bố cục này:
+
+1. **`min-h-0` phải có ở MỌI mắt xích** từ khung ngoài tới vùng cuộn. Mặc định `min-height` của flex/
+   grid item là `auto` — nó nở đúng bằng nội dung và không bao giờ nhỏ hơn để mà phải cuộn. CSS không
+   báo gì; nó chỉ lặng lẽ cuộn cả trang.
+2. **Không bọc bằng `<Space>`.** `Space` đặt mỗi phần tử con vào một `.ant-space-item` riêng, nên
+   `flex-1` áp vào cái bọc chứ không tới được phần tử thật.
+3. **Chỉ áp từ `lg`.** Dưới ngưỡng đó bố cục xếp dọc; nhồi ba vùng cuộn vào màn hình điện thoại thì
+   mỗi vùng còn vài dòng, để cả trang cuộn như thường là đúng hơn.
+
+Con số 136px = 72px thanh điều hướng (token `Layout.headerHeight`) + 64px đệm dọc của `Content`.
+`dvh` chứ không `vh`: trên trình duyệt điện thoại `vh` tính theo khung lúc thanh địa chỉ ẩn, nên đáy
+trang — đúng chỗ đặt ô nhập — bị đẩy khỏi vùng nhìn thấy.
+
+**Ô nhập trong khung nổi phải tắt viền và vòng focus của Ant Design ở mọi trạng thái**, và thắng bằng
+cách thêm tên thẻ vào bộ chọn (`textarea.ant-input:focus` = (0,2,1)) chứ **không** bằng `!important`.
+AntD v6 sinh CSS lúc chạy và chèn sau tệp của dự án, nên bằng điểm đặc hiệu là nó thắng nhờ đứng sau;
+còn `!important` thì từng thắng đúng luật rồi làm vỡ bố cục nội bộ của `Input.Search` (§4.2). Dấu
+hiệu focus không mất — nó chuyển ra viền của cả khung qua `:focus-within`.
+
+### 4.6. Cột phụ: nền chìm thay cho lưới viền
 
 Cột danh sách đứng cạnh một khung nội dung chính (danh sách hội thoại, danh sách học liệu ở màn Trợ
 lý) dùng **một nền `--color-surface-subtle` bo 12px, không kẻ viền quanh từng khối và từng dòng**.
@@ -385,6 +412,12 @@ tử đó giờ là một mục trong menu — menu đóng ngay khi bấm nên h
 phụ), nên hàng dính sát nhau và khó dò theo hàng ngang.
 
 ## 4.4. Công thức toán — `<MathText>`
+
+**Chỉ dựng ở nội dung do HỆ THỐNG hoặc NGƯỜI RA ĐỀ viết, không dựng ở chữ người dùng vừa gõ.** Mô
+hình và người soạn đề được dặn dùng `$...$` nên với họ dấu `$` là mốc có chủ ý; người học gõ tự do,
+và một câu như *"sách giá 100$ còn khoá học 200$"* có đủ dấu mở lẫn dấu đóng. Bên nào nhận quy ước
+thì bên đó được dựng. Trích dẫn nguồn cũng giữ nguyên xi — nó là thứ để **đối chiếu** với tài liệu
+gốc, nên không được đẹp hơn sự thật.
 
 Nội dung có công thức dựng bằng **KaTeX**, đánh dấu bằng `$...$`.
 

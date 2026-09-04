@@ -21,6 +21,7 @@ import {
   PlusOutlined,
   RobotOutlined,
 } from '@ant-design/icons'
+import MathText from '@/shared/components/MathText'
 import Pill from '@/shared/components/Pill'
 import PageHeader from '@/shared/components/PageHeader'
 import { useUploadMaterial } from '@/features/ai/hooks/useAiQueries'
@@ -85,7 +86,11 @@ export default function AssistantPage() {
   }
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    /* KHÔNG dùng `<Space>` ở đây như các trang khác: `Space` bọc mỗi phần tử con vào một
+       `.ant-space-item` riêng, nên `flex-1` đặt trên lưới bên dưới sẽ áp vào cái bọc đó chứ không
+       tới được lưới — khối chat không bao giờ nhận được phần chiều cao còn lại. Một `flex` tự viết
+       làm đúng việc `Space` làm (xếp dọc, cách nhau 24px) mà giữ được chuỗi chiều cao liền mạch. */
+    <div className="chat-trang flex w-full flex-col gap-6">
       <PageHeader
         title="Trợ lý học tập"
         description="Hỏi về nội dung trong học liệu — trợ lý trả lời kèm tài liệu đã dựa vào"
@@ -102,10 +107,18 @@ export default function AssistantPage() {
         }
       />
 
-      {/* Cột trái xếp hai khối (hội thoại, học liệu), khung hội thoại chiếm trọn chiều cao bên phải */}
-      <div className="grid gap-4 lg:grid-cols-[260px_1fr] lg:grid-rows-[auto_1fr]">
-        {/* Danh sách phiên */}
-        <aside className="chat-rail lg:col-start-1 lg:row-start-1">
+      {/* Cột trái xếp hai khối (hội thoại, học liệu), khung hội thoại chiếm trọn chiều cao bên phải.
+
+          `min-h-0` có mặt ở MỌI mắt xích từ đây xuống tới vùng cuộn. Thiếu nó thì `overflow-y-auto`
+          bên dưới không có tác dụng: mặc định `min-height` của một flex/grid item là `auto`, tức nó
+          nở đúng bằng nội dung và không bao giờ nhỏ hơn để mà phải cuộn. Đây là chỗ dễ mất cả buổi
+          nhất khi dựng bố cục kiểu này, vì CSS không báo gì — nó chỉ lặng lẽ cuộn cả trang. */}
+      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[260px_1fr]">
+        {/* Cột trái: hai khối xếp dọc, mỗi khối tự cuộn trong lòng nó */}
+        <div className="flex flex-col gap-4 lg:min-h-0">
+        {/* Danh sách phiên — cao tối đa 40% cột, dài hơn thì cuộn tại chỗ thay vì đẩy khối học liệu
+            xuống dưới mép màn hình */}
+        <aside className="chat-rail lg:max-h-[40%] lg:overflow-y-auto">
           <div className="px-2 py-2">
             <Text className="text-ink-soft text-xs font-bold">Hội thoại của bạn</Text>
           </div>
@@ -160,7 +173,7 @@ export default function AssistantPage() {
 
         {/* Học liệu hỏi được — trước đây người học không có cách nào biết kho có tài liệu gì, họ chỉ
             thấy tên một tài liệu SAU KHI tình cờ hỏi trúng nó qua khối trích dẫn */}
-        <aside className="chat-rail lg:col-start-1 lg:row-start-2">
+        <aside className="chat-rail lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
           <div className="px-2 py-2">
             <Text className="text-ink-soft text-xs font-bold">Học liệu hỏi được</Text>
           </div>
@@ -234,9 +247,12 @@ export default function AssistantPage() {
           )}
         </aside>
 
-        {/* Khung hội thoại */}
-        <section className="flex min-h-[60vh] flex-col lg:col-start-2 lg:row-span-2 lg:row-start-1">
-          <div className="flex-1 overflow-y-auto pb-4">
+        </div>
+
+        {/* Khung hội thoại. `min-h-[60vh]` chỉ còn tác dụng dưới `lg` — nơi bố cục xếp dọc và cả
+            trang cuộn như thường; từ `lg` trở lên chiều cao do lưới quyết định. */}
+        <section className="flex min-h-[60vh] flex-col lg:col-start-2 lg:min-h-0">
+          <div className="min-h-0 flex-1 overflow-y-auto pb-4">
             {sessionId && messagesLoading ? (
               <Skeleton active paragraph={{ rows: 5 }} />
             ) : messages.length === 0 ? (
@@ -363,7 +379,7 @@ export default function AssistantPage() {
           Toàn bộ câu hỏi và câu trả lời trong “{xoaPhien?.title}” sẽ bị xoá.
         </Paragraph>
       </Modal>
-    </Space>
+    </div>
   )
 }
 
@@ -440,8 +456,25 @@ export function goiYCauHoi(
   return ket
 }
 
-/** Một bong bóng hội thoại. Câu trả lời của trợ lý luôn kèm phần "dựa trên tài liệu nào". */
-function MessageBubble({ item, isStreaming }: { item: ChatMessage; isStreaming: boolean }) {
+/**
+ * Một bong bóng hội thoại. Câu trả lời của trợ lý luôn kèm phần "dựa trên tài liệu nào".
+ *
+ * ## Chỉ câu TRẢ LỜI được dựng công thức, câu hỏi thì không
+ * Trợ lý được dặn viết công thức trong `$...$` (`ChatPromptBuilder`), nên với nó dấu `$` là mốc có
+ * chủ ý. Người học thì gõ tự do: một câu như "sách giá 100$ còn khoá học 200$" có đủ dấu mở và dấu
+ * đóng, và dựng phần ở giữa thành công thức là bóp méo đúng câu chữ họ vừa viết ra. Bên nào tự nhận
+ * quy ước thì bên đó được dựng.
+ *
+ * ## Đang stream thì công thức hiện dần
+ * Giữa chừng, `$y = x^` chưa có dấu đóng nên `MathText` để nguyên làm chữ (nó không bao giờ sửa chữ
+ * thường); tới khi mảnh chứa dấu đóng về thì đoạn đó thành công thức. Không cần xử lý riêng.
+ *
+ * ## Trích dẫn nguồn giữ nguyên xi
+ * Khối `sources` là đoạn trích từ tài liệu gốc — một trích dẫn thì phải đúng từng ký tự với bản gốc,
+ * kể cả khi bản gốc viết `x^2` thô. Đó là thứ người học dùng để ĐỐI CHIẾU, nên nó không được đẹp hơn
+ * sự thật.
+ */
+export function MessageBubble({ item, isStreaming }: { item: ChatMessage; isStreaming: boolean }) {
   const isUser = item.role === 'USER'
 
   if (isUser) {
@@ -458,7 +491,8 @@ function MessageBubble({ item, isStreaming }: { item: ChatMessage; isStreaming: 
     <div className="max-w-[90%]">
       <Text className="text-ink-soft mb-1 block text-xs font-bold">Trợ lý</Text>
       <Paragraph className="mb-2! whitespace-pre-wrap">
-        {item.content}
+        {/* Dựng công thức ở ĐÂY mà không dựng ở bong bóng câu hỏi — xem chú thích trên hàm. */}
+        <MathText>{item.content}</MathText>
         {/* Con trỏ nhấp nháy khi chữ chưa chảy xong — người dùng biết là còn đang viết, không phải đã dừng */}
         {isStreaming && <Spin size="small" className="ml-2" />}
       </Paragraph>
