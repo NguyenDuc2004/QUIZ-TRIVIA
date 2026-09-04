@@ -515,3 +515,160 @@ body {
   border-color: var(--color-ink-soft);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
+
+
+/* ══════════════════════════════════════════════════════════════════
+   TRỢ LÝ HỌC TẬP — lối trình bày riêng của màn hội thoại
+
+   Đây là NGOẠI LỆ thứ hai của quy ước "bo góc 4px cho mọi thứ" (§4), sau viên thuốc trạng
+   thái. Lý do giống nhau: hình dáng mang nghĩa. Khung soạn tin bo tròn nổi trên nền là hình
+   dáng người dùng đã học được từ mọi công cụ hội thoại khác — nó nói "gõ vào đây" trước cả khi
+   đọc placeholder. Ngoại lệ dừng đúng ở khung soạn tin và chip gợi ý; nút, ô nhập, thẻ ở phần
+   còn lại của trang vẫn 4px.
+
+   Vì sao các lớp này nằm ở đây chứ không phải class Tailwind viết thẳng trong component:
+   ui-design-system.md cấm hardcode màu/bo góc/shadow trong component. Bán kính 16px và bóng
+   mềm bên dưới là quyết định của hệ thống thiết kế, nên chúng sống trong hệ thống thiết kế.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Khung soạn tin nổi ── */
+.chat-composer {
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background: var(--color-surface);
+  padding: 8px 8px 8px 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Viền sáng lên khi con trỏ đang ở trong khung. `:focus-within` chứ không `:focus`: phần tử
+   nhận focus là <textarea> bên trong, còn thứ cần đổi hình là cái khung bọc ngoài. */
+.chat-composer:focus-within {
+  border-color: var(--color-ink-soft);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme='dark'] .chat-composer {
+  /* Bóng đen trên nền tối là vô hình. Ở chế độ tối, thứ tách khung ra khỏi nền là NỀN SÁNG HƠN
+     một bậc chứ không phải bóng — nên dùng `--color-surface` (#202126) trên nền `#17181c`. */
+  box-shadow: none;
+}
+
+/* Ô nhập bên trong khung: bỏ hết viền/nền riêng của Ant Design để nó hoà vào khung bọc, nếu
+   không sẽ thành hai lớp viền lồng nhau. */
+.chat-composer .ant-input {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 4px 0;
+  resize: none;
+}
+
+/* ── Chip câu hỏi gợi ý ── */
+.chat-chip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.chat-chip:hover {
+  border-color: var(--color-ink-soft);
+  background: var(--color-surface-subtle);
+}
+
+/* ── Cột trái: nền chìm thay cho lưới viền ──
+   Bản trước kẻ viền quanh từng khối và từng dòng, thành ra một bàn cờ: mắt phải bỏ qua hàng
+   chục đường kẻ mới đọc được tên hội thoại. Một nền chìm tách cột khỏi khung chat đủ rõ mà
+   không thêm đường nào. */
+.chat-rail {
+  background: var(--color-surface-subtle);
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.chat-rail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  transition: background 0.12s ease;
+}
+
+.chat-rail-item:hover {
+  background: var(--color-surface);
+}
+
+.chat-rail-item[data-dang-chon='true'] {
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+}
+
+/* Nút xoá chỉ hiện khi rê chuột — nhưng PHẢI hiện cả khi nó nhận focus bàn phím, nếu không thì
+   người dùng Tab tới một nút vô hình và không có cách nào biết mình đang đứng ở đâu. Đó là lý
+   do dùng `opacity` chứ không `display: none`: phần tử ẩn bằng `display` không nhận được focus. */
+.chat-rail-item .chat-rail-xoa {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.chat-rail-item:hover .chat-rail-xoa,
+.chat-rail-item:focus-within .chat-rail-xoa {
+  opacity: 1;
+}
+
+/* Màn cảm ứng không có trạng thái rê chuột: `:hover` ở đó hoặc không bao giờ đúng, hoặc dính
+   lại sau khi chạm. Nút xoá vì vậy luôn hiện trên thiết bị chạm. */
+@media (hover: none) {
+  .chat-rail-item .chat-rail-xoa {
+    opacity: 1;
+  }
+}
+
+/* ── Nút thêm học liệu, viền đứt ──
+   Viền đứt là quy ước chung cho "chỗ trống chờ được lấp" (khu vực thả tệp). Nó nói rằng đây
+   chưa phải nội dung, mà là chỗ để tạo ra nội dung. */
+.chat-them-hoc-lieu {
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 1px dashed var(--color-line);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-ink-soft);
+  padding: 18px 12px;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.chat-them-hoc-lieu:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+  background: var(--color-surface);
+}
+
+/* Biểu tượng trợ lý ở màn hình rỗng. Hình tròn ở đây là quy ước "đại diện" (avatar), không phải
+   bo góc trang trí — nên nó không thuộc diện quy ước 4px. */
+.chat-hero-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-line);
+  color: var(--color-brand);
+  font-size: 26px;
+}

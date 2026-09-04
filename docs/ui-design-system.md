@@ -218,6 +218,33 @@ Font: `Inter`, dự phòng `system-ui, sans-serif`.
 - Chiều cao control: 40px (thường), 48px (nút CTA lớn).
 - **Gradient: chỉ ở KHOẢNH KHẮC, không ở KHUNG CHỨC NĂNG.** Xem mục 4.1.
 
+**Hai ngoại lệ của quy ước 4px, và ranh giới của chúng.** Cả hai được chấp nhận vì *hình dáng mang
+nghĩa*, không phải vì trông mềm mại hơn:
+
+| Ngoại lệ | Bán kính | Vì sao | Ranh giới |
+|---|---|---|---|
+| Viên thuốc trạng thái `<Pill>` | tròn hoàn toàn | Nằm lẫn trong bảng dày chữ; hình viên thuốc tách nó khỏi chữ thường trước cả khi mắt đọc tới màu | Chỉ nhãn trạng thái. Nút, ô nhập, thẻ vẫn 4px |
+| Khung soạn tin trợ lý `.chat-composer`, chip gợi ý `.chat-chip` | 16px / 12px | Khung bo tròn nổi trên nền là hình dáng người dùng đã học từ mọi công cụ hội thoại khác — nó nói "gõ vào đây" trước cả khi đọc placeholder | Chỉ trong màn Trợ lý học tập, và chỉ ở khung soạn tin + chip |
+
+Cả hai sống ở `index.css` chứ **không** viết thẳng vào component: bán kính và bóng là quyết định của
+hệ thống thiết kế, nên chúng nằm trong hệ thống thiết kế. Component chỉ gọi tên lớp.
+
+### 4.5. Cột phụ: nền chìm thay cho lưới viền
+
+Cột danh sách đứng cạnh một khung nội dung chính (danh sách hội thoại, danh sách học liệu ở màn Trợ
+lý) dùng **một nền `--color-surface-subtle` bo 12px, không kẻ viền quanh từng khối và từng dòng**.
+
+Bản đầu của màn Trợ lý kẻ viền đủ cả hai: viền quanh khối, viền dưới mỗi dòng, viền quanh khung chat.
+Kết quả là một bàn cờ — mắt phải bỏ qua hàng chục đường kẻ mới đọc được tên hội thoại, trong khi thứ
+duy nhất cần phân biệt là "cột phụ" với "nội dung chính". Một nền chìm làm đúng việc đó mà không thêm
+đường nào.
+
+**Thao tác phá hoại trong danh sách kiểu này ẩn cho tới khi rê chuột** (`.chat-rail-xoa`) — nhưng ẩn
+bằng `opacity`, không bằng `display: none`, và phải hiện lại ở `:focus-within`. Phần tử ẩn bằng
+`display` không nhận được focus bàn phím, nên người dùng bàn phím sẽ Tab tới một nút vô hình mà không
+có cách nào biết mình đang đứng ở đâu. Trên thiết bị chạm (`@media (hover: none)`) nút luôn hiện: ở đó
+`:hover` hoặc không bao giờ đúng, hoặc dính lại sau khi chạm.
+
 ### 4.1. Gradient dùng ở đâu, và vì sao không dùng rộng hơn
 
 Bản đầu của tài liệu này cấm gradient trừ khối ảnh giả lập. Cấm sạch thì an toàn nhưng làm mất một thứ:
