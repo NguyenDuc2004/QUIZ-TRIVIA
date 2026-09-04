@@ -239,7 +239,13 @@ export default function QuizIntroPage() {
             <>
               <div className="my-4 border-t border-line" />
               <Text className="text-ink-soft text-xs">Hoặc thi đấu cùng bạn bè</Text>
-              <Link to="/rooms">
+              {/* Mang theo quiz đang xem sang sảnh phòng đấu.
+
+                  Trước đây nút này chỉ dẫn tới `/rooms` trống trơn, nên người dùng đang xem đúng một
+                  quiz lại phải tự tìm lại nó trong ô chọn — và nút "Mở phòng" bên đó thì đang bị
+                  `disabled` vì chưa chọn gì. Người dùng bấm một nút tên là "Mở phòng đấu trí" rồi
+                  đến nơi thấy nút "Mở phòng" bấm không được. */}
+              <Link to={`/rooms?quizId=${quizId}`}>
                 <Button block className="mt-2">
                   Mở phòng đấu trí
                 </Button>

@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Button, Checkbox, Input, Select, Space, Typography, message } from 'antd'
+import { useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Alert, Button, Checkbox, Input, Select, Space, Typography, message } from 'antd'
 import { getApiErrorMessage } from '@/shared/api/client'
 import PageHeader from '@/shared/components/PageHeader'
-import { useQuizList } from '@/features/quiz/hooks/useQuizQueries'
+import { useQuizList, useQuizSummary } from '@/features/quiz/hooks/useQuizQueries'
 import { roomApi } from '../api/roomApi'
 
 const { Text, Paragraph } = Typography
@@ -18,7 +18,18 @@ export default function RoomLobbyPage() {
   const navigate = useNavigate()
   const { data: quizzes, isPending } = useQuizList({ size: 50 })
 
-  const [quizId, setQuizId] = useState<string | undefined>()
+  /*
+   * Quiz được chỉ định sẵn qua `?quizId=` — người dùng bấm "Mở phòng đấu trí" từ trang giới thiệu
+   * một quiz cụ thể.
+   *
+   * Đặt thẳng làm giá trị KHỞI TẠO của state chứ không đồng bộ bằng `useEffect`: dùng effect thì
+   * lượt vẽ đầu tiên ô chọn vẫn rỗng rồi mới nhảy sang có giá trị, và effect còn phải canh để không
+   * ghi đè lựa chọn mà người dùng vừa đổi tay. Giá trị khởi tạo không có cả hai vấn đề đó.
+   */
+  const [searchParams] = useSearchParams()
+  const quizIdTuUrl = searchParams.get('quizId') ?? undefined
+
+  const [quizId, setQuizId] = useState<string | undefined>(quizIdTuUrl)
   const [seconds, setSeconds] = useState(20)
   const [allowGuests, setAllowGuests] = useState(true)
   const [code, setCode] = useState('')
@@ -54,6 +65,50 @@ export default function RoomLobbyPage() {
 
   const playableQuizzes = (quizzes?.content ?? []).filter((quiz) => quiz.questionCount > 0)
 
+  /*
+   * Nạp riêng quiz đến từ URL.
+   *
+   * Danh sách trên chỉ có quiz CÔNG KHAI (`QuizRepository` lọc `visibility = PUBLIC`), trong khi
+   * backend CHO PHÉP mở phòng từ quiz riêng tư của chính mình (`RoomService.loadPlayableQuiz` chỉ
+   * chặn quiz riêng tư của NGƯỜI KHÁC). Không nạp thêm thì chủ một quiz riêng tư sẽ thấy ô chọn hiện
+   * một mã UUID trần, hoặc rỗng — dù backend hoàn toàn mở được phòng cho nó.
+   *
+   * Đây là lỗ có sẵn từ trước, không phải hệ quả của việc thêm `?quizId=`: trước nay không có đường
+   * nào chọn được quiz riêng tư trong sảnh cả.
+   *
+   * Gần như luôn là một lần đọc cache chứ không phải một request: người dùng vừa từ trang giới thiệu
+   * quiz sang, mà trang đó dùng đúng `useQuizSummary` với cùng khoá.
+   */
+  const { data: quizTuUrl, isPending: dangNapQuizTuUrl } = useQuizSummary(quizIdTuUrl)
+
+  const luaChonQuiz = useMemo(() => {
+    const ds = playableQuizzes.map((quiz) => ({
+      value: quiz.id,
+      label: `${quiz.title} · ${quiz.questionCount} câu`,
+    }))
+    if (quizTuUrl && quizTuUrl.questionCount > 0 && !ds.some((m) => m.value === quizTuUrl.id)) {
+      ds.unshift({
+        value: quizTuUrl.id,
+        label: `${quizTuUrl.title} · ${quizTuUrl.questionCount} câu`,
+      })
+    }
+    return ds
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizzes, quizTuUrl])
+
+  /*
+   * URL chỉ định một quiz nhưng không dựng được lựa chọn nào cho nó: id sai, quiz riêng tư của người
+   * khác (backend trả 404), hoặc quiz chưa có câu hỏi.
+   *
+   * Phải NÓI RA. Im lặng thì màn hình trông y hệt lúc chưa sửa gì — ô chọn rỗng và nút "Mở phòng"
+   * bấm không được — mà người dùng thì vừa bấm một nút hứa hẹn điều ngược lại.
+   */
+  const khongDungDuocQuizTuUrl =
+    Boolean(quizIdTuUrl) &&
+    !dangNapQuizTuUrl &&
+    !isPending &&
+    !luaChonQuiz.some((m) => m.value === quizIdTuUrl)
+
   return (
     <Space direction="vertical" size="large" className="w-full">
       {/* Khối mở đầu của sảnh phòng đấu.
@@ -88,18 +143,27 @@ export default function RoomLobbyPage() {
           </Paragraph>
 
           <Space direction="vertical" size={12} className="w-full">
+            {khongDungDuocQuizTuUrl && (
+              <Alert
+                type="warning"
+                showIcon
+                message="Không mở được phòng cho quiz bạn vừa chọn"
+                description={
+                  quizTuUrl && quizTuUrl.questionCount === 0
+                    ? 'Quiz đó chưa có câu hỏi nào. Hãy chọn một quiz khác bên dưới.'
+                    : 'Quiz đó không còn, hoặc bạn không có quyền dùng nó. Hãy chọn một quiz khác bên dưới.'
+                }
+              />
+            )}
             <Select
               showSearch
-              loading={isPending}
+              loading={isPending || dangNapQuizTuUrl}
               placeholder="Chọn quiz"
               className="w-full"
-              value={quizId}
+              value={khongDungDuocQuizTuUrl ? undefined : quizId}
               onChange={setQuizId}
               optionFilterProp="label"
-              options={playableQuizzes.map((quiz) => ({
-                value: quiz.id,
-                label: `${quiz.title} · ${quiz.questionCount} câu`,
-              }))}
+              options={luaChonQuiz}
             />
             <Select
               className="w-full"
