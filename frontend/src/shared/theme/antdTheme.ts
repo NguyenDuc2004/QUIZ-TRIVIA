@@ -155,13 +155,23 @@ export const darkTheme: ThemeConfig = {
     colorPrimary: darkColors.brand,
     colorLink: darkColors.brandStrong,
     colorLinkHover: darkColors.brand,
+    // Khai CẢ `colorTextBase` LẪN `colorText`/`colorTextHeading`.
+    //
+    // `colorTextBase` là hạt giống để thuật toán suy ra hàng chục màu chữ khác nhau, nhưng bản thân
+    // tiêu đề (`Typography.Title`) đọc `colorTextHeading`, còn thân bài đọc `colorText`. Chỉ đặt hạt
+    // giống thì hai màu kia vẫn được suy ra — nhưng suy ra kèm độ mờ, nên tiêu đề trên nền tối trông
+    // nhợt hẳn đi. Đặt thẳng thì tiêu đề rõ đúng như mong muốn.
     colorTextBase: darkColors.ink,
+    colorText: darkColors.ink,
+    colorTextHeading: darkColors.ink,
     colorTextSecondary: darkColors.inkSoft,
+    colorTextDescription: darkColors.inkSoft,
     colorBorder: darkColors.line,
     colorBorderSecondary: darkColors.line,
     colorBgLayout: darkColors.surfaceSubtle,
     colorBgContainer: darkColors.surface,
     colorBgElevated: darkColors.surface,
+    colorBgBase: darkColors.surfaceSubtle,
   },
   components: {
     ...appTheme.components,
