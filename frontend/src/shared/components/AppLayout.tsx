@@ -4,6 +4,7 @@ import { Avatar, Button, Drawer, Dropdown, Input, Layout, Space, Tag, Typography
 import type { MenuProps } from 'antd'
 import {
   DownOutlined,
+  HistoryOutlined,
   LogoutOutlined,
   MenuOutlined,
   SearchOutlined,
@@ -83,6 +84,20 @@ export default function AppLayout() {
       icon: <UserOutlined />,
       label: 'Trang cá nhân',
       onClick: () => navigate('/profile'),
+    },
+    {
+      // Lịch sử làm bài nằm ở ĐÂY chứ không trong menu "Học tập", và chỉ ở một chỗ.
+      //
+      // Menu "Học tập" là nơi chọn *việc sắp làm* — vào lớp, ôn thẻ, xem lộ trình. Lịch sử làm bài
+      // ngược lại: nó là *hồ sơ của riêng mình*, cùng loại với Trang cá nhân, nên thuộc về menu tài
+      // khoản. Đặt đúng nhóm thì người dùng đoán được chỗ tìm mà không phải nhớ.
+      //
+      // Không để cả hai nơi: hai lối vào cùng một trang làm người dùng dừng lại tự hỏi chúng có khác
+      // nhau không, và mỗi lần thêm mục mới lại phải quyết định nhân đôi hay không.
+      key: 'attempts',
+      icon: <HistoryOutlined />,
+      label: 'Lịch sử làm bài',
+      onClick: () => navigate('/my-attempts'),
     },
     // KHÔNG còn mục "Khu quản trị" ở đây. Quản trị viên không vào được layout này nữa (route khu học tập
     // chỉ nhận LEARNER và CREATOR), nên mục đó là một nhánh không ai chạy tới — và một nhánh chết trong
@@ -338,7 +353,7 @@ const MUC_HOC_TAP: MucMenu[] = [
   { to: '/leaderboard', label: 'Xếp hạng mùa', moTa: 'So điểm với người học khác trong mùa này' },
   { to: '/learning-path', label: 'Lộ trình học', moTa: 'Thứ tự chủ đề nên ôn, gợi ý từ đồ thị hành vi' },
   { to: '/my-progress', label: 'Tiến độ', moTa: 'Điểm theo thời gian, mạnh yếu theo chủ đề' },
-  { to: '/my-attempts', label: 'Lịch sử làm bài', moTa: 'Các bài đã làm và kết quả' },
+  // "Lịch sử làm bài" đã chuyển sang menu tài khoản (dưới avatar) — xem `accountMenuItems`.
 ]
 
 const MUC_THU_VIEN: MucMenu[] = [
