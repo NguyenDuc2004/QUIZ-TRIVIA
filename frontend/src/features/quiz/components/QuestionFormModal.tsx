@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import MathText from '@/shared/components/MathText'
+import XemTruocCongThuc, { coDanhDauCongThuc } from '@/shared/components/XemTruocCongThuc'
 import {
   Alert,
   AutoComplete,
@@ -162,7 +164,14 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
           <Controller
             name="content"
             control={control}
-            render={({ field }) => <Input.TextArea {...field} rows={2} />}
+            render={({ field }) => (
+              <>
+                <Input.TextArea {...field} rows={2} />
+                {/* Xem trước ngay dưới ô nhập: người viết thấy kết quả trong lúc gõ, nên vừa biết
+                    tính năng công thức tồn tại vừa kiểm được mình gõ đúng cú pháp chưa. */}
+                <XemTruocCongThuc noiDung={field.value ?? ''} />
+              </>
+            )}
           />
         </Form.Item>
 
@@ -211,14 +220,25 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
                     type === 'SHORT_ANSWER' ? (
                       <Input.TextArea {...field} rows={2} style={{ width: 560 }} />
                     ) : (
-                      <Input
-                        {...field}
-                        style={{ width: 520 }}
-                        disabled={type === 'TRUE_FALSE'}
-                        placeholder={
-                          type === 'FILL_BLANK' ? 'Một cách viết đáp án được chấp nhận' : 'Nội dung lựa chọn'
-                        }
-                      />
+                      <div style={{ width: 520 }}>
+                        <Input
+                          {...field}
+                          disabled={type === 'TRUE_FALSE'}
+                          placeholder={
+                            type === 'FILL_BLANK'
+                              ? 'Một cách viết đáp án được chấp nhận'
+                              : 'Nội dung lựa chọn'
+                          }
+                        />
+                        {/* Chỉ xem trước khi lựa chọn ĐÃ có `$...$` — phần gợi ý cú pháp đã nói một
+                            lần ở ô nội dung, nhắc lại dưới từng lựa chọn là bốn dòng chữ giống nhau
+                            trong một hộp thoại vốn đã dày. */}
+                        {coDanhDauCongThuc(field.value ?? '') && (
+                          <div className="bg-surface-subtle border-line mt-1 rounded-control border px-2 py-1">
+                            <MathText>{field.value ?? ''}</MathText>
+                          </div>
+                        )}
+                      </div>
                     )
                   }
                 />

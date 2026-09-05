@@ -485,6 +485,28 @@ phụ), nên hàng dính sát nhau và khó dò theo hàng ngang.
 
 ### 4.4. Công thức toán — `<MathText>`
 
+### Người viết phải BIẾT là có cú pháp đó
+
+Luật "không tự đoán" chỉ công bằng nếu người viết **biết cách tự đánh dấu**. Trước 06/09/2026 không có
+gì trong màn soạn câu hỏi nhắc tới `$...$`, nên một giáo viên gõ `y = x^2` sẽ mãi gõ như vậy và không
+hiểu vì sao đề của mình trông thô hơn đề AI sinh.
+
+`<XemTruocCongThuc>` đặt dưới ô nội dung và dưới mỗi lựa chọn:
+
+| Trạng thái | Hiện gì |
+|---|---|
+| Đã có `$...$` | **Xem trước** công thức đã dựng, để người viết kiểm lại cú pháp |
+| Có `^` hoặc lệnh LaTeX viết trần | Một dòng **gợi ý** cú pháp, kèm ví dụ |
+| Chữ thường | **Không hiện gì** |
+
+**Chỗ này ĐOÁN — và đoán được, vì nó chỉ đề nghị chứ không sửa.** Đoán sai thì người viết bỏ qua một
+dòng chữ; đoán sai lúc tự đổi nội dung thì họ mất chữ. Hai việc khác hẳn nhau về hậu quả nên chịu được
+hai mức chắc chắn khác nhau.
+
+Bắt **hẹp**: chỉ `^` và lệnh LaTeX, **không** bắt `/` hay `*` — chúng đầy trong câu chữ bình thường
+("km/h", "và/hoặc"), và một gợi ý nhảy ra sai chỗ vài lần là người dùng thôi đọc nó. Chữ thường thì im
+lặng hẳn: một dòng nhắc thường trực ở mọi câu hỏi sẽ bị đọc lướt qua ngay từ câu thứ ba.
+
 **Chỉ dựng ở nội dung do HỆ THỐNG hoặc NGƯỜI RA ĐỀ viết, không dựng ở chữ người dùng vừa gõ.** Mô
 hình và người soạn đề được dặn dùng `$...$` nên với họ dấu `$` là mốc có chủ ý; người học gõ tự do,
 và một câu như *"sách giá 100$ còn khoá học 200$"* có đủ dấu mở lẫn dấu đóng. Bên nào nhận quy ước
