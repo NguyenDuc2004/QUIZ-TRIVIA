@@ -16,6 +16,7 @@ Cho phép người dùng đăng ký, đăng nhập an toàn và phân quyền tr
 - **FR-3** [S] ✅ Đăng nhập bằng **Google** (Google Identity Services, luồng ID token).
 - **FR-4** [M] ✅ Quên/đặt lại mật khẩu bằng **mã OTP 6 chữ số gửi qua email** (Gmail SMTP + App Password).
 - **FR-4b** [S] ✅ Người dùng **tự đổi vai trò LEARNER ↔ CREATOR** ở trang Hồ sơ (`PATCH /auth/my-role`), không cần admin duyệt.
+- **FR-4c** [S] ✅ Ô **"Ghi nhớ đăng nhập"** ở màn đăng nhập — bỏ tick thì đóng trình duyệt là hết phiên (dành cho máy chung).
 
 ### Đăng nhập Google — vì sao chọn luồng ID token
 

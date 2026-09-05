@@ -60,7 +60,7 @@ describe('Đổi tài khoản không được để lộ dữ liệu người tr
     expect(client.getQueryData(['chat', 'sessions'])).toBeDefined()
 
     const { result } = renderHook(() => useLogin(), { wrapper: wrapper(client) })
-    result.current.mutate({ email: 'b@example.com', password: 'MatKhau12345' })
+    result.current.mutate({ email: 'b@example.com', password: 'MatKhau12345', ghiNho: true })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -100,7 +100,7 @@ describe('Đổi tài khoản không được để lộ dữ liệu người tr
     })
 
     const { result } = renderHook(() => useLogin(), { wrapper: wrapper(client) })
-    result.current.mutate({ email: 'b@example.com', password: 'MatKhau12345' })
+    result.current.mutate({ email: 'b@example.com', password: 'MatKhau12345', ghiNho: true })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(orderSeen).toEqual(['clear(user=null)', 'setSession(user=u2)'])

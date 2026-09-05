@@ -29,12 +29,15 @@ export function useLogin() {
   const navigate = useNavigate()
 
   return useMutation({
-    mutationFn: (body: LoginBody) => authApi.login(body),
-    onSuccess: (result) => {
+    // `ghiNho` KHÔNG gửi lên server: nó chỉ quyết định phía client lưu token ở đâu. Backend đã cấp
+    // refresh token 14 ngày cho mọi phiên rồi — "không ghi nhớ" nghĩa là máy này quên sớm hơn, chứ
+    // không phải server cấp phiên ngắn hơn.
+    mutationFn: ({ ghiNho: _bo, ...body }: LoginBody & { ghiNho: boolean }) => authApi.login(body),
+    onSuccess: (result, bien) => {
       // Xoá TRƯỚC khi đặt phiên mới: không để tồn tại khoảnh khắc nào mà danh tính đã là người mới
       // trong khi cache vẫn là dữ liệu người cũ
       clearQueryCache(queryClient)
-      setSession(result)
+      setSession(result, bien.ghiNho)
       message.success(`Xin chào ${result.user.displayName}`)
       navigate('/', { replace: true })
     },
