@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Alert, Button, Checkbox, Form, Input, Typography } from 'antd'
 import GoogleLoginButton from '../components/GoogleLoginButton'
 import { useLogin } from '../hooks/useAuthMutations'
+import { emailDaLuu } from '../emailDaLuu'
 import { loginSchema, type LoginForm } from '../schema'
 import ThemeToggle from '@/shared/components/ThemeToggle'
 
@@ -24,7 +25,8 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    // Điền sẵn email của lần trước. Mật khẩu luôn để trống — nó là việc của trình duyệt.
+    defaultValues: { email: emailDaLuu.doc(), password: '' },
   })
 
   return (

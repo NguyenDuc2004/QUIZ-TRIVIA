@@ -4,6 +4,7 @@ import { message } from 'antd'
 import { getApiErrorMessage } from '@/shared/api/client'
 import { tokenStorage } from '@/shared/api/tokenStorage'
 import { authApi, type LoginBody, type RegisterBody, type Role } from '../api/authApi'
+import { emailDaLuu } from '../emailDaLuu'
 import { useAuthStore } from '../store/authStore'
 
 /**
@@ -38,6 +39,10 @@ export function useLogin() {
       // trong khi cache vẫn là dữ liệu người cũ
       clearQueryCache(queryClient)
       setSession(result, bien.ghiNho)
+      // Lưu SAU khi đăng nhập thành công, không lưu lúc đang gõ — nếu không thì nhớ luôn cả email gõ
+      // sai. Dùng email server trả về chứ không phải chuỗi người dùng gõ: backend chuẩn hoá chữ
+      // thường, nên gõ "Ban@Example.com" thì lần sau điền sẵn đúng dạng đã lưu.
+      emailDaLuu.luu(result.user.email, bien.ghiNho)
       message.success(`Xin chào ${result.user.displayName}`)
       navigate('/', { replace: true })
     },

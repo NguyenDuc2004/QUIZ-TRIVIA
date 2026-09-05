@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { emailDaLuu } from '../emailDaLuu'
 import { useLogin, useLogout } from './useAuthMutations'
 import { useAuthStore } from '../store/authStore'
 
@@ -53,6 +54,33 @@ function clientWithPreviousUserData() {
 describe('Đổi tài khoản không được để lộ dữ liệu người trước', () => {
   beforeEach(() => {
     useAuthStore.getState().clearSession()
+  })
+
+  it('đăng nhập thành công thì nhớ email — và LẤY TỪ SERVER, không lấy chuỗi người dùng gõ', async () => {
+    localStorage.clear()
+    const client = clientWithPreviousUserData()
+
+    const { result } = renderHook(() => useLogin(), { wrapper: wrapper(client) })
+    // Gõ hoa; backend chuẩn hoá về chữ thường và trả bản đã chuẩn hoá.
+    result.current.mutate({ email: 'B@Example.com', password: 'MatKhau12345', ghiNho: true })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    // Lưu bản của server: lần sau ô email điền sẵn đúng dạng tài khoản thật sự mang.
+    expect(emailDaLuu.doc()).toBe('b@example.com')
+  })
+
+  it('đăng nhập KHÔNG ghi nhớ thì không để lại email trên máy', async () => {
+    localStorage.clear()
+    emailDaLuu.luu('nguoi-truoc@example.com', true)
+    const client = clientWithPreviousUserData()
+
+    const { result } = renderHook(() => useLogin(), { wrapper: wrapper(client) })
+    result.current.mutate({ email: 'b@example.com', password: 'MatKhau12345', ghiNho: false })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(emailDaLuu.doc()).toBe('')
   })
 
   it('đăng nhập xoá sạch cache của người dùng trước', async () => {
