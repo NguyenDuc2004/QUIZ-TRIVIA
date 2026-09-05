@@ -378,7 +378,7 @@ export default function AppLayout() {
       </Drawer>
 
       <Content className="px-6 py-8">
-        <div className="mx-auto max-w-6xl">
+        <div className="khung-noi-dung">
           <Outlet />
         </div>
       </Content>

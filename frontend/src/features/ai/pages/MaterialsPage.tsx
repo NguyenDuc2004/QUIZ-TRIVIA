@@ -199,7 +199,10 @@ export default function MaterialsPage() {
   ]
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space direction="vertical" size="large" className="trang-rong w-full">
+      {/* `trang-rong` — nới bề ngang vùng nội dung cho bảng dày, xem `.khung-noi-dung`
+          trong index.css. Bảng này khai `scroll={{ x }}` nên thiếu chỗ là nó cuộn ngang
+          bên trong, trong khi hai bên màn hình còn trống. */}
       <PageHeader
         title={canShare ? 'Học liệu' : 'Học liệu của tôi'}
         description={

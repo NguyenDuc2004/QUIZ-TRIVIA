@@ -882,3 +882,35 @@ body {
     height: calc(100dvh - 136px);
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   BỀ NGANG VÙNG NỘI DUNG
+
+   Mặc định 72rem (1152px) và ĐÓ LÀ CỐ Ý, không phải giới hạn tạm. Trên màn 1900px nó để lại
+   khoảng 370px lề mỗi bên — lề đó đang làm việc của nó: giữ lưới thẻ ở 4 cột và giữ dòng chữ đủ
+   ngắn để mắt không phải quét ngang cả gang tay. Kéo hết bề ngang thì được cái đầy, mất cái đọc
+   được.
+
+   ── Ngoại lệ: trang có BẢNG DÀY ──
+   Ở đó thứ quyết định không còn là độ dài dòng chữ mà là việc quét theo hàng ngang, và cuộn ngang
+   là điều tệ nhất cho việc đó. Các bảng này khai `scroll={{ x: 'max-content' }}`, nên bảng nào
+   rộng hơn khung sẽ cuộn ngang BÊN TRONG — người dùng phải kéo để xem cột cuối, ngay cạnh một
+   vùng trống rộng bằng nửa cái bảng.
+
+   ── Vì sao dùng `:has()` chứ không một danh sách route trong AppLayout ──
+   Danh sách route đặt quyết định về bề ngang của một trang ở một tệp khác hẳn trang đó. Thêm
+   trang mới nghĩa là phải nhớ ra có cái danh sách ấy, và người quên sẽ không nhận được tín hiệu
+   nào. Với `:has()`, trang tự khai bằng một lớp trên chính nó — quyết định nằm cạnh thứ nó nói về.
+
+   `:has()` chạy trên mọi trình duyệt hiện hành (Chrome 105+, Safari 15.4+, Firefox 121+). Trình
+   duyệt quá cũ không hiểu thì bỏ qua luật này và trang giữ bề ngang mặc định — hỏng về phía an
+   toàn, chứ không vỡ bố cục.
+   ══════════════════════════════════════════════════════════════════ */
+.khung-noi-dung {
+  margin-inline: auto;
+  max-width: 72rem;
+}
+
+.khung-noi-dung:has(.trang-rong) {
+  max-width: 90rem;
+}

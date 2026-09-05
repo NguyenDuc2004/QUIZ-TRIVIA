@@ -70,7 +70,10 @@ export default function AssignmentResultsPage() {
   const { baiTap } = data
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="trang-rong flex flex-col gap-6">
+      {/* `trang-rong` — nới bề ngang vùng nội dung cho bảng dày, xem `.khung-noi-dung`
+          trong index.css. Bảng này khai `scroll={{ x }}` nên thiếu chỗ là nó cuộn ngang
+          bên trong, trong khi hai bên màn hình còn trống. */}
       <PageHeader
         actions={
           <Button icon={<DownloadOutlined />} loading={dangTai} onClick={() => void taiCsv()}>
