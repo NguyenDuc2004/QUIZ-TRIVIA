@@ -77,6 +77,15 @@ do đã ghi ở bảng bên dưới cho `ChatController`.
 | Trần **10 tài liệu/người học**, vượt trả 409 | Lý do khoá cũ là chi phí, nhưng vai trò là công cụ tồi để canh chi phí — nó chặn sạch người cần dùng và không chặn gì ở người đã có quyền. Trần đo đúng đại lượng cần đo; ghép với 10MB/tệp thành một chặn trên thật. Hạn mức ngày **không** đỡ được: nó cố ý không tính lượt nhúng (`AiQuotaService`) |
 | Creator **không** bị trần đó | Họ soạn nội dung cho nhiều lớp và nhiều đề; siết thêm là đổi hành vi của một nhóm không liên quan tới thay đổi này |
 
+**Hệ quả bỏ sót, vá 05/09/2026.** Mở quyền cho một vai trò thì phải rà lại mọi thứ vai trò đó nhìn
+thấy, không chỉ endpoint vừa mở:
+
+| Chỗ | Vấn đề | Đã sửa |
+|---|---|---|
+| Khối "Tiếp theo" ở trang Học liệu | Mời người học sang **Sinh đề bằng AI** — route chặn ở CREATOR/ADMIN, backend trả 403 | Đổi đích sang **Trợ lý học tập**, không giấu khối: họ nạp tài liệu chính là để hỏi trợ lý, giấu đi thì hết bị mời sai nhưng cũng hết lối đi tiếp |
+| `GET /ai/status` | Trả 403 với người học, nên cảnh báo "chưa cấu hình API key" không tới được họ — tệp dừng ở trạng thái Lỗi mà không có lý do | Tách sang `AiStatusController`, mở cho mọi tài khoản đã đăng nhập |
+| Chân trang | Cột của người học thiếu "Học liệu của tôi" (thanh điều hướng đã thêm, chân trang thì sót) | Thêm vào |
+
 **2. Kho rỗng thì không gọi mô hình.** Đường đi cũ vẫn nhúng câu hỏi rồi vẫn gọi mô hình chỉ để nghe
 nó nói đúng cái câu mà prompt đã bắt nó nói — **hai lời gọi tốn tiền cho một kết quả xác định từ
 đầu**, và với người học chưa nạp gì thì đó là *mọi* câu hỏi họ gõ. `prepare` kiểm `hasAskable` trước,

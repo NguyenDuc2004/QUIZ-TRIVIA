@@ -151,10 +151,18 @@ class AiGenerationIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"topic\":\"HTTP\",\"count\":3}"))
                 .andExpect(status().isForbidden());
+    }
 
+    @Test
+    @DisplayName("Learner XEM ĐƯỢC trạng thái dịch vụ AI — việc nạp học liệu của họ phụ thuộc vào nó")
+    void shouldLetLearnerReadAiStatus() throws Exception {
+        // Endpoint này từng nằm trong `AiController` nên trả 403 với người học. Hệ quả: trang Học liệu
+        // của họ KHÔNG BAO GIỜ hiện được cảnh báo "chưa cấu hình API key" — họ tải tệp lên, tệp dừng ở
+        // trạng thái Lỗi, và không có gì cho biết vì sao.
         mockMvc.perform(get("/api/v1/ai/status")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").exists());
     }
 
     @Test

@@ -315,7 +315,8 @@ PATCH  /api/v1/ai/materials/{id}/shared  Bật/tắt chia sẻ học liệu cho 
 |---|---|---|
 | `GET/POST/DELETE /ai/materials*` | **mọi tài khoản đã đăng nhập** | Người học phải nạp được tài liệu của chính họ, không thì trợ lý học tập chết hẳn với người học đơn lẻ — xem features/08 |
 | `PATCH /ai/materials/{id}/shared` | **CREATOR/ADMIN** | Bật `shared` là đẩy tài liệu vào trợ lý của *mọi* người học: một hành vi xuất bản, và một bề mặt kiểm duyệt |
-| `/ai/generate-questions`, `/ai/jobs/*`, `/ai/status` | **CREATOR/ADMIN** | Công cụ soạn nội dung, giữ nguyên luật cũ |
+| `/ai/generate-questions`, `/ai/jobs/*` | **CREATOR/ADMIN** | Công cụ soạn nội dung, giữ nguyên luật cũ |
+| `GET /ai/status` | **mọi tài khoản đã đăng nhập** | Tách sang `AiStatusController` (05/09/2026). Nó từng trả 403 với người học, nên trang Học liệu của họ **không bao giờ** hiện được cảnh báo "chưa cấu hình API key" — dù việc nạp tài liệu của họ phụ thuộc vào đúng dịch vụ đó. Chỉ lộ "AI có chạy được không" và tên nhà cung cấp; khoá, hạn mức và số liệu dùng vẫn nằm ở khu quản trị |
 
 Học liệu và job là **dữ liệu riêng**: của người khác trả **404**. Mở quyền *nạp* không kéo theo mở
 quyền *đọc* — mọi phương thức của `MaterialService` vẫn đi qua `requireOwned`.

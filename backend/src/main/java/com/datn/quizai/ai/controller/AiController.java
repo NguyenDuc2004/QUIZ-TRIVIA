@@ -48,6 +48,10 @@ import java.util.UUID;
  * lớp riêng chứ không mở lẻ vài phương thức ở đây: một lớp cấm cả cụm rồi mở ngoại lệ bên trong là
  * cách chắc chắn để sau này có người mở quyền quá tay. Phần chi phí mà luật vai trò đang thay mặt
  * canh được thay bằng trần số tài liệu, cưỡng chế ở {@code MaterialService}.
+ * <p>
+ * <b>{@code GET /ai/status} cũng đã chuyển đi</b> (05/09/2026), sang {@link AiStatusController}: nó trả
+ * 403 với người học, nên trang Học liệu của họ không bao giờ hiện được cảnh báo "chưa cấu hình API
+ * key" — dù việc nạp tài liệu của họ phụ thuộc vào đúng dịch vụ đó.
  */
 @RestController
 @RequestMapping("/api/v1/ai")
@@ -66,15 +70,6 @@ public class AiController {
         this.materialService = materialService;
         this.jobService = jobService;
         this.aiOrchestrator = aiOrchestrator;
-    }
-
-    @GetMapping("/status")
-    @Operation(summary = "Dịch vụ AI đã cấu hình chưa — giao diện dựa vào đây để báo trước, "
-            + "thay vì để người dùng bấm rồi mới nhận lỗi")
-    public Map<String, Object> status() {
-        return Map.of(
-                "available", aiOrchestrator.isAvailable(),
-                "providers", aiOrchestrator.availableProviders());
     }
 
     // ------------------------------------------------------------- sinh đề
