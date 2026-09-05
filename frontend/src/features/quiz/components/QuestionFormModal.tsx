@@ -1,8 +1,7 @@
 import { useEffect } from 'react'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import MathText from '@/shared/components/MathText'
-import XemTruocCongThuc, { coDanhDauCongThuc } from '@/shared/components/XemTruocCongThuc'
+import XemTruocCongThuc from '@/shared/components/XemTruocCongThuc'
 import {
   Alert,
   AutoComplete,
@@ -169,7 +168,7 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
                 <Input.TextArea {...field} rows={2} />
                 {/* Xem trước ngay dưới ô nhập: người viết thấy kết quả trong lúc gõ, nên vừa biết
                     tính năng công thức tồn tại vừa kiểm được mình gõ đúng cú pháp chưa. */}
-                <XemTruocCongThuc noiDung={field.value ?? ''} />
+                <XemTruocCongThuc noiDung={field.value ?? ''} onDoi={field.onChange} />
               </>
             )}
           />
@@ -233,11 +232,10 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
                         {/* Chỉ xem trước khi lựa chọn ĐÃ có `$...$` — phần gợi ý cú pháp đã nói một
                             lần ở ô nội dung, nhắc lại dưới từng lựa chọn là bốn dòng chữ giống nhau
                             trong một hộp thoại vốn đã dày. */}
-                        {coDanhDauCongThuc(field.value ?? '') && (
-                          <div className="bg-surface-subtle border-line mt-1 rounded-control border px-2 py-1">
-                            <MathText>{field.value ?? ''}</MathText>
-                          </div>
-                        )}
+                        {/* Lựa chọn cũng cần nút bọc: đáp án của câu toán gần như luôn là công
+                            thức, và bắt người viết gõ tay `$` bốn lần cho bốn lựa chọn là đúng cái
+                            phiền mà nút này sinh ra để bỏ. */}
+                        <XemTruocCongThuc noiDung={field.value ?? ''} onDoi={field.onChange} />
                       </div>
                     )
                   }

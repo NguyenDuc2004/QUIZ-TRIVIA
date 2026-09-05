@@ -499,6 +499,22 @@ hiểu vì sao đề của mình trông thô hơn đề AI sinh.
 | Có `^` hoặc lệnh LaTeX viết trần | Một dòng **gợi ý** cú pháp, kèm ví dụ |
 | Chữ thường | **Không hiện gì** |
 
+Kèm nút **"Bọc thành công thức"**: bấm một cái là nó chèn `$...$` quanh đoạn trông giống toán. Người
+viết thấy dấu `$` hiện ra trong chính ô mình đang gõ và thấy kết quả ở hộp xem trước — đoán sai thì xoá
+hai dấu đô la là xong.
+
+Khoanh vùng theo hai bước, và bước thứ hai mới là bước khó:
+
+1. **Theo ký tự** — chữ cái tiếng Việt có dấu (`à`, `ố`) không thuộc tập ký tự toán, nên chúng tự cắt
+   biên. `Đạo hàm của hàm số y = x^2 là:` tự đứt ở `số` và `là`.
+2. **Theo từ** — tiếng Việt có rất nhiều từ **không dấu** (`khi`, `cho`, `tam`, `va`), và xét theo ký
+   tự thì chúng giống hệt biến số. Xét theo từ thì phân biệt được: biến trong đề phổ thông gần như luôn
+   là **một** chữ cái, còn từ tiếng Việt từ hai chữ trở lên. Có danh sách trắng cho tên hàm (`ln`,
+   `log`, `sin`…) — thiếu nó thì đáp án của mọi câu đạo hàm hàm mũ bị cắt ngay trước `ln`.
+
+Bước 2 do **thử tay bắt được**, không phải nghĩ ra trước: bộ kiểm ban đầu chỉ có câu chứa chữ có dấu
+nên xanh hết mà vẫn sai. Hai ca đó đã thành phép kiểm.
+
 **Chỗ này ĐOÁN — và đoán được, vì nó chỉ đề nghị chứ không sửa.** Đoán sai thì người viết bỏ qua một
 dòng chữ; đoán sai lúc tự đổi nội dung thì họ mất chữ. Hai việc khác hẳn nhau về hậu quả nên chịu được
 hai mức chắc chắn khác nhau.
