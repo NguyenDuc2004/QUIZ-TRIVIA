@@ -10,6 +10,20 @@
   - ✅ **`POST /auth/logout-all`** — đăng xuất khỏi mọi thiết bị, dùng khi mất máy (đăng xuất trên máy đang cầm không giúp gì, vì phiên nằm ở chiếc máy đã mất). Trả về số phiên đã thu hồi.
   - Cả hai dựa trên chỉ mục ngược Redis `user-sessions:{userId}`; không có nó thì phải `SCAN` toàn bộ key `session:*` để tìm phiên của một người.
 - **RBAC:** phân quyền theo vai trò ở tầng controller bằng `@PreAuthorize("hasRole('CREATOR')")`.
+- **ADMIN không tự đăng ký được:** `AuthService` hạ mọi yêu cầu `role: ADMIN` xuống `LEARNER`, kể cả qua đăng nhập Google. Ranh giới an ninh của dự án là ADMIN, không phải CREATOR.
+- **Tài khoản ADMIN đầu tiên — `AdminBootstrap`** *(thêm 05/09/2026)*. Hai luật trên khoá lẫn nhau trên một CSDL mới: không có admin nào, và không có đường nào tạo admin. Trước đó cách duy nhất là gõ tay `UPDATE users SET role='ADMIN'` — một bước không nằm trong tài liệu nào và phải làm lại mỗi lần dựng máy mới.
+
+  Lúc khởi động, **nếu hệ thống có đúng 0 admin**, ứng dụng đọc `APP_ADMIN_EMAIL` / `APP_ADMIN_PASSWORD` từ `.env` và tạo tài khoản đó.
+
+  | Quyết định | Lý do |
+  |---|---|
+  | **Không** seed bằng Flyway | Chuỗi bcrypt trong migration là **mật khẩu quản trị bị commit vào repo** — ai đọc mã nguồn cũng đăng nhập được. Migration đã commit lại không sửa được để đổi mật khẩu đi |
+  | Chỉ chạy khi có **đúng 0 admin** | Đây là điều kiện chặn quan trọng nhất: đã có admin thì cấu hình này bị bỏ qua hoàn toàn, nên không dùng được để leo thang về sau |
+  | Khai **nửa vời thì dừng khởi động** | Bỏ qua trong im lặng thì người vận hành tưởng đã cấu hình xong, mà hệ thống vẫn không có admin — và họ chỉ phát hiện đúng lúc cần vào khu quản trị |
+  | Email đã là tài khoản thường → **nâng quyền**, log `WARN` | Từ chối cho "an toàn" thì để lại đúng cái bế tắc cần gỡ. Điều kiện "0 admin" đã chặn phần nguy hiểm: hệ thống lúc đó chưa dựng xong, không phải đang vận hành bình thường. Chỉ đổi vai trò, **không** đổi mật khẩu của người ta |
+  | Mật khẩu tối thiểu 8 ký tự | Tài khoản quyền cao nhất không được yếu hơn tài khoản người học |
+
+  Không bao giờ ghi mật khẩu ra log.
 - **Đăng nhập Google:** xác minh ID token bằng `GoogleIdTokenVerifier` chính chủ — kiểm chữ ký, `iss`, hạn dùng, và **`aud` phải khớp Client ID của ứng dụng** (không kiểm `aud` thì token cấp cho ứng dụng khác vẫn vào được). Từ chối token có email chưa xác minh, vì tài khoản Google mang email người khác sẽ chiếm được tài khoản của họ. Liên kết theo `sub` chứ không theo email. Tài khoản tạo qua Google luôn là **LEARNER**. Client ID là giá trị công khai, không phải secret; luồng ID token nên **không cần Client Secret**.
 - **WebSocket:** xác thực ở **frame STOMP CONNECT** (không phải lúc handshake HTTP — trình duyệt không gắn được header vào yêu cầu nâng cấp WebSocket). Chấp nhận `Authorization: Bearer <JWT>` cho thành viên, hoặc `X-Guest-Key` cho khách vãng lai.
 - **Khoá phiên khách:** ngẫu nhiên 32 byte, lưu Redis `roomguest:{key}` với TTL 6 giờ, **gắn chặt với đúng một phòng**. Không phải JWT nên không mở được bất kỳ API nào khác; hết ván là hết giá trị.

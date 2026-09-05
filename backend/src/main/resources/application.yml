@@ -65,6 +65,10 @@ server:
 
 # ===== Cấu hình riêng của ứng dụng =====
 app:
+  # Tài khoản quản trị đầu tiên — chỉ dùng khi hệ thống chưa có ADMIN nào. Xem `AdminBootstrap`.
+  admin:
+    email: ${APP_ADMIN_EMAIL:}
+    password: ${APP_ADMIN_PASSWORD:}
   jwt:
     secret: ${JWT_SECRET:}
     access-ttl-seconds: ${JWT_ACCESS_TTL:900}

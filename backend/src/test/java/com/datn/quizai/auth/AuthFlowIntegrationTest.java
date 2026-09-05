@@ -126,6 +126,35 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
+    @DisplayName("Đường dẫn không tồn tại → 404, KHÔNG phải 500")
+    void duongDanKhongTonTaiTra404() throws Exception {
+        // Trước khi sửa: 500 "Đã có lỗi xảy ra" kèm stack trace ghi ở mức ERROR.
+        //
+        // `GlobalExceptionHandler` CÓ sẵn một nhánh bắt `NoHandlerFoundException`, nhưng đó là nhánh
+        // CHẾT: Spring Boot 3 chỉ ném nó khi bật `spring.mvc.throw-exception-if-no-handler-found`, mà
+        // dự án không bật. Thực tế request rơi xuống bộ xử lý tài nguyên tĩnh và nhận
+        // `NoResourceFoundException` — một kiểu khác hẳn, không kế thừa từ kiểu kia.
+        //
+        // Hai cái giá của 500: client không phân biệt được "gõ sai địa chỉ" với "server hỏng", và log
+        // đầy stack trace của những đường dẫn gõ sai, làm loãng đúng thứ mức ERROR sinh ra để đánh dấu.
+        // Gọi KÈM token. Khách vãng lai gõ sai đường dẫn thì nhận 401, và đó là đúng: chưa đăng nhập
+        // thì không được biết đường dẫn nào có tồn tại. 404 chỉ dành cho người đã qua cửa xác thực.
+        String token = objectMapper.readTree(mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"go-sai-duong-dan@example.com","password":"MatKhau@123",
+                                 "displayName":"Người dùng"}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString())
+                .get("accessToken").asText();
+
+        mockMvc.perform(get("/api/v1/auth/khong-he-ton-tai")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("Tự đăng ký ADMIN → hệ thống hạ xuống LEARNER")
     void shouldNotAllowSelfServiceAdmin() throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
