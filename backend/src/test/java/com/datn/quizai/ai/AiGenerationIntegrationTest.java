@@ -144,19 +144,31 @@ class AiGenerationIntegrationTest {
     }
 
     @Test
-    @DisplayName("Learner không gọi được API AI — mỗi lời gọi đều tốn tiền")
-    void shouldRejectLearnerFromAiEndpoints() throws Exception {
-        mockMvc.perform(post("/api/v1/ai/materials")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(materialBody("Learner thử nạp")))
-                .andExpect(status().isForbidden());
-
+    @DisplayName("Learner không SINH ĐỀ được — đó là công cụ soạn nội dung, và mỗi lời gọi đều tốn tiền")
+    void shouldRejectLearnerFromGenerationEndpoints() throws Exception {
         mockMvc.perform(post("/api/v1/ai/generate-questions")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"topic\":\"HTTP\",\"count\":3}"))
                 .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/ai/status")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Learner NẠP được học liệu của chính mình — ranh giới dời từ vai trò sang trần số lượng")
+    void shouldLetLearnerCreateMaterial() throws Exception {
+        // Ca này từng khẳng định điều ngược lại. Nó không sai lúc viết: luật khi đó là khoá cả cụm
+        // `/ai/**` theo vai trò, với lý do chi phí. Nhưng khoá theo vai trò làm trợ lý học tập chết
+        // hẳn với người học đơn lẻ (features/08), nên phần canh chi phí chuyển sang trần số tài liệu
+        // — thứ đo đúng đại lượng cần đo. Sinh đề thì vẫn khoá, và ca ở trên giữ đúng phần đó.
+        mockMvc.perform(post("/api/v1/ai/materials")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learnerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(materialBody("Vở ghi của người học")))
+                .andExpect(status().isAccepted());
     }
 
     // ================================================================ sinh đề

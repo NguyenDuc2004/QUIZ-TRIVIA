@@ -1,0 +1,33 @@
+classDiagram
+  class QuestionFormPage {
+    <<boundary>>
+    +nhapNoiDung()
+    +submit()
+  }
+  class QuestionService {
+    <<control>>
+    +createQuestion(dto) Question
+    +validate(dto)
+  }
+  class DuplicateDetector {
+    <<control>>
+    +checkDuplicate(content) double
+  }
+  class Question {
+    <<entity>>
+    -id
+    -type
+    -content
+    -difficulty
+    -points
+    +save()
+  }
+  class QuestionOption {
+    <<entity>>
+    -content
+    -correct
+  }
+  QuestionFormPage --> QuestionService
+  QuestionService --> DuplicateDetector
+  QuestionService --> Question
+  Question "1" --> "*" QuestionOption

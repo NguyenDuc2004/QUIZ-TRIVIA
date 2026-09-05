@@ -1,0 +1,26 @@
+flowchart LR
+  SV["Sinh viên"]
+  GV["Giảng viên"]
+  AD["Quản trị viên"]
+  subgraph SYS["Hệ thống EduExam AI"]
+    u1(["Đăng nhập"])
+    u2(["Tham gia lớp / Làm bài thi"])
+    u3(["Luyện tập, ôn tập"])
+    u4(["Quản lý lớp và ngân hàng câu hỏi"])
+    u5(["Sinh đề bằng AI"])
+    u6(["Tổ chức kỳ thi và xem kết quả"])
+    u7(["Giám sát thi"])
+    u8(["Quản lý tài khoản và dữ liệu nền"])
+    u9(["Dashboard và nhật ký kiểm toán"])
+  end
+  SV --- u1
+  GV --- u1
+  AD --- u1
+  SV --- u2
+  SV --- u3
+  GV --- u4
+  GV --- u5
+  GV --- u6
+  GV --- u7
+  AD --- u8
+  AD --- u9

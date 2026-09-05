@@ -1,0 +1,28 @@
+sequenceDiagram
+  actor SV as Sinh viên
+  participant B as «boundary» ExamAttemptPage
+  participant MP as «boundary» FaceDetector
+  participant C as «control» AttemptService
+  participant P as «control» ProctoringService
+  participant G as «control» GradingService
+  participant E as «entity» ExamAttempt
+  SV->>B: vào thi + đồng ý quyền riêng tư
+  B->>C: startAttempt(examId)
+  C->>E: tạo ExamAttempt + khóa thứ tự câu
+  E-->>C: attempt
+  C-->>B: câu hỏi + thời lượng
+  B->>MP: bật nhận diện khuôn mặt
+  loop trong khi thi
+    SV->>B: chọn đáp án
+    B->>C: saveAnswer(attemptId, qId, ans)
+    C->>E: upsert Answer
+    MP-->>B: vắng mặt / nhiều mặt
+    B->>P: reportEvent(event)
+    P->>E: lưu ProctoringEvent
+  end
+  SV->>B: nộp bài (hoặc hết giờ)
+  B->>C: submit(attemptId)
+  C->>G: grade(attempt)
+  G-->>C: điểm
+  C->>E: cập nhật score + status
+  C-->>B: kết quả

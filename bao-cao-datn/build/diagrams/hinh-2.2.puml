@@ -1,0 +1,91 @@
+@startuml
+
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #C99AAB
+skinparam ArrowFontColor #202020
+skinparam Padding 4
+skinparam ParticipantPadding 18
+skinparam BoxPadding 8
+skinparam SequenceMessageAlign center
+skinparam guillemet false
+
+skinparam usecase {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  FontColor #1a1a1a
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #404040
+  FontColor #1a1a1a
+}
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #808080
+}
+
+skinparam sequence {
+  ArrowColor #C99AAB
+  ArrowThickness 1
+  LifeLineBorderColor #C99AAB
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #FFFADC
+  ParticipantBorderColor #C99AAB
+  ParticipantFontColor #1a1a1a
+  ParticipantFontSize 12
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #404040
+  GroupBorderColor #C99AAB
+  GroupBackgroundColor #FFF5F8
+  BoxBorderColor #C99AAB
+}
+
+skinparam class {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  HeaderBackgroundColor #FFEFC4
+  AttributeFontColor #1a1a1a
+  FontColor #1a1a1a
+  ArrowColor #C99AAB
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam stereotype {
+  CBackgroundColor #FFF1A8
+  CBorderColor #C99AAB
+  EBackgroundColor #FFF1A8
+  EBorderColor #C99AAB
+  ABackgroundColor #FFF1A8
+  ABorderColor #C99AAB
+}
+
+left to right direction
+actor "Khách" as G
+rectangle "Chức năng dành cho khách chưa đăng nhập" {
+  usecase "Xem danh sách quiz công khai" as U1
+  usecase "Xem thông tin giới thiệu một quiz\n(không xem được nội dung câu hỏi)" as U2
+  usecase "Tìm kiếm và lọc quiz" as U3
+  usecase "Đăng ký tài khoản" as U4
+  usecase "Đăng nhập" as U5
+  usecase "Đăng nhập bằng Google" as U6
+  usecase "Quên mật khẩu (OTP qua email)" as U7
+  usecase "Vào phòng đấu bằng mã PIN\nvới tư cách khách" as U8
+}
+G --> U1
+G --> U2
+G --> U3
+G --> U4
+G --> U5
+G --> U6
+G --> U7
+G --> U8
+U6 .up.> U5 : <<extend>>
+note right of U8
+  Chỉ khi chủ phòng bật
+  tùy chọn cho khách
+end note
+@enduml

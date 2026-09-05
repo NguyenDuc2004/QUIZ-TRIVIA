@@ -61,7 +61,7 @@ Làm **trọn một tính năng** rồi mới sang tính năng khác. Thứ tự
 - Tác vụ AI nặng chạy nền, trả `jobId`.
 - **Guest (chưa đăng nhập) chỉ được `GET` danh sách/giới thiệu quiz công khai** — không làm bài, không xem nội dung câu hỏi. Mọi thứ khác `authenticated()`.
   - **Ngoại lệ duy nhất — phòng đấu:** khách vào được khi biết mã PIN 6 số **và** host bật `allowGuests` cho phòng đó. Khách dùng *khoá phiên* riêng (Redis `roomguest:{key}`), không phải JWT, và khoá chỉ mở đúng một phòng.
-- **Giao diện theo [ui-design-system.md](docs/ui-design-system.md)**: không hardcode màu/bo góc/shadow trong component; nút hành động chính màu đen, tím chỉ cho link; trang người học dùng lưới card, trang quản lý dùng bảng; dùng lại `PageHeader`/`EmptyState`; **không bịa dữ liệu** (rating, số lượt học) cho đẹp giao diện.
+- **Giao diện theo [ui-design-system.md](docs/ui-design-system.md)**: không hardcode màu/bo góc/shadow trong component; nút hành động chính màu tím đặc `violet-600` (`type="primary"`); trang người học dùng lưới card, trang quản lý dùng bảng; dùng lại `PageHeader`/`EmptyState`; **không bịa dữ liệu** (rating, số lượt học) cho đẹp giao diện.
 - Không commit secret. `.env` đã gitignore; `.env.example` là bản mẫu.
 - Commit theo Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`…), tiếng Việt.
 
@@ -73,8 +73,14 @@ cd backend && ./mvnw spring-boot:run  # chạy BE (http://localhost:8080)
 cd backend && ./mvnw test             # chạy test BE
 cd frontend && npm run dev            # chạy FE (http://localhost:5173)
 cd frontend && npm test               # chạy test FE (vitest, chạy một lượt rồi thoát)
-cd frontend && npm run build          # tsc -b + vite build — CHẠY CẢ LỆNH NÀY sau khi đổi cấu hình
+cd frontend && npm run build          # oxlint + tsc -b + vite build — CHẠY CẢ LỆNH NÀY sau khi đổi cấu hình
+node scripts/seed-demo.mjs            # nạp dữ liệu demo (cần BE đang chạy); chạy lại không nhân đôi
 ```
+
+> **`npm run build` chạy `oxlint` trước khi biên dịch.** Luật `react/rules-of-hooks` đã bật từ đầu và bắt
+> đúng lỗi "gọi hook sau lệnh return sớm" — nhưng nó chỉ chạy khi ai đó gõ `npm run lint`, mà không ai gõ.
+> Hệ quả: một lỗi loại đó nằm trong mã nguồn cho tới khi người dùng bấm vào và nhận màn hình trắng. Gắn vào
+> `build` để nó chạy ở nơi chắc chắn có người chạy.
 
 > Cấu hình vitest nằm ở `frontend/vitest.config.ts` **riêng**, không gộp vào `vite.config.ts`: vitest 3
 > chưa hỗ trợ Vite 8 nên nó tự cài một bản vite riêng, hai bộ type plugin không khớp và gộp lại sẽ làm

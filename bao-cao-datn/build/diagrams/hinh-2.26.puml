@@ -1,0 +1,106 @@
+@startuml
+
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #C99AAB
+skinparam ArrowFontColor #202020
+skinparam Padding 4
+skinparam ParticipantPadding 18
+skinparam BoxPadding 8
+skinparam SequenceMessageAlign center
+skinparam guillemet false
+
+skinparam usecase {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  FontColor #1a1a1a
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #404040
+  FontColor #1a1a1a
+}
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #808080
+}
+
+skinparam sequence {
+  ArrowColor #C99AAB
+  ArrowThickness 1
+  LifeLineBorderColor #C99AAB
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #FFFADC
+  ParticipantBorderColor #C99AAB
+  ParticipantFontColor #1a1a1a
+  ParticipantFontSize 12
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #404040
+  GroupBorderColor #C99AAB
+  GroupBackgroundColor #FFF5F8
+  BoxBorderColor #C99AAB
+}
+
+skinparam class {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  HeaderBackgroundColor #FFEFC4
+  AttributeFontColor #1a1a1a
+  FontColor #1a1a1a
+  ArrowColor #C99AAB
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam stereotype {
+  CBackgroundColor #FFF1A8
+  CBorderColor #C99AAB
+  EBackgroundColor #FFF1A8
+  EBorderColor #C99AAB
+  ABackgroundColor #FFF1A8
+  ABorderColor #C99AAB
+}
+
+title Biểu đồ trình tự — Use case Nhận gợi ý bài thi và lộ trình học
+
+actor "Người học" as L
+boundary "RecommendationPage" as B
+control "RecommendationController" as RC
+control "RecommendationService" as RS
+entity "RecommendationRepository" as RR
+database "Neo4j" as NEO
+
+L -> B : mở trang gợi ý
+B -> RC : GET /api/v1/recommendations
+RC -> RS : forUser(userId)
+
+RS -> RR : weakTopics(userId)
+RR -> NEO : MATCH (u:User)-[p:PRACTICED]->(t:Topic)\nWHERE p.accuracy < ngưỡng
+NEO --> RR : danh sách chủ đề còn yếu
+RR --> RS : chủ đề yếu
+
+RS -> RR : quizzesByTopic(topics, loại trừ đã làm)
+RR -> NEO : MATCH (q:Quiz)-[:COVERS]->(t:Topic)\nWHERE NOT (u)-[:ATTEMPTED]->(q)
+NEO --> RR : quiz theo chủ đề yếu
+RR --> RS : danh sách quiz
+
+RS -> RR : peerQuizzes(userId)
+RR -> NEO : MATCH (u)-[:ATTEMPTED]->(shared)<-[:ATTEMPTED]-(peer)\nWITH peer, count(DISTINCT shared) AS similarity
+NEO --> RR : quiz của người học tương tự
+RR --> RS : danh sách quiz
+
+alt Chưa có dữ liệu hành vi
+  RS --> RC : danh sách rỗng + hướng dẫn làm một bài
+  note right of RS : KHÔNG gợi ý bừa\ntheo độ phổ biến
+else Neo4j không phản hồi
+  RS --> RC : danh sách rỗng (không phải lỗi 500)
+  note right of RS : các chức năng khác\nkhông bị ảnh hưởng
+else Có dữ liệu
+  RS -> RS : hợp nhất, xếp hạng, kèm lý do gợi ý
+  RS --> RC : danh sách gợi ý
+end
+RC --> B : 200 OK
+B --> L : hiển thị quiz gợi ý kèm lý do và lộ trình học
+@enduml

@@ -1,13 +1,18 @@
 import { useState } from 'react'
-import { Button, Input, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd'
+import { Button, Input, Modal, Select, Space, Table, Typography } from 'antd'
+import { DeleteOutlined, EditOutlined, UserOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
+import MathText from '@/shared/components/MathText'
 import PageHeader from '@/shared/components/PageHeader'
+import Pill from '@/shared/components/Pill'
+import RowActions from '@/shared/components/RowActions'
 import type { Difficulty, Question, QuestionType } from '../api/quizApi'
 import {
-  DIFFICULTY_COLOR,
+  DIFFICULTY_DOT,
   DIFFICULTY_LABEL,
   DIFFICULTY_OPTIONS,
+  DIFFICULTY_PILL,
   QUESTION_TYPE_LABEL,
   QUESTION_TYPE_OPTIONS,
 } from '../constants'
@@ -24,6 +29,9 @@ export default function QuestionBankPage() {
   const [difficulty, setDifficulty] = useState<Difficulty | undefined>()
   const [topic, setTopic] = useState<string | undefined>()
   const [editing, setEditing] = useState<Question | null>(null)
+  /* Cùng lý do với bảng "Quiz của tôi": `Popconfirm` bám vào phần tử kích hoạt, mà phần tử đó giờ là
+     một mục trong menu — menu đóng ngay khi bấm nên hộp xác nhận mất điểm neo và không hiện. */
+  const [xoaCau, setXoaCau] = useState<Question | null>(null)
   const [creating, setCreating] = useState(false)
 
   const { data, isFetching } = useQuestionBank({
@@ -43,7 +51,9 @@ export default function QuestionBankPage() {
       dataIndex: 'content',
       render: (content: string, row) => (
         <Space direction="vertical" size={0}>
-          <Text className="font-bold!">{content}</Text>
+          <Text className="font-bold!">
+            <MathText>{content}</MathText>
+          </Text>
           <Text className="text-ink-soft text-xs">
             {row.options.filter((o) => o.correct).length} đáp án đúng / {row.options.length} lựa chọn
           </Text>
@@ -54,14 +64,16 @@ export default function QuestionBankPage() {
       title: 'Loại',
       dataIndex: 'type',
       width: 140,
-      render: (value: QuestionType) => <Tag>{QUESTION_TYPE_LABEL[value]}</Tag>,
+      render: (value: QuestionType) => <Pill>{QUESTION_TYPE_LABEL[value]}</Pill>,
     },
     {
       title: 'Độ khó',
       dataIndex: 'difficulty',
       width: 120,
       render: (value: Difficulty) => (
-        <Tag color={DIFFICULTY_COLOR[value]}>{DIFFICULTY_LABEL[value]}</Tag>
+        <Pill mau={DIFFICULTY_PILL[value]} chamMau={DIFFICULTY_DOT[value]}>
+          {DIFFICULTY_LABEL[value]}
+        </Pill>
       ),
     },
     {
@@ -76,30 +88,36 @@ export default function QuestionBankPage() {
       dataIndex: 'source',
       width: 110,
       render: (value: string) =>
-        value === 'AI_GENERATED' ? <Tag color="purple">AI sinh</Tag> : <Tag>Tự soạn</Tag>,
+        value === 'AI_GENERATED' ? (
+          <Pill mau="tim" icon="✨">
+            AI sinh
+          </Pill>
+        ) : (
+          <Pill icon={<UserOutlined />}>Tự soạn</Pill>
+        ),
     },
     {
       title: '',
       key: 'actions',
-      width: 130,
+      width: 110,
+      align: 'right',
       render: (_, row) => (
-        <Space size="small">
-          <Button type="link" size="small" onClick={() => setEditing(row)}>
-            Sửa
-          </Button>
-          <Popconfirm
-            title="Xóa câu hỏi này?"
-            description="Không xóa được nếu câu hỏi đang nằm trong quiz."
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-            onConfirm={() => deleteQuestion.mutate(row.id)}
-          >
-            <Button type="link" size="small" danger>
-              Xóa
+        <RowActions
+          chinh={
+            <Button size="small" icon={<EditOutlined />} onClick={() => setEditing(row)}>
+              Sửa
             </Button>
-          </Popconfirm>
-        </Space>
+          }
+          items={[
+            {
+              key: 'xoa',
+              icon: <DeleteOutlined />,
+              label: 'Xóa câu hỏi',
+              danger: true,
+              onClick: () => setXoaCau(row),
+            },
+          ]}
+        />
       ),
     },
   ]
@@ -116,7 +134,7 @@ export default function QuestionBankPage() {
         }
       />
 
-      <div className="border border-line bg-white">
+      <div className="soft-panel">
         <div className="flex flex-wrap gap-2 border-b border-line p-3">
           <Input.Search
             allowClear
@@ -169,6 +187,7 @@ export default function QuestionBankPage() {
         </div>
 
         <Table<Question>
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           size="middle"
           loading={isFetching}
@@ -205,6 +224,24 @@ export default function QuestionBankPage() {
           setEditing(null)
         }}
       />
+
+      {/* Mô tả nói trước ràng buộc của máy chủ: câu hỏi đang nằm trong một quiz thì KHÔNG xóa được.
+          Nói ở đây tốt hơn là để người dùng bấm rồi ăn một lỗi 409 không đoán được. */}
+      <Modal
+        open={xoaCau !== null}
+        title="Xóa câu hỏi này?"
+        okText="Xóa"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true, loading: deleteQuestion.isPending }}
+        onCancel={() => setXoaCau(null)}
+        onOk={() => {
+          if (xoaCau) {
+            deleteQuestion.mutate(xoaCau.id, { onSuccess: () => setXoaCau(null) })
+          }
+        }}
+      >
+        Không xóa được nếu câu hỏi đang nằm trong một quiz nào đó.
+      </Modal>
     </Space>
   )
 }

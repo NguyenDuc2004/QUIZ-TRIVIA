@@ -1,0 +1,113 @@
+@startuml
+
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #C99AAB
+skinparam ArrowFontColor #202020
+skinparam Padding 4
+skinparam ParticipantPadding 18
+skinparam BoxPadding 8
+skinparam SequenceMessageAlign center
+skinparam guillemet false
+
+skinparam usecase {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  FontColor #1a1a1a
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #404040
+  FontColor #1a1a1a
+}
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #808080
+}
+
+skinparam sequence {
+  ArrowColor #C99AAB
+  ArrowThickness 1
+  LifeLineBorderColor #C99AAB
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #FFFADC
+  ParticipantBorderColor #C99AAB
+  ParticipantFontColor #1a1a1a
+  ParticipantFontSize 12
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #404040
+  GroupBorderColor #C99AAB
+  GroupBackgroundColor #FFF5F8
+  BoxBorderColor #C99AAB
+}
+
+skinparam class {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  HeaderBackgroundColor #FFEFC4
+  AttributeFontColor #1a1a1a
+  FontColor #1a1a1a
+  ArrowColor #C99AAB
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam stereotype {
+  CBackgroundColor #FFF1A8
+  CBorderColor #C99AAB
+  EBackgroundColor #FFF1A8
+  EBorderColor #C99AAB
+  ABackgroundColor #FFF1A8
+  ABorderColor #C99AAB
+}
+
+title Biểu đồ trình tự — Use case Làm bài quiz cá nhân
+
+actor "Người học" as L
+boundary "AttemptPage" as B
+control "AttemptController" as AC
+control "AttemptService" as AS
+entity "QuizAttempt" as QA
+entity "AttemptAnswer" as AA
+control "AnswerGrader" as AG
+control "AiGradingService" as AI
+control "AttemptGraphSyncService" as GS
+database "Neo4j" as NEO
+
+L -> B : chọn chế độ và bắt đầu
+B -> AC : POST /api/v1/quizzes/{id}/attempts
+AC -> AS : start(quizId, userId, mode)
+alt Đã có lượt đang làm dở
+  AS --> AC : trả về đúng lượt đó để làm tiếp
+else Tạo lượt mới
+  AS -> QA : new QuizAttempt(maxScore chốt lúc này)
+  AS -> AA : sinh sẵn từng câu của riêng lượt này
+  note right of AA : chốt đề — sửa quiz sau đó\nkhông ảnh hưởng bài đang làm
+end
+AS --> B : đề bài (KHÔNG kèm đáp án đúng)
+
+loop mỗi câu trả lời
+  L -> B : chọn đáp án
+  B -> AC : PUT /api/v1/attempts/{id}/answers/{qid}
+  AC -> AS : saveAnswer(...)
+  AS -> AA : lưu ngay, không chờ tới lúc nộp
+end
+
+L -> B : nộp bài
+B -> AC : POST /api/v1/attempts/{id}/submit
+AC -> AS : submit(attemptId, userId)
+alt Đã quá thời điểm hết hạn
+  AS -> QA : status = EXPIRED, chỉ chấm câu đã trả lời
+else Còn hạn
+  AS -> AG : chấm các câu có đáp án xác định
+  AG --> AS : điểm từng câu
+  AS -> AI : xếp câu tự luận vào hàng đợi chấm AI
+  AS -> QA : tính tổng điểm, status = SUBMITTED
+end
+AS -> GS : publish AttemptSubmittedEvent (AFTER_COMMIT)
+GS -> NEO : MERGE (User)-[:ATTEMPTED]->(Quiz), cập nhật PRACTICED
+AS --> B : kết quả kèm đáp án đúng và lời giải thích
+B --> L : hiển thị điểm và giải thích
+@enduml

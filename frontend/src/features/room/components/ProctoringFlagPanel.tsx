@@ -32,7 +32,7 @@ export default function ProctoringFlagPanel({
   }
 
   return (
-    <div className="border border-line bg-white p-4">
+    <div className="soft-panel p-4">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Text className="font-bold!">Tín hiệu cần để ý ({flags.length})</Text>
         <Tag className="mr-0!">chỉ bạn thấy bảng này</Tag>
@@ -55,7 +55,7 @@ export default function ProctoringFlagPanel({
           return (
             <div
               key={flag.playerId}
-              className="flex flex-wrap items-center gap-2 border border-line bg-surface-subtle p-3"
+              className="flex flex-wrap items-center gap-2 soft-panel-subtle p-3"
             >
               <div className="min-w-40 flex-1">
                 <div className="flex flex-wrap items-center gap-2">

@@ -258,9 +258,11 @@ Nói rõ giới hạn để không ai đọc quá con số:
   giáo viên" thì cần nhiều người chấm độc lập cùng bộ bài rồi so sánh.
 - **Cỡ mẫu nhỏ**: 8 bài chấm, 10 câu sinh đề, 5 câu hỏi trợ lý. Đủ để phát hiện lỗi hệ thống và xu
   hướng, không đủ cho kết luận thống kê.
-- **Chỉ một nhà cung cấp mô hình.** Đường dự phòng sang xAI Grok **chưa đo được**: gói của Grok không
-  có bậc miễn phí, mọi lời gọi trả 403 ở tầng quyền khi chưa nạp tín dụng, nên `GROK_API_KEY` để trống
-  và cơ chế chuyển dự phòng dù đã hiện thực xong vẫn chưa chạy thật lần nào.
+- **Đường dự phòng đã đo, nhưng chưa quan sát được một lần CHUYỂN thật.** Mục 7 (đo 20/08) chứng minh
+  Groq phục vụ sinh đề qua chính ứng dụng — 9/9 câu. Cái chưa có là một lần `AiOrchestrator` tự chuyển
+  từ Gemini sang Groq do lỗi *tạm thời*; xem mục 7.5.
+  *(Gạch đầu dòng này trước đây ghi "chưa đo được" vì nhà cung cấp dự phòng cũ là xAI Grok không có gói
+  miễn phí. Nó đã lỗi thời từ khi đổi sang Groq ngày 20/08.)*
 - **Không đo chất lượng sư phạm** của câu hỏi sinh ra (xem mục 5).
 - **Không đo độ trễ AI** ở đây; nhật ký `ai_request_logs` có `latency_ms` cho từng lời gọi, dùng khi
   cần phân tích chi phí và thời gian phản hồi.

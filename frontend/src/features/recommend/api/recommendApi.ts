@@ -15,6 +15,14 @@ export interface RecommendedQuiz {
   peerCount: number
   /** Số lượt làm thật, **không phải** điểm đánh giá — hệ thống chưa có tính năng đánh giá quiz. */
   attemptCount: number
+  /**
+   * Tên danh mục, dùng để chọn màu và biểu tượng khối bìa khi quiz chưa có ảnh.
+   *
+   * Backend nạp từ PostgreSQL cùng lúc với tiêu đề và ảnh bìa, không lấy từ đồ thị. Nhờ vậy cùng một
+   * quiz ra **cùng một màu** ở lưới Khám phá và ở thẻ Gợi ý — thiếu trường này thì thẻ gợi ý phải đoán
+   * màu từ tiêu đề và người dùng thấy hai thẻ khác màu cho cùng một quiz.
+   */
+  categoryName: string | null
 }
 
 export interface TopicMastery {

@@ -28,7 +28,7 @@ export default function StrictExamGate({
   }
 
   return (
-    <div className="border border-line bg-white p-6 text-center">
+    <div className="soft-panel p-6 text-center">
       <ExpandOutlined className="text-ink-soft mb-3 text-3xl" />
 
       <Text className="mb-2 block text-lg font-bold!">Bài thi này yêu cầu chế độ toàn màn hình</Text>

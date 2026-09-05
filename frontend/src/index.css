@@ -14,12 +14,70 @@
  * KHÔNG hardcode mã màu trong component.
  */
 @theme {
-  --color-ink: #1c1d1f;
-  --color-ink-soft: #6a6f73;
+  --color-ink: #0f172a;
+  /*
+   * `slate-600`, KHÔNG phải `slate-500`.
+   *
+   * Đo thật: `#64748b` trên nền trắng là 4,76:1 (đạt), nhưng trên nền chìm `#f1f5f9` — nền của tiêu
+   * đề bảng và cột phụ màn Trợ lý — chỉ còn **4,27:1**, tức KHÔNG đạt AA. Chữ phụ ở đây thường là
+   * 12px nên không được hưởng ngoại lệ "chữ lớn". `#475569` đạt 6,78:1 trên nền chìm và 7,56:1 trên
+   * nền trắng, vẫn cách `--color-ink` đủ xa để đọc ra thứ bậc.
+   */
+  --color-ink-soft: #475569;
   --color-brand: #a435f0;
   --color-brand-strong: #5624d0;
-  --color-line: #d1d7dc;
-  --color-surface-subtle: #f7f9fa;
+
+  /*
+   * Viền SIÊU MỜ, không phải viền kẻ.
+   *
+   * Ngôn ngữ hình khối của dự án đổi ngày 05/09/2026: trước đây là "viền 1px thay cho đổ bóng", nay là
+   * "bóng mờ + viền gần như không thấy". Viền vẫn còn, và cố ý còn — bỏ hẳn thì trên màn hình chỉnh
+   * tương phản cao hoặc khi người dùng bật `forced-colors`, các thẻ mất hết ranh giới vì bóng đổ là thứ
+   * đầu tiên bị những chế độ đó loại bỏ.
+   */
+  --color-line: rgba(226, 232, 240, 0.6);
+
+  /*
+   * Viền ĐẬM HƠN cho ô nhập liệu, ô chọn, vùng bấm được.
+   *
+   * Không dùng chung `--color-line` với thẻ: một cái thẻ mất ranh giới thì chỉ hơi khó nhìn, còn một ô
+   * nhập mất ranh giới thì người dùng không biết bấm vào đâu để gõ. WCAG 1.4.11 đòi thành phần giao
+   * diện tương phản tối thiểu 3:1 với nền — `slate-200/60` trên nền trắng không đạt mức đó.
+   */
+  --color-line-strong: #e2e8f0;
+
+  /* Nền chung của trang — xám kem, không phải trắng tinh. Thẻ trắng nổi lên trên nền này. */
+  --color-canvas: #f8fafc;
+  --color-placeholder: #94a3b8;
+
+  /* Nút hành động chính — tím `violet-600`. Trước 05/09/2026 là nền đen (quy ước Udemy cũ);
+     xem chú thích đầy đủ ở `components.Button` trong antdTheme.ts. */
+  --color-action: #7c3aed;
+
+  /* ── Bo góc ──
+     Thang ba bậc thay cho "4px cho mọi thứ": khối lớn bo nhiều, thành phần điều khiển bo vừa, nhãn
+     trạng thái bo tròn hẳn. Bo góc trở thành thứ nói lên CẤP của phần tử, không còn là một hằng số. */
+  --radius-panel: 24px;
+  --radius-card: 16px;
+  --radius-control: 12px;
+  --radius-small: 8px;
+
+  /* ── Bóng đổ ──
+     Hai lớp: một lớp 1px sát mép cho ranh giới, một lớp toả rộng rất mờ cho cảm giác nổi. Chỉ một lớp
+     toả rộng thì thẻ trông như đang lơ lửng mà không có mép; chỉ một lớp sát mép thì nó chỉ là cái viền
+     đậm hơn. */
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 30px rgb(15 23 42 / 0.04);
+  --shadow-lifted: 0 2px 4px rgb(15 23 42 / 0.05), 0 12px 32px rgb(15 23 42 / 0.09);
+
+  /*
+   * Nền của thẻ, bảng, khối nội dung — thứ trước đây viết thẳng là `bg-white` ở 57 chỗ.
+   *
+   * Phải là token thì chế độ tối mới đổi được. `bg-white` là màu tuyệt đối: ở chế độ tối nó vẫn trắng,
+   * và chữ sáng của Ant Design nằm lên nền trắng đó thành không đọc nổi. Đây là kiểu hỏng chỉ lộ ra khi
+   * mở từng màn hình ra nhìn, không phép kiểm nào bắt được.
+   */
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f1f5f9;
   --color-star: #e59819;
   --color-rating: #b4690e;
   --color-badge: #eceb98;
@@ -49,6 +107,74 @@
   --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   KHỐI NỘI DUNG — `.soft-panel`
+
+   Thay cho tổ hợp `border border-line bg-surface` rải ở 58 chỗ. Gom lại một lớp chứ không sửa
+   tay từng nơi: bo góc và bóng đổ là quyết định của hệ thống thiết kế, để chúng nằm trong 58
+   chuỗi class nghĩa là lần đổi quy ước sau phải đi sửa đủ 58 chỗ và chắc chắn sót.
+
+   `overflow: hidden` để bảng bên trong bị cắt theo góc bo — không có nó thì bốn góc bảng vẫn
+   vuông và thò ra ngoài mép panel. Đã kiểm: không panel nào có phần tử `position: sticky` nằm
+   BÊN TRONG (mấy chỗ sticky là chính panel đó, và `overflow` của bản thân phần tử không ảnh
+   hưởng tới việc nó dính hay không). Nếu sau này thêm bảng có tiêu đề dính, phải bỏ lớp này ra
+   khỏi panel đó — `overflow: hidden` tạo ra một vùng cuộn mới và phần tử dính bên trong sẽ chết.
+   ══════════════════════════════════════════════════════════════════ */
+.soft-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   NHẤC LÊN KHI RÊ CHUỘT — `.soft-lift`
+
+   Dùng cho THẺ và Ô BẤM ĐƯỢC CỠ LỚN. Cố ý KHÔNG dùng cho hàng bảng: hàng bảng cao 50px và
+   xếp sát nhau, nhấc một hàng lên 2px làm cả cột chữ bên cạnh giật theo — và bảng là thứ
+   người dùng rà mắt theo hàng ngang, nên nhiễu ở đó đắt hơn nhiều so với ở một lưới thẻ.
+   Hàng bảng vẫn báo hiệu bằng đổi nền, đúng như trước.
+
+   Liệt kê từng thuộc tính thay vì `transition: all`. `all` kéo theo cả `width`, `opacity`,
+   `transform` của những thứ vốn không định chuyển động — dropdown và modal của Ant Design
+   giật cục vì đúng lý do đó (đã gặp khi làm chế độ tối).
+   ══════════════════════════════════════════════════════════════════ */
+/* Liệt kê cả ba selector trong MỘT luật thay vì để mỗi lớp tự chép lại cùng bộ giá trị.
+   `.browse-card` (thẻ quiz) và `.room-option` (ô đáp án phòng đấu) trước đây mỗi cái tự khai một
+   thời lượng và một độ nhấc riêng — 0,15s/1px và 0,12s/1px — nên hai thứ bấm được cạnh nhau phản
+   hồi khác nhau ở mức vừa đủ để thấy lạ mà không đủ để chỉ ra là lạ ở đâu. */
+.soft-lift,
+.browse-card,
+.room-option {
+  transition:
+    box-shadow 0.2s ease-out,
+    transform 0.2s ease-out,
+    border-color 0.2s ease-out;
+}
+
+.soft-lift:hover,
+.room-option:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lifted);
+}
+
+/* Người dùng đặt hệ điều hành ở chế độ giảm chuyển động thì bỏ phần dịch chuyển, giữ lại bóng —
+   bóng vẫn báo được "đang trỏ vào đây" mà không có gì trượt trên màn hình. */
+@media (prefers-reduced-motion: reduce) {
+  .soft-lift,
+  .browse-card,
+  .room-option {
+    transition: box-shadow 0.2s ease-out;
+  }
+
+  .soft-lift:hover,
+  .browse-card:hover,
+  .room-option:hover {
+    transform: none;
+  }
+}
+
 html,
 body,
 #root {
@@ -59,7 +185,45 @@ body,
 body {
   font-family: var(--font-sans);
   color: var(--color-ink);
-  background: #fff;
+  background: var(--color-canvas);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   LỀ TRÊN CỦA TIÊU ĐỀ — hệ quả của việc KHÔNG nạp preflight
+
+   Dự án cố ý không nạp preflight của Tailwind (xem đầu tệp), nên `h1`–`h6` giữ nguyên lề mặc
+   định của trình duyệt: `margin-block-start` cỡ 0,83em–1,33em. Ant Design có token
+   `titleMarginTop: '0'` nhưng nó chỉ áp cho tiêu đề ĐỨNG SAU một phần tử khác, không áp cho
+   tiêu đề đứng một mình — phần đó AntD trông cậy vào preflight, thứ ở đây không có.
+
+   Hệ quả không nằm ở khoảng cách mà ở CĂN HÀNG. Trong một hàng flex, lề trên làm hộp của tiêu
+   đề cao hơn hẳn phần chữ của nó, nên:
+     - `PageHeader`: nút hành động bên phải nằm CAO HƠN tiêu đề, ở mọi trang.
+     - "Gợi ý cho bạn": dòng mô tả bên cạnh trôi lên trên, dù hàng đã đặt `items-center`.
+
+   Người dùng chỉ ra chỗ thứ hai. Chỗ thứ nhất có ở mọi trang mà không ai để ý, vì lệch đều thì
+   trông giống một lựa chọn thiết kế.
+
+   ── Đã đọc mã nguồn AntD để chắc, không suy đoán ──
+   `antd/es/typography/style/index.js` chỉ đặt `titleMarginTop` qua bộ chọn ANH-EM:
+   `& + h1.ant-typography`, và `div, p, h1… + h1…`. Tiêu đề đứng ĐẦU khối không khớp bộ chọn nào,
+   nên nó không nhận luật nào từ AntD — phần đó AntD giao cho preflight.
+
+   Luật dưới đây cố ý để điểm đặc hiệu THẤP (0,1,1). Hai bộ chọn anh-em của AntD là (0,2,1) nên
+   chúng vẫn thắng: khoảng cách 1,2em giữa hai tiêu đề xếp chồng được giữ nguyên, và chỉ trường
+   hợp đứng đầu khối mới bị đưa về 0. Đúng cái AntD định làm, không hơn.
+   ══════════════════════════════════════════════════════════════════ */
+h1.ant-typography,
+h2.ant-typography,
+h3.ant-typography,
+h4.ant-typography,
+h5.ant-typography,
+.ant-typography h1,
+.ant-typography h2,
+.ant-typography h3,
+.ant-typography h4,
+.ant-typography h5 {
+  margin-top: 0;
 }
 
 /* Tiêu đề card cắt 2 dòng như lưới khoá học của Udemy */
@@ -70,22 +234,651 @@ body {
   overflow: hidden;
 }
 
-/* Card ở trang browse: viền mảnh, chỉ nổi shadow khi hover */
+/* ══════════════════════════════════════════════════════════════════
+   CHẾ ĐỘ TỐI
+
+   Chỉ định nghĩa lại giá trị của TOKEN, không đụng tới component nào. Nhờ vậy mọi chỗ đã
+   dùng `bg-surface`, `text-ink`, `border-line`… tự đổi theo mà không phải sửa.
+
+   Chọn `[data-theme='dark']` trên <html> chứ không dùng `@media (prefers-color-scheme)` một
+   mình: người dùng phải ĐỔI ĐƯỢC, không chỉ bị hệ điều hành quyết thay. Trạng thái "theo hệ
+   thống" xử lý ở JavaScript — nó đọc thiết lập hệ điều hành rồi đặt đúng thuộc tính này.
+
+   ── Vì sao nền tối KHÔNG dùng đen tuyền ──
+   Đen tuyền `#000` đã có nghĩa riêng trong dự án: nó là nền khu quản trị, một TÍN HIỆU CẢNH
+   BÁO (ui-design-system.md §1). Nếu chế độ tối cũng đen tuyền thì tín hiệu đó biến mất — admin
+   không còn phân biệt được mình đang ở khu quản trị hay chỉ đang bật chế độ tối.
+
+   Từ 05/09/2026 nền tối là họ xanh đá (`#0f172a` / `#1e293b`) thay cho xám than trung tính. Việc
+   này còn LÀM MẠNH THÊM tín hiệu kia: đen tuyền không chỉ tối hơn mà còn khác hẳn sắc — admin
+   phân biệt được ngay cả khi màn hình chỉnh sáng thấp, chỗ mà hai mức xám gần nhau thì không.
+   ══════════════════════════════════════════════════════════════════ */
+:root[data-theme='dark'] {
+  /* Đảo vai trò: `ink` là màu CHỮ, nên ở nền tối nó phải sáng.
+
+     Ba bậc, đo trên nền thẻ #1e293b: ink ~14:1 · ink-soft ~8,9:1 · placeholder ~4,9:1.
+     Bản trước dùng #9aa0a6 cho chữ phụ (~5:1) — ĐẠT chuẩn AA nhưng người dùng vẫn báo khó đọc,
+     vì đạt chuẩn là sàn tối thiểu chứ không phải mục tiêu. Đồng thời đổi từ xám ẤM sang họ xanh
+     đá cho khớp nền mới: xám ấm trên nền xanh đá ngả vàng nhẹ, rõ nhất ở khối chữ dài. */
+  --color-ink: #f1f5f9;
+  --color-ink-soft: #cbd5e1;
+  --color-placeholder: #94a3b8;
+
+  /* Tím thương hiệu sáng lên một bậc: `--color-brand-strong` (#5624d0) là tím đậm dành cho nền
+     sáng, đặt lên nền tối thì gần như không đọc được — đúng lỗi đã gặp với link ở chân trang. */
+  --color-brand: #c084fc;
+  --color-brand-strong: #b07af0;
+
+  /* Viền ở nền tối là MỘT VỆT SÁNG MỜ, không phải một đường xám.
+     Nền tối thì viền tối hơn nền là vô hình; thứ vẽ được mép ở đây là ánh sáng, không phải bóng. */
+  --color-line: rgba(255, 255, 255, 0.1);
+  --color-line-strong: rgba(255, 255, 255, 0.18);
+
+  --color-canvas: #0f172a;
+  --color-action: #7c3aed;
+  --color-surface: #1e293b;
+  --color-surface-subtle: #172033;
+
+  /* Bóng đen trên nền tối gần như vô hình, nên đổ bóng ở đây chỉ giữ lại lớp sát mép để tách thẻ
+     khỏi nền; phần "nổi" do NỀN SÁNG HƠN một bậc đảm nhiệm (#1e293b trên #0f172a). */
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-lifted: 0 4px 16px rgb(0 0 0 / 0.5);
+
+  --color-star: #f0b429;
+  --color-rating: #e0a020;
+  --color-badge: #4a4a2a;
+
+  /* Khu quản trị vẫn phải TỐI HƠN nền chung để giữ vai trò tín hiệu cảnh báo */
+  --color-admin-bg: #000000;
+  --color-admin-line: #2b2f37;
+
+  /* Chân trang: ở chế độ tối nó gần như hoà vào nền, nên nhạt hơn nền một chút để vẫn thấy ranh
+     giới — ngược với chế độ sáng, nơi nó tối hơn nền. */
+  --color-footer-bg: #24252c;
+  --color-footer-line: #3d4059;
+  --color-footer-text: #b9bcc8;
+
+  color-scheme: dark;
+}
+
+/* Nền và màu chữ mặc định của cả trang. Không có hai dòng này thì vùng ngoài các thẻ vẫn trắng. */
+body {
+  background: var(--color-surface-subtle);
+  color: var(--color-ink);
+}
+
+/* ── Chuyển màu mềm khi đổi giao diện ────────────────────────────
+   Đổi tức thì làm cả trang "nhảy", nhất là màn nhiều thẻ. 180ms là đủ để mắt theo được mà
+   không thành hiệu ứng chậm rãi gây sốt ruột.
+
+   Chỉ chuyển `background-color`, `border-color` và `color` — KHÔNG dùng `transition: all`.
+   `all` sẽ kéo theo cả `transform`, `width`, `opacity`… của mọi phần tử, làm menu xổ xuống và
+   modal của Ant Design mở ra chậm chạp và giật, tức là hỏng đúng thứ đang muốn làm mượt.
+
+   `!important` là bắt buộc để thắng CSS của Ant Design (§3), nhưng chỉ áp cho ba thuộc tính
+   màu nên không đụng vào bố cục của component nào. */
+:root * {
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+/* Người đặt hệ điều hành ở chế độ giảm chuyển động thì đổi thẳng, không chuyển dần. */
+@media (prefers-reduced-motion: reduce) {
+  :root * {
+    transition: none;
+  }
+}
+
+/* ── Ba màu NGỮ NGHĨA phải đảo theo chế độ ───────────────────────
+   Trước đây viết thẳng `bg-green-50` / `bg-red-50` / `text-red-600` — màu tuyệt đối. Ở chế độ
+   tối nền xanh-nhạt và đỏ-nhạt vẫn sáng trưng, mà `--color-ink` lúc đó đã là màu SÁNG, nên chữ
+   trắng nằm trên nền xanh nhạt: không đọc nổi.
+
+   Ba lớp dưới đây giữ đúng ý nghĩa (đúng / sai / gấp) và tự đổi giá trị theo chế độ. */
+.bg-correct {
+  background-color: #f0fdf4;
+}
+.bg-wrong {
+  background-color: #fef2f2;
+}
+.text-urgent {
+  color: #dc2626;
+}
+
+:root[data-theme='dark'] .bg-correct {
+  /* Xanh rất tối, đủ để nhận ra là "đúng" mà chữ sáng vẫn đọc được trên đó */
+  background-color: #10291b;
+}
+:root[data-theme='dark'] .bg-wrong {
+  background-color: #2d1416;
+}
+:root[data-theme='dark'] .text-urgent {
+  /* Sáng hơn hẳn `red-600`: trên nền #202126 màu đó chỉ đạt khoảng 3,4:1 — sát ngưỡng đọc được */
+  color: #f87171;
+}
+
+/* Công thức KaTeX kế thừa màu chữ của khối chứa nó, nên tự đúng ở cả hai chế độ.
+   Chỉ cần chặn nó tràn ngang: một công thức dài trong ô bảng sẽ đẩy cả bảng rộng ra. */
+.katex {
+  font-size: 1.05em;
+}
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* ── Nhãn trạng thái dạng viên thuốc ─────────────────────────────
+   Ngoại lệ có chủ ý của quy ước "bo góc 4px cho mọi thứ" (§4). Nhãn trạng thái nằm lẫn trong
+   bảng dày đặc chữ, và hình viên thuốc tách chúng khỏi chữ thường ngay từ hình dáng — trước cả
+   khi mắt đọc tới màu. Ngoại lệ dừng ở đây: nút, ô nhập, thẻ vẫn 4px. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  flex: none;
+}
+
+.pill-trungTinh {
+  background: var(--color-surface-subtle);
+  border-color: var(--color-line);
+  color: var(--color-ink-soft);
+}
+.pill-tim {
+  background: #f6eeff;
+  border-color: #e3d0fb;
+  color: #6b21a8;
+}
+.pill-xanhLa {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+.pill-vang {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #a16207;
+}
+.pill-do {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+.pill-xanhDuong {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+/* Bản chế độ tối — chỉ hạ độ sáng của nền và viền, giữ nguyên tông để nghĩa của màu không đổi */
+:root[data-theme='dark'] .pill-tim {
+  background: #2a1b3d;
+  border-color: #4c2d70;
+  color: #d8b4fe;
+}
+:root[data-theme='dark'] .pill-xanhLa {
+  background: #10291b;
+  border-color: #1e5235;
+  color: #86efac;
+}
+:root[data-theme='dark'] .pill-vang {
+  background: #2a2310;
+  border-color: #5c4813;
+  color: #fcd34d;
+}
+:root[data-theme='dark'] .pill-do {
+  background: #2d1416;
+  border-color: #6b1f24;
+  color: #fca5a5;
+}
+:root[data-theme='dark'] .pill-xanhDuong {
+  background: #131c31;
+  border-color: #1e3a6b;
+  color: #93c5fd;
+}
+
+/* ── Hàng bảng: thoáng hơn và có phản hồi khi rê chuột ───────────
+   `padding` mặc định của Ant Design đủ cho bảng một dòng chữ, nhưng các bảng ở đây có ô hai dòng
+   (nội dung câu hỏi + dòng phụ), nên hàng dính sát nhau và khó dò theo hàng ngang. */
+.ant-table-tbody > tr > td {
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+
+/* Card ở trang browse: nổi sẵn bằng bóng mờ, nhấc lên khi rê chuột */
 .browse-card {
   border: 1px solid var(--color-line);
-  border-radius: 4px;
-  background: #fff;
-  transition:
-    box-shadow 0.15s ease,
-    border-color 0.15s ease;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Phần trò chơi hoá — ba lớp dưới đây là NGOẠI LỆ có kiểm soát của
+   ui-design-system.md §4 ("không dùng gradient").
+
+   Lý do: tài liệu chia sẵn ba bộ mặt — khu học tập, phòng đấu, khu
+   quản trị — nhưng trên thực tế cả ba đang trông như nhau. Cấp độ,
+   huy hiệu và chuỗi ngày học là *phần thưởng*; trình bày chúng bằng
+   đúng bộ quy tắc của một bảng quản trị thì chúng thôi là phần thưởng.
+
+   Ngoại lệ dừng đúng ở đây: màn LÀM BÀI và khu QUẢN TRỊ giữ nguyên.
+   Màn làm bài cần sự tập trung (đó là lý do nó ẩn cả chân trang), còn
+   nền đen của khu quản trị là một tín hiệu cảnh báo — tô màu vào đó
+   là làm loãng tín hiệu.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Khối mở đầu trang Khám phá — màn hình đầu tiên người dùng thấy sau khi đăng nhập */
+.browse-hero {
+  background: linear-gradient(135deg, #5624d0 0%, #a435f0 55%, #c084fc 100%);
+  border-radius: var(--radius-panel);
+}
+
+/* ── Sảnh phòng đấu ──────────────────────────────────────────────
+   Màn hình người dùng đứng NGAY TRƯỚC lúc chơi, nên nó nên báo trước rằng thứ sắp tới là
+   một trò chơi. Trước đây nó trông y hệt một trang quản lý: hai hộp trắng viền xám. */
+.room-hero {
+  background: linear-gradient(120deg, #4c1d95 0%, #7c3aed 45%, #db2777 100%);
+  border-radius: var(--radius-panel);
+}
+
+/* Hai thẻ, hai việc ngược nhau — chủ phòng và người vào.
+
+   Chỉ tô VIỀN và TIÊU ĐỀ, không tô nền: bên trong là biểu mẫu có ô chọn và ô nhập, mà nền
+   màu làm chữ trong đó khó đọc. Viền 2px thay vì 1px — đây là chỗ duy nhất trong dự án cần
+   phân biệt hai khối ngang hàng bằng màu, và 1px màu nhạt thì gần như không thấy. */
+.room-card {
+  border-radius: var(--radius-card);
+  border-width: 2px;
+  border-style: solid;
+}
+
+.room-card-host {
+  border-color: #a435f0;
+}
+.room-card-host .room-card-title {
+  color: #6b21a8 !important;
+}
+
+.room-card-join {
+  border-color: #0ea5e9;
+}
+.room-card-join .room-card-title {
+  color: #0369a1 !important;
+}
+
+/* ── Phòng đấu: mỗi phương án một màu theo VỊ TRÍ ────────────────
+   Bốn ô trắng xếp dọc là hình ảnh của một biểu mẫu, không phải của một trò chơi tính điểm
+   theo tốc độ. Cho mỗi vị trí một màu giúp người chơi nhắm được ô mình muốn bấm TRƯỚC KHI
+   kịp đọc hết chữ — đúng thứ một trò hỏi đáp cần.
+
+   Nền nhạt chứ không đặc: chữ câu trả lời phải đọc được, và ô đang chọn của Ant Design cũng
+   cần nhìn ra trên nền này. */
+.room-option {
+  border-radius: var(--radius-control);
+}
+
+.room-option-a {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+.room-option-b {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+.room-option-c {
+  border-color: #eab308;
+  background: #fefce8;
+}
+.room-option-d {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+
+/* ── Bản chế độ tối cho các lớp trang trí ────────────────────────
+   Những lớp bên trên dùng màu tuyệt đối vì chúng sinh ra khi chỉ có chế độ sáng. Ở nền tối
+   chúng hoặc chói loá (nền pastel), hoặc chìm hẳn (chữ tím đậm, xanh đậm). Chỉ đổi ĐỘ SÁNG,
+   giữ nguyên tông màu — người dùng vẫn nhận ra đỏ là A, xanh dương là B. */
+
+:root[data-theme='dark'] .room-option-a {
+  border-color: #b91c1c;
+  background: #2d1416;
+}
+:root[data-theme='dark'] .room-option-b {
+  border-color: #1d4ed8;
+  background: #131c31;
+}
+:root[data-theme='dark'] .room-option-c {
+  border-color: #a16207;
+  background: #2a2310;
+}
+:root[data-theme='dark'] .room-option-d {
+  border-color: #15803d;
+  background: #10291b;
+}
+
+/* Huy hiệu đã mở: vàng nhạt thành vàng tối, viền giữ vàng để vẫn "được thưởng" */
+:root[data-theme='dark'] .badge-earned {
+  border-color: #a16207;
+  background: linear-gradient(160deg, #2a2310, #332b12);
+}
+
+/* Tiêu đề hai thẻ ở sảnh phòng đấu: tím đậm và xanh đậm chìm hẳn trên nền tối */
+:root[data-theme='dark'] .room-card-host .room-card-title {
+  color: #d8b4fe !important;
+}
+:root[data-theme='dark'] .room-card-join .room-card-title {
+  color: #7dd3fc !important;
+}
+
+/* ── Khối công bố điểm ở màn kết quả ─────────────────────────────
+   Bốn mức thay vì hai: chỉ "đạt / không đạt" thì một bài 51% và một bài 99% trông y hệt nhau,
+   mà đó là hai kết quả rất khác nhau với người vừa làm xong. */
+.result-hero-excellent,
+.result-hero-good,
+.result-hero-pass,
+.result-hero-low {
+  border-radius: var(--radius-panel);
+}
+
+.result-hero-excellent {
+  background: linear-gradient(135deg, #047857, #10b981);
+}
+.result-hero-good {
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+}
+.result-hero-pass {
+  background: linear-gradient(135deg, #b45309, #f59e0b);
+}
+/* Mức thấp nhất dùng XÁM ĐÁ, không dùng đỏ: đỏ ở đây đọc thành một lời phán xét, trong khi một
+   bài điểm thấp chỉ có nghĩa là còn chỗ để ôn — và ôn tiếp mới là việc hệ thống muốn người học làm. */
+.result-hero-low {
+  background: linear-gradient(135deg, #475569, #64748b);
+}
+
+/* ── Huy chương top 3 của bảng xếp hạng mùa ──────────────────────
+   Trước đây hạng 1 vàng còn hạng 2 và 3 dùng chung một màu xám, nên vị trí thứ nhì và thứ ba
+   nhìn không khác gì nhau — trong khi cả bảng xếp hạng tồn tại để phân biệt đúng những khác
+   biệt đó. */
+.podium {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.podium-1 {
+  background: linear-gradient(135deg, #b45309, #fbbf24);
+}
+.podium-2 {
+  background: linear-gradient(135deg, #64748b, #cbd5e1);
+  color: #1c1d1f;
+}
+.podium-3 {
+  background: linear-gradient(135deg, #7c2d12, #d97706);
+}
+
+/* Thẻ cấp độ ở trang Thành tích */
+.achievement-hero {
+  background: linear-gradient(135deg, #5624d0, #a435f0);
+}
+
+/* Huy hiệu ĐÃ mở khoá — vàng, để phân biệt tức thì với nhóm chưa mở (xám mờ) */
+.badge-earned {
+  border-color: #eab308;
+  background: linear-gradient(160deg, #fefce8, #fef9c3);
+}
+
+/* Ngọn lửa của chuỗi ngày học, chỉ khi chuỗi còn được giữ trong hôm nay */
+.streak-alight {
+  animation: streak-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes streak-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.85;
+  }
+}
+
+/* Người dùng đặt hệ điều hành ở chế độ giảm chuyển động thì tắt hẳn nhịp đập.
+   Một biểu tượng nhấp nháy liên tục là thứ gây khó chịu thật với một số người, và đây là
+   trang họ mở thường xuyên. */
+@media (prefers-reduced-motion: reduce) {
+  .streak-alight {
+    animation: none;
+  }
 }
 
 .browse-card:hover {
-  /* Đậm hơn bản đầu (4px / 8%) vì bản đó gần như không nhìn thấy trên nền trắng cạnh viền sáng —
-     người dùng báo "thẻ quiz không có hiệu ứng hover" trong khi CSS thì có.
+  transform: translateY(-2px);
+  /* Viền đậm lại MỘT BẬC bên cạnh bóng, không chỉ tăng bóng.
 
-     Thêm việc VIỀN ĐẬM LẠI, không chỉ tăng bóng: viền 1px là ngôn ngữ hình khối chính của dự án
-     (ui-design-system.md §4), nên nói bằng viền thì rõ hơn và hợp hệ thống hơn là đổ bóng dày. */
+     Lý do đã đổi cùng ngôn ngữ hình khối (05/09/2026): trước đây viền 1px là cách nói chính của dự
+     án nên hover nói bằng viền; nay bóng mới là cách nói chính, còn viền đậm lên chỉ để giữ ranh
+     giới cho người dùng bật tương phản cao — nhóm mà bóng đổ bị hệ điều hành loại bỏ hoàn toàn. */
+  border-color: var(--color-line-strong);
+  box-shadow: var(--shadow-lifted);
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   TRỢ LÝ HỌC TẬP — lối trình bày riêng của màn hội thoại
+
+   Đây là NGOẠI LỆ thứ hai của quy ước "bo góc 4px cho mọi thứ" (§4), sau viên thuốc trạng
+   thái. Lý do giống nhau: hình dáng mang nghĩa. Khung soạn tin bo tròn nổi trên nền là hình
+   dáng người dùng đã học được từ mọi công cụ hội thoại khác — nó nói "gõ vào đây" trước cả khi
+   đọc placeholder. Ngoại lệ dừng đúng ở khung soạn tin và chip gợi ý; nút, ô nhập, thẻ ở phần
+   còn lại của trang vẫn 4px.
+
+   Vì sao các lớp này nằm ở đây chứ không phải class Tailwind viết thẳng trong component:
+   ui-design-system.md cấm hardcode màu/bo góc/shadow trong component. Bán kính 16px và bóng
+   mềm bên dưới là quyết định của hệ thống thiết kế, nên chúng sống trong hệ thống thiết kế.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Khung soạn tin nổi ── */
+.chat-composer {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  padding: 8px 8px 8px 14px;
+  box-shadow: var(--shadow-soft);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Viền sáng lên khi con trỏ đang ở trong khung. `:focus-within` chứ không `:focus`: phần tử
+   nhận focus là <textarea> bên trong, còn thứ cần đổi hình là cái khung bọc ngoài. */
+.chat-composer:focus-within {
   border-color: var(--color-ink-soft);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-lifted);
+}
+
+:root[data-theme='dark'] .chat-composer {
+  /* Bóng đen trên nền tối là vô hình. Ở chế độ tối, thứ tách khung ra khỏi nền là NỀN SÁNG HƠN
+     một bậc chứ không phải bóng — nên dùng `--color-surface` (#202126) trên nền `#17181c`. */
+  box-shadow: none;
+}
+
+/* Ô nhập bên trong khung: bỏ hết viền/nền/vòng focus riêng của Ant Design để nó hoà vào khung bọc.
+
+   ── Vì sao phải liệt kê từng trạng thái, và vì sao gắn thêm `textarea` vào bộ chọn ──
+   Ant Design v6 sinh CSS lúc CHẠY và chèn vào <head> SAU tệp này, nên khi hai bộ chọn bằng điểm đặc
+   hiệu thì nó thắng nhờ đứng sau. Bộ chọn của nó cỡ `.ant-input-outlined:focus` — phần băm nằm trong
+   `:where()` nên không tính điểm — tức (0,2,0), y hệt `.chat-composer .ant-input`. Kết quả: viền và
+   vòng focus vẫn hiện, thành hai lớp viền lồng nhau, và vòng focus lại màu tím — trái quy ước §5
+   (tím chỉ dành cho link).
+
+   Cách thắng là thêm tên THẺ vào bộ chọn: `textarea.ant-input:focus` là (0,2,1), hơn hẳn mà không
+   cần `!important`. Điều này quan trọng — `!important` từng thắng đúng luật rồi làm vỡ bố cục nội bộ
+   của `Input.Search` (xem ui-design-system.md §4.2). Ở đây `textarea` là thẻ lá, không có bố cục
+   trong nó để mà vỡ.
+
+   Khung bọc `.chat-composer:focus-within` đã đổi viền khi con trỏ vào trong, nên dấu hiệu focus
+   không mất — nó chỉ chuyển từ vòng quanh ô nhập ra viền quanh cả khung, đúng thứ người dùng thấy ở
+   mọi công cụ hội thoại khác. */
+.chat-composer .ant-input,
+.chat-composer textarea.ant-input,
+.chat-composer textarea.ant-input:hover,
+.chat-composer textarea.ant-input:focus,
+.chat-composer textarea.ant-input-focused,
+.chat-composer .ant-input-affix-wrapper,
+.chat-composer .ant-input-affix-wrapper:hover,
+.chat-composer .ant-input-affix-wrapper:focus-within {
+  background: transparent;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  padding: 4px 0;
+  resize: none;
+}
+
+/* ── Chip câu hỏi gợi ý ── */
+.chat-chip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.chat-chip:hover {
+  border-color: var(--color-ink-soft);
+  background: var(--color-surface-subtle);
+}
+
+/* ── Cột trái: nền chìm thay cho lưới viền ──
+   Bản trước kẻ viền quanh từng khối và từng dòng, thành ra một bàn cờ: mắt phải bỏ qua hàng
+   chục đường kẻ mới đọc được tên hội thoại. Một nền chìm tách cột khỏi khung chat đủ rõ mà
+   không thêm đường nào. */
+.chat-rail {
+  background: var(--color-surface-subtle);
+  border-radius: var(--radius-card);
+  padding: 8px;
+}
+
+.chat-rail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: var(--radius-small);
+  padding: 8px 10px;
+  transition: background 0.12s ease;
+}
+
+.chat-rail-item:hover {
+  background: var(--color-surface);
+}
+
+.chat-rail-item[data-dang-chon='true'] {
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+}
+
+/* Nút xoá chỉ hiện khi rê chuột — nhưng PHẢI hiện cả khi nó nhận focus bàn phím, nếu không thì
+   người dùng Tab tới một nút vô hình và không có cách nào biết mình đang đứng ở đâu. Đó là lý
+   do dùng `opacity` chứ không `display: none`: phần tử ẩn bằng `display` không nhận được focus. */
+.chat-rail-item .chat-rail-xoa {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.chat-rail-item:hover .chat-rail-xoa,
+.chat-rail-item:focus-within .chat-rail-xoa {
+  opacity: 1;
+}
+
+/* Màn cảm ứng không có trạng thái rê chuột: `:hover` ở đó hoặc không bao giờ đúng, hoặc dính
+   lại sau khi chạm. Nút xoá vì vậy luôn hiện trên thiết bị chạm. */
+@media (hover: none) {
+  .chat-rail-item .chat-rail-xoa {
+    opacity: 1;
+  }
+}
+
+/* ── Nút thêm học liệu, viền đứt ──
+   Viền đứt là quy ước chung cho "chỗ trống chờ được lấp" (khu vực thả tệp). Nó nói rằng đây
+   chưa phải nội dung, mà là chỗ để tạo ra nội dung. */
+.chat-them-hoc-lieu {
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 1px dashed var(--color-line-strong);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-ink-soft);
+  padding: 18px 12px;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.chat-them-hoc-lieu:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+  background: var(--color-surface);
+}
+
+/* Biểu tượng trợ lý ở màn hình rỗng. Hình tròn ở đây là quy ước "đại diện" (avatar), không phải
+   bo góc trang trí — nên nó không thuộc diện quy ước 4px. */
+.chat-hero-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-line);
+  color: var(--color-brand);
+  font-size: 26px;
+}
+
+/* ── Màn Trợ lý: chỉ khung hội thoại cuộn, phần còn lại đứng im ──
+
+   Bản trước để khối chat `min-h-[60vh]` nên nó phình theo số tin nhắn, và thứ cuộn là CẢ TRANG:
+   đọc tới câu trả lời thứ ba là tiêu đề trang và cột học liệu đã trôi mất, muốn đổi tài liệu phải
+   cuộn ngược lên. Ràng chiều cao trang lại thì mỗi khối tự cuộn trong lòng nó.
+
+   136px = 72px thanh điều hướng (token `Layout.headerHeight` trong antdTheme.ts) + 64px đệm dọc của
+   `<Content className="px-6 py-8">`. Hai con số này là kích thước thật của khung ứng dụng; đặt ở đây
+   kèm nguồn gốc để khi ai đổi chúng thì tìm ra được chỗ này.
+
+   `dvh` chứ không `vh`: trên trình duyệt điện thoại `vh` tính theo khung lúc thanh địa chỉ đang ẩn,
+   nên phần đáy — đúng chỗ đặt ô nhập — bị đẩy xuống dưới mép nhìn thấy.
+
+   CHỈ áp từ `lg` trở lên. Dưới ngưỡng đó bố cục xếp dọc, nhồi ba vùng cuộn vào một màn hình điện
+   thoại thì mỗi vùng còn vài dòng — ở đó để cả trang cuộn như thường là đúng hơn. */
+@media (width>=64rem) {
+  .chat-trang {
+    height: calc(100dvh - 136px);
+  }
 }

@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<style>
+  /*
+   * Mockup wireframe — phong cách HaUI (line drawing đen-trắng).
+   * Content khớp UI thực tế của frontend EduExam (Tailwind 3 + shadcn/ui).
+   * 6 màn: Login, MyCourses (SV home), ExamAttempt, QuestionBank (GV),
+   *         GenerateQuestions (AI), AdminDashboard.
+   */
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", Arial, sans-serif; }
+  body { background: #fff; }
+  .screen { width: 860px; border: 1.5px solid #555; background: #fff; margin: 18px; }
+  .chrome { border-bottom: 1.5px solid #555; background: #ededed; }
+  .tab { display: inline-block; border: 1px solid #888; border-bottom: none; background: #fff; padding: 3px 14px; margin: 4px 0 0 8px; font-size: 12px; color: #444; }
+  .addr { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
+  .nav { color: #555; font-size: 14px; letter-spacing: 2px; }
+  .url { flex: 1; border: 1px solid #888; border-radius: 11px; background: #fff; padding: 3px 12px; font-size: 12px; color: #777; }
+  .page { padding: 0; }
+
+  /* AppLayout shared header — exact match với components/layout/AppLayout.tsx */
+  .app-header { display: flex; align-items: center; justify-content: space-between; height: 48px; border-bottom: 1px solid #999; padding: 0 18px; font-size: 13px; }
+  .brand { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .user-info { text-align: right; font-size: 12px; line-height: 1.3; }
+  .user-info .name { font-weight: 600; color: #222; }
+  .user-info .role { font-size: 11px; color: #666; }
+  .icon-btn { width: 26px; height: 26px; border: 1px solid #888; background: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #555; }
+
+  .body { padding: 18px; }
+  .row { display: flex; gap: 14px; }
+  .col { flex: 1; }
+  .box { border: 1px solid #777; background: #fff; }
+  .lbl { font-size: 12px; color: #555; margin: 8px 0 3px; }
+  .field { border: 1px solid #888; background: #fafafa; padding: 6px 10px; font-size: 12px; color: #999; }
+  .btn { border: 1.5px solid #555; background: #e9e9e9; text-align: center; padding: 6px 10px; font-size: 12px; color: #222; display: inline-block; }
+  .btn-pri { border: 1.5px solid #333; background: #333; color: #fff; text-align: center; padding: 6px 10px; font-size: 12px; display: inline-block; }
+  .btn-ghost { background: transparent; border: 1px dashed #888; padding: 4px 8px; font-size: 12px; color: #444; display: inline-block; }
+  .btn-link { background: transparent; border: none; padding: 4px 4px; font-size: 12px; color: #444; text-decoration: underline; display: inline-block; }
+  .h { font-size: 16px; font-weight: 700; color: #222; text-align: center; margin-bottom: 12px; }
+  .h-page { font-size: 18px; font-weight: 700; color: #222; }
+  .h2 { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 8px; }
+  .small { font-size: 11px; color: #666; }
+  .imgbox { background:
+      linear-gradient(to top right, transparent 49.3%, #aaa 49.3%, #aaa 50.7%, transparent 50.7%),
+      linear-gradient(to bottom right, transparent 49.3%, #aaa 49.3%, #aaa 50.7%, transparent 50.7%),
+      #f4f4f4; border: 1px solid #888; }
+  .card { border: 1px solid #888; padding: 10px; }
+  .card .n { font-size: 18px; font-weight: 800; color: #333; }
+  .opt { border: 1px solid #999; padding: 7px 10px; margin-bottom: 6px; font-size: 12px; color: #333; }
+  .grid5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .cell { border: 1px solid #999; text-align: center; padding: 5px 0; font-size: 10px; color: #555; }
+  .cell.on { background: #d6d6d6; }
+  .cell.cur { background: #555; color: #fff; border-color: #333; font-weight: 700; }
+  .cell.flag { background: #f0f0f0; border-color: #555; font-style: italic; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { border: 1px solid #999; padding: 5px 8px; text-align: left; color: #333; }
+  th { background: #ececec; }
+  .pill { border: 1px solid #888; border-radius: 9px; padding: 1px 8px; font-size: 10px; }
+  .cite { border-left: 3px solid #888; background: #f6f6f6; padding: 4px 8px; font-size: 10px; color: #555; margin-top: 4px; }
+  .chip { display: inline-block; border: 1px solid #888; border-radius: 11px; padding: 1px 8px; font-size: 10px; color: #444; margin-right: 4px; background: #fff; }
+  .chip.on { background: #555; color: #fff; border-color: #333; }
+  .check { display: inline-block; width: 11px; height: 11px; border: 1.5px solid #555; background: #fff; vertical-align: middle; margin-right: 5px; }
+  .check.on { background: #555; }
+  .seg { display: flex; border: 1px solid #888; }
+  .seg > div { flex: 1; padding: 5px; text-align: center; font-size: 11px; border-right: 1px solid #888; }
+  .seg > div:last-child { border-right: none; }
+  .seg > div.on { background: #555; color: #fff; font-weight: 600; }
+  .warn-banner { border: 1px solid #888; background: #f6f6f6; padding: 6px 10px; font-size: 11px; color: #444; margin-bottom: 10px; }
+  .badge { display: inline-block; border: 1px solid #777; padding: 1px 6px; font-size: 10px; color: #333; background: #f0f0f0; }
+  .badge-strong { display: inline-block; border: 1px solid #444; padding: 1px 6px; font-size: 10px; color: #fff; background: #555; font-weight: 600; }
+
+  /* Question list article style (QuestionListItem) */
+  .qitem { display: flex; gap: 10px; border: 1px solid #999; padding: 10px; margin-bottom: 6px; }
+  .qitem .body-col { flex: 1; }
+  .qitem .badges { display: flex; gap: 4px; margin-bottom: 6px; flex-wrap: wrap; }
+  .qitem .content { font-size: 13px; color: #222; line-height: 1.4; margin-bottom: 6px; }
+  .qitem .meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 10px; color: #666; }
+  .qitem .actions { display: flex; gap: 2px; align-items: flex-start; }
+  .qitem .act { width: 22px; height: 22px; border: 1px solid #888; background: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #555; }
+
+  /* KPI card admin */
+  .kpi { display: flex; align-items: center; gap: 8px; border: 1px solid #888; padding: 10px; }
+  .kpi .kico { width: 32px; height: 32px; border: 1px solid #888; background: #f4f4f4; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; }
+  .kpi .kv { font-size: 18px; font-weight: 800; line-height: 1; color: #222; }
+  .kpi .kl { font-size: 10px; color: #555; }
+  .kpi .kg { font-size: 9px; color: #444; }
+
+  /* Top courses list item */
+  .rank-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px dashed #ccc; font-size: 11px; }
+  .rank-item:last-child { border-bottom: none; }
+  .rank-circle { width: 22px; height: 22px; border-radius: 50%; background: #ececec; border: 1px solid #999; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+
+  /* Ongoing exam card item */
+  .exam-card { border: 1px solid #999; padding: 8px 10px; margin-bottom: 6px; }
+  .exam-card .row1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .exam-card .title { font-weight: 600; font-size: 12px; }
+  .exam-card .live { background: #555; color: #fff; font-size: 9px; padding: 1px 5px; border-radius: 6px; font-weight: 600; }
+
+  .gap-2 { gap: 8px; }
+  .mb-4 { margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<!-- 2.30 Đăng nhập / Đăng ký -->
+<div class="screen">
+  <div class="chrome"><div class="tab">Quiz AI — Đăng nhập</div>
+    <div class="addr"><span class="nav">&#8592; &#8594; &#8635;</span><div class="url">localhost:5173/login</div></div></div>
+  <div class="page"><div class="body" style="padding:34px 200px;">
+    <div class="h">Quiz <span style="font-weight:800;">AI</span></div>
+    <div class="small" style="text-align:center;margin-bottom:16px;">Đăng nhập để làm bài, thi đấu và dùng trợ lý học tập</div>
+    <div class="lbl">Email</div><div class="field">email@example.com</div>
+    <div class="lbl">Mật khẩu</div><div class="field">••••••••</div>
+    <div style="display:flex;justify-content:flex-end;margin:6px 0 12px;"><span class="btn-link">Quên mật khẩu?</span></div>
+    <div class="btn-pri" style="width:100%;padding:9px;">Đăng nhập</div>
+    <div class="small" style="text-align:center;margin:12px 0;">— hoặc —</div>
+    <div class="btn" style="width:100%;padding:9px;">Đăng nhập bằng Google</div>
+    <div class="small" style="text-align:center;margin-top:14px;">Chưa có tài khoản? <span class="btn-link">Đăng ký</span></div>
+  </div></div>
+</div>
+
+<!-- 2.31 Khám phá quiz -->
+<div class="screen">
+  <div class="chrome"><div class="tab">Quiz AI — Khám phá</div>
+    <div class="addr"><span class="nav">&#8592; &#8594; &#8635;</span><div class="url">localhost:5173/quizzes</div></div></div>
+  <div class="page">
+    <div class="app-header">
+      <div class="brand">Quiz <span>AI</span></div>
+      <div style="flex:1;margin:0 18px;"><div class="url" style="border-radius:2px;">Tìm quiz theo tiêu đề…</div></div>
+      <div style="display:flex;gap:14px;font-size:12px;color:#333;">
+        <span style="font-weight:600;">Khám phá</span><span>Phòng đấu</span><span>Trợ lý AI</span><span>Lộ trình</span><span>Tiến độ</span><span>Lịch sử</span>
+      </div>
+      <div class="header-right"><div class="user-info"><div class="name">Minh Đức</div><div class="role">Người học</div></div>
+        <div class="icon-btn">&#9660;</div></div>
+    </div>
+    <div class="body">
+      <div class="row mb-4" style="align-items:center;">
+        <div class="h-page" style="flex:1;">Khám phá quiz</div>
+        <span class="chip on">Tất cả</span><span class="chip">Lập trình</span><span class="chip">Toán</span><span class="chip">Tiếng Anh</span>
+        <span class="chip">Dễ</span><span class="chip">Trung bình</span><span class="chip">Khó</span>
+      </div>
+      <div class="row" style="flex-wrap:wrap;">
+        <div class="col box" style="min-width:250px;">
+          <div class="imgbox" style="height:96px;"></div>
+          <div style="padding:10px;">
+            <div style="font-size:13px;font-weight:600;">Spring MVC cơ bản</div>
+            <div class="small" style="margin:4px 0;">Lập trình · Trung bình</div>
+            <div class="small">20 câu · 15 phút</div>
+            <div class="btn-pri" style="width:100%;margin-top:8px;">Xem chi tiết</div>
+          </div>
+        </div>
+        <div class="col box" style="min-width:250px;">
+          <div class="imgbox" style="height:96px;"></div>
+          <div style="padding:10px;">
+            <div style="font-size:13px;font-weight:600;">Thymeleaf và View</div>
+            <div class="small" style="margin:4px 0;">Lập trình · Dễ</div>
+            <div class="small">12 câu · không giới hạn</div>
+            <div class="btn-pri" style="width:100%;margin-top:8px;">Xem chi tiết</div>
+          </div>
+        </div>
+        <div class="col box" style="min-width:250px;">
+          <div class="imgbox" style="height:96px;"></div>
+          <div style="padding:10px;">
+            <div style="font-size:13px;font-weight:600;">Cơ sở dữ liệu quan hệ</div>
+            <div class="small" style="margin:4px 0;">Cơ sở dữ liệu · Khó</div>
+            <div class="small">25 câu · 30 phút</div>
+            <div class="btn-pri" style="width:100%;margin-top:8px;">Xem chi tiết</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2.32 Làm bài -->
+<div class="screen">
+  <div class="chrome"><div class="tab">Quiz AI — Làm bài</div>
+    <div class="addr"><span class="nav">&#8592; &#8594; &#8635;</span><div class="url">localhost:5173/attempts/8f3c…</div></div></div>
+  <div class="page">
+    <div class="app-header"><div class="brand">Quiz <span>AI</span></div>
+      <div style="font-size:12px;color:#333;">Spring MVC cơ bản — chế độ tính giờ</div>
+      <div class="header-right"><span class="badge-strong">Còn lại 08:24</span></div></div>
+    <div class="body"><div class="row">
+      <div class="col" style="flex:3;">
+        <div class="h2">Câu 7 / 20 · 2 điểm · một đáp án</div>
+        <div class="box" style="padding:12px;margin-bottom:10px;">
+          <div style="font-size:13px;line-height:1.5;">Trong Spring MVC, thành phần nào chịu trách nhiệm chọn View để kết xuất kết quả trả về cho người dùng?</div>
+        </div>
+        <div class="opt"><span class="check"></span> A. DispatcherServlet</div>
+        <div class="opt"><span class="check on"></span> B. ViewResolver</div>
+        <div class="opt"><span class="check"></span> C. HandlerMapping</div>
+        <div class="opt"><span class="check"></span> D. ModelAndView</div>
+        <div class="small" style="margin-top:6px;">Câu trả lời được lưu ngay khi chọn — không cần bấm lưu.</div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <div class="btn">&#8592; Câu trước</div><div class="btn">Câu sau &#8594;</div>
+          <div style="flex:1;"></div><div class="btn-pri">Nộp bài</div>
+        </div>
+      </div>
+      <div class="col" style="flex:1;">
+        <div class="h2">Điều hướng câu hỏi</div>
+        <div class="grid5">
+          <div class="cell on">1</div><div class="cell on">2</div><div class="cell on">3</div><div class="cell on">4</div><div class="cell on">5</div>
+          <div class="cell on">6</div><div class="cell cur">7</div><div class="cell">8</div><div class="cell">9</div><div class="cell">10</div>
+          <div class="cell">11</div><div class="cell">12</div><div class="cell">13</div><div class="cell">14</div><div class="cell">15</div>
+          <div class="cell">16</div><div class="cell">17</div><div class="cell">18</div><div class="cell">19</div><div class="cell">20</div>
+        </div>
+        <div class="small" style="margin-top:8px;">Đã trả lời: 6 / 20</div>
+        <div class="warn-banner" style="margin-top:10px;">Đề đã được chốt lúc bắt đầu: chủ quiz sửa bài sau đó không ảnh hưởng lượt làm này.</div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- 2.33 Kết quả làm bài -->
+<div class="screen">
+  <div class="chrome"><div class="tab">Quiz AI — Kết quả</div>
+    <div class="addr"><span class="nav">&#8592; &#8594; &#8635;</span><div class="url">localhost:5173/attempts/8f3c…</div></div></div>
+  <div class="page">
+    <div class="app-header"><div class="brand">Quiz <span>AI</span></div>
+      <div class="header-right"><div class="user-info"><div class="name">Minh Đức</div><div class="role">Người học</div></div><div class="icon-btn">&#9660;</div></div></div>
+    <div class="body">
+      <div class="h-page mb-4">Kết quả — Spring MVC cơ bản</div>
+      <div class="row mb-4">
+        <div class="col card"><div class="n">34 / 40</div><div class="small">Tổng điểm</div></div>
+        <div class="col card"><div class="n">17 / 20</div><div class="small">Số câu đúng</div></div>
+        <div class="col card"><div class="n">12:06</div><div class="small">Thời gian làm bài</div></div>
+      </div>
+      <div class="h2">Chi tiết từng câu</div>
+      <div class="qitem"><div class="body-col">
+        <div class="badges"><span class="badge">Câu 7</span><span class="badge-strong">Đúng</span><span class="badge">2 / 2 điểm</span></div>
+        <div class="content">Trong Spring MVC, thành phần nào chịu trách nhiệm chọn View…</div>
+        <div class="small">Bạn chọn: B. ViewResolver — chính xác</div>
+        <div class="cite">Giải thích: ViewResolver ánh xạ tên logic của view sang view thật để kết xuất.</div>
+      </div></div>
+      <div class="qitem"><div class="body-col">
+        <div class="badges"><span class="badge">Câu 18</span><span class="badge">Tự luận</span><span class="badge-strong">Chấm bởi AI</span><span class="badge">1,5 / 3 điểm</span></div>
+        <div class="content">Trình bày vai trò của DispatcherServlet trong luồng xử lý một yêu cầu.</div>
+        <div class="cite">Nhận xét của AI: Nêu đúng vai trò tiếp nhận yêu cầu, còn thiếu bước chọn HandlerMapping.</div>
+        <div class="cite">Gợi ý cải thiện: bổ sung thứ tự các bước từ khi nhận yêu cầu tới khi trả view.</div>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 2.34 Sảnh chờ và phòng đấu -->
+<div class="screen">
+  <div class="chrome"><div class="tab">Quiz AI — Phòng đấu</div>
+    <div class="addr"><span class="nav">&#8592; &#8594; &#8635;</span><div class="url">localhost:5173/rooms/K7M2QP</div></div></div>
+  <div class="page">
+    <div class="app-header"><div class="brand">Quiz <span>AI</span></div>
+      <div style="font-size:12px;">Mã phòng <span class="badge-strong">K7M2QP</span></div>
+      <div class="header-right"><span class="badge">6 người chơi</span></div></div>
+    <div class="body"><div class="row">
+      <div class="col" style="flex:2;">
+        <div class="h2">Sảnh chờ — Thymeleaf và View</div>
+        <div class="box" style="padding:12px;margin-bottom:10px;">
+          <div class="row" style="align-items:center;">
+            <div class="imgbox" style="width:92px;height:92px;"></div>
+            <div style="flex:1;padding-left:12px;">
+              <div class="small">Người chơi quét mã QR hoặc nhập mã PIN để vào phòng.</div>
+              <div style="margin-top:6px;"><span class="check on"></span><span class="small">Cho khách chưa có tài khoản vào chơi</span></div>
+              <div class="small" style="margin-top:4px;">Mặc định tắt — chủ phòng chủ động bật.</div>
+            </div>
+          </div>
+        </div>
+        <div class="h2">Câu 3 / 12 · còn 07 giây</div>
+        <div class="box" style="padding:12px;">
+          <div style="font-size:13px;margin-bottom:8px;">Thymeleaf có thể xử lý những loại nội dung nào?</div>
+          <div class="row gap-2">
+            <div class="col opt" style="text-align:center;">A. Chỉ HTML</div>
+            <div class="col opt" style="text-align:center;">B. HTML, XML, JS, CSS, text</div>
+          </div>
+          <div class="row gap-2">
+            <div class="col opt" style="text-align:center;">C. Chỉ XML</div>
+            <div class="col opt" style="text-align:center;">D. Chỉ văn bản thuần</div>
+          </div>
+        </div>
+      </div>
+      <div class="col" style="flex:1;">
+        <div class="h2">Bảng xếp hạng trực tiếp</div>
+        <div class="rank-item"><span class="rank-circle">1</span><span style="flex:1;">Minh Nga</span><span class="badge-strong">2 180</span></div>
+        <div class="rank-item"><span class="rank-circle">2</span><span style="flex:1;">Minh Đức</span><span class="badge">1 940</span></div>
+        <div class="rank-item"><span class="rank-circle">3</span><span style="flex:1;">Phương Mai</span><span class="badge">1 725</span></div>
+        <div class="rank-item"><span class="rank-circle">4</span><span style="flex:1;">Khách_Hùng</span><span class="badge">1 510</span></div>
+        <div class="rank-item"><span class="rank-circle">5</span><span style="flex:1;">Cucurella</span><span class="badge">1 240</span></div>
+        <div class="warn-banner" style="margin-top:10px;">Điểm tính theo độ chính xác kết hợp tốc độ trả lời; cập nhật sau mỗi câu qua Redis Pub/Sub.</div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- 2.35 Học liệu và sinh đề bằng AI -->
+<div class="screen">
+  <div class="chrome"><div class="tab">Quiz AI — Học liệu &amp; Sinh đề</div>
+    <div class="addr"><span class="nav">&#8592; &#8594; &#8635;</span><div class="url">localhost:5173/ai/generate</div></div></div>
+  <div class="page">
+    <div class="app-header"><div class="brand">Quiz <span>AI</span></div>
+      <div style="display:flex;gap:14px;font-size:12px;color:#333;">
+        <span>Khám phá</span><span>Quiz của tôi</span><span>Ngân hàng câu hỏi</span><span style="font-weight:600;">Học liệu</span><span>Sinh đề AI</span></div>
+      <div class="header-right"><div class="user-info"><div class="name">Minh Đức</div><div class="role">Người tạo nội dung</div></div><div class="icon-btn">&#9660;</div></div></div>
+    <div class="body">
+      <div class="h2">Học liệu</div>
+      <table class="mb-4">
+        <tr><th>Tiêu đề</th><th>Nguồn</th><th>Trạng thái</th><th>Số đoạn</th><th>Chia sẻ</th><th></th></tr>
+        <tr><td>Slide 3 — View và Thymeleaf</td><td>PDF</td><td><span class="badge-strong">READY</span></td><td>9</td><td><span class="check on"></span></td><td><span class="btn-ghost">Xoá</span></td></tr>
+        <tr><td>Ghi chú Java cơ bản</td><td>TEXT</td><td><span class="badge-strong">READY</span></td><td>1</td><td><span class="check"></span></td><td><span class="btn-ghost">Xoá</span></td></tr>
+        <tr><td>Slide 1 — Spring MVC</td><td>PDF</td><td><span class="badge">PROCESSING</span></td><td>—</td><td><span class="check"></span></td><td><span class="btn-ghost">Xoá</span></td></tr>
+      </table>
+      <div class="row">
+        <div class="col box" style="padding:12px;">
+          <div class="h2">Cấu hình sinh đề</div>
+          <div class="lbl">Học liệu nguồn</div><div class="field">Slide 3 — View và Thymeleaf</div>
+          <div class="lbl">Chủ đề</div><div class="field">Thymeleaf</div>
+          <div class="row gap-2"><div class="col"><div class="lbl">Số câu</div><div class="field">10</div></div>
+            <div class="col"><div class="lbl">Độ khó</div><div class="field">Trung bình</div></div></div>
+          <div class="lbl">Loại câu hỏi</div>
+          <div><span class="chip on">Một đáp án</span><span class="chip">Nhiều đáp án</span><span class="chip">Đúng/Sai</span><span class="chip">Tự luận</span></div>
+          <div class="btn-pri" style="width:100%;margin-top:12px;">Sinh câu hỏi</div>
+          <div class="small" style="margin-top:6px;">Tác vụ chạy nền, trả về mã công việc để theo dõi.</div>
+        </div>
+        <div class="col box" style="padding:12px;">
+          <div class="h2">Câu hỏi nháp — chờ duyệt (10)</div>
+          <div class="qitem"><div class="body-col">
+            <div class="badges"><span class="badge">Một đáp án</span><span class="badge">2 điểm</span><span class="badge">AI sinh</span></div>
+            <div class="content">Thymeleaf được thiết kế phù hợp với tiêu chuẩn web nào?</div>
+            <div class="cite">Nguồn: Slide 3 — "Thymeleaf được xây dựng phù hợp với các tiêu chuẩn của web, đặc biệt là HTML5."</div>
+          </div><div class="actions"><span class="act">&#10003;</span><span class="act">&#9998;</span><span class="act">&#10007;</span></div></div>
+          <div class="qitem"><div class="body-col">
+            <div class="badges"><span class="badge">Nhiều đáp án</span><span class="badge">2 điểm</span><span class="badge">AI sinh</span></div>
+            <div class="content">Thymeleaf có thể xử lý những loại nội dung nào?</div>
+            <div class="cite">Nguồn: Slide 3 — "Thymeleaf có thể xử lý HTML, XML, JavaScript, CSS và cả text."</div>
+          </div><div class="actions"><span class="act">&#10003;</span><span class="act">&#9998;</span><span class="act">&#10007;</span></div></div>
+          <div class="warn-banner">Câu hỏi do AI sinh không tự vào ngân hàng — phải duyệt từng câu.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2.36 Trợ lý học tập -->
+<div class="screen">
+  <div class="chrome"><div class="tab">Quiz AI — Trợ lý học tập</div>
+    <div class="addr"><span class="nav">&#8592; &#8594; &#8635;</span><div class="url">localhost:5173/assistant</div></div></div>
+  <div class="page">
+    <div class="app-header"><div class="brand">Quiz <span>AI</span></div>
+      <div style="display:flex;gap:14px;font-size:12px;color:#333;">
+        <span>Khám phá</span><span>Phòng đấu</span><span style="font-weight:600;">Trợ lý AI</span><span>Lộ trình</span><span>Tiến độ</span><span>Lịch sử</span></div>
+      <div class="header-right"><div class="user-info"><div class="name">Minh Đức</div><div class="role">Người học</div></div><div class="icon-btn">&#9660;</div></div></div>
+    <div class="body">
+      <div class="row mb-4" style="align-items:flex-start;">
+        <div class="h-page" style="flex:1;">Trợ lý học tập</div><div class="btn">Hội thoại mới</div>
+      </div>
+      <div class="row">
+        <div class="col box" style="flex:1;padding:0;">
+          <div style="padding:8px 12px;border-bottom:1px solid #999;font-size:12px;font-weight:700;">Hội thoại của bạn</div>
+          <div style="padding:8px 12px;font-size:11px;border-bottom:1px dashed #ccc;background:#f2f2f2;">Thymeleaf dùng để làm gì…</div>
+          <div style="padding:8px 12px;font-size:11px;border-bottom:1px dashed #ccc;">Phân biệt DispatcherServlet…</div>
+          <div style="padding:8px 12px;font-size:11px;">ViewResolver hoạt động…</div>
+        </div>
+        <div class="col box" style="flex:3;padding:0;">
+          <div style="padding:12px;min-height:230px;">
+            <div style="text-align:right;margin-bottom:10px;">
+              <span class="opt" style="display:inline-block;background:#f0f0f0;">Thymeleaf dùng để làm gì và nó xử lý được những loại nội dung nào?</span>
+            </div>
+            <div class="box" style="padding:10px;">
+              <div style="font-size:12px;line-height:1.5;">Dựa trên tài liệu học tập được cung cấp: Thymeleaf được dùng để xây dựng template hiện đại và dễ bảo trì cho ứng dụng web cũng như ứng dụng độc lập. Nó xử lý được HTML, XML, JavaScript, CSS và cả văn bản thuần…</div>
+              <div class="cite"><b>Dựa trên:</b> Slide 3 — View và Thymeleaf · đoạn 2<br/>"Thymeleaf có thể xử lý HTML, XML, JavaScript, CSS và cả text."</div>
+            </div>
+          </div>
+          <div style="border-top:1px solid #999;padding:10px 12px;">
+            <div class="row gap-2"><div class="col field">Hỏi về nội dung trong học liệu…</div><div class="btn-pri">Gửi</div></div>
+            <div class="small" style="margin-top:6px;">Trợ lý chỉ dựa trên học liệu. Chưa có tài liệu nào phù hợp thì nó nói thẳng là không biết, thay vì đoán.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2.37 Gợi ý và lộ trình học -->
+<div class="screen">
+  <div class="chrome"><div class="tab">Quiz AI — Lộ trình học</div>
+    <div class="addr"><span class="nav">&#8592; &#8594; &#8635;</span><div class="url">localhost:5173/learning-path</div></div></div>
+  <div class="page">
+    <div class="app-header"><div class="brand">Quiz <span>AI</span></div>
+      <div style="display:flex;gap:14px;font-size:12px;color:#333;">
+        <span>Khám phá</span><span>Phòng đấu</span><span>Trợ lý AI</span><span style="font-weight:600;">Lộ trình</span><span>Tiến độ</span><span>Lịch sử</span></div>
+      <div class="header-right"><div class="user-info"><div class="name">Minh Đức</div><div class="role">Người học</div></div><div class="icon-btn">&#9660;</div></div></div>
+    <div class="body">
+      <div class="h-page mb-4">Gợi ý cho bạn</div>
+      <div class="row mb-4">
+        <div class="col box" style="padding:10px;">
+          <div class="badges" style="margin-bottom:6px;"><span class="badge-strong">Chủ đề còn yếu</span></div>
+          <div style="font-size:13px;font-weight:600;">Thymeleaf và View</div>
+          <div class="small" style="margin:4px 0;">Độ chính xác của bạn: 45% · 12 câu đã làm</div>
+          <div class="cite">Lý do gợi ý: bạn còn yếu ở chủ đề này và chưa từng làm quiz dưới đây.</div>
+          <div class="btn-pri" style="width:100%;margin-top:8px;">Làm quiz "Thymeleaf nâng cao"</div>
+        </div>
+        <div class="col box" style="padding:10px;">
+          <div class="badges" style="margin-bottom:6px;"><span class="badge">Người học tương tự</span></div>
+          <div style="font-size:13px;font-weight:600;">Cơ sở dữ liệu quan hệ</div>
+          <div class="small" style="margin:4px 0;">4 người có kết quả tương tự bạn đã làm bài này</div>
+          <div class="cite">Lý do gợi ý: nhóm người học có nhiều bài làm trùng với bạn đã học tiếp nội dung này.</div>
+          <div class="btn" style="width:100%;margin-top:8px;">Xem chi tiết</div>
+        </div>
+      </div>
+      <div class="h2">Lộ trình học đề xuất</div>
+      <div class="box" style="padding:12px;">
+        <div class="seg">
+          <div class="on">1. Thymeleaf và View<br/><span style="font-size:9px;">45% — ưu tiên</span></div>
+          <div>2. Spring MVC<br/><span style="font-size:9px;">62%</span></div>
+          <div>3. Cơ sở dữ liệu<br/><span style="font-size:9px;">71%</span></div>
+          <div>4. Java cơ bản<br/><span style="font-size:9px;">88% — đã vững</span></div>
+        </div>
+        <div class="small" style="margin-top:8px;">Thứ tự dựa trên độ chính xác theo chủ đề, truy vấn từ đồ thị hành vi trên Neo4j.</div>
+      </div>
+      <div class="warn-banner" style="margin-top:12px;">Chưa có dữ liệu hành vi thì hệ thống trả danh sách rỗng kèm hướng dẫn làm một bài, không gợi ý theo độ phổ biến.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Hình 2.38: Khu quản trị — quản lý người dùng ============
+     Layout KHÁC hẳn hai bộ mặt trên: sidebar dọc nền tối thay cho thanh ngang.
+     Trong wireframe đen-trắng, "nền tối" thể hiện bằng khối tô xám đậm. -->
+<div class="screen">
+  <div class="chrome"><div class="tab">Quiz AI — Quản trị</div>
+    <div class="addr"><span class="nav">&#8592; &#8594; &#8635;</span><div class="url">localhost:5173/admin/users</div></div></div>
+  <div class="page">
+    <div style="display:flex;min-height:340px;">
+      <div style="width:170px;background:#3a3a3a;color:#fff;padding:0;">
+        <div style="padding:12px;border-bottom:1px solid #666;">
+          <div style="font-weight:700;font-size:13px;">Quiz AI</div>
+          <div style="font-size:10px;color:#ccc;">Khu quản trị</div>
+        </div>
+        <div style="font-size:12px;">
+          <div style="padding:8px 12px;color:#ddd;">Tổng quan</div>
+          <div style="padding:8px 12px 3px;font-size:9px;letter-spacing:1px;color:#999;">NGƯỜI DÙNG &amp; NỘI DUNG</div>
+          <div style="padding:8px 12px;background:#555;border-left:3px solid #fff;font-weight:600;">Người dùng</div>
+          <div style="padding:8px 12px;color:#ddd;">Danh mục</div>
+          <div style="padding:8px 12px;color:#ddd;">Kiểm duyệt quiz</div>
+          <div style="padding:8px 12px 3px;font-size:9px;letter-spacing:1px;color:#999;">GIÁM SÁT</div>
+          <div style="padding:8px 12px;color:#ddd;">Phòng đấu</div>
+          <div style="padding:8px 12px;color:#ddd;">Giám sát AI</div>
+        </div>
+        <div style="border-top:1px solid #666;padding:8px 12px;font-size:12px;color:#ddd;">&#8592; Về khu học tập</div>
+      </div>
+      <div style="flex:1;">
+        <div class="app-header" style="justify-content:space-between;">
+          <span style="font-size:12px;font-weight:600;">Quản trị hệ thống</span>
+          <div class="header-right"><div class="user-info"><div class="name">Minh Đức</div><div class="role">Quản trị viên</div></div><div class="icon-btn">&#9660;</div></div>
+        </div>
+        <div class="body">
+          <div class="h-page mb-4">Quản lý người dùng</div>
+          <div class="row mb-4">
+            <div class="field" style="flex:2;">Tìm theo email hoặc tên…</div>
+            <div class="field" style="flex:1;">Mọi vai trò &#9660;</div>
+            <div class="field" style="flex:1;">Mọi trạng thái &#9660;</div>
+          </div>
+          <div class="box">
+            <div class="seg" style="font-size:11px;font-weight:600;">
+              <div>Người dùng</div><div>Vai trò</div><div>Trạng thái</div><div>Đăng nhập</div><div>Hành động</div>
+            </div>
+            <div class="seg" style="font-size:11px;">
+              <div>Minh Nga<br/><span style="font-size:9px;color:#777;">nga@example.com</span></div>
+              <div>Người học</div><div>Hoạt động</div><div>Mật khẩu</div><div>Đổi vai trò · Khoá · Thu hồi phiên</div>
+            </div>
+            <div class="seg" style="font-size:11px;">
+              <div>Trần Hải<br/><span style="font-size:9px;color:#777;">hai@example.com</span></div>
+              <div>Người tạo</div><div>Hoạt động</div><div>Google</div><div>Đổi vai trò · Khoá · Thu hồi phiên</div>
+            </div>
+            <div class="seg" style="font-size:11px;">
+              <div>Lê Bình<br/><span style="font-size:9px;color:#777;">binh@example.com</span></div>
+              <div>Người học</div><div><b>Bị khoá</b></div><div>Mật khẩu</div><div>Đổi vai trò · Mở khoá · Thu hồi phiên</div>
+            </div>
+          </div>
+          <div class="warn-banner" style="margin-top:12px;">Khoá tài khoản thu hồi mọi phiên ngay và chặn đăng nhập lại, nhưng KHÔNG xoá dữ liệu. Hệ thống không có chức năng xoá người dùng, và quản trị viên không tự khoá được chính mình.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Hình 2.39: Khu quản trị — giám sát chi phí AI ============ -->
+<div class="screen">
+  <div class="chrome"><div class="tab">Quiz AI — Giám sát AI</div>
+    <div class="addr"><span class="nav">&#8592; &#8594; &#8635;</span><div class="url">localhost:5173/admin/ai</div></div></div>
+  <div class="page">
+    <div style="display:flex;min-height:340px;">
+      <div style="width:170px;background:#3a3a3a;color:#fff;">
+        <div style="padding:12px;border-bottom:1px solid #666;">
+          <div style="font-weight:700;font-size:13px;">Quiz AI</div>
+          <div style="font-size:10px;color:#ccc;">Khu quản trị</div>
+        </div>
+        <div style="font-size:12px;">
+          <div style="padding:8px 12px;color:#ddd;">Tổng quan</div>
+          <div style="padding:8px 12px 3px;font-size:9px;letter-spacing:1px;color:#999;">NGƯỜI DÙNG &amp; NỘI DUNG</div>
+          <div style="padding:8px 12px;color:#ddd;">Người dùng</div>
+          <div style="padding:8px 12px;color:#ddd;">Danh mục</div>
+          <div style="padding:8px 12px;color:#ddd;">Kiểm duyệt quiz</div>
+          <div style="padding:8px 12px 3px;font-size:9px;letter-spacing:1px;color:#999;">GIÁM SÁT</div>
+          <div style="padding:8px 12px;color:#ddd;">Phòng đấu</div>
+          <div style="padding:8px 12px;background:#555;border-left:3px solid #fff;font-weight:600;">Giám sát AI</div>
+        </div>
+        <div style="border-top:1px solid #666;padding:8px 12px;font-size:12px;color:#ddd;">&#8592; Về khu học tập</div>
+      </div>
+      <div style="flex:1;">
+        <div class="app-header" style="justify-content:space-between;">
+          <span style="font-size:12px;font-weight:600;">Quản trị hệ thống</span>
+          <div class="header-right"><div class="user-info"><div class="name">Minh Đức</div><div class="role">Quản trị viên</div></div><div class="icon-btn">&#9660;</div></div>
+        </div>
+        <div class="body">
+          <div style="display:flex;justify-content:space-between;align-items:center;" class="mb-4">
+            <div class="h-page">Giám sát AI</div>
+            <div class="seg" style="width:220px;font-size:11px;"><div>7 ngày</div><div class="on">30 ngày</div><div>90 ngày</div></div>
+          </div>
+          <div class="row mb-4">
+            <div class="col box" style="padding:10px;"><div class="small">Tổng lượt gọi</div><div style="font-size:18px;font-weight:700;">142</div></div>
+            <div class="col box" style="padding:10px;"><div class="small">Tỉ lệ thất bại</div><div style="font-size:18px;font-weight:700;">2,1%</div><div style="font-size:9px;color:#777;">3 / 142 lượt</div></div>
+            <div class="col box" style="padding:10px;"><div class="small">Tổng token</div><div style="font-size:18px;font-weight:700;">86 420</div><div style="font-size:9px;color:#777;">vào 41 200 · ra 45 220</div></div>
+            <div class="col box" style="padding:10px;"><div class="small">Độ trễ P95</div><div style="font-size:18px;font-weight:700;">2 140 ms</div><div style="font-size:9px;color:#777;">trung bình 890 ms</div></div>
+          </div>
+          <div class="h2">Cấu hình nhà cung cấp</div>
+          <div class="box mb-4">
+            <div class="seg" style="font-size:11px;font-weight:600;"><div>Nhà cung cấp</div><div>Khoá API</div><div>Dùng được</div><div>Hỗ trợ</div></div>
+            <div class="seg" style="font-size:11px;"><div>gemini <span style="font-size:9px;color:#777;">ưu tiên đầu</span></div><div>Đã cấu hình</div><div>Sẵn sàng</div><div>vector nhúng · streaming</div></div>
+            <div class="seg" style="font-size:11px;"><div>grok</div><div>Đã cấu hình</div><div>Sẵn sàng</div><div>chỉ sinh văn bản</div></div>
+          </div>
+          <div class="h2">Theo chức năng</div>
+          <div class="box">
+            <div class="seg" style="font-size:11px;font-weight:600;"><div>Chức năng</div><div>Lượt gọi</div><div>Token vào</div><div>Token ra</div><div>Độ trễ TB</div></div>
+            <div class="seg" style="font-size:11px;"><div>Trợ lý học tập</div><div>78</div><div>24 100</div><div>18 900</div><div>760 ms</div></div>
+            <div class="seg" style="font-size:11px;"><div>Sinh đề</div><div>31</div><div>12 400</div><div>21 300</div><div>3 250 ms</div></div>
+            <div class="seg" style="font-size:11px;"><div>Chấm tự luận</div><div>19</div><div>3 100</div><div>4 020</div><div>1 180 ms</div></div>
+            <div class="seg" style="font-size:11px;"><div>Sinh vector nhúng</div><div>14</div><div>1 600</div><div>1 000</div><div>320 ms</div></div>
+          </div>
+          <div class="warn-banner" style="margin-top:12px;">Bảng cấu hình chỉ cho biết khoá API đã được đặt hay chưa — hệ thống không bao giờ hiển thị giá trị khoá, và không cho sửa khoá hay system prompt qua giao diện.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

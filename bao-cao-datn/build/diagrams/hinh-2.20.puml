@@ -1,0 +1,123 @@
+@startuml
+
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #C99AAB
+skinparam ArrowFontColor #202020
+skinparam Padding 4
+skinparam ParticipantPadding 18
+skinparam BoxPadding 8
+skinparam SequenceMessageAlign center
+skinparam guillemet false
+
+skinparam usecase {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  FontColor #1a1a1a
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #404040
+  FontColor #1a1a1a
+}
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #808080
+}
+
+skinparam sequence {
+  ArrowColor #C99AAB
+  ArrowThickness 1
+  LifeLineBorderColor #C99AAB
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #FFFADC
+  ParticipantBorderColor #C99AAB
+  ParticipantFontColor #1a1a1a
+  ParticipantFontSize 12
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #404040
+  GroupBorderColor #C99AAB
+  GroupBackgroundColor #FFF5F8
+  BoxBorderColor #C99AAB
+}
+
+skinparam class {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  HeaderBackgroundColor #FFEFC4
+  AttributeFontColor #1a1a1a
+  FontColor #1a1a1a
+  ArrowColor #C99AAB
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam stereotype {
+  CBackgroundColor #FFF1A8
+  CBorderColor #C99AAB
+  EBackgroundColor #FFF1A8
+  EBorderColor #C99AAB
+  ABackgroundColor #FFF1A8
+  ABorderColor #C99AAB
+}
+
+title Biểu đồ trình tự — Use case Tham gia phòng đấu thời gian thực
+
+actor "Chủ phòng" as H
+actor "Người chơi" as P
+boundary "RoomPage" as B
+control "StompAuthChannelInterceptor" as AUTH
+control "RoomStompController" as RC
+control "RoomService" as RS
+control "SpeedScorer" as SC
+control "RoomStateStore" as ST
+control "GameEventPublisher" as PUB
+control "GameEventRelay" as REL
+database "Redis" as RD
+
+H -> RS : mở phòng từ một quiz
+RS -> RS : sinh mã PIN 6 ký tự (bỏ 0/O, 1/I)
+RS -> RD : lưu trạng thái phòng, TTL
+
+P -> B : nhập mã PIN, chọn biệt danh
+B -> AUTH : CONNECT (Authorization: Bearer JWT)
+alt Token không hợp lệ
+  AUTH --> B : từ chối kết nối
+else Hợp lệ hoặc có khóa phiên khách
+  AUTH -> RC : cho phép đăng ký /topic/room/{code}
+  RC -> RS : join(code, player)
+  RS -> ST : thêm người chơi
+  RS -> PUB : phát danh sách người chơi
+  PUB -> RD : PUBLISH room:{code}:events
+  RD -> REL : nhận sự kiện
+  REL --> B : cập nhật danh sách
+end
+
+H -> RC : bắt đầu ván
+loop mỗi câu hỏi
+  RC -> PUB : phát câu hỏi + thời gian giới hạn
+  PUB -> RD : PUBLISH
+  RD -> REL : fan-out tới mọi tiến trình
+  REL --> B : hiển thị câu hỏi đồng thời
+  P -> B : chọn đáp án
+  B -> RC : gửi đáp án
+  RC -> SC : score(correct, elapsedMs)
+  SC --> RC : điểm theo độ chính xác và tốc độ
+  RC -> ST : cập nhật điểm trên Redis
+  RC -> PUB : phát bảng xếp hạng mới
+  PUB -> RD : PUBLISH
+  RD -> REL : fan-out
+  REL --> B : bảng xếp hạng trực tiếp
+end
+
+RC -> RS : kết thúc ván
+RS -> RS : ghi final_score xuống PostgreSQL
+RS --> B : kết quả cuối ván
+
+note over ST, RD
+  Trạng thái đang chơi chỉ nằm ở Redis;
+  chỉ kết quả cuối ván ghi xuống CSDL quan hệ
+end note
+@enduml

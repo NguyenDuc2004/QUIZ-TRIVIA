@@ -1,0 +1,24 @@
+flowchart LR
+  GV["Giảng viên"]
+  subgraph SYS["Hệ thống EduExam AI"]
+    a(["Quản lý lớp và cộng tác"])
+    b(["CRUD ngân hàng câu hỏi - 8 loại"])
+    c(["Upload tài liệu"])
+    d(["Sinh đề bằng AI - RAG"])
+    e(["Trợ lý AI soạn thảo"])
+    f(["Phân tích chất lượng câu hỏi"])
+    g(["Tạo và cấu hình kỳ thi"])
+    h(["Cấu hình giám sát"])
+    i(["Xem kết quả và vi phạm"])
+    j(["Nhập / xuất câu hỏi"])
+  end
+  GV --- a
+  GV --- b
+  GV --- c
+  GV --- d
+  GV --- e
+  GV --- f
+  GV --- g
+  GV --- h
+  GV --- i
+  GV --- j

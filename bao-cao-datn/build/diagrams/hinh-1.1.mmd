@@ -1,0 +1,47 @@
+flowchart TB
+  classDef fe fill:#DBEAFE,stroke:#1D4ED8,color:#1E3A8A;
+  classDef be fill:#FEF3C7,stroke:#B45309,color:#7C2D12;
+  classDef data fill:#EDE9FE,stroke:#6D28D9,color:#4C1D95;
+  classDef ext fill:#E5E7EB,stroke:#4B5563,color:#1F2937;
+
+  subgraph CLIENT["Trình duyệt (Client)"]
+    UI["React 19 + Vite 8 (TypeScript)<br/>Ant Design v6 + Tailwind v4"]:::fe
+    WSC["STOMP.js — WebSocket Client<br/>(phòng đấu)"]:::fe
+    SSEC["Fetch stream — SSE Client<br/>(trợ lý học tập)"]:::fe
+  end
+
+  subgraph BACKEND["Backend — Spring Boot 3.x + Java 21"]
+    SEC["Security Filter — JWT + RBAC"]:::be
+    API["REST Controllers (/api/v1)"]:::be
+    WS["WebSocket Endpoint (/ws) — STOMP"]:::be
+    SVC["Service Layer<br/>auth · quiz · attempt · realtime · ai · chat · recommend · analytics"]:::be
+    RAG["RAG Pipeline<br/>Tika → chunk → embedding → truy hồi"]:::be
+    ORCH["AiOrchestrator<br/>Gemini → Groq + Circuit Breaker"]:::be
+    GAME["Realtime Game Engine<br/>SpeedScorer + Redis Pub/Sub"]:::be
+  end
+
+  subgraph STORE["Docker Compose — tầng dữ liệu"]
+    PG[("PostgreSQL 16 + pgvector<br/>dữ liệu nghiệp vụ + kho vector")]:::data
+    NEO[("Neo4j 5<br/>đồ thị hành vi, gợi ý")]:::data
+    RD[("Redis 7<br/>phiên · trạng thái phòng · Pub/Sub · hạn mức")]:::data
+  end
+
+  GEM["Google Gemini API<br/>(nhà cung cấp chính)"]:::ext
+  GRK["Groq API<br/>(dự phòng)"]:::ext
+
+  UI -->|"REST / HTTPS"| API
+  SSEC -->|"SSE (text/event-stream)"| API
+  WSC -->|"WebSocket / STOMP"| WS
+  API --> SEC
+  WS --> SEC
+  SEC --> SVC
+  SVC --> RAG
+  SVC --> ORCH
+  SVC --> GAME
+  SVC --> PG
+  RAG --> PG
+  SVC --> NEO
+  GAME --> RD
+  SVC --> RD
+  ORCH -->|"HTTPS"| GEM
+  ORCH -.->|"khi Gemini lỗi tạm thời"| GRK

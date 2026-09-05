@@ -42,6 +42,12 @@ import java.util.UUID;
  * <p>
  * Toàn bộ yêu cầu vai trò <b>CREATOR/ADMIN</b>: đây là công cụ soạn nội dung, và mỗi lời gọi đều
  * tốn tiền API nên không mở cho mọi tài khoản đăng ký được.
+ * <p>
+ * <b>Nhóm học liệu đã chuyển sang {@link MaterialController}</b> (04/09/2026) vì người học phải nạp
+ * được tài liệu của chính họ — không thì trợ lý học tập chết hẳn với người học đơn lẻ. Chuyển sang
+ * lớp riêng chứ không mở lẻ vài phương thức ở đây: một lớp cấm cả cụm rồi mở ngoại lệ bên trong là
+ * cách chắc chắn để sau này có người mở quyền quá tay. Phần chi phí mà luật vai trò đang thay mặt
+ * canh được thay bằng trần số tài liệu, cưỡng chế ở {@code MaterialService}.
  */
 @RestController
 @RequestMapping("/api/v1/ai")
@@ -69,61 +75,6 @@ public class AiController {
         return Map.of(
                 "available", aiOrchestrator.isAvailable(),
                 "providers", aiOrchestrator.availableProviders());
-    }
-
-    // ------------------------------------------------------------- học liệu
-
-    @GetMapping("/materials")
-    @Operation(summary = "Học liệu của tôi")
-    public PageResponse<MaterialResponse> listMaterials(
-            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
-            @PageableDefault(size = 20) Pageable pageable) {
-        return materialService.listMine(current.id(), pageable);
-    }
-
-    @GetMapping("/materials/{id}")
-    @Operation(summary = "Chi tiết một học liệu (dùng để hỏi lại trạng thái xử lý)")
-    public MaterialResponse getMaterial(@AuthenticationPrincipal JwtService.AuthenticatedUser current,
-                                        @PathVariable UUID id) {
-        return materialService.get(id, current);
-    }
-
-    @PostMapping("/materials")
-    @Operation(summary = "Nạp học liệu bằng văn bản dán trực tiếp; xử lý chạy nền")
-    public ResponseEntity<MaterialResponse> createMaterial(
-            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
-            @Valid @RequestBody CreateMaterialRequest request) {
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(materialService.createFromText(request, current.id()));
-    }
-
-    @PostMapping(value = "/materials/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Nạp học liệu từ file PDF/DOCX/TXT; Tika trích text rồi xử lý nền")
-    public ResponseEntity<MaterialResponse> uploadMaterial(
-            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(required = false) String title,
-            @RequestParam(required = false) String topic) {
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(materialService.createFromFile(file, title, topic, current.id()));
-    }
-
-    @PatchMapping("/materials/{id}/shared")
-    @Operation(summary = "Bật/tắt chia sẻ học liệu cho người học (features/08). Chỉ tài liệu đã bật "
-            + "mới được trợ lý AI dùng để trả lời cho người khác; tài liệu chưa xử lý xong trả 409.")
-    public MaterialResponse setMaterialShared(
-            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
-            @PathVariable UUID id,
-            @RequestParam boolean shared) {
-        return materialService.setShared(id, shared, current);
-    }
-
-    @DeleteMapping("/materials/{id}")
-    @Operation(summary = "Xoá học liệu và toàn bộ vector của nó")
-    public ResponseEntity<Void> deleteMaterial(@AuthenticationPrincipal JwtService.AuthenticatedUser current,
-                                               @PathVariable UUID id) {
-        materialService.delete(id, current);
-        return ResponseEntity.noContent().build();
     }
 
     // ------------------------------------------------------------- sinh đề

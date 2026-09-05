@@ -1,0 +1,116 @@
+@startuml
+
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #C99AAB
+skinparam ArrowFontColor #202020
+skinparam Padding 4
+skinparam ParticipantPadding 18
+skinparam BoxPadding 8
+skinparam SequenceMessageAlign center
+skinparam guillemet false
+
+skinparam usecase {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  FontColor #1a1a1a
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #404040
+  FontColor #1a1a1a
+}
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #808080
+}
+
+skinparam sequence {
+  ArrowColor #C99AAB
+  ArrowThickness 1
+  LifeLineBorderColor #C99AAB
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #FFFADC
+  ParticipantBorderColor #C99AAB
+  ParticipantFontColor #1a1a1a
+  ParticipantFontSize 12
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #404040
+  GroupBorderColor #C99AAB
+  GroupBackgroundColor #FFF5F8
+  BoxBorderColor #C99AAB
+}
+
+skinparam class {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  HeaderBackgroundColor #FFEFC4
+  AttributeFontColor #1a1a1a
+  FontColor #1a1a1a
+  ArrowColor #C99AAB
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam stereotype {
+  CBackgroundColor #FFF1A8
+  CBorderColor #C99AAB
+  EBackgroundColor #FFF1A8
+  EBorderColor #C99AAB
+  ABackgroundColor #FFF1A8
+  ABorderColor #C99AAB
+}
+
+left to right direction
+skinparam nodesep 22
+skinparam ranksep 60
+
+actor "Khách" as G
+actor "Người học" as L
+actor "Người tạo nội dung" as C
+actor "Quản trị viên" as A
+
+rectangle "HỆ THỐNG QUIZ/TRIVIA TÍCH HỢP AI" {
+  usecase "Xem quiz công khai" as U1
+  usecase "Đăng ký, đăng nhập" as U2
+  usecase "Làm bài quiz cá nhân" as U3
+  usecase "Tham gia phòng đấu\nthời gian thực" as U4
+  usecase "Hỏi trợ lý học tập\n(RAG)" as U5
+  usecase "Nhận gợi ý và\nlộ trình học" as U6
+  usecase "Xem tiến độ,\nlịch sử làm bài" as U7
+  usecase "Quản lý quiz và\nngân hàng câu hỏi" as U8
+  usecase "Nạp và chia sẻ\nhọc liệu" as U9
+  usecase "Sinh đề bằng AI" as U10
+  usecase "Duyệt câu hỏi\ndo AI sinh" as U11
+  usecase "Mở và điều khiển\nphòng đấu" as U12
+  usecase "Chấm tay câu tự luận" as U13
+  usecase "Quản lý người dùng" as U14
+  usecase "Giám sát chi phí AI" as U15
+}
+
+G --> U1
+G --> U2
+L --> U3
+L --> U4
+L --> U5
+L --> U6
+L --> U7
+C --> U8
+C --> U9
+C --> U10
+C --> U11
+C --> U12
+C --> U13
+A --> U14
+A --> U15
+
+C -up-|> L
+A -up-|> C
+
+note bottom of L
+  Creator có toàn bộ quyền của Learner,
+  Admin có toàn bộ quyền của Creator
+end note
+@enduml

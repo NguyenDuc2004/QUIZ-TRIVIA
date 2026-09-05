@@ -1,0 +1,157 @@
+@startuml
+' Style sạch cho biểu đồ lớp thiết kế tổng thể (khác phong cách hồng của VOPC)
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam roundCorner 4
+skinparam classAttributeIconSize 0
+skinparam guillemet false
+hide circle
+skinparam nodesep 35
+skinparam ranksep 55
+
+skinparam class {
+  BackgroundColor #F4F8FC
+  BorderColor #2E5984
+  HeaderBackgroundColor #C7DAEE
+  ArrowColor #2E5984
+  AttributeFontSize 11
+  FontSize 12
+}
+
+class User {
+  -id : UUID
+  -email : String
+  -passwordHash : String
+  -googleId : String
+  -displayName : String
+  -role : Role
+}
+
+class Category {
+  -id : UUID
+  -name : String
+  -slug : String
+}
+
+class Quiz {
+  -id : UUID
+  -title : String
+  -difficulty : Difficulty
+  -visibility : Visibility
+  -timeLimitSec : Integer
+  -isAiGenerated : boolean
+}
+
+class Question {
+  -id : UUID
+  -type : QuestionType
+  -content : String
+  -explanation : String
+  -rubric : String
+  -topic : String
+  -points : int
+  -source : QuestionSource
+}
+
+class QuestionOption {
+  -id : UUID
+  -content : String
+  -isCorrect : boolean
+  -orderIndex : int
+}
+
+class QuizQuestion {
+  -orderIndex : int
+}
+
+class QuizAttempt {
+  -id : UUID
+  -mode : AttemptMode
+  -status : AttemptStatus
+  -startedAt : OffsetDateTime
+  -expiresAt : OffsetDateTime
+  -totalScore : int
+  -maxScore : int
+}
+
+class AttemptAnswer {
+  -id : UUID
+  -userAnswer : AnswerPayload
+  -isCorrect : Boolean
+  -score : int
+  -aiFeedback : String
+  -aiSuggestions : String
+  -gradedBy : GradedBy
+}
+
+class LearningMaterial {
+  -id : UUID
+  -title : String
+  -sourceType : MaterialSourceType
+  -status : MaterialStatus
+  -shared : boolean
+  -chunkCount : int
+}
+
+class MaterialChunk {
+  -id : UUID
+  -chunkIndex : int
+  -content : String
+  -embedding : vector(768)
+}
+
+class GameRoom {
+  -id : UUID
+  -roomCode : String
+  -status : RoomStatus
+  -secondsPerQuestion : Integer
+  -allowGuests : boolean
+}
+
+class GameRoomPlayer {
+  -id : UUID
+  -displayName : String
+  -avatar : String
+  -isGuest : boolean
+  -finalScore : Integer
+}
+
+class ChatSession {
+  -id : UUID
+  -title : String
+}
+
+class ChatMessage {
+  -id : UUID
+  -role : ChatRole
+  -content : String
+}
+
+class AiJob {
+  -id : UUID
+  -type : JobType
+  -status : JobStatus
+}
+
+User "1" --> "0..*" Quiz : sở hữu
+User "1" --> "0..*" Question : soạn
+User "1" --> "0..*" QuizAttempt : làm bài
+User "1" --> "0..*" LearningMaterial : nạp
+User "1" --> "0..*" GameRoom : mở phòng
+User "1" --> "0..*" ChatSession : hội thoại
+User "1" --> "0..*" AiJob : yêu cầu
+User "0..1" --> "0..*" GameRoomPlayer : tham gia
+Category "1" --> "0..*" Quiz : phân loại
+Quiz "1" --> "0..*" QuizQuestion
+Question "1" --> "0..*" QuizQuestion
+Question "1" *-- "0..*" QuestionOption
+Quiz "1" --> "0..*" QuizAttempt
+QuizAttempt "1" *-- "1..*" AttemptAnswer
+Question "1" --> "0..*" AttemptAnswer
+LearningMaterial "1" *-- "0..*" MaterialChunk
+Quiz "1" --> "0..*" GameRoom : dùng cho
+GameRoom "1" *-- "1..*" GameRoomPlayer
+ChatSession "1" *-- "0..*" ChatMessage
+@enduml

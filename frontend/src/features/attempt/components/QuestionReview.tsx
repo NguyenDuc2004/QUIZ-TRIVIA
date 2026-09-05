@@ -56,7 +56,7 @@ export default function QuestionReview({
   const isChoice = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE'].includes(question.type)
 
   return (
-    <div className="border border-line bg-white p-5">
+    <div className="soft-panel p-5">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Text className="text-ink-soft text-xs font-bold">Câu {question.orderIndex + 1}</Text>
         <Tag className="mr-0!">{QUESTION_TYPE_LABEL[question.type]}</Tag>
@@ -74,7 +74,7 @@ export default function QuestionReview({
         <img
           src={question.imageUrl}
           alt="Ảnh minh hoạ của câu hỏi"
-          className="mb-4 max-h-72 w-auto max-w-full border border-line object-contain"
+          className="mb-4 max-h-72 w-auto max-w-full border border-line rounded-card object-contain"
         />
       )}
 
@@ -85,9 +85,9 @@ export default function QuestionReview({
             const isChosen = chosen.has(option.id)
             // Xanh = đáp án đúng; đỏ = người dùng chọn nhưng sai
             const tone = isCorrect
-              ? 'border-green-500 bg-green-50'
+              ? 'border-green-500 bg-correct'
               : isChosen
-                ? 'border-red-500 bg-red-50'
+                ? 'border-red-500 bg-wrong'
                 : 'border-line'
 
             return (
@@ -101,14 +101,14 @@ export default function QuestionReview({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <div className="border border-line p-3">
+          <div className="border border-line rounded-card p-3">
             <Text className="text-ink-soft text-xs">Bạn trả lời</Text>
             <Paragraph className="mb-0! whitespace-pre-wrap">
               {question.userAnswer?.text?.trim() || <Text className="text-ink-soft">(bỏ trống)</Text>}
             </Paragraph>
           </div>
           {question.options.length > 0 && (
-            <div className="border border-green-500 bg-green-50 p-3">
+            <div className="border border-green-500 bg-correct p-3">
               <Text className="text-ink-soft text-xs">
                 {question.type === 'FILL_BLANK' ? 'Đáp án được chấp nhận' : 'Đáp án mẫu'}
               </Text>
@@ -128,7 +128,7 @@ export default function QuestionReview({
       )}
 
       {question.gradedBy === 'PENDING_AI' && (
-        <div className="mt-3 flex items-center gap-2 border border-line bg-surface-subtle p-3">
+        <div className="mt-3 flex items-center gap-2 soft-panel-subtle p-3">
           <Spin size="small" />
           <Text className="text-ink-soft text-xs">
             {throttledSeconds > 0
@@ -139,7 +139,7 @@ export default function QuestionReview({
       )}
 
       {question.aiFeedback && (
-        <div className="mt-3 border border-line p-3">
+        <div className="mt-3 border border-line rounded-card p-3">
           <Text className="text-ink-soft text-xs font-bold">
             Nhận xét · {GRADED_BY_LABEL[question.gradedBy ?? 'AI']}
           </Text>

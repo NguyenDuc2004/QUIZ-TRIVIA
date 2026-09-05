@@ -211,6 +211,7 @@ export default function AdminUsersPage() {
         />
       ) : (
         <Table<AdminUser>
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           columns={columns}
           dataSource={data?.content ?? []}

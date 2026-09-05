@@ -1,0 +1,16 @@
+flowchart TB
+  BROWSER["Trình duyệt người dùng"]
+  subgraph DEV["Máy triển khai cục bộ"]
+    FE["Frontend - Vite (cổng 5173)"]
+    BE["Backend - Spring Boot JAR (cổng 8080)"]
+    FS["Thư mục uploads / snapshots"]
+    subgraph DOCKER["Docker Compose"]
+      PG[("PostgreSQL 16 + pgvector")]
+    end
+  end
+  GEMINI["Google Gemini API (Internet)"]
+  BROWSER -->|"HTTP / WebSocket"| FE
+  FE -->|"REST / JWT"| BE
+  BE --> PG
+  BE --> FS
+  BE -->|"HTTPS"| GEMINI

@@ -62,6 +62,7 @@ export default function AdminQuizzesPage() {
       </div>
 
       <Table<QuizSummary>
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         loading={isLoading}
         dataSource={data?.content}

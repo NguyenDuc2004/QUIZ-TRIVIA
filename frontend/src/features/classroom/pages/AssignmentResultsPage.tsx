@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { Button, Card, Skeleton, Statistic, Table, Tag, Typography, message } from 'antd'
+import { Button, Card, Skeleton, Statistic, Table, Tag, Tooltip, Typography, message } from 'antd'
 import { DownloadOutlined } from '@ant-design/icons'
 import { useState } from 'react'
 import PageHeader from '@/shared/components/PageHeader'
@@ -110,6 +110,7 @@ export default function AssignmentResultsPage() {
       </div>
 
       <Table<AssignmentResultRow>
+        scroll={{ x: 'max-content' }}
         rowKey="userId"
         dataSource={data.danhSach}
         pagination={{ pageSize: 50, hideOnSinglePage: true }}
@@ -145,6 +146,51 @@ export default function AssignmentResultsPage() {
             width: 170,
             render: (v: string | null) =>
               v ? new Date(v).toLocaleString('vi-VN') : <Text className="text-ink-soft">—</Text>,
+          },
+          {
+            // Bài tập của lớp CHẠY Ở CHẾ ĐỘ THI, nên có thu tín hiệu hành vi. Trước đây bảng này không
+            // hiện gì về chúng, tức tín hiệu được ghi mà không ai thấy — bằng không ghi.
+            //
+            // Cột chỉ có nội dung ở bài vượt ngưỡng: máy chủ không gửi điểm của bài dưới ngưỡng, nên đây
+            // không phải "ẩn cho gọn" mà là không có gì để hiện.
+            title: 'Rủi ro',
+            key: 'risk',
+            width: 130,
+            render: (_, row) => {
+              if (row.riskScore === null) {
+                return <Text className="text-ink-soft">—</Text>
+              }
+              return (
+                <Tooltip title="Điểm rủi ro không phải bằng chứng gian lận. Mở bài để đọc lý do cụ thể.">
+                  <div className="flex flex-col items-start gap-0.5">
+                    {/* Cam chứ không đỏ: đỏ đọc thành "đã kết luận có tội", còn trạng thái thật là
+                        "đáng xem". Giống hệt trang thống kê quiz — cùng một con số thì phải cùng một
+                        cách nói, nếu không hai màn hình cho hai ấn tượng khác nhau về cùng một học sinh */}
+                    <Tag color="orange" className="mr-0!">
+                      {row.riskScore}/100
+                    </Tag>
+                    {row.reviewStatus !== 'PENDING' && (
+                      <Text className="text-ink-soft text-xs">
+                        {row.reviewStatus === 'VALID' ? 'đã xác nhận hợp lệ' : 'đã đánh dấu không hợp lệ'}
+                      </Text>
+                    )}
+                  </div>
+                </Tooltip>
+              )
+            },
+          },
+          {
+            // Không có cột này thì cột Rủi ro là ngõ cụt: giáo viên thấy con số nhưng không có đường đọc
+            // LÝ DO, mà lý do mới là thứ dùng được. Một con số 70/100 đứng một mình chỉ tạo nghi ngờ.
+            title: '',
+            key: 'mo',
+            width: 90,
+            render: (_, row) =>
+              row.attemptId ? (
+                <Link to={`/attempts/${row.attemptId}`} className="text-sm font-bold underline">
+                  Xem bài
+                </Link>
+              ) : null,
           },
         ]}
       />

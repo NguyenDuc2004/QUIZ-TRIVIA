@@ -321,6 +321,68 @@ class ClassroomIntegrationTest {
     }
 
     @Test
+    @DisplayName("Bảng theo dõi mang điểm rủi ro của bài bị gắn cờ — không thì tín hiệu ghi mà không ai thấy")
+    void shouldExposeRiskScoreInResults() throws Exception {
+        String quizId = taoQuizRiengCoCau();
+        JsonNode lop = taoLop("Lớp có rủi ro");
+        thamGia(lop, tokenHocSinh);
+        String baiTapId = giaoBai(lop, quizId, null).get("id").asText();
+
+        String attemptId = batDauBaiTap(baiTapId, tokenHocSinh);
+
+        // Bắn đủ tín hiệu để vượt ngưỡng gắn cờ. Bài tập của lớp chạy ở chế độ THI nên chấp nhận tín hiệu —
+        // chính điều đó làm bảng theo dõi trở thành nơi giáo viên cần thấy kết quả.
+        mockMvc.perform(post("/api/v1/attempts/{id}/proctoring-events", attemptId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenHocSinh)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"events":[
+                                  {"type":"TAB_HIDDEN"},{"type":"TAB_HIDDEN"},{"type":"TAB_HIDDEN"},
+                                  {"type":"TAB_HIDDEN"},{"type":"TAB_HIDDEN"},{"type":"TAB_HIDDEN"},
+                                  {"type":"PASTE","length":1200},{"type":"PASTE","length":1500},
+                                  {"type":"WINDOW_BLUR"},{"type":"WINDOW_BLUR"},{"type":"WINDOW_BLUR"}
+                                ]}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/attempts/{id}/submit", attemptId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenHocSinh))
+                .andExpect(status().isOk());
+
+        JsonNode kq = json(get("/api/v1/assignments/{id}/results", baiTapId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenGiaoVien));
+
+        JsonNode dong = kq.get("danhSach").get(0);
+        assertThat(dong.get("riskScore").isNull())
+                .as("bài vượt ngưỡng phải có điểm rủi ro trong bảng theo dõi của lớp")
+                .isFalse();
+        assertThat(dong.get("riskScore").asInt()).isGreaterThanOrEqualTo(60);
+        assertThat(dong.get("reviewStatus").asText()).isEqualTo("PENDING");
+    }
+
+    @Test
+    @DisplayName("Bài KHÔNG bị gắn cờ thì riskScore là null — không phải 0")
+    void shouldNotExposeRiskScoreBelowThreshold() throws Exception {
+        String quizId = taoQuizRiengCoCau();
+        JsonNode lop = taoLop("Lớp sạch");
+        thamGia(lop, tokenHocSinh);
+        String baiTapId = giaoBai(lop, quizId, null).get("id").asText();
+
+        String attemptId = batDauBaiTap(baiTapId, tokenHocSinh);
+        mockMvc.perform(post("/api/v1/attempts/{id}/submit", attemptId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenHocSinh))
+                .andExpect(status().isOk());
+
+        JsonNode kq = json(get("/api/v1/assignments/{id}/results", baiTapId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenGiaoVien));
+
+        // null nghĩa là "không có gì đáng xem"; 0 nghĩa là "đã đo và sạch". Với bài không thu tín hiệu nào
+        // thì hai câu đó khác nhau, và hiện 0/100 sẽ làm giáo viên tưởng hệ thống đã kiểm mọi bài.
+        assertThat(kq.get("danhSach").get(0).get("riskScore").isNull()).isTrue();
+        assertThat(kq.get("danhSach").get(0).get("reviewStatus").isNull()).isTrue();
+    }
+
+    @Test
     @DisplayName("Học sinh KHÔNG xem được bảng theo dõi của cả lớp")
     void shouldRestrictResults() throws Exception {
         String quizId = taoQuizRiengCoCau();

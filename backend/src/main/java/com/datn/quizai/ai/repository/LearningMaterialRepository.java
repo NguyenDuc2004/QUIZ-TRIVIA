@@ -38,4 +38,23 @@ public interface LearningMaterialRepository extends JpaRepository<LearningMateri
             order by m.createdAt desc
             """)
     List<LearningMaterial> findAskable(@Param("userId") UUID userId, Limit limit);
+
+    /**
+     * Người này có tài liệu nào hỏi được không.
+     * <p>
+     * Dùng để <b>không gọi AI khi câu trả lời đã biết trước</b>: kho rỗng thì mọi câu hỏi đều dẫn tới
+     * cùng một câu "chưa có tài liệu để dựa vào", nhưng đường đi cũ vẫn nhúng câu hỏi rồi vẫn gọi mô
+     * hình để nghe nó nói đúng câu đó. Hai lời gọi tốn tiền cho một kết quả xác định từ đầu.
+     * <p>
+     * Đúng cùng phạm vi với {@code findAskable} — kiểm bằng một câu khác phạm vi sẽ cho ra lúc thì
+     * chặn nhầm, lúc thì bỏ lọt.
+     */
+    @Query("""
+            select count(m) > 0 from LearningMaterial m
+            where (m.owner.id = :userId or m.shared = true)
+              and m.status = com.datn.quizai.ai.domain.MaterialStatus.READY
+            """)
+    boolean hasAskable(@Param("userId") UUID userId);
+
+    long countByOwnerId(UUID ownerId);
 }

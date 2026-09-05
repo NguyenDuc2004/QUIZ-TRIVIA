@@ -42,10 +42,15 @@
 | State | Zustand |
 | Routing | React Router |
 | UI | **Ant Design** (component) + TailwindCSS (layout/spacing) |
+| Công thức toán | **KaTeX** — dựng công thức trong nội dung câu hỏi, chỉ phần đặt giữa `$...$` |
 | Form | React Hook Form + Zod |
 | HTTP | Axios / Fetch |
 | Real-time | `@stomp/stompjs` + SockJS |
 | Streaming | EventSource (SSE) cho chatbot |
+
+> **KaTeX** thêm vào ngày 30/08/2026 theo yêu cầu hiển thị công thức toán. Nó **không** tự nhận diện
+> toán trong văn bản thường — chỉ dựng phần người viết đánh dấu bằng `$...$`, vì tự đoán là làm hỏng chính
+> câu chữ của người dùng (xem ui-design-system.md §4.4).
 
 > **Antd + Tailwind:** Dùng Ant Design v6 cho component (Table, Form, Modal…), Tailwind v4 chỉ cho layout/spacing.
 > Tailwind v4 không còn `tailwind.config.js`; để **không nạp Preflight** (reset CSS sẽ đè style của Antd), trong `src/index.css` chỉ import `theme.css` + `utilities.css` thay vì `tailwindcss`. Tùy biến theme qua `ConfigProvider` của Antd.

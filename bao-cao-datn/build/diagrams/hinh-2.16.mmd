@@ -1,0 +1,12 @@
+sequenceDiagram
+  actor U as Người dùng
+  participant B as «boundary» LoginPage
+  participant C as «control» AuthService
+  participant E as «entity» User
+  U->>B: nhập email, mật khẩu
+  B->>C: login(email, password)
+  C->>E: findByEmail(email)
+  E-->>C: User
+  C->>C: verify(password)
+  C-->>B: TokenResponse(access, refresh)
+  B-->>U: chuyển vào trang theo vai trò

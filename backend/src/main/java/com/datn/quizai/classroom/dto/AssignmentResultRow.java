@@ -1,5 +1,7 @@
 package com.datn.quizai.classroom.dto;
 
+import com.datn.quizai.integrity.domain.ReviewStatus;
+
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -21,6 +23,8 @@ public record AssignmentResultRow(
         Integer diemToiDa,
         OffsetDateTime nopLuc,
         TrangThaiBaiTap trangThai,
-        String trangThaiNhan
+        String trangThaiNhan,
+        Integer riskScore,
+        ReviewStatus reviewStatus
 ) {
 }

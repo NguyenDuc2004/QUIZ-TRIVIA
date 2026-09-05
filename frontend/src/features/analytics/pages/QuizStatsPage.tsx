@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
-import { Alert, Card, Skeleton, Space, Statistic, Table, Tag, Tooltip, Typography } from 'antd'
+import { Alert, Button, Card, Skeleton, Space, Statistic, Table, Tag, Tooltip, Typography } from 'antd'
+import { EditOutlined, EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
@@ -143,8 +144,12 @@ export default function QuizStatsPage() {
       key: 'actions',
       width: 120,
       render: (_, row) => (
-        <Link to={`/my-quizzes/${id}/attempts/${row.attemptId}`} className="text-sm font-bold">
-          {row.needsManualGrading ? 'Chấm tay' : 'Xem bài'}
+        <Link to={`/my-quizzes/${id}/attempts/${row.attemptId}`}>
+          {/* Nút viền thay cho chữ trần: một hàng bảng có nhiều chữ, và hành động phải nhận ra được
+              là hành động ngay từ hình dáng chứ không chỉ từ màu. */}
+          <Button size="small" icon={row.needsManualGrading ? <EditOutlined /> : <EyeOutlined />}>
+            {row.needsManualGrading ? 'Chấm tay' : 'Xem bài'}
+          </Button>
         </Link>
       ),
     },
@@ -220,6 +225,7 @@ export default function QuizStatsPage() {
               />
             ) : (
               <Table
+                scroll={{ x: 'max-content' }}
                 rowKey="questionId"
                 size="small"
                 columns={hardColumns}
@@ -232,6 +238,7 @@ export default function QuizStatsPage() {
           <div>
             <Text className="mb-2 block font-bold">Bài làm ({attempts?.length ?? 0})</Text>
             <Table
+              scroll={{ x: 'max-content' }}
               rowKey="attemptId"
               size="small"
               columns={attemptColumns}

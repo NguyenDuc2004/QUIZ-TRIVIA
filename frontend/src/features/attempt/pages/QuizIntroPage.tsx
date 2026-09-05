@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Alert, Button, Radio, Skeleton, Space, Table, Tag, Typography } from 'antd'
+import { TrophyOutlined } from '@ant-design/icons'
+import { Alert, Button, Checkbox, Radio, Skeleton, Space, Table, Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { getApiErrorMessage } from '@/shared/api/client'
 import EmptyState from '@/shared/components/EmptyState'
@@ -8,6 +9,7 @@ import PageHeader from '@/shared/components/PageHeader'
 import { DIFFICULTY_COLOR, DIFFICULTY_LABEL } from '@/features/quiz/constants'
 import { useQuizSummary } from '@/features/quiz/hooks/useQuizQueries'
 import { useAuthStore } from '@/features/auth/store/authStore'
+import ProctoringNotice from '@/features/integrity/components/ProctoringNotice'
 import type { AttemptMode, AttemptSummary, LeaderboardEntry } from '../api/attemptApi'
 import { MODE_HINT, MODE_LABEL, STATUS_COLOR, STATUS_LABEL, formatDuration } from '../constants'
 import { useAttemptHistory, useLeaderboard, useStartAttempt } from '../hooks/useAttemptQueries'
@@ -27,6 +29,11 @@ export default function QuizIntroPage() {
   const startAttempt = useStartAttempt()
 
   const [mode, setMode] = useState<AttemptMode>('EXAM')
+
+  // Xác nhận đã đọc thông báo ghi nhận hành vi. KHÔNG nhớ lại giữa các lần: mục đích của ô này là người thi
+  // đọc trước LẦN THI NÀY, không phải một lần duy nhất trong đời rồi thôi. Bỏ qua sau lần đầu thì nó thành
+  // một hộp thoại người ta bấm cho xong, đúng thứ mà việc báo trước cần tránh.
+  const [daHieu, setDaHieu] = useState(false)
 
   if (error) {
     return <Alert type="error" showIcon message={getApiErrorMessage(error)} />
@@ -92,11 +99,11 @@ export default function QuizIntroPage() {
             <img
               src={quiz.thumbnailUrl}
               alt=""
-              className="aspect-video w-full border border-line object-cover"
+              className="aspect-video w-full border border-line rounded-card object-cover"
             />
           )}
 
-          <div className="border border-line bg-white p-5">
+          <div className="soft-panel p-5">
             <Text className="text-ink-soft text-xs font-bold">Giới thiệu</Text>
             <Paragraph className="mt-2! mb-0! whitespace-pre-wrap">
               {quiz.description?.trim() || (
@@ -105,11 +112,12 @@ export default function QuizIntroPage() {
             </Paragraph>
           </div>
 
-          <div className="border border-line bg-white">
+          <div className="soft-panel">
             <div className="border-b border-line px-4 py-3">
               <Text className="font-bold!">Bảng xếp hạng</Text>
             </div>
             <Table<LeaderboardEntry>
+              scroll={{ x: 'max-content' }}
               rowKey="userId"
               size="middle"
               pagination={false}
@@ -130,7 +138,7 @@ export default function QuizIntroPage() {
             />
           </div>
 
-          <div className="border border-line bg-white">
+          <div className="soft-panel">
             <div className="flex items-center justify-between border-b border-line px-4 py-3">
               <Text className="font-bold!">Lần làm gần đây của tôi</Text>
               <Link to="/my-attempts" className="text-xs font-bold">
@@ -138,6 +146,7 @@ export default function QuizIntroPage() {
               </Link>
             </div>
             <Table<AttemptSummary>
+              scroll={{ x: 'max-content' }}
               rowKey="id"
               size="middle"
               pagination={false}
@@ -151,7 +160,7 @@ export default function QuizIntroPage() {
         </div>
 
         {/* Khối hành động dính theo cuộn — chỗ Udemy đặt giá thì ở đây đặt nút bắt đầu */}
-        <aside className="h-fit border border-line bg-white p-5 lg:sticky lg:top-24">
+        <aside className="h-fit soft-panel p-5 lg:sticky lg:top-24">
           <div className="mb-4 flex flex-col gap-1">
             <Text className="text-ink-soft text-xs">Nội dung</Text>
             <Text className="font-bold!">{quiz.questionCount} câu hỏi</Text>
@@ -178,6 +187,24 @@ export default function QuizIntroPage() {
           </Radio.Group>
           <Paragraph className="mb-4! text-ink-soft text-xs">{MODE_HINT[mode]}</Paragraph>
 
+          {/* Nói luật TRƯỚC khi đồng hồ chạy.
+
+              Thông báo này vốn đã có, nhưng nằm ở màn LÀM BÀI — tức người thi chỉ đọc được sau khi bài đã
+              bắt đầu và giờ đã chạy. Đọc lúc đó thì không còn lựa chọn nào: không đóng bớt tab được, không
+              đổi chỗ ngồi được, và lần rời trang đầu tiên rất có thể xảy ra ngay trong lúc đang đọc chính
+              dòng chữ giải thích rằng rời trang sẽ bị ghi lại.
+
+              Ô xác nhận bên dưới là thứ biến "có dán thông báo" thành "người thi đã đọc". Chỉ áp cho chế độ
+              Thi, vì luyện tập không ghi nhận gì. */}
+          {mode === 'EXAM' && (
+            <div className="mb-4 flex flex-col gap-3">
+              <ProctoringNotice />
+              <Checkbox checked={daHieu} onChange={(e) => setDaHieu(e.target.checked)}>
+                <span className="text-sm">Tôi đã đọc và hiểu những tín hiệu được ghi nhận</span>
+              </Checkbox>
+            </div>
+          )}
+
           {/* FR-48. Nói TRƯỚC khi bấm bắt đầu, không phải lúc màn hình đã đổi: người học cần biết mình sắp
               vào toàn màn hình để còn chọn thời điểm — đóng bớt tab, ngồi vào chỗ yên tĩnh. Bật lên đột ngột
               giữa lúc họ chưa sẵn sàng thì lần thoát ra đầu tiên là do MÌNH gây ra, mà nó vẫn bị ghi lại.
@@ -196,7 +223,7 @@ export default function QuizIntroPage() {
             type="primary"
             size="large"
             block
-            disabled={quiz.questionCount === 0}
+            disabled={quiz.questionCount === 0 || (mode === 'EXAM' && !daHieu)}
             loading={startAttempt.isPending}
             onClick={() => quizId && startAttempt.mutate({ quizId, mode })}
           >
@@ -212,7 +239,13 @@ export default function QuizIntroPage() {
             <>
               <div className="my-4 border-t border-line" />
               <Text className="text-ink-soft text-xs">Hoặc thi đấu cùng bạn bè</Text>
-              <Link to="/rooms">
+              {/* Mang theo quiz đang xem sang sảnh phòng đấu.
+
+                  Trước đây nút này chỉ dẫn tới `/rooms` trống trơn, nên người dùng đang xem đúng một
+                  quiz lại phải tự tìm lại nó trong ô chọn — và nút "Mở phòng" bên đó thì đang bị
+                  `disabled` vì chưa chọn gì. Người dùng bấm một nút tên là "Mở phòng đấu trí" rồi
+                  đến nơi thấy nút "Mở phòng" bấm không được. */}
+              <Link to={`/rooms?quizId=${quizId}`}>
                 <Button block className="mt-2">
                   Mở phòng đấu trí
                 </Button>
@@ -227,10 +260,21 @@ export default function QuizIntroPage() {
 
 const LEADERBOARD_COLUMNS: ColumnsType<LeaderboardEntry> = [
   {
+    // Dùng lại đúng huy chương của bảng xếp hạng mùa (`.podium-*` trong index.css), không vẽ lại kiểu
+    // khác: hai bảng xếp hạng trong cùng một sản phẩm mà hạng nhất trông khác nhau thì người dùng phải
+    // học hai lần cùng một thứ.
     title: '#',
     dataIndex: 'rank',
-    width: 60,
-    render: (rank: number) => <Text className="font-bold!">{rank}</Text>,
+    width: 70,
+    render: (rank: number) =>
+      rank <= 3 ? (
+        <span className={`podium podium-${rank}`}>
+          <TrophyOutlined />
+          <span className="font-bold">{rank}</span>
+        </span>
+      ) : (
+        <Text className="text-ink-soft">{rank}</Text>
+      ),
   },
   { title: 'Người chơi', dataIndex: 'displayName' },
   {

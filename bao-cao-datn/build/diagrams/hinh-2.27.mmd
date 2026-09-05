@@ -1,0 +1,33 @@
+classDiagram
+  class UserManagementPage {
+    <<boundary>>
+    +danhSachUser()
+    +lock()
+  }
+  class AdminUserService {
+    <<control>>
+    +lockUser(id)
+    +unlockUser(id)
+  }
+  class AuditLogService {
+    <<control>>
+    +record(action, actor, target)
+  }
+  class User {
+    <<entity>>
+    -id
+    -email
+    -status
+    +setStatus(s)
+  }
+  class AuditLog {
+    <<entity>>
+    -action
+    -actorId
+    -targetId
+    -timestamp
+  }
+  UserManagementPage --> AdminUserService
+  AdminUserService --> User
+  AdminUserService --> AuditLogService
+  AuditLogService --> AuditLog

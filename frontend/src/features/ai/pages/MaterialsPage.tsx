@@ -6,17 +6,19 @@ import {
   Form,
   Input,
   Modal,
-  Popconfirm,
   Space,
   Switch,
   Table,
-  Tag,
   Typography,
   Upload,
 } from 'antd'
+import { DeleteOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
+import { useAuthStore } from '@/features/auth/store/authStore'
+import Pill from '@/shared/components/Pill'
+import RowActions from '@/shared/components/RowActions'
 import type { Material, MaterialStatus } from '../api/aiApi'
 import {
   useAiStatus,
@@ -30,28 +32,94 @@ import {
 const { Text, Paragraph } = Typography
 const { TextArea } = Input
 
+/**
+ * Trần số học liệu của một người học — bản sao để hiển thị của `MaterialService.MAX_MATERIALS_PER_LEARNER`.
+ *
+ * Con số nằm ở hai nơi, và đó là đánh đổi có ý thức: **backend là nơi cưỡng chế**, thông báo lỗi của nó
+ * mang con số thật. Bản ở đây chỉ để nói trước cho người dùng biết trần là bao nhiêu — không nói trước thì
+ * họ nạp tới tài liệu thứ 11 mới biết là có giới hạn. Hai bên lệch nhau thì hậu quả là một dòng mô tả sai,
+ * không phải một lỗ hổng: người dùng vẫn bị chặn đúng chỗ backend chặn.
+ */
+const MAX_HOC_LIEU_NGUOI_HOC = 10
+
 const STATUS_LABEL: Record<MaterialStatus, string> = {
   PROCESSING: 'Đang xử lý',
   READY: 'Sẵn sàng',
   FAILED: 'Lỗi',
 }
 
-const STATUS_COLOR: Record<MaterialStatus, string> = {
-  PROCESSING: 'processing',
-  READY: 'green',
-  FAILED: 'red',
+/**
+ * Tông viên thuốc và chấm màu cho trạng thái xử lý học liệu.
+ *
+ * Trạng thái này là một **tiến trình** (đang xử lý → xong / hỏng), nên nó dùng chấm màu giống độ khó:
+ * ba chấm xanh dương–xanh lá–đỏ đọc được thành tiến trình ngay, còn ba biểu tượng khác nhau thì không.
+ */
+const STATUS_PILL: Record<MaterialStatus, 'xanhDuong' | 'xanhLa' | 'do'> = {
+  PROCESSING: 'xanhDuong',
+  READY: 'xanhLa',
+  FAILED: 'do',
+}
+
+const STATUS_DOT: Record<MaterialStatus, string> = {
+  PROCESSING: '#3b82f6',
+  READY: '#22c55e',
+  FAILED: '#ef4444',
 }
 
 /** Kho học liệu cho RAG — bộ mặt bảng điều khiển (docs/ui-design-system.md §1). */
 export default function MaterialsPage() {
   const [page, setPage] = useState(0)
   const [pasteOpen, setPasteOpen] = useState(false)
+  /* Cùng lý do với hai bảng kia: `Popconfirm` bám vào phần tử kích hoạt, mà nó giờ là mục trong menu —
+     menu đóng ngay khi bấm nên hộp xác nhận mất điểm neo. */
+  const [xoaHocLieu, setXoaHocLieu] = useState<Material | null>(null)
 
   const { data: aiStatus } = useAiStatus()
   const { data, isFetching } = useMaterials({ page, size: 10 })
   const uploadMaterial = useUploadMaterial()
   const deleteMaterial = useDeleteMaterial()
   const setShared = useSetMaterialShared()
+
+  // Người học nạp được tài liệu của CHÍNH họ, nhưng không bật được chia sẻ: bật `shared` là đẩy tài liệu
+  // vào trợ lý của mọi người học khác — hành vi xuất bản, và một bề mặt kiểm duyệt. Backend chặn ở
+  // `MaterialController.setMaterialShared`; ẩn cột ở đây để họ không nhìn thấy một công tắc mà bấm vào
+  // chỉ nhận về lỗi 403.
+  const role = useAuthStore((state) => state.user?.role)
+  const canShare = role === 'CREATOR' || role === 'ADMIN'
+
+  /**
+   * Cột chia sẻ — chỉ dựng cho CREATOR/ADMIN.
+   *
+   * Phải nằm TRONG hàm: nó dùng `setShared`, là mutation của component. Tách khỏi mảng `columns` thay vì
+   * chèn thẳng một biểu thức điều kiện vào giữa: cột này dài hơn 25 dòng, nhét vào giữa mảng thì hai cột
+   * đứng cạnh nó bị đẩy thụt vào một mức khác hẳn và mảng đọc không ra hình dạng nữa.
+   */
+  const cotChiaSe: ColumnsType<Material> = [
+      {
+        title: 'Chia sẻ',
+        key: 'shared',
+        width: 210,
+        render: (_, row) => (
+          <Space direction="vertical" size={0}>
+            <Switch
+              size="small"
+              checked={row.shared}
+              // Chỉ bật được khi đã xử lý xong: tài liệu chưa có vector thì chia sẻ ra cũng không ai
+              // truy xuất được, và một công tắc bật rồi mà vô tác dụng thì tệ hơn là không cho bật
+              disabled={row.status !== 'READY' || setShared.isPending}
+              onChange={(shared) => setShared.mutate({ id: row.id, shared })}
+            />
+            <Text className="text-ink-soft text-xs">
+              {row.status !== 'READY'
+                ? 'Xử lý xong mới chia sẻ được'
+                : row.shared
+                  ? 'Người học hỏi được trên tài liệu này'
+                  : 'Chỉ bạn dùng được'}
+            </Text>
+          </Space>
+        ),
+      },
+  ]
 
   const columns: ColumnsType<Material> = [
     {
@@ -71,7 +139,11 @@ export default function MaterialsPage() {
       title: 'Nguồn',
       dataIndex: 'sourceType',
       width: 90,
-      render: (value: string) => <Tag className="mr-0!">{value === 'TEXT' ? 'Dán tay' : value}</Tag>,
+      render: (value: string) => (
+        <Pill icon={value === 'TEXT' ? <EditOutlined /> : <FileTextOutlined />}>
+          {value === 'TEXT' ? 'Dán tay' : value}
+        </Pill>
+      ),
     },
     {
       title: 'Trạng thái',
@@ -79,11 +151,11 @@ export default function MaterialsPage() {
       width: 190,
       render: (value: MaterialStatus, row) => (
         <Space direction="vertical" size={0}>
-          <Tag color={STATUS_COLOR[value]} className="mr-0!">
+          <Pill mau={STATUS_PILL[value]} chamMau={STATUS_DOT[value]}>
             {STATUS_LABEL[value]}
-          </Tag>
+          </Pill>
           {row.errorMessage && (
-            <Text className="text-xs text-red-600">{row.errorMessage}</Text>
+            <Text className="text-xs text-urgent">{row.errorMessage}</Text>
           )}
         </Space>
       ),
@@ -101,47 +173,27 @@ export default function MaterialsPage() {
           <Text className="text-ink-soft text-xs">—</Text>
         ),
     },
-    {
-      title: 'Chia sẻ',
-      key: 'shared',
-      width: 210,
-      render: (_, row) => (
-        <Space direction="vertical" size={0}>
-          <Switch
-            size="small"
-            checked={row.shared}
-            // Chỉ bật được khi đã xử lý xong: tài liệu chưa có vector thì chia sẻ ra cũng không ai
-            // truy xuất được, và một công tắc bật rồi mà vô tác dụng thì tệ hơn là không cho bật
-            disabled={row.status !== 'READY' || setShared.isPending}
-            onChange={(shared) => setShared.mutate({ id: row.id, shared })}
-          />
-          <Text className="text-ink-soft text-xs">
-            {row.status !== 'READY'
-              ? 'Xử lý xong mới chia sẻ được'
-              : row.shared
-                ? 'Người học hỏi được trên tài liệu này'
-                : 'Chỉ bạn dùng được'}
-          </Text>
-        </Space>
-      ),
-    },
+    ...(canShare ? cotChiaSe : []),
     {
       title: '',
       key: 'actions',
-      width: 80,
+      width: 70,
+      align: 'right',
       render: (_, row) => (
-        <Popconfirm
-          title="Xoá học liệu này?"
-          description="Toàn bộ vector của tài liệu cũng bị xoá."
-          okText="Xoá"
-          cancelText="Hủy"
-          okButtonProps={{ danger: true }}
-          onConfirm={() => deleteMaterial.mutate(row.id)}
-        >
-          <Button type="link" size="small" danger>
-            Xoá
-          </Button>
-        </Popconfirm>
+        /* Bảng này chỉ có MỘT thao tác, và nó là thao tác xoá. Không có hành động chính nào để hiện
+           ra ngoài, nên menu ba chấm đứng một mình — vẫn đúng ý đồ: việc không hoàn tác được thì
+           không nằm sẵn dưới con trỏ. */
+        <RowActions
+          items={[
+            {
+              key: 'xoa',
+              icon: <DeleteOutlined />,
+              label: 'Xoá học liệu',
+              danger: true,
+              onClick: () => setXoaHocLieu(row),
+            },
+          ]}
+        />
       ),
     },
   ]
@@ -149,8 +201,12 @@ export default function MaterialsPage() {
   return (
     <Space direction="vertical" size="large" className="w-full">
       <PageHeader
-        title="Học liệu"
-        description="Tài liệu bạn nạp vào để AI sinh câu hỏi bám theo nội dung, thay vì bịa."
+        title={canShare ? 'Học liệu' : 'Học liệu của tôi'}
+        description={
+          canShare
+            ? 'Tài liệu bạn nạp vào để AI sinh câu hỏi bám theo nội dung, thay vì bịa.'
+            : `Tài liệu bạn nạp lên để hỏi trợ lý. Chỉ mình bạn hỏi được trên chúng, tối đa ${MAX_HOC_LIEU_NGUOI_HOC} tài liệu.`
+        }
         actions={
           <>
             <Button onClick={() => setPasteOpen(true)}>Dán văn bản</Button>
@@ -179,8 +235,9 @@ export default function MaterialsPage() {
         />
       )}
 
-      <div className="border border-line bg-white">
+      <div className="soft-panel">
         <Table<Material>
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           size="middle"
           loading={isFetching}
@@ -204,7 +261,7 @@ export default function MaterialsPage() {
         />
       </div>
 
-      <div className="border border-line bg-white p-5">
+      <div className="soft-panel p-5">
         <Text className="font-bold!">Tiếp theo</Text>
         <Paragraph className="mt-2! mb-3! text-ink-soft">
           Khi tài liệu đã ở trạng thái <b>Sẵn sàng</b>, sang trang Sinh đề bằng AI để tạo câu hỏi
@@ -216,6 +273,25 @@ export default function MaterialsPage() {
       </div>
 
       <PasteMaterialModal open={pasteOpen} onClose={() => setPasteOpen(false)} />
+
+      {/* Nói rõ hệ quả: xoá học liệu là xoá luôn vector, tức trợ lý mất khả năng trả lời trên tài
+          liệu đó. Người dùng không nhìn thấy vector nên phải nói bằng lời. */}
+      <Modal
+        open={xoaHocLieu !== null}
+        title={`Xoá học liệu “${xoaHocLieu?.title ?? ''}”?`}
+        okText="Xoá"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true, loading: deleteMaterial.isPending }}
+        onCancel={() => setXoaHocLieu(null)}
+        onOk={() => {
+          if (xoaHocLieu) {
+            deleteMaterial.mutate(xoaHocLieu.id, { onSuccess: () => setXoaHocLieu(null) })
+          }
+        }}
+      >
+        Toàn bộ vector của tài liệu cũng bị xoá — trợ lý học tập sẽ không trả lời được trên tài liệu này
+        nữa.
+      </Modal>
     </Space>
   )
 }

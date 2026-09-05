@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Skeleton, Tag, Typography, message } from 'antd'
 import { getApiErrorMessage } from '@/shared/api/client'
-import { coverOf } from '@/features/quiz/coverGradient'
+import { boMatCua } from '@/features/quiz/coverGradient'
 import { recommendApi, type RecommendationSource } from '../api/recommendApi'
 import { useRecommendedQuizzes } from '../hooks/useRecommendQueries'
 
@@ -71,8 +71,8 @@ export default function RecommendedQuizzes() {
 
   if (data.items.length === 0) {
   return (
-      <section className="border border-line bg-white p-5">
-        <div className="mb-2 flex flex-wrap items-center gap-3">
+      <section className="soft-panel p-5">
+        <div className="mb-2 flex flex-wrap items-baseline gap-3">
           <Title level={4} className="mb-0!">
             Gợi ý cho bạn
           </Title>
@@ -86,8 +86,8 @@ export default function RecommendedQuizzes() {
   }
 
   return (
-    <section className="border border-line bg-white p-5">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+    <section className="soft-panel p-5">
+      <div className="mb-4 flex flex-wrap items-baseline gap-3">
         <Title level={4} className="mb-0!">
           Gợi ý cho bạn
         </Title>
@@ -116,7 +116,16 @@ export default function RecommendedQuizzes() {
                 className="aspect-video w-full object-cover"
               />
             ) : (
-              <div className="aspect-video w-full" style={{ background: coverOf(item.title) }} />
+              <div
+                className="flex aspect-video w-full items-center justify-center"
+                style={{ background: boMatCua(item.categoryName, item.title).nen }}
+              >
+                {/* 54px — đúng gấp rưỡi bản cũ, và nhỏ hơn thẻ ở lưới Khám phá (72px) theo đúng tỉ
+                    lệ khối bìa của hai chỗ: thẻ gợi ý hẹp hơn nên icon cùng cỡ sẽ chạm mép. */}
+                <span aria-hidden className="select-none text-[54px] leading-none opacity-90">
+                  {boMatCua(item.categoryName, item.title).icon}
+                </span>
+              </div>
             )}
 
             <div className="flex flex-1 flex-col p-4">
@@ -145,7 +154,8 @@ export default function RecommendedQuizzes() {
               )}
 
               <Link to={`/quizzes/${item.quizId}`} className="mt-auto">
-                <Button size="small" block>
+                {/* Hành động DUY NHẤT của thẻ gợi ý — không có gì để nó phải nhường chỗ cho */}
+                <Button type="primary" size="small" block>
                   Làm thử
                 </Button>
               </Link>

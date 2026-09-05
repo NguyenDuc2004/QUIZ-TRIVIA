@@ -48,6 +48,8 @@
 | 20/08 (chiều) | **Làm nốt 6 mục hoãn**: FR-11, FR-36, FR-32, FR-12, FR-64, FR-69 — hết mục ⏳ | 6/6 | 🟢 xong |
 | 20/08 (tối) | **Đánh bóng phần người dùng thấy**: số người đã học · sửa hồ sơ + ảnh đại diện · chân trang · hover thẻ quiz · **đăng ký Google nhận đúng vai trò** — 571 test BE / 67 FE | 5/5 | 🟢 xong — 2 lỗi thật do người dùng chỉ ra |
 | 21/08 | **Người học không đổi được ảnh đại diện (403)** — tách đường tải riêng, mỗi người một file · dọn phòng chờ: bỏ IP dưới QR, cho "sẵn sàng" có hậu quả — 578 test BE / 67 FE | 2/2 | 🟢 xong |
+| 04/09 | **Trợ lý học tập vô dụng với người học đơn lẻ** — mở quyền nạp học liệu cho Learner (tách `MaterialController`, trần 10 tài liệu) · kho rỗng thì không gọi mô hình · 2 ca test cũ khẳng định luật đã hết hạn | 6/6 | 🟢 xong — do người dùng chỉ ra |
+| 05/09 | **Modern Soft UI cho toàn bộ giao diện** — đổi ở tầng token nên cả trăm màn hình theo cùng lúc · nút chính sang tím · 3 lỗi người dùng chỉ ra + 3 lỗi tự phát hiện khi đo | 7/7 | 🟢 xong — 6 lỗi, 3 do người dùng chỉ ra |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -3569,6 +3571,203 @@ phải khoá"* kèm lý do, để lần sau không ai đọc nó rồi tưởng 
   khác nhau vì một bên không giới hạn số lượng còn một bên chặn ở một file.
 - **Mục 2.4 (đặc tả use case "Chơi phòng đấu"):** chuyện nút "Sẵn sàng" là ví dụ cho *đặc tả im lặng cũng
   là một loại thiếu sót* — không có dòng nào sai, nhưng chỗ không nói tới thì bị lấp bằng cách dễ nhất.
+
+---
+
+## 📅 T6 — 04/09/2026 — Một câu hỏi của người dùng làm lộ chức năng chết
+
+**Mục tiêu hôm nay:** dựng lại màn Trợ lý học tập theo lối hội thoại hiện đại — và trả lời cho ra ngô
+ra khoai câu hỏi *"thế nếu không ai chia sẻ thì người học coi như chức năng đó phế?"*
+
+### Nhiệm vụ
+- [x] Màn Trợ lý: màn hình chào có chip gợi ý, khung soạn tin nổi, cột trái nền chìm, nút thêm học liệu
+- [x] Truy nguyên câu hỏi của người dùng về tận `ChatPromptBuilder`
+- [x] Mở quyền nạp học liệu cho người học, kèm chốt chặn chi phí thay cho chốt chặn vai trò
+- [x] Kho rỗng thì không gọi mô hình
+- [x] Cập nhật `docs/api.md`, `docs/security.md`, `docs/features/08`
+- [x] Test: 4 unit + 5 integration mới; sửa 2 ca cũ khẳng định luật đã hết hạn
+
+### Đã làm được
+
+**Chức năng chết, không phải chức năng xấu.** Người dùng hỏi một câu rất ngắn và nó chỉ đúng chỗ:
+người học không sở hữu học liệu nào, nên nếu chưa ai bật `shared` thì truy hồi ra 0 đoạn, và
+`ChatPromptBuilder` bắt mô hình nói "chưa có tài liệu để dựa vào". **Mọi** câu hỏi họ gõ đều nhận cùng
+một lời từ chối. Đặc tả features/08 đã tự nhận ra lỗ này từ 13/08 và chữa bằng cột `shared` — nhưng cột
+đó chỉ *chuyển* sự phụ thuộc: chức năng của người học nằm trong tay việc người khác có bấm nút hay
+không, một điều kiện họ không tác động được.
+
+**Vai trò là công cụ tồi để canh chi phí.** Javadoc của `AiController` nói rõ lý do khoá cả cụm
+`/ai/**`: "mỗi lời gọi đều tốn tiền API". Lý do đúng, nhưng cái chặn thì sai đại lượng — nó chặn sạch
+người cần dùng, và không chặn gì ở người đã có quyền. Thay bằng **trần 10 tài liệu/người học**, ghép
+với giới hạn 10MB/tệp sẵn có thành một chặn trên thật. Việc tách quyền làm bằng **một controller
+riêng** chứ không mở lẻ vài phương thức trong lớp đang khoá cả cụm — đúng tiền lệ `ChatController` và
+`FlashcardController` đã đặt, và đúng lý do ghi trong chính đặc tả: cấm cả cụm rồi mở ngoại lệ bên
+trong là cách chắc chắn để sau này có người mở quyền quá tay.
+
+**Hạn mức ngày không đỡ được phần này.** `AiQuotaService` **cố ý** không tính lượt nhúng học liệu — một
+tài liệu chia 50 đoạn là 50 lời gọi cho *một* hành động, tính vào thì hạn mức 20 lượt hết ngay ở tài
+liệu đầu tiên. Nên đường nạp học liệu trước nay không có ai canh chi phí ngoài luật vai trò, và trần
+mới là chốt duy nhất.
+
+**Hai lời gọi tốn tiền cho một kết quả biết trước.** Kho rỗng thì đường đi cũ vẫn nhúng câu hỏi rồi vẫn
+gọi mô hình, chỉ để nghe nó nói đúng cái câu mà prompt đã bắt nó nói. Với người học chưa nạp gì, đó là
+*mọi* câu hỏi họ gõ. `prepare` nay kiểm `hasAskable` trước và trả thẳng câu dựng sẵn.
+
+### Vướng mắc
+
+- **`REQUIRES_NEW` suýt làm câu trả lời biến mất không tiếng động.** Bản đầu lưu câu dựng sẵn qua
+  `ChatMessageWriter.saveAnswer`. Hàm đó là `REQUIRES_NEW` — nó mở transaction riêng, mà phiên vừa tạo
+  còn nằm trong transaction chưa commit của `prepare`. Transaction mới không thấy phiên, rồi **nuốt lỗi
+  theo đúng thiết kế của nó**, để lại một phiên chỉ chứa câu hỏi. Sửa: lưu thẳng bằng
+  `messageRepository` trong chính transaction đó.
+- **`EXIT=$?` sau một pipe là mã của lệnh cuối, không phải của Maven.** Đã ba lần báo "compile sạch"
+  trong khi `mvnw` đang đỏ, vì `./mvnw ... | tail` nuốt mất mã lỗi. Chỉ lộ ra khi một lớp không khởi
+  tạo được lúc chạy test, với thông báo `Unresolved compilation problem`. Từ đây ghi ra file rồi mới
+  đọc mã trả về.
+- **Chạy `prettier` lần thứ hai vào cùng một file.** Dự án không có cấu hình prettier, nên nó đổi hết
+  sang nháy kép và dấu chấm phẩy — 174 dòng đổi cho một thay đổi 30 dòng. Khôi phục rồi sửa tay.
+- **Thêm 5 phép kiểm làm lộ một chỗ cạn tài nguyên trong chính bộ test.** `ChatIntegrationTest` xanh
+  sạch ở 20 ca, nhưng lên 25 thì đỏ đúng **một** ca mỗi lượt chạy — và mỗi lượt một ca khác nhau, với
+  `HTTP/1.1 header parser received no bytes`. Đã dựng mốc so sánh bằng cách `git stash` rồi chạy trên
+  `main` để chắc chắn đây là chuyện do thay đổi này gây ra, không phải lỗi có sẵn.
+
+  Nguyên nhân: helper `ask` tạo `HttpClient` mới cho mỗi lượt (để không ai nhặt phải kết nối chết của
+  lượt trước) nhưng **không đóng** nó. Mỗi client giữ kết nối và luồng chọn riêng cho tới khi bị thu
+  gom, nên số kết nối còn mở tới Tomcat lớn dần theo số phép kiểm. Chú thích sẵn có ở đó nói "cách duy
+  nhất là đừng có bể kết nối nào để mà cũ" — đúng một nửa: phải đóng client nữa. Sửa bằng
+  `try-with-resources` (`HttpClient` là `AutoCloseable` từ JDK 21); hai lượt liên tiếp 25/25 xanh.
+
+### Ghi chú báo cáo
+
+- **Mục 2.3 / 3.4:** đây là ví dụ mạnh cho ý *phân quyền phải bám vào rủi ro cụ thể, không bám vào vai
+  trò cho tiện*. Rủi ro thật là **chi phí**, và vai trò chỉ là một biến gần đúng cho nó — gần đúng đến
+  mức làm chết một trong bốn trụ cột của đề tài với đúng nhóm người dùng mà nó phục vụ. Cặp đôi rất tốt
+  với bảng hai đường tải ảnh hôm 20/08 (cùng một hành động, hai mức quyền, vì hai mức rủi ro).
+- **Mục 3.4 (kiểm thử):** hai ca test cũ phải sửa vì chúng *đúng với đặc tả lúc viết* và đặc tả mới là
+  thứ hết hạn — lần thứ hai trong đồ án gặp đúng dạng này (lần đầu 21/08). Bổ sung được cho ý *bộ test
+  xanh không chứng minh hệ thống đúng*: ở đây bộ test xanh còn đang **bảo vệ** một hành vi sai.
+- **Mục 3.6 / kết luận:** ca `ChatKhoRongTest` cho một lập luận cụ thể về chi phí — bỏ được hai lời gọi
+  mô hình cho mỗi câu hỏi trong tình huống kho rỗng, mà không đánh đổi gì.
+
+---
+
+## 📅 T7 — 05/09/2026 — Đổi ngôn ngữ hình khối, và sáu lỗi lộ ra trên đường
+
+**Mục tiêu hôm nay:** chuyển giao diện sang **Modern Soft UI** theo yêu cầu, rồi vá những chỗ lệch mà
+người dùng chỉ ra khi dùng thật.
+
+### Nhiệm vụ
+- [x] Bo góc theo thang, viền siêu mờ + bóng mềm, nền kem, nhấc nhẹ khi rê chuột
+- [x] Nút hành động chính đổi sang tím đặc
+- [x] Nâng tương phản chữ phụ và placeholder ở cả hai chế độ
+- [x] KaTeX cho câu trả lời của trợ lý; chỉ khung chat cuộn
+- [x] Vá 3 lỗi người dùng chỉ ra + 3 lỗi tự phát hiện khi đo
+- [x] Cập nhật `ui-design-system.md`, `conventions.md`, `CLAUDE.md`
+- [x] Test: 92 phép kiểm frontend, build sạch
+
+### Đã làm được
+
+**Đổi ở tầng TOKEN, không rải class vào component.** Yêu cầu viết theo class Tailwind cụ thể
+(`bg-slate-50`, `border-slate-200/60`, `bg-[#0f172a]`). Làm đúng chữ đó thì hỏng nút sáng/tối, vì
+những class ấy là **màu tuyệt đối**. Đưa đúng các giá trị đó vào `--color-*` / `shape.*` thì cả trăm
+màn hình đổi theo mà không phải sửa file nào. Gom thêm `border border-line bg-surface` ở **45 chỗ /
+26 file** thành một lớp `.soft-panel`.
+
+**Ba chỗ cố ý KHÔNG làm theo yêu cầu, và lý do:**
+
+| Yêu cầu | Đã làm | Vì sao |
+|---|---|---|
+| Bỏ viền kẻ cứng nhắc | Viền vẫn còn, chỉ mờ đi | Bóng đổ là thứ **đầu tiên** bị loại khi người dùng bật tương phản cao hoặc `forced-colors`; bỏ viền thì với nhóm đó mọi thẻ mất sạch ranh giới |
+| `transition-all duration-200` | Liệt kê từng thuộc tính | `all` kéo theo `width`/`opacity`/`transform` — đúng thứ từng làm dropdown AntD giật cục hồi làm chế độ tối |
+| Nút chính nền tím **hoặc gradient** | Tím đặc | §4.1 cấm gradient ở khung chức năng, và nút chính có ở mọi trang thì nó chính là khung chức năng |
+
+**Nút chính đổi tím thì phải đổi TOÀN CỤC.** Yêu cầu chỉ nêu ba nút. Làm đúng ba nút thì trong cùng
+một trang sẽ có nút chính tím và nút chính đen — người dùng đọc hai màu đó thành hai *mức* quan trọng
+khác nhau, trong khi chúng ngang nhau.
+
+Đồng thời rà cả **9 nút `block`** trong ứng dụng: ba nút thật sự thiếu `type="primary"` (đó mới là lý
+do chúng "xám chìm"), và **hai nút cố ý giữ mặc định** — "Mở phòng đấu trí" ở trang giới thiệu quiz là
+lựa chọn *thay thế* cho "Bắt đầu làm bài" ngay trên nó, hai primary trong một khối thì không còn cái
+nào là chính.
+
+### Sáu lỗi, ba do người dùng chỉ ra
+
+| # | Lỗi | Nguyên nhân thật |
+|---|---|---|
+| 1 | Viền tím trong ô nhập của trợ lý | AntD vẽ viền + vòng focus riêng bên trong khung nổi. Thắng bằng cách thêm tên **thẻ** vào bộ chọn (`textarea.ant-input:focus` = (0,2,1)), **không** `!important` — cách đó từng làm vỡ bố cục `Input.Search` |
+| 2 | Chip danh mục mất chữ ở chế độ tối | `bg-ink text-white`: `--color-ink` là màu **chữ** nên nền tối nó lật thành gần trắng. Có ở **hai** trang, chỗ thứ hai là **ô số câu đang làm ở màn thi** |
+| 3 | "Gợi ý cho bạn" lệch hàng | Dự án không nạp preflight nên `h1`–`h6` giữ lề trên mặc định. Đọc mã AntD: `titleMarginTop` chỉ áp qua bộ chọn **anh-em**, tiêu đề đứng đầu khối không nhận luật nào |
+| 4 | Chữ phụ ở chế độ **sáng** không đạt AA | `slate-500` trên nền trắng 4,76:1 (đạt) nhưng trên nền chìm `#f1f5f9` chỉ 4,27:1. Không ai báo — tự phát hiện khi đo |
+| 5 | Huy hiệu chưa mở khoá `opacity-50` | Ở chế độ tối kéo chữ xuống ~4,1:1 |
+| 6 | "Mở phòng đấu trí" không mang theo quiz | Nút chỉ điều hướng tới `/rooms` trống. Kèm theo lộ ra một **lỗ có sẵn**: backend cho mở phòng từ quiz riêng tư của chính mình, nhưng danh sách trong sảnh chỉ lấy quiz `PUBLIC` — trước nay không có đường nào chọn được |
+
+Lỗi **#3** đáng ghi nhất: chỗ người dùng thấy là chỗ **thứ hai**. Chỗ thứ nhất là `PageHeader` — nút
+hành động bên phải nằm cao hơn tiêu đề **ở mọi trang**, mà không ai để ý, vì *lệch đều thì trông giống
+một lựa chọn thiết kế*. Nó chỉ lộ ra khi có một chỗ lệch **khác** những chỗ còn lại.
+
+### Vướng mắc
+
+- **`\f` trong text block của Java là ký tự FORM-FEED.** Ví dụ trong prompt viết `$\frac{a}{b}$` một
+  dấu chéo, nên thứ gửi tới mô hình là `<FF>rac{a}{b}` — không gây lỗi, chỉ lặng lẽ dạy mô hình bằng
+  một ví dụ hỏng, đúng ở chỗ đang dặn nó viết cho chuẩn. Rồi **chính script Python đi sửa cũng mắc lại
+  đúng cái bẫy đó**, vì `\\` trong lệnh bị co thành `\` trước khi Python đọc tới. Phải dùng
+  `chr(92)` để tránh hẳn dấu chéo trong chuỗi lệnh. Lần thứ BA gặp cùng một bẫy trong một ngày — lần
+  thứ ba xảy ra ngay trong đoạn văn đang viết về chính nó.
+- **Script sửa `RoomLobbyPage` thiếu dòng ghi file** — nó đổi chuỗi trong bộ nhớ rồi thoát, mà vẫn in
+  "xong" bốn lần, và mình đã tin dòng chữ đó. Chỉ 4 test đỏ mới lộ ra; truy tiếp thì thấy
+  `quizApi.get` chưa hề được gọi. Nếu chỉ chạy `build` thì việc này lọt qua hoàn toàn.
+- **Chạy `prettier` lần thứ hai vào cùng một file.** Dự án không có cấu hình prettier nên nó đổi hết
+  sang nháy kép và dấu chấm phẩy — 174 dòng đổi cho một thay đổi 30 dòng.
+
+### Nợ / chuyển sang ngày sau
+
+- `[!]` **`ChatIntegrationTest` còn flake ~1/3 lượt** — `HTTP/1.1 header parser received no bytes` ở
+  helper `ask`, mỗi lượt đỏ một ca khác nhau. Đây là lỗi của **bộ test**, không phải của sản phẩm:
+  cùng luồng đó chạy tay trên máy thật đều đúng, và mọi ca đều xanh khi chạy riêng.
+
+  Đo cụ thể trước khi kết luận: sau khi đóng `HttpClient` bằng `try-with-resources` (04/09), lớp này
+  từ **đỏ một ca mỗi lượt** giảm còn **2 xanh / 1 đỏ trong 3 lượt**, và bộ đầy đủ 590 ca có lượt xanh
+  hoàn toàn. Tức là đã đỡ hẳn nhưng chưa dứt.
+
+  **Chưa vá tiếp, và có lý do.** Chú thích sẵn trong tệp ghi lại ba vòng sửa trước cùng thứ đã thử và
+  vì sao hỏng — đáng chú ý nhất là `.retry(1)`: nó **tệ hơn** vì request này CÓ TÁC DỤNG PHỤ (tạo
+  phiên chat), nên lượt thử lại đẻ ra phiên thứ hai. Lỗi hiện tại là "không đọc được byte nào", tức
+  **không biết** server đã xử lý request hay chưa, nên retry vẫn không an toàn vì đúng lý do cũ.
+
+  **Đã thử dứt điểm, hai cách, cả hai hỏng — và cách thứ nhất trả về thông tin đáng giá hơn một
+  bản vá:**
+
+  **(a) Mở sẵn kết nối bằng `GET` idempotent rồi mới `POST`.** Ý tưởng giữ nguyên luật "không bao giờ
+  thử lại request có tác dụng phụ": đẩy rủi ro "mở kết nối" sang một request chỉ đọc, thử lại thoải
+  mái. **Đo: 4 xanh / 2 đỏ trong 6 lượt — không khá hơn mốc.**
+
+  Nhưng phép đo cho thấy lỗi nổ ở **chính dòng `POST`**, trên kết nối mà `GET` ngay trước đó vừa
+  chứng minh là sống. Tức nó hỏng trên **cả** kết nối mới lẫn kết nối đang dùng dở — **bác bỏ** giả
+  thuyết *"kết nối cũ nằm lại trong bể sau khi luồng SSE đóng"* mà chú thích trong tệp đã khẳng định
+  suốt ba vòng sửa. Ba vòng trước đều chữa đúng thứ mình tin, và niềm tin đó sai.
+
+  **(b) Bỏ HTTP thật, dùng `MockMvc` + `asyncDispatch`.** Chết ở chỗ khác và dứt khoát:
+  `MockHttpServletResponse` **không thread-safe**, mà controller trả `Flux` nên phần ghi response
+  chạy trên thread của Reactor còn test đọc trên thread của mình → `ConcurrentModificationException`.
+  Đây là giới hạn của công cụ, không vá được từ phía test.
+
+  **Kết luận: giữ bản tốt nhất đo được, không ship một bản vá ngang bằng mà thêm phức tạp.** Đã ghi
+  cả hai hướng đã thử vào chú thích trong tệp để người sau không đi lại. Việc còn lại cần một chẩn
+  đoán ở tầng khác (Tomcat/OS), không phải thêm một vòng đoán nữa ở tầng client.
+
+### Ghi chú báo cáo
+
+- **Mục 2.3 / 3.4:** bộ ba lỗi #2, #4, #5 là ví dụ rất tốt cho ý *tiêu chuẩn tiếp cận phải ĐO, không
+  ước lượng*. Đáng chú ý là hai thái cực gặp trong cùng một ngày: #4 **đạt** chuẩn AA trên nền thẻ
+  nhưng **không đạt** trên nền chìm — nên phải đo trên đúng nền thật; còn chữ phụ ở chế độ tối thì
+  *đạt* chuẩn mà người dùng vẫn báo khó đọc, tức **đạt chuẩn là sàn, không phải mục tiêu**.
+- **Mục 3.4:** lỗi #2 sinh ra một phép kiểm chặn **cả lớp lỗi** thay vì một trường hợp
+  (`mauTuyetDoi.test.ts` quét toàn bộ `.tsx`, báo đúng `file:dòng`). Đã kiểm ngược bằng cách cố tình
+  đưa lỗi trở lại — phép kiểm đỏ và chỉ đúng chỗ. Một phép kiểm chưa từng thấy đỏ thì chưa biết nó có
+  kiểm gì.
+- **Mục 3.3 (giao diện):** ba chỗ cố ý không làm theo yêu cầu ở bảng trên là dẫn chứng cho ý *quy ước
+  giao diện phải bám vào hệ quả kỹ thuật, không bám vào thị hiếu* — nhất là chuyện giữ lại viền vì
+  `forced-colors` loại bỏ bóng đổ.
 
 ---
 

@@ -33,7 +33,7 @@ export default function LobbyPlayerGrid({
           <div
             key={player.playerId}
             className={`flex flex-col items-center gap-2 border p-4 ${
-              player.ready ? 'border-green-500 bg-green-50' : 'border-line bg-white'
+              player.ready ? 'border-green-500 bg-correct' : 'border-line bg-surface'
             }`}
           >
             <PlayerAvatarBadge emoji={player.avatarEmoji} color={player.avatarColor} size="lg" />

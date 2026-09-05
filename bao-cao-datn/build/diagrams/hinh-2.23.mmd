@@ -1,0 +1,35 @@
+classDiagram
+  class ExamFormPage {
+    <<boundary>>
+    +nhapThongTin()
+    +chonCauHoi()
+    +cauHinhGiamSat()
+  }
+  class ExamService {
+    <<control>>
+    +createExam(dto) Exam
+    +selectRandom(criteria, n) List~Question~
+  }
+  class Exam {
+    <<entity>>
+    -title
+    -openAt
+    -closeAt
+    -durationMinutes
+    -proctorConfig
+    +save()
+  }
+  class ExamQuestion {
+    <<entity>>
+    -order
+  }
+  class Question {
+    <<entity>>
+    -content
+    -difficulty
+  }
+  ExamFormPage --> ExamService
+  ExamService --> Exam
+  ExamService --> Question
+  Exam "1" --> "*" ExamQuestion
+  ExamQuestion "*" --> "1" Question

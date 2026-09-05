@@ -33,7 +33,7 @@ export default function RoomCountdown({
     <div className="flex items-center gap-3">
       <span
         className={`font-mono text-3xl font-extrabold tabular-nums ${
-          remaining <= 5 ? 'text-red-600' : 'text-ink'
+          remaining <= 5 ? 'text-urgent' : 'text-ink'
         }`}
       >
         {remaining}

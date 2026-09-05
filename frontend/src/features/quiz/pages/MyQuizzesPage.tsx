@@ -1,14 +1,31 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Button, Input, Popconfirm, Select, Space, Table, Tag, Tooltip, Upload, message } from 'antd'
-import { UploadOutlined } from '@ant-design/icons'
+import { Link, useNavigate } from 'react-router-dom'
+import { Button, Input, Modal, Select, Space, Table, Upload, message } from 'antd'
+import {
+  BarChartOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  GlobalOutlined,
+  LockOutlined,
+  PlayCircleOutlined,
+  UploadOutlined,
+} from '@ant-design/icons'
 import { useQueryClient } from '@tanstack/react-query'
 import { getApiErrorMessage } from '@/shared/api/client'
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
+import Pill from '@/shared/components/Pill'
+import RowActions from '@/shared/components/RowActions'
 import { quizApi, type Difficulty, type QuizSummary, type Visibility } from '../api/quizApi'
-import { DIFFICULTY_COLOR, DIFFICULTY_LABEL, DIFFICULTY_OPTIONS, VISIBILITY_LABEL } from '../constants'
+import {
+  DIFFICULTY_DOT,
+  DIFFICULTY_LABEL,
+  DIFFICULTY_OPTIONS,
+  DIFFICULTY_PILL,
+  VISIBILITY_LABEL,
+} from '../constants'
 import { useCategories, useDeleteQuiz, useQuizList } from '../hooks/useQuizQueries'
 import QuizFormModal from '../components/QuizFormModal'
 
@@ -17,7 +34,13 @@ import QuizFormModal from '../components/QuizFormModal'
  * (docs/ui-design-system.md §1). Hiển thị cả quiz riêng tư.
  */
 export default function MyQuizzesPage() {
+  const navigate = useNavigate()
   const [page, setPage] = useState(0)
+  /* Xác nhận xóa chuyển từ `Popconfirm` sang `Modal`.
+
+     `Popconfirm` bám vào phần tử kích hoạt, mà phần tử đó giờ là một mục trong menu — menu đóng lại
+     ngay khi bấm, nên hộp xác nhận mất luôn điểm neo và không hiện. */
+  const [xoaQuiz, setXoaQuiz] = useState<QuizSummary | null>(null)
   const [keyword, setKeyword] = useState('')
   const [categoryId, setCategoryId] = useState<string | undefined>()
   const [difficulty, setDifficulty] = useState<Difficulty | undefined>()
@@ -47,7 +70,7 @@ export default function MyQuizzesPage() {
               src={row.thumbnailUrl}
               alt=""
               loading="lazy"
-              className="h-10 w-16 shrink-0 border border-line object-cover"
+              className="h-10 w-16 shrink-0 border border-line rounded-card object-cover"
             />
           ) : (
             <div className="h-10 w-16 shrink-0 border border-dashed border-line bg-surface-subtle" />
@@ -69,7 +92,9 @@ export default function MyQuizzesPage() {
       dataIndex: 'difficulty',
       width: 120,
       render: (value: Difficulty) => (
-        <Tag color={DIFFICULTY_COLOR[value]}>{DIFFICULTY_LABEL[value]}</Tag>
+        <Pill mau={DIFFICULTY_PILL[value]} chamMau={DIFFICULTY_DOT[value]}>
+          {DIFFICULTY_LABEL[value]}
+        </Pill>
       ),
     },
     { title: 'Số câu', dataIndex: 'questionCount', width: 90, align: 'center' },
@@ -78,7 +103,12 @@ export default function MyQuizzesPage() {
       dataIndex: 'visibility',
       width: 120,
       render: (value: Visibility) => (
-        <Tag color={value === 'PUBLIC' ? 'purple' : undefined}>{VISIBILITY_LABEL[value]}</Tag>
+        <Pill
+          mau={value === 'PUBLIC' ? 'xanhDuong' : 'trungTinh'}
+          icon={value === 'PUBLIC' ? <GlobalOutlined /> : <LockOutlined />}
+        >
+          {VISIBILITY_LABEL[value]}
+        </Pill>
       ),
     },
     {
@@ -91,51 +121,61 @@ export default function MyQuizzesPage() {
     {
       title: '',
       key: 'actions',
-      width: 260,
+      width: 150,
+      align: 'right',
       render: (_, row) => (
-        <Space size="small">
-          <Link to={`/my-quizzes/${row.id}`} className="text-sm font-bold">
-            Soạn câu hỏi
-          </Link>
-          {/* Chủ quiz làm được bài trên quiz của mình, kể cả quiz riêng tư — dùng để tự kiểm đề */}
-          {row.questionCount > 0 && (
-            <>
-              <Link to={`/quizzes/${row.id}`} className="text-sm font-bold">
-                Làm thử
-              </Link>
-              {/* Cửa vào thống kê VÀ vào việc chấm tay câu tự luận (features/09) */}
-              <Link to={`/my-quizzes/${row.id}/stats`} className="text-sm font-bold">
-                Thống kê
-              </Link>
-            </>
-          )}
-          <Tooltip title="Tải file JSON để sao lưu hoặc chia sẻ đề">
-            <Button
-              type="link"
-              size="small"
-              className="px-0!"
-              loading={dangXuat === row.id}
-              onClick={() => void xuatQuiz(row)}
-            >
-              Xuất
-            </Button>
-          </Tooltip>
-          <Button type="link" size="small" onClick={() => setEditing(row)}>
-            Sửa
-          </Button>
-          <Popconfirm
-            title="Xóa quiz này?"
-            description="Câu hỏi vẫn còn trong ngân hàng."
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-            onConfirm={() => deleteQuiz.mutate(row.id)}
-          >
-            <Button type="link" size="small" danger>
-              Xóa
-            </Button>
-          </Popconfirm>
-        </Space>
+        <RowActions
+          /* Hành động chính là "Soạn câu hỏi": đó là việc người tạo nội dung mở bảng này để làm.
+             Năm hành động còn lại gom vào menu — trong đó có Xóa, thứ trước đây nằm ngang hàng với
+             Soạn câu hỏi và lại là chữ đỏ nên hút mắt nhất trong sáu chữ. */
+          chinh={
+            <Link to={`/my-quizzes/${row.id}`}>
+              <Button size="small" icon={<EditOutlined />}>
+                Soạn câu hỏi
+              </Button>
+            </Link>
+          }
+          items={[
+            // Chủ quiz làm được bài trên quiz của mình, kể cả quiz riêng tư — dùng để tự kiểm đề
+            ...(row.questionCount > 0
+              ? [
+                  {
+                    key: 'thu',
+                    icon: <PlayCircleOutlined />,
+                    label: 'Làm thử',
+                    onClick: () => navigate(`/quizzes/${row.id}`),
+                  },
+                  {
+                    // Cửa vào thống kê VÀ vào việc chấm tay câu tự luận (features/09)
+                    key: 'thongke',
+                    icon: <BarChartOutlined />,
+                    label: 'Thống kê',
+                    onClick: () => navigate(`/my-quizzes/${row.id}/stats`),
+                  },
+                ]
+              : []),
+            {
+              key: 'xuat',
+              icon: <DownloadOutlined />,
+              // Chặn bấm lần hai khi đang tải: menu không có chỗ hiện vòng xoay như nút, nên khoá
+              // luôn mục đó và đổi chữ là cách duy nhất cho người dùng biết nó đang chạy.
+              label: dangXuat === row.id ? 'Đang xuất…' : 'Xuất file JSON',
+              disabled: dangXuat === row.id,
+              onClick: () => void xuatQuiz(row),
+            },
+            { key: 'sua', icon: <EditOutlined />, label: 'Sửa thông tin', onClick: () => setEditing(row) },
+            { type: 'divider' as const },
+            {
+              // Nằm sau vạch ngăn và tô đỏ: đây là thao tác không hoàn tác được, nên nó phải tách khỏi
+              // nhóm thao tác thường bằng cả khoảng cách lẫn màu.
+              key: 'xoa',
+              icon: <DeleteOutlined />,
+              label: 'Xóa quiz',
+              danger: true,
+              onClick: () => setXoaQuiz(row),
+            },
+          ]}
+        />
       ),
     },
   ]
@@ -218,7 +258,7 @@ export default function MyQuizzesPage() {
         }
       />
 
-      <div className="border border-line bg-white">
+      <div className="soft-panel">
         <div className="flex flex-wrap gap-2 border-b border-line p-3">
           <Input.Search
             allowClear
@@ -254,6 +294,7 @@ export default function MyQuizzesPage() {
         </div>
 
         <Table<QuizSummary>
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           size="middle"
           loading={isFetching}
@@ -290,6 +331,27 @@ export default function MyQuizzesPage() {
           setEditing(null)
         }}
       />
+
+      {/* Hộp xác nhận xóa.
+
+          Vẫn phải xác nhận dù thao tác đã nằm sau một lần bấm trong menu: menu chỉ làm cho việc chạm
+          tới nó khó hơn, không làm nó bớt không-hoàn-tác-được. Mô tả nói rõ điều người dùng hay lo
+          nhất — câu hỏi KHÔNG mất theo quiz. */}
+      <Modal
+        open={xoaQuiz !== null}
+        title={`Xóa quiz “${xoaQuiz?.title ?? ''}”?`}
+        okText="Xóa"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true, loading: deleteQuiz.isPending }}
+        onCancel={() => setXoaQuiz(null)}
+        onOk={() => {
+          if (xoaQuiz) {
+            deleteQuiz.mutate(xoaQuiz.id, { onSuccess: () => setXoaQuiz(null) })
+          }
+        }}
+      >
+        Câu hỏi trong quiz này <b>vẫn còn</b> trong ngân hàng câu hỏi — chỉ quiz bị xóa.
+      </Modal>
     </Space>
   )
 }

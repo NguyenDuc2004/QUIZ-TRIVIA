@@ -88,6 +88,7 @@ export default function LeaderboardPage() {
           />
         ) : (
           <Table<LeaderboardRow>
+            scroll={{ x: 'max-content' }}
             rowKey="userId"
             dataSource={data.top}
             pagination={false}
@@ -101,10 +102,14 @@ export default function LeaderboardPage() {
                 dataIndex: 'rank',
                 width: 70,
                 render: (rank: number) =>
+                  /* Top 3 có huy chương riêng từng hạng.
+                     Trước đây hạng 1 vàng còn hạng 2 và 3 dùng chung một màu xám, nên vị trí thứ nhì
+                     và thứ ba nhìn không khác gì nhau — trong khi cả bảng xếp hạng tồn tại để phân
+                     biệt đúng những khác biệt đó. */
                   rank <= 3 ? (
-                    <span className="flex items-center gap-1">
-                      <TrophyOutlined className={rank === 1 ? 'text-star' : 'text-ink-soft'} />
-                      <Text className="font-bold!">{rank}</Text>
+                    <span className={`podium podium-${rank}`}>
+                      <TrophyOutlined />
+                      <span className="font-bold">{rank}</span>
                     </span>
                   ) : (
                     <Text className="text-ink-soft">{rank}</Text>
@@ -156,6 +161,7 @@ export default function LeaderboardPage() {
       {(history?.length ?? 0) > 0 && (
         <Card title="Mùa đã kết thúc">
           <Table<SeasonHistoryItem>
+            scroll={{ x: 'max-content' }}
             rowKey="seasonId"
             dataSource={history}
             pagination={false}

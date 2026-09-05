@@ -36,7 +36,7 @@ export default function NotificationBell() {
       trigger={['click']}
       placement="bottomRight"
       popupRender={() => (
-        <div className="border-line bg-surface w-90 max-w-[calc(100vw-2rem)] rounded-xl border shadow-lg">
+        <div className="border-line bg-surface w-90 max-w-[calc(100vw-2rem)] rounded-card border shadow-lg">
           <div className="border-line flex items-center justify-between border-b px-4 py-2.5">
             <Text className="font-bold!">Thông báo</Text>
             {(soChuaDoc ?? 0) > 0 && (
@@ -102,7 +102,7 @@ export default function NotificationBell() {
         aria-label={
           soChuaDoc ? `Thông báo, ${soChuaDoc} chưa đọc` : 'Thông báo'
         }
-        className="text-ink hover:bg-surface-subtle flex size-9 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent transition-colors"
+        className="text-ink hover:bg-surface-subtle flex size-9 cursor-pointer items-center justify-center rounded-control border-0 bg-transparent transition-colors"
       >
         {/* Badge của antd tự ẩn khi count = 0, nên không cần rẽ nhánh ở đây */}
         <Badge count={soChuaDoc ?? 0} size="small" overflowCount={99}>

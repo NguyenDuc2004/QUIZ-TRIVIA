@@ -170,6 +170,17 @@ function BangBaiTap({
 }) {
   const xoa = useDeleteAssignment(classroomId)
 
+  // MỌI hook phải đứng trước mọi lệnh return sớm.
+  //
+  // Trước đây `useState` này nằm SAU khối `if (baiTaps.length === 0) return ...` bên dưới, và hệ quả là
+  // lớp chưa có bài tập nào thì hook không chạy, còn lớp vừa được giao bài thì nó chạy — số hook giữa hai
+  // lần render khác nhau, React ném lỗi và cả trang thành màn hình trắng.
+  //
+  // Đường đi tới lỗi đúng là đường dùng tự nhiên nhất: tạo lớp mới (chưa có bài tập) rồi bấm Giao bài.
+  // Không có màn hình lỗi nào, không có thông báo — chỉ trắng trơn, nên nhìn từ ngoài không đoán được
+  // nguyên nhân nằm ở đâu.
+  const [dangTai, setDangTai] = useState<string | null>(null)
+
   if (baiTaps.length === 0) {
     return (
       <EmptyState
@@ -178,8 +189,6 @@ function BangBaiTap({
       />
     )
   }
-
-  const [dangTai, setDangTai] = useState<string | null>(null)
 
   /**
    * Tải bảng điểm CSV ngay từ bảng bài tập (FR-58).
@@ -206,6 +215,7 @@ function BangBaiTap({
 
   return (
     <Table<Assignment>
+      scroll={{ x: 'max-content' }}
       rowKey="id"
       dataSource={baiTaps}
       pagination={{ pageSize: 20, hideOnSinglePage: true }}
@@ -300,6 +310,7 @@ function BangThanhVien({
 
   return (
     <Table<Member>
+      scroll={{ x: 'max-content' }}
       rowKey="userId"
       dataSource={thanhVien}
       pagination={{ pageSize: 50, hideOnSinglePage: true }}

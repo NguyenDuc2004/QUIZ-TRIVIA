@@ -1,0 +1,146 @@
+erDiagram
+  users ||--o{ quizzes : "sở hữu"
+  users ||--o{ questions : "soạn"
+  users ||--o{ quiz_attempts : "làm bài"
+  users ||--o{ learning_materials : "nạp"
+  users ||--o{ game_rooms : "mở phòng"
+  users ||--o{ chat_sessions : "hội thoại"
+  users ||--o{ ai_jobs : "yêu cầu"
+  users ||--o{ ai_request_logs : "phát sinh"
+  categories ||--o{ quizzes : "phân loại"
+  quizzes ||--o{ quiz_questions : "gồm"
+  questions ||--o{ quiz_questions : "thuộc"
+  questions ||--o{ question_options : "có phương án"
+  quizzes ||--o{ quiz_attempts : "được làm"
+  quizzes ||--o{ game_rooms : "dùng cho"
+  quiz_attempts ||--o{ attempt_answers : "gồm"
+  questions ||--o{ attempt_answers : "được trả lời"
+  learning_materials ||--o{ material_chunks : "chia đoạn"
+  game_rooms ||--o{ game_room_players : "có người chơi"
+  chat_sessions ||--o{ chat_messages : "gồm"
+
+  users {
+    uuid id PK
+    varchar email UK
+    varchar password_hash "NULL nếu chỉ dùng Google"
+    varchar google_id UK
+    varchar display_name
+    varchar role "LEARNER|CREATOR|ADMIN"
+  }
+  categories {
+    uuid id PK
+    varchar name
+    varchar slug UK
+  }
+  quizzes {
+    uuid id PK
+    uuid owner_id FK
+    uuid category_id FK
+    varchar title
+    varchar difficulty
+    varchar visibility "public|private"
+    int time_limit_sec
+    boolean is_ai_generated
+  }
+  questions {
+    uuid id PK
+    uuid owner_id FK
+    varchar type "5 loại câu hỏi"
+    text content
+    text explanation
+    text rubric "tiêu chí chấm tự luận"
+    varchar topic
+    int points
+    varchar source "manual|ai_generated"
+  }
+  question_options {
+    uuid id PK
+    uuid question_id FK
+    text content
+    boolean is_correct
+    int order_index
+  }
+  quiz_questions {
+    uuid quiz_id PK_FK
+    uuid question_id PK_FK
+    int order_index
+  }
+  quiz_attempts {
+    uuid id PK
+    uuid user_id FK "NOT NULL"
+    uuid quiz_id FK
+    varchar mode "PRACTICE|EXAM"
+    varchar status
+    timestamptz expires_at
+    int total_score
+    int max_score "chốt lúc bắt đầu"
+  }
+  attempt_answers {
+    uuid id PK
+    uuid attempt_id FK
+    uuid question_id FK
+    jsonb user_answer
+    int score
+    text ai_feedback
+    text ai_suggestions
+    varchar graded_by "AUTO|AI|AI_FAILED|HUMAN"
+  }
+  learning_materials {
+    uuid id PK
+    uuid owner_id FK
+    varchar title
+    varchar source_type
+    varchar status "PROCESSING|READY|FAILED"
+    boolean shared "mặc định false"
+  }
+  material_chunks {
+    uuid id PK
+    uuid material_id FK
+    int chunk_index
+    text content
+    vector embedding "768 chiều"
+  }
+  game_rooms {
+    uuid id PK
+    varchar room_code UK "PIN 6 ký tự"
+    uuid host_id FK
+    uuid quiz_id FK
+    varchar status
+    boolean allow_guests "mặc định false"
+  }
+  game_room_players {
+    uuid id PK
+    uuid room_id FK
+    uuid user_id FK "NULL nếu là khách"
+    varchar display_name
+    boolean is_guest
+    int final_score
+  }
+  chat_sessions {
+    uuid id PK
+    uuid user_id FK
+    varchar title
+  }
+  chat_messages {
+    uuid id PK
+    uuid session_id FK
+    varchar role "USER|ASSISTANT"
+    text content
+  }
+  ai_jobs {
+    uuid id PK
+    uuid user_id FK
+    varchar type
+    varchar status
+    jsonb request
+    jsonb result
+  }
+  ai_request_logs {
+    uuid id PK
+    uuid user_id FK
+    varchar feature
+    varchar provider "gemini|grok"
+    int tokens_in
+    int tokens_out
+    int latency_ms
+  }

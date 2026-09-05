@@ -1,0 +1,15 @@
+sequenceDiagram
+  actor AD as Quản trị viên
+  participant B as «boundary» UserManagementPage
+  participant C as «control» AdminUserService
+  participant A as «control» AuditLogService
+  participant E as «entity» User
+  participant L as «entity» AuditLog
+  AD->>B: chọn user + Khóa tài khoản
+  B->>C: lockUser(userId)
+  C->>E: setStatus(LOCKED)
+  C->>E: save()
+  C->>A: publish(UserLockedEvent)
+  A->>L: ghi AuditLog (bất đồng bộ)
+  C-->>B: thành công
+  B-->>AD: thông báo đã khóa

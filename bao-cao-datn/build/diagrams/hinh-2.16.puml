@@ -1,0 +1,113 @@
+@startuml
+
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #C99AAB
+skinparam ArrowFontColor #202020
+skinparam Padding 4
+skinparam ParticipantPadding 18
+skinparam BoxPadding 8
+skinparam SequenceMessageAlign center
+skinparam guillemet false
+
+skinparam usecase {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  FontColor #1a1a1a
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #404040
+  FontColor #1a1a1a
+}
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #808080
+}
+
+skinparam sequence {
+  ArrowColor #C99AAB
+  ArrowThickness 1
+  LifeLineBorderColor #C99AAB
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #FFFADC
+  ParticipantBorderColor #C99AAB
+  ParticipantFontColor #1a1a1a
+  ParticipantFontSize 12
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #404040
+  GroupBorderColor #C99AAB
+  GroupBackgroundColor #FFF5F8
+  BoxBorderColor #C99AAB
+}
+
+skinparam class {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  HeaderBackgroundColor #FFEFC4
+  AttributeFontColor #1a1a1a
+  FontColor #1a1a1a
+  ArrowColor #C99AAB
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam stereotype {
+  CBackgroundColor #FFF1A8
+  CBorderColor #C99AAB
+  EBackgroundColor #FFF1A8
+  EBorderColor #C99AAB
+  ABackgroundColor #FFF1A8
+  ABorderColor #C99AAB
+}
+
+title Biểu đồ trình tự — Use case Quản lý quiz và ngân hàng câu hỏi
+
+actor "Người tạo nội dung" as C
+boundary "QuizEditorPage" as B
+control "QuizController" as QC
+control "QuizService" as QS
+control "OwnershipGuard" as OG
+control "QuestionService" as QNS
+entity "Quiz" as Q
+entity "Question" as QN
+entity "QuestionOption" as QO
+control "FileStorageService" as FS
+
+C -> B : nhập tiêu đề, danh mục, độ khó, thời lượng
+B -> QC : POST /api/v1/quizzes
+QC -> QS : create(request, currentUser)
+QS -> Q : new Quiz(ownerId = currentUser)
+QS --> QC : QuizResponse
+QC --> B : 201 Created
+
+C -> B : soạn câu hỏi mới
+B -> QC : POST /api/v1/questions
+QC -> QNS : create(request)
+QNS -> QNS : kiểm tra dữ liệu theo từng loại câu hỏi
+alt Dữ liệu không hợp lệ
+  QNS --> B : 400 kèm lỗi từng trường
+else Hợp lệ
+  QNS -> QN : lưu Question
+  QNS -> QO : lưu các phương án
+end
+
+C -> B : thêm câu vào quiz, sắp thứ tự
+B -> QC : PUT /api/v1/quizzes/{id}/questions
+QC -> QS : setQuestions(quizId, ids)
+QS -> OG : requireOwner(quiz, currentUser)
+alt Không phải chủ sở hữu
+  OG --> QC : NotFoundException
+  QC --> B : 404 (không tiết lộ tài nguyên tồn tại)
+else Là chủ sở hữu
+  QS -> Q : cập nhật liên kết kèm orderIndex
+end
+
+C -> B : tải ảnh bìa
+B -> QC : POST /api/v1/files/images
+QC -> FS : store(file)
+FS -> FS : nhận dạng theo chữ ký byte, giới hạn 2MB
+FS --> QC : đường dẫn /uploads/images/{uuid}.ext
+@enduml

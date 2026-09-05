@@ -58,6 +58,7 @@ export default function AdminCategoriesPage() {
       />
 
       <Table<AdminCategory>
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         loading={isLoading}
         dataSource={data}

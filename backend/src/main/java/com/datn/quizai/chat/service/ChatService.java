@@ -111,9 +111,32 @@ public class ChatService {
                 .toList();
     }
 
-    /** Kết quả bước chuẩn bị: đủ thứ để bắt đầu stream, và transaction đã đóng. */
-    public record Prepared(UUID sessionId, List<ChatSource> sources, AiPrompt prompt) {
+    /**
+     * Kết quả bước chuẩn bị: đủ thứ để bắt đầu stream, và transaction đã đóng.
+     *
+     * @param prompt      {@code null} khi câu trả lời đã xác định từ trước và <b>không cần gọi AI</b>
+     * @param traLoiSan   câu trả lời dựng sẵn, chỉ có giá trị khi {@code prompt == null}
+     */
+    public record Prepared(UUID sessionId, List<ChatSource> sources, AiPrompt prompt,
+                           String traLoiSan) {
+
+        public boolean canGoiAi() {
+            return prompt != null;
+        }
     }
+
+    /**
+     * Câu trả lời khi kho học liệu rỗng hoàn toàn.
+     * <p>
+     * Nói rõ đây là chuyện <b>thiếu dữ liệu</b>, không phải trợ lý hỏng hay câu hỏi sai — hai thứ
+     * người dùng rất dễ tự quy kết cho mình khi chỉ nhận về một lời từ chối trống.
+     */
+    static final String KHO_RONG =
+            "Kho học liệu đang trống nên tôi chưa có căn cứ nào để trả lời. "
+            + "Trợ lý này chỉ dựa trên tài liệu được nạp vào, không trả lời bằng kiến thức "
+            + "chung — để bạn luôn kiểm được câu trả lời đến từ đâu. "
+            + "Hãy nạp một tài liệu (PDF, DOCX hoặc TXT) ở khối Học liệu bên trái, đợi "
+            + "trạng thái chuyển sang Sẵn sàng rồi hỏi lại.";
 
     /**
      * Bước chuẩn bị, chạy trong <b>một transaction ngắn</b>: mở/kiểm phiên, lưu câu hỏi, truy xuất học
@@ -134,6 +157,26 @@ public class ChatService {
         List<ChatMessage> history = recentHistory(session.getId());
         messageRepository.save(new ChatMessage(session, ChatRole.USER, question, null));
 
+        // Kho rỗng thì kết quả đã biết trước: truy hồi chắc chắn ra 0 đoạn, và prompt bắt mô hình nói
+        // "chưa có tài liệu để dựa vào". Đường đi cũ vẫn nhúng câu hỏi rồi vẫn gọi mô hình để nghe nó
+        // nói đúng câu đó — hai lời gọi tốn tiền cho một câu trả lời xác định từ đầu. Với người học
+        // chưa nạp tài liệu nào thì đó là MỌI câu hỏi họ gõ, không phải một trường hợp hiếm.
+        if (!materialRepository.hasAskable(userId)) {
+            // Lưu bằng `messageRepository` ngay trong transaction này, KHÔNG qua `messageWriter`.
+            // `saveAnswer` là REQUIRES_NEW — nó mở một transaction riêng, mà phiên vừa tạo ở trên còn
+            // nằm trong transaction chưa commit của chính hàm này. Transaction mới sẽ không thấy phiên
+            // đó, rồi nuốt lỗi theo đúng thiết kế của nó: câu trả lời biến mất không một tiếng động,
+            // và người dùng có một phiên chỉ có câu hỏi.
+            messageRepository.save(new ChatMessage(session, ChatRole.ASSISTANT, KHO_RONG, null));
+            if (sessionId != null) {
+                // Phiên vừa mở ở lượt này đã có `updatedAt` là bây giờ; chỉ phiên cũ mới cần đẩy lên
+                // đầu danh sách. Gọi cho cả hai thì câu UPDATE của phiên mới có thể chạy trước cả câu
+                // INSERT chưa được flush.
+                sessionRepository.touch(session.getId());
+            }
+            return new Prepared(session.getId(), List.of(), null, KHO_RONG);
+        }
+
         List<MaterialChunkRepository.Chunk> chunks = retrieve(userId, materialId, question);
 
         AiPrompt prompt = new AiPrompt(
@@ -144,7 +187,7 @@ public class ChatService {
                 // neo bằng học liệu nên không cần siết thêm bằng temperature
                 0.3);
 
-        return new Prepared(session.getId(), toSources(chunks), prompt);
+        return new Prepared(session.getId(), toSources(chunks), prompt, null);
     }
 
     /**
@@ -155,6 +198,12 @@ public class ChatService {
      * đọc tin rằng việc ghi ở đây được bảo vệ.
      */
     public Flux<String> streamAnswer(UUID userId, Prepared prepared) {
+        // Câu trả lời dựng sẵn đã được lưu ngay trong `prepare` (nó chạy trong transaction, còn hàm
+        // này thì không). Ở đây chỉ phát ra cho client, không gọi mô hình và không lưu lần nữa.
+        if (!prepared.canGoiAi()) {
+            return Flux.just(prepared.traLoiSan());
+        }
+
         StringBuilder answer = new StringBuilder();
         return aiOrchestrator.stream(prepared.prompt(), "chat", userId)
                 .doOnNext(answer::append)

@@ -15,17 +15,27 @@ Nhờ vậy sửa nội dung là sửa file `.md` rồi build lại, không ph�
 | `assets/` | 39 hình PNG đã sinh (`hinh-1.1.png` … `hinh-2.37.png`) |
 | `build/` | Script sinh hình và dựng file Word |
 
-**Chưa có:** `03-chuong-3.md` (Thực nghiệm và đánh giá) và `04-ket-luan.md` — chờ số liệu đo mục 3.5
-(hiệu năng thời gian thực) và 3.6 (độ chính xác AI). `build.js` tự bỏ qua file chưa tồn tại, nên thiếu
-hai file này vẫn build được.
+| `03-chuong-3.md` | Chương 3 — Thực nghiệm và đánh giá (số liệu 3.5 và 3.6 đã đo thật) |
+
+| `04-ket-luan.md` | Kết luận — kết quả đạt được, hạn chế, bài học, hướng phát triển |
+
+Bộ nội dung đã **đủ**. `build.js` vẫn tự bỏ qua file chưa tồn tại nên thêm/bớt phần đều không làm đổ build.
+
+**17 hình của Chương 3 (3.1–3.17) chưa có ảnh** — chúng là ảnh chụp màn hình sản phẩm và một biểu đồ,
+không sinh được từ định nghĩa text. `build.js` chèn khung xám thay chỗ. Script `capture/capture.mjs`
+hiện là bản của **đồ án khác** (nói về Khoa, Môn học, gv.demo) nên chưa dùng lại được.
 
 ## Dựng lại bản Word
 
 ```bash
 cd build
 npm install                # lần đầu: cài mermaid-cli, docx, sharp…
-node build.js              # -> ../BaoCao-QuizAI-DATN.docx
+node build.js              # -> ../bao-cao-datn-v{n}.docx  (tự tăng số, KHÔNG ghi đè bản cũ)
+node build.js --final      # -> ../bao-cao-datn-final.docx (bản chốt để nộp)
 ```
+
+Bản Word đánh số phiên bản để trong lúc trao đổi với giảng viên còn chỉ đích danh được "bản nào",
+thay vì "bản mới nhất". Bản cũ không bị ghi đè, nên build lại lúc đang mở file trong Word cũng không sao.
 
 Mở file trong Word rồi nhấn `Ctrl+A` → `F9` → *Update entire table*. Mục lục và danh mục hình/bảng là
 field của Word nên số trang chỉ điền sau bước này.

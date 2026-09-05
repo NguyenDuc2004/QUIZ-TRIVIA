@@ -160,7 +160,8 @@ public class RecommendationService {
                 .filter(item -> cards.containsKey(item.quizId()))
                 .map(item -> {
                     QuizRepository.QuizCardRow card = cards.get(item.quizId());
-                    return item.withDisplayData(card.getTitle(), card.getThumbnailUrl());
+                    return item.withDisplayData(
+                            card.getTitle(), card.getThumbnailUrl(), card.getCategoryName());
                 })
                 .toList();
     }
@@ -226,7 +227,8 @@ public class RecommendationService {
                 "Ôn lại " + String.join(", ", weakTopics) + " — bạn đang làm sai nhiều ở đây",
                 weakTopics,
                 0,
-                asLong(row.get("attemptCount")));
+                asLong(row.get("attemptCount")),
+                null);   // danh mục nạp từ PostgreSQL ở withDisplayData()
     }
 
     private RecommendedQuizResponse fromPeers(Map<String, Object> row) {
@@ -239,7 +241,8 @@ public class RecommendationService {
                 peers + " người học giống bạn đã làm quiz này",
                 List.of(),
                 peers,
-                0);
+                0,
+                null);   // danh mục nạp từ PostgreSQL ở withDisplayData()
     }
 
     private RecommendedQuizResponse fromNewTopic(Map<String, Object> row) {
@@ -253,7 +256,8 @@ public class RecommendationService {
                 "Chủ đề bạn chưa thử: " + String.join(", ", topics),
                 List.of(),
                 0,
-                asLong(row.get("attemptCount")));
+                asLong(row.get("attemptCount")),
+                null);   // danh mục nạp từ PostgreSQL ở withDisplayData()
     }
 
     /** Xem javadoc lớp: đồ thị hỏng thì gợi ý rỗng, không kéo sập trang. */

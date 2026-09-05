@@ -1,0 +1,39 @@
+classDiagram
+  class AIGeneratePage {
+    <<boundary>>
+    +chonTaiLieu()
+    +xemKetQua()
+    +duyet()
+  }
+  class AIQuestionService {
+    <<control>>
+    +generate(request) List~Question~
+    +validate(json)
+    +approve(list)
+  }
+  class GeminiClient {
+    <<control>>
+    +embed(text) vector
+    +generateContent(prompt) String
+  }
+  class ChunkRetriever {
+    <<control>>
+    +retrieveTopK(vector) List~DocumentChunk~
+  }
+  class DocumentChunk {
+    <<entity>>
+    -text
+    -embedding
+    -pageNo
+  }
+  class Question {
+    <<entity>>
+    -content
+    -citation
+    -explanation
+  }
+  AIGeneratePage --> AIQuestionService
+  AIQuestionService --> GeminiClient
+  AIQuestionService --> ChunkRetriever
+  ChunkRetriever --> DocumentChunk
+  AIQuestionService --> Question

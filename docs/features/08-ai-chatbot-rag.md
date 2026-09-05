@@ -57,6 +57,41 @@ Hai đường truy xuất tách bạch:
 | `searchSimilar` | sinh đề (features/05) | **chỉ tài liệu của chính mình** — soạn đề thì không có lý do lấy nội dung người khác |
 | `searchSimilarIncludingShared` | trợ lý học tập | tài liệu của mình **+** tài liệu người khác đã bật `shared` |
 
+### Cột `shared` chưa đủ: nó chuyển sự phụ thuộc chứ không gỡ  ✅ *(đã làm 04/09/2026)*
+
+Cờ `shared` làm người học **hỏi được**, nhưng chỉ khi có người khác chia sẻ. Với một người học đơn lẻ
+— không thuộc lớp nào, chưa ai bật cờ nào — kho vẫn rỗng, truy xuất vẫn ra 0 đoạn, và prompt vẫn bắt
+mô hình nói "chưa có tài liệu để dựa vào". **Mọi câu hỏi họ gõ đều nhận cùng một lời từ chối.** Chức
+năng nằm trong tay một điều kiện họ không tác động được.
+
+Hai thay đổi gỡ nốt phần đó:
+
+**1. Người học tự nạp học liệu riêng.** Nhóm endpoint học liệu tách khỏi `AiController` sang
+`MaterialController` (không khoá vai trò). Không đục lỗ ngoại lệ trong lớp đang khoá cả cụm — cùng lý
+do đã ghi ở bảng bên dưới cho `ChatController`.
+
+| Quyết định | Lý do |
+|---|---|
+| Tài liệu người học nạp mặc định **riêng tư** | Truy hồi đã sẵn `m.owner_id = :userId`, nên không cần migration. Mở quyền *nạp* không kéo theo mở quyền *đọc*: mọi phương thức vẫn qua `requireOwned` |
+| **Chia sẻ vẫn là CREATOR/ADMIN** | Bật `shared` đẩy tài liệu vào trợ lý của *mọi* người học — hành vi xuất bản, và một bề mặt kiểm duyệt: nội dung sai của một người thành căn cứ trả lời cho người khác |
+| Trần **10 tài liệu/người học**, vượt trả 409 | Lý do khoá cũ là chi phí, nhưng vai trò là công cụ tồi để canh chi phí — nó chặn sạch người cần dùng và không chặn gì ở người đã có quyền. Trần đo đúng đại lượng cần đo; ghép với 10MB/tệp thành một chặn trên thật. Hạn mức ngày **không** đỡ được: nó cố ý không tính lượt nhúng (`AiQuotaService`) |
+| Creator **không** bị trần đó | Họ soạn nội dung cho nhiều lớp và nhiều đề; siết thêm là đổi hành vi của một nhóm không liên quan tới thay đổi này |
+
+**2. Kho rỗng thì không gọi mô hình.** Đường đi cũ vẫn nhúng câu hỏi rồi vẫn gọi mô hình chỉ để nghe
+nó nói đúng cái câu mà prompt đã bắt nó nói — **hai lời gọi tốn tiền cho một kết quả xác định từ
+đầu**, và với người học chưa nạp gì thì đó là *mọi* câu hỏi họ gõ. `prepare` kiểm `hasAskable` trước,
+trả thẳng câu trả lời dựng sẵn nói rõ đây là chuyện **thiếu dữ liệu** kèm việc cần làm.
+
+Câu trả lời dựng sẵn lưu bằng `messageRepository` ngay trong transaction của `prepare`, **không** qua
+`ChatMessageWriter.saveAnswer`: hàm đó là `REQUIRES_NEW` nên transaction mới của nó không thấy phiên
+vừa tạo, rồi nuốt lỗi theo đúng thiết kế — câu trả lời sẽ biến mất không một tiếng động và người dùng
+có một phiên chỉ chứa câu hỏi.
+
+Phần này kiểm bằng **unit test** (`ChatKhoRongTest`) chứ không trong `ChatIntegrationTest`: điều kiện
+"kho rỗng" tính cả tài liệu người khác đã chia sẻ, mà tài liệu chia sẻ dùng chung toàn hệ thống — trong
+một lớp test dùng chung CSDL thì chỉ cần một ca khác chia sẻ tài liệu là điều kiện không dựng lại được,
+và phép kiểm đúng hay sai tuỳ thứ tự chạy.
+
 ### Người học phải thấy mình được hỏi trên tài liệu nào  ✅ *(đã làm 13/08/2026)*
 
 Cột `shared` giải quyết việc *truy xuất ra được gì*, nhưng ban đầu chưa giải quyết việc *người học biết

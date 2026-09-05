@@ -20,8 +20,9 @@ import QuestionReview from '../components/QuestionReview'
 import { MODE_LABEL, STATUS_COLOR, STATUS_LABEL, formatDuration } from '../constants'
 import { useAnswerQuestion, useAttempt, useSubmitAttempt } from '../hooks/useAttemptQueries'
 import ProctoringNotice from '@/features/integrity/components/ProctoringNotice'
+import ProctoringLiveCount from '@/features/integrity/components/ProctoringLiveCount'
 
-const { Text, Paragraph, Title } = Typography
+const { Text, Paragraph } = Typography
 
 const EMPTY_ANSWER: AnswerPayload = {}
 
@@ -78,7 +79,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
   // Thu tín hiệu hành vi CHỈ ở chế độ thi (features/12). Luyện tập không bị theo dõi — và người dùng được
   // nói rõ điều đó ngay trên màn hình, xem khối thông báo bên dưới. Server cũng từ chối lượt PRACTICE, nên
   // đây là lớp thứ hai chứ không phải lớp duy nhất.
-  useProctoring(attempt.id, !isPractice)
+  const soLanGhiNhan = useProctoring(attempt.id, !isPractice)
 
   // FR-48. Dùng thẳng `attempt.strictExam` — KHÔNG tự nhân với `!isPractice` ở đây: server đã tính rồi, và
   // tính lại ở client là mở đường cho hai bên nói khác nhau.
@@ -175,7 +176,8 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
 
       {/* Minh bạch là ràng buộc của features/12, không phải chi tiết trang trí: thu tín hiệu hành vi mà
           không nói với người bị thu là làm sau lưng họ. Chỉ hiện ở chế độ thi vì luyện tập không thu gì. */}
-      {!isPractice && <ProctoringNotice />}
+      {!isPractice && <ProctoringNotice compact />}
+      {!isPractice && <ProctoringLiveCount soLan={soLanGhiNhan} />}
 
       {/* Đã thoát toàn màn hình giữa chừng: nhắc, KHÔNG che đề. Che đi là phạt người bấm nhầm Esc bằng
           cách chặn họ làm tiếp, trong khi tín hiệu đã ghi rồi */}
@@ -193,7 +195,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
           {locked ? (
             <QuestionReview question={mergeFeedback(question, feedback[question.questionId])} />
           ) : (
-            <div className="border border-line bg-white p-5">
+            <div className="soft-panel p-5">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <Text className="text-ink-soft text-xs font-bold">
                   Câu {index + 1}/{questions.length}
@@ -210,7 +212,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
                 <img
                   src={question.imageUrl}
                   alt="Ảnh minh hoạ của câu hỏi"
-                  className="mb-4 max-h-72 w-auto max-w-full border border-line object-contain"
+                  className="mb-4 max-h-72 w-auto max-w-full border border-line rounded-card object-contain"
                 />
               )}
 
@@ -255,7 +257,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
             />
           )}
 
-          <div className="border border-line bg-white p-4">
+          <div className="soft-panel p-4">
             <Text className="text-ink-soft text-xs">Tiến độ</Text>
             <Progress
               percent={Math.round((answeredCount / questions.length) * 100)}
@@ -266,7 +268,11 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
               {answeredCount}/{questions.length} câu đã trả lời
             </Text>
 
-            <div className="mt-3 grid grid-cols-5 gap-1">
+            {/* Nhiều cột hơn ở màn hẹp, ít cột lại ở màn rộng — nghe ngược nhưng đúng: từ `lg` trở
+                lên khối này nằm trong cột phụ rộng 260px, còn dưới `lg` nó xuống dòng và giãn hết
+                chiều ngang màn hình. Giữ 5 cột ở đó thì mỗi nút rộng gần 70px, thưa thớt và đẩy danh
+                sách câu dài xuống quá xa. */}
+            <div className="mt-3 grid grid-cols-8 gap-1 sm:grid-cols-10 lg:grid-cols-5">
               {questions.map((q, i) => {
                 const done = isAnswered(draft[q.questionId])
                 return (
@@ -274,12 +280,14 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
                     key={q.questionId}
                     type="button"
                     onClick={() => setIndex(i)}
-                    className={`h-8 border text-xs font-bold ${
+                    /* `text-canvas` chứ không `text-white`: xem chú thích ở `chipClass` của
+                       BrowseQuizzesPage. Ở đây hậu quả nặng hơn — ô biến mất là ô CÂU ĐANG LÀM. */
+                    className={`h-8 rounded-small border text-xs font-bold ${
                       i === index
-                        ? 'border-ink bg-ink text-white'
+                        ? 'border-ink bg-ink text-canvas'
                         : done
                           ? 'border-line bg-surface-subtle text-ink'
-                          : 'border-line bg-white text-ink-soft'
+                          : 'border-line bg-surface text-ink-soft'
                     }`}
                   >
                     {i + 1}
@@ -309,6 +317,29 @@ function mergeFeedback(question: AttemptQuestion, fb: AnswerFeedback): AttemptQu
 }
 
 // --------------------------------------------------------------------- kết quả
+
+/**
+ * Nền khối công bố điểm, đổi theo tỉ lệ đúng.
+ *
+ * Bốn mức thay vì hai: chỉ "đạt / không đạt" thì một bài 51% và một bài 99% trông y hệt nhau, mà đó là
+ * hai kết quả rất khác nhau với người vừa làm xong.
+ *
+ * Mức thấp nhất dùng **xám đá, không dùng đỏ**. Đỏ ở đây đọc thành một lời phán xét, trong khi một bài
+ * luyện tập điểm thấp chỉ có nghĩa là còn chỗ để ôn — và ôn tiếp mới là việc hệ thống muốn người học làm.
+ */
+function tongDiemTone(percent: number): string {
+  if (percent >= 90) return 'result-hero-excellent'
+  if (percent >= 70) return 'result-hero-good'
+  if (percent >= 50) return 'result-hero-pass'
+  return 'result-hero-low'
+}
+
+function nhanKetQua(percent: number): string {
+  if (percent >= 90) return 'Xuất sắc'
+  if (percent >= 70) return 'Khá'
+  if (percent >= 50) return 'Đạt'
+  return 'Cần ôn thêm'
+}
 
 function AttemptResult({ detail }: { detail: AttemptDetail }) {
   const { attempt, questions } = detail
@@ -351,11 +382,29 @@ function AttemptResult({ detail }: { detail: AttemptDetail }) {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-4">
-        <Stat label="Điểm" value={`${attempt.totalScore}/${attempt.maxScore}`} highlight />
-        <Stat label="Tỷ lệ" value={`${percent}%`} />
-        <Stat label="Số câu đúng" value={`${attempt.correctCount}/${attempt.questionCount}`} />
-        <Stat label="Thời gian làm" value={formatDuration(attempt.durationSec)} />
+      {/* Khối công bố điểm.
+
+          Trước đây bốn ô thống kê trắng như nhau, trong đó điểm số — thứ người học chờ suốt cả bài —
+          nằm ngang hàng với "thời gian làm". Đây là khoảnh khắc cảm xúc nhất của cả luồng học, nên nó
+          được một khối riêng, và MÀU ĐỔI THEO KẾT QUẢ: người học biết mình làm thế nào trước cả khi
+          đọc con số.
+
+          Màu vẫn đi kèm chữ ("Xuất sắc", "Đạt"…) chứ không thay chữ: người mù màu phải đọc được cùng
+          một thông tin, và một mảng màu không tự nói được nó nghĩa là gì. */}
+      <div className={`flex flex-wrap items-end justify-between gap-4 p-6 ${tongDiemTone(percent)}`}>
+        <div>
+          <div className="text-sm font-bold text-white/85">{nhanKetQua(percent)}</div>
+          <div className="text-5xl leading-tight font-bold text-white">
+            {attempt.totalScore}
+            <span className="text-2xl text-white/70">/{attempt.maxScore}</span>
+          </div>
+          <div className="text-sm text-white/85">
+            Đúng {attempt.correctCount}/{attempt.questionCount} câu · {percent}%
+          </div>
+        </div>
+        <div className="text-sm text-white/85">
+          Thời gian làm: <b className="text-white">{formatDuration(attempt.durationSec)}</b>
+        </div>
       </div>
 
       {pendingAi > 0 && (
@@ -395,16 +444,5 @@ function AttemptResult({ detail }: { detail: AttemptDetail }) {
         ))}
       </div>
     </Space>
-  )
-}
-
-function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div className="border border-line bg-white p-4">
-      <Text className="text-ink-soft text-xs">{label}</Text>
-      <Title level={3} className={`mb-0! ${highlight ? 'text-brand-strong!' : ''}`}>
-        {value}
-      </Title>
-    </div>
   )
 }

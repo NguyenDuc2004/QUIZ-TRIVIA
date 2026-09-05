@@ -42,7 +42,7 @@ export default function RoomProctoringSummary({ roomCode }: { roomCode: string }
 
   if (rows.length === 0) {
     return (
-      <div className="border border-line bg-white p-4">
+      <div className="soft-panel p-4">
         <Text className="font-bold! block">Chống gian lận</Text>
         <Text className="text-ink-soft text-sm">
           Không thu được tín hiệu rời trang nào trong ván này.
@@ -54,7 +54,7 @@ export default function RoomProctoringSummary({ roomCode }: { roomCode: string }
   const soBiGanCo = rows.filter((row) => row.biGanCo).length
 
   return (
-    <div className="border border-line bg-white p-4">
+    <div className="soft-panel p-4">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Text className="font-bold!">Chống gian lận</Text>
         <Tag className="mr-0!">chỉ bạn thấy bảng này</Tag>
@@ -81,6 +81,7 @@ export default function RoomProctoringSummary({ roomCode }: { roomCode: string }
       )}
 
       <Table<RoomProctoringSummaryRow>
+        scroll={{ x: 'max-content' }}
         rowKey="playerId"
         size="small"
         dataSource={rows}

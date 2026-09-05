@@ -105,6 +105,17 @@ class ChatIntegrationTest {
         creatorToken = register("creator-chat@example.com", "CREATOR");
         otherCreatorToken = register("creator-khac-chat@example.com", "CREATOR");
         learnerToken = register("learner-chat@example.com", "LEARNER");
+
+        // Một tài liệu đã chia sẻ, có mặt trước MỌI ca test.
+        //
+        // Từ 04/09/2026 `prepare` không gọi mô hình khi người hỏi không có tài liệu nào hỏi được:
+        // kết quả đã biết trước, nên hai lời gọi (nhúng + sinh) là tiền tiêu vô ích. Hệ quả cho test
+        // là các ca kiểm ĐƯỜNG ĐI QUA MÔ HÌNH sẽ phụ thuộc thứ tự chạy — ca chạy đầu tiên gặp kho
+        // rỗng và không có prompt nào để soi. Tài liệu nền này gỡ đúng sự phụ thuộc đó.
+        stubEmbedding();
+        setShared(creatorToken,
+                createMaterial(creatorToken, "Tài liệu nền của bộ test", "Nội dung nền BASE0000."),
+                true);
     }
 
     @BeforeEach
@@ -175,6 +186,9 @@ class ChatIntegrationTest {
         String secret = "MẬT KHẨU HỆ THỐNG LÀ ABC123 XYZ";
         createMaterial(otherCreatorToken, "Tài liệu riêng tư", secret);
 
+        // Nhờ tài liệu nền ở @BeforeAll, người học CÓ tài liệu hỏi được nên truy xuất thật sự chạy.
+        // Đó là điều kiện để phép kiểm này có nghĩa: nếu kho rỗng thì prompt không chứa bí mật chỉ vì
+        // chẳng có gì được truy xuất cả, và bộ lọc quyền không hề bị kiểm.
         ask(learnerToken, null, "Mật khẩu hệ thống là gì?");
 
         assertThat(capturedPrompt().userPrompt())
@@ -299,6 +313,82 @@ class ChatIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + creatorToken)
                         .param("shared", "true"))
                 .andExpect(status().isConflict());
+    }
+
+    // ================================================================ người học tự nạp học liệu
+
+    @Test
+    @DisplayName("Người học nạp được học liệu của CHÍNH mình, và hỏi được trên nó")
+    void shouldLetLearnerCreateOwnMaterial() throws Exception {
+        // Đây là lý do tồn tại của thay đổi 04/09/2026: trước đó người học không nạp được gì, không
+        // sở hữu gì, nên trợ lý của họ chỉ sống được khi một Creator nào đó bấm nút chia sẻ.
+        String learner = register("learner-tu-nap@example.com", "LEARNER");
+        String materialId = createMaterial(learner, "Vở ghi của tôi", "Ghi chép riêng DELTA5150.");
+
+        ask(learner, null, materialId, "Vở ghi của tôi viết gì?");
+
+        assertThat(capturedPrompt().userPrompt()).contains("DELTA5150");
+    }
+
+    @Test
+    @DisplayName("Học liệu người học tự nạp là RIÊNG TƯ — người khác không truy xuất được")
+    void shouldKeepLearnerMaterialPrivate() throws Exception {
+        String learner = register("learner-rieng-tu@example.com", "LEARNER");
+        createMaterial(learner, "Ghi chú cá nhân", "Bí mật của riêng tôi ECHO7373.");
+
+        ask(creatorToken, null, "Ghi chú cá nhân nói gì?");
+
+        assertThat(capturedPrompt().userPrompt())
+                .as("mở quyền NẠP không được kéo theo mở quyền ĐỌC của nhau")
+                .doesNotContain("ECHO7373");
+    }
+
+    @Test
+    @DisplayName("Người học KHÔNG bật được chia sẻ — đẩy tài liệu vào trợ lý của mọi người là hành vi xuất bản")
+    void shouldRejectLearnerSharingMaterial() throws Exception {
+        String learner = register("learner-doi-chia-se@example.com", "LEARNER");
+        String materialId = createMaterial(learner, "Tài liệu muốn chia sẻ", "Nội dung bất kỳ.");
+
+        mockMvc.perform(patch("/api/v1/ai/materials/{id}/shared", materialId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learner)
+                        .param("shared", "true"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Người học vượt trần 10 tài liệu thì bị chặn — nhúng học liệu KHÔNG tính vào hạn mức ngày")
+    void shouldCapLearnerMaterialCount() throws Exception {
+        // Trần này là chốt chặn chi phí DUY NHẤT của đường nạp học liệu: `AiQuotaService` cố ý không
+        // tính lượt nhúng vào hạn mức ngày (một tài liệu 50 đoạn là 50 lời gọi cho một hành động).
+        String learner = register("learner-tran@example.com", "LEARNER");
+        for (int i = 0; i < 10; i++) {
+            createMaterial(learner, "Tài liệu " + i, "Nội dung " + i);
+        }
+
+        mockMvc.perform(post("/api/v1/ai/materials")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + learner)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of(
+                                "title", "Quá trần",
+                                // Phải đủ dài để qua được `@Valid`: kiểm tra hợp lệ của Spring chạy
+                                // TRƯỚC service, nên nội dung ngắn sẽ trả 400 và ca test không bao giờ
+                                // chạm tới đoạn kiểm trần.
+                                "content", "Nội dung thứ mười một." + PADDING))))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("Creator KHÔNG bị trần đó — họ soạn nội dung cho nhiều lớp, 10 tài liệu là con số vô lý")
+    void shouldNotCapCreatorMaterialCount() throws Exception {
+        String creator = register("creator-khong-tran@example.com", "CREATOR");
+        for (int i = 0; i < 11; i++) {
+            createMaterial(creator, "Tài liệu creator " + i, "Nội dung " + i);
+        }
+
+        mockMvc.perform(get("/api/v1/ai/materials")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + creator))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(11));
     }
 
     // ================================================================ phiên và lịch sử
@@ -511,10 +601,43 @@ class ChatIntegrationTest {
         // và biến mất khi chạy riêng một phép kiểm.
         //
         // Không đặt được header `Connection: close` để chữa — JDK cấm client tự đặt header đó. Nên cách
-        // duy nhất là đừng có bể kết nối nào để mà cũ.
-        byte[] raw = newJdkClient()
-                .send(request, java.net.http.HttpResponse.BodyHandlers.ofByteArray())
-                .body();
+        // duy nhất là đừng có bể kết nối nào để mà cũ — và phải ĐÓNG client, xem ngay dưới.
+        //
+        // ĐÓNG client sau khi dùng (`try-with-resources`) — `HttpClient` là `AutoCloseable` từ JDK 21.
+        //
+        // Client mới cho mỗi lượt chỉ giải quyết được nửa vấn đề: mỗi client có bể riêng nên không ai
+        // nhặt phải kết nối chết của lượt trước, nhưng client KHÔNG đóng thì giữ nguyên kết nối và
+        // luồng chọn của nó cho tới khi bị thu gom. Sau vài chục lượt trong một lớp test, số kết nối
+        // còn mở tới Tomcat lớn dần và lượt gửi mới bắt đầu nhận "header parser received no bytes".
+        //
+        // Đo được: lớp này xanh sạch ở 20 phép kiểm, và đỏ đúng MỘT ca mỗi lượt chạy khi lên 25 —
+        // mỗi lượt một ca khác nhau, dấu hiệu của cạn tài nguyên chứ không phải lỗi của ca nào.
+        //
+        // ── VÒNG SỬA THỨ TƯ (05/09/2026): thử hai cách nữa, cả hai ĐỀU HỎNG. Ghi lại để người sau
+        //    không đi lại ──
+        //
+        // (a) Mở sẵn kết nối bằng một `GET` idempotent rồi mới `POST` trên đúng kết nối đó. Ý tưởng:
+        //     `GET` không đổi gì nên thử lại thoải mái, nó chịu cú "mở kết nối" thay cho `POST` —
+        //     giữ nguyên luật "không bao giờ thử lại request có tác dụng phụ" ở vòng 2.
+        //     ĐO: 4 xanh / 2 đỏ trong 6 lượt. KHÔNG khá hơn mốc (khoảng 1 đỏ trong 3).
+        //
+        //     Nhưng phép đo trả về một thông tin LẬT NGƯỢC chẩn đoán: lỗi nổ ở chính dòng `POST`,
+        //     trên kết nối mà `GET` ngay trước đó vừa chứng minh là sống. Tức nó hỏng trên CẢ kết
+        //     nối mới lẫn kết nối đang dùng dở — **bác bỏ** giả thuyết "kết nối cũ nằm lại trong bể"
+        //     mà chú thích phía trên khẳng định suốt ba vòng. Giả thuyết đó vẫn đứng đây vì nó mô tả
+        //     đúng những gì quan sát được ở vòng 1–3, nhưng nó KHÔNG còn giải thích được vòng này.
+        //
+        // (b) Bỏ hẳn HTTP thật, chuyển sang `MockMvc` + `asyncDispatch`. Chết ở chỗ khác và dứt
+        //     khoát: `MockHttpServletResponse` KHÔNG thread-safe, mà controller trả `Flux` nên phần
+        //     ghi response chạy trên thread của Reactor còn test đọc trên thread của mình →
+        //     `ConcurrentModificationException` trong `LinkedCaseInsensitiveMap`. Đây là giới hạn
+        //     của công cụ, không phải thứ vá được từ phía test.
+        //
+        // Nên bản đang chạy vẫn là bản tốt nhất ĐO ĐƯỢC. Phần còn lại ghi `[!]` trong nhật ký.
+        byte[] raw;
+        try (java.net.http.HttpClient client = newJdkClient()) {
+            raw = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofByteArray()).body();
+        }
 
         return parseSse(new String(raw, java.nio.charset.StandardCharsets.UTF_8));
     }

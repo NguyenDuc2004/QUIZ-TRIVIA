@@ -12,6 +12,31 @@ export const DIFFICULTY_COLOR: Record<Difficulty, string> = {
   HARD: 'red',
 }
 
+/**
+ * Tông màu viên thuốc cho từng độ khó — dùng với `<Pill>`.
+ *
+ * Tách khỏi `DIFFICULTY_COLOR` ở trên vì hai bảng màu khác nhau: cái trên là tên màu của Ant Design
+ * (`green`, `gold`), cái này là tên tông của hệ thống viên thuốc. Gộp làm một thì một trong hai chỗ
+ * dùng sẽ nhận màu không tồn tại.
+ */
+export const DIFFICULTY_PILL: Record<Difficulty, 'xanhLa' | 'vang' | 'do'> = {
+  EASY: 'xanhLa',
+  MEDIUM: 'vang',
+  HARD: 'do',
+}
+
+/**
+ * Chấm màu dẫn đầu viên thuốc độ khó.
+ *
+ * Độ khó là thang **có thứ tự** (dễ → trung bình → khó), nên nó dùng chấm màu thay vì biểu tượng: ba
+ * chấm xanh–vàng–đỏ đọc được thành một thang ngay lập tức, còn ba biểu tượng khác nhau thì không.
+ */
+export const DIFFICULTY_DOT: Record<Difficulty, string> = {
+  EASY: '#22c55e',
+  MEDIUM: '#eab308',
+  HARD: '#ef4444',
+}
+
 export const VISIBILITY_LABEL: Record<Visibility, string> = {
   PUBLIC: 'Công khai',
   PRIVATE: 'Riêng tư',

@@ -128,16 +128,14 @@ export default function App() {
         <Route path="/assistant" element={<AssistantPage />} />
         {/* Sảnh phòng đấu cần đăng nhập vì chỉ thành viên mới mở được phòng */}
         <Route path="/rooms" element={<RoomLobbyPage />} />
-        {/* Khu vực AI — AiController chặn CREATOR/ADMIN ở BE; chặn thêm ở FE để người học gõ tay
-            đường dẫn thì được đưa về chỗ khác thay vì thấy một trang chỉ toàn lỗi 403 */}
-        <Route
-          path="/ai/materials"
-          element={
-            <ProtectedRoute roles={['CREATOR', 'ADMIN']}>
-              <MaterialsPage />
-            </ProtectedRoute>
-          }
-        />
+        {/* Học liệu mở cho MỌI người đã đăng nhập (04/09/2026).
+
+            Trước đây chặn CREATOR/ADMIN cho khớp `AiController`, và hệ quả là trợ lý học tập chết
+            hẳn với người học đơn lẻ: họ không nạp được tài liệu nào, không sở hữu tài liệu nào, nên
+            mọi câu hỏi đều nhận về "chưa có tài liệu để dựa vào". Backend nay tách nhóm học liệu sang
+            `MaterialController` không khoá vai trò; riêng công tắc CHIA SẺ vẫn là CREATOR/ADMIN. */}
+        <Route path="/ai/materials" element={<MaterialsPage />} />
+        {/* Sinh đề vẫn là công cụ soạn nội dung — chặn ở FE cho khớp `AiController` */}
         <Route
           path="/ai/generate"
           element={

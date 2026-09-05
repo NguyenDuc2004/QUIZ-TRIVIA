@@ -93,6 +93,7 @@ export default function AiProviderStatusCard() {
       <div>
         <Text className="mb-2 block text-sm font-bold">Cấu hình nhà cung cấp</Text>
         <Table<AiProviderStatus>
+          scroll={{ x: 'max-content' }}
           rowKey="ten"
           size="small"
           columns={columns}

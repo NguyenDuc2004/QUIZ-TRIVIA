@@ -1,0 +1,21 @@
+flowchart TB
+  subgraph WEB["Tầng Web - Controller"]
+    W1["REST Controllers"]
+    W2["WebSocket Endpoints"]
+  end
+  subgraph SVC["Tầng Service - nghiệp vụ"]
+    S1["Auth · User"]
+    S2["Course · Question · AI"]
+    S3["Exam · Attempt · Proctoring"]
+    S4["Admin · Report"]
+  end
+  subgraph DOM["Tầng Domain - Entity + Enum"]
+    D1["JPA Entities"]
+  end
+  subgraph PER["Tầng Persistence - Repository"]
+    P1["Spring Data JPA Repositories"]
+  end
+  WEB --> SVC
+  SVC --> PER
+  PER --> DOM
+  SVC --> DOM

@@ -1,0 +1,119 @@
+@startuml
+
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #C99AAB
+skinparam ArrowFontColor #202020
+skinparam Padding 4
+skinparam ParticipantPadding 18
+skinparam BoxPadding 8
+skinparam SequenceMessageAlign center
+skinparam guillemet false
+
+skinparam usecase {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  FontColor #1a1a1a
+}
+skinparam actor {
+  BackgroundColor #FFFFFF
+  BorderColor #404040
+  FontColor #1a1a1a
+}
+skinparam rectangle {
+  BackgroundColor #FAFAFA
+  BorderColor #808080
+}
+
+skinparam sequence {
+  ArrowColor #C99AAB
+  ArrowThickness 1
+  LifeLineBorderColor #C99AAB
+  LifeLineBackgroundColor #FFFFFF
+  ParticipantBackgroundColor #FFFADC
+  ParticipantBorderColor #C99AAB
+  ParticipantFontColor #1a1a1a
+  ParticipantFontSize 12
+  ActorBackgroundColor #FFFFFF
+  ActorBorderColor #404040
+  GroupBorderColor #C99AAB
+  GroupBackgroundColor #FFF5F8
+  BoxBorderColor #C99AAB
+}
+
+skinparam class {
+  BackgroundColor #FFFADC
+  BorderColor #C99AAB
+  HeaderBackgroundColor #FFEFC4
+  AttributeFontColor #1a1a1a
+  FontColor #1a1a1a
+  ArrowColor #C99AAB
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam stereotype {
+  CBackgroundColor #FFF1A8
+  CBorderColor #C99AAB
+  EBackgroundColor #FFF1A8
+  EBorderColor #C99AAB
+  ABackgroundColor #FFF1A8
+  ABorderColor #C99AAB
+}
+
+title Biểu đồ trình tự — Use case Hỏi trợ lý học tập
+
+actor "Người học" as L
+boundary "AssistantPage" as B
+control "ChatController" as CC
+control "ChatService" as CS
+control "AiOrchestrator" as ORCH
+entity "MaterialChunkRepository" as MCR
+control "ChatPromptBuilder" as PB
+entity "ChatSession" as SES
+entity "ChatMessage" as MSG
+
+L -> B : nhập câu hỏi (tối đa 2000 ký tự)
+B -> CC : POST /api/v1/ai/chat (SSE)
+CC -> CS : prepare(userId, sessionId, question)
+alt Chưa có phiên
+  CS -> SES : mở phiên mới, tiêu đề cắt từ câu hỏi đầu
+end
+CS -> ORCH : embed(question)
+ORCH --> CS : vector truy vấn
+CS -> MCR : searchSimilarIncludingShared(userId, vector, topK=5)
+note right of MCR
+  Lọc quyền TRƯỚC trong CTE materialized:
+  tài liệu của tôi HOẶC đã bật shared,
+  rồi mới tính khoảng cách cosine
+end note
+MCR --> CS : các đoạn kèm khoảng cách
+CS -> CS : loại đoạn vượt ngưỡng 0,75
+
+alt Không còn đoạn nào đủ liên quan
+  CS -> PB : prompt nói rõ "không có tài liệu liên quan"
+  note right of PB : trợ lý trả lời KHÔNG BIẾT,\nkhông suy đoán từ kiến thức nền
+else Còn đoạn hợp lệ
+  CS -> PB : dựng prompt (chỉ dẫn + ngữ cảnh + lịch sử phiên)
+end
+
+CC --> B : event "meta" — sessionId + danh sách nguồn
+CS -> ORCH : stream(prompt)
+alt Lỗi trước mảnh chữ đầu tiên
+  ORCH -> ORCH : chuyển sang Groq
+else Lỗi giữa luồng
+  ORCH --> CC : event "error"
+  note right of ORCH
+    KHÔNG chuyển nhà cung cấp giữa dòng —
+    sẽ nối câu trả lời của hai mô hình
+  end note
+end
+loop từng mảnh chữ
+  ORCH --> CC : delta
+  CC --> B : event "token"
+  B --> L : chữ hiện dần
+end
+CS -> MSG : lưu câu hỏi và câu trả lời
+@enduml

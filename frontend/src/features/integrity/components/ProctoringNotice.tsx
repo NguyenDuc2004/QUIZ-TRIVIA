@@ -13,8 +13,33 @@ const { Text } = Typography
  * - nói rõ hệ thống **không tự kết luận** — tín hiệu chỉ để giáo viên rà soát.
  *
  * Không hiện với lượt luyện tập, vì luyện tập không thu gì cả.
+ *
+ * ## Hai chỗ dùng, hai mức chi tiết
+ * - **Trang giới thiệu quiz** (`compact` tắt) — bản đầy đủ, đọc TRƯỚC khi đồng hồ chạy. Đây mới là nơi thông
+ *   báo có tác dụng thật: người thi còn kịp đóng bớt tab, chọn chỗ ngồi yên tĩnh, hoặc quyết định lùi lại.
+ * - **Màn làm bài** (`compact` bật) — bản một dòng, chỉ để nhắc rằng cơ chế đang chạy. Lặp lại nguyên văn cả
+ *   đoạn dài ở đây chiếm chỗ của đề bài, và người thi vừa đọc nó xong ở bước trước.
+ *
+ * Vẫn giữ bản rút gọn thay vì bỏ hẳn: người làm tiếp một bài đang dở vào thẳng màn làm bài, không đi qua
+ * trang giới thiệu, nên bỏ hẳn thì đúng nhóm người đó không được nhắc gì.
  */
-export default function ProctoringNotice() {
+export default function ProctoringNotice({ compact = false }: { compact?: boolean } = {}) {
+  if (compact) {
+    return (
+      <Alert
+        type="info"
+        showIcon
+        icon={<EyeOutlined />}
+        message={
+          <Text className="text-sm">
+            Bài thi đang ghi nhận số lần rời trang, sao chép và dán — <b>không</b> ghi hình, <b>không</b> đọc
+            nội dung. Hệ thống không tự kết luận.
+          </Text>
+        }
+      />
+    )
+  }
+
   return (
     <Alert
       type="info"

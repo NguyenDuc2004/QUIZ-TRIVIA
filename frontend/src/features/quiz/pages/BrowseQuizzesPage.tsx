@@ -33,23 +33,47 @@ export default function BrowseQuizzesPage() {
     difficulty,
   })
 
+  /**
+   * `text-canvas` chứ KHÔNG `text-white` cho chip đang chọn.
+   *
+   * `bg-ink` lật theo chế độ màu (`--color-ink` là màu CHỮ nên ở nền tối nó thành gần trắng), còn
+   * `text-white` thì tuyệt đối. Ghép hai thứ đó lại là chữ trắng trên nền gần trắng — chip đang chọn
+   * biến mất ở chế độ tối, đúng cái chip mà người dùng cần thấy nhất.
+   *
+   * `--color-canvas` lật cùng chiều với `--color-ink` nên cặp này tương phản ở cả hai chế độ.
+   */
   const chipClass = (active: boolean) =>
-    `rounded border px-3 py-1.5 text-sm font-bold whitespace-nowrap ${
+    `rounded-full border px-3 py-1.5 text-sm font-bold whitespace-nowrap ${
       active
-        ? 'border-ink bg-ink text-white'
-        : 'border-line bg-white text-ink hover:border-ink'
+        ? 'border-ink bg-ink text-canvas'
+        : 'border-line bg-surface text-ink hover:border-ink'
     }`
 
   return (
     <Space direction="vertical" size="large" className="w-full">
-      <PageHeader
-        title="Khám phá quiz"
-        description={
-          keyword
-            ? `Kết quả cho “${keyword}” — ${data?.totalElements ?? 0} quiz`
-            : 'Các quiz đã được xuất bản công khai'
-        }
-      />
+      {/* Khối mở đầu.
+
+          Đây là trang chủ thật của người học (`/` chỉ chuyển hướng về đây), nên nó là màn hình đầu tiên
+          người dùng — và hội đồng chấm — nhìn thấy. Trước đây nó bắt đầu thẳng bằng một dòng tiêu đề và
+          một lưới thẻ, không có gì cho biết đây là sản phẩm gì.
+
+          Chỉ hiện khi KHÔNG tìm kiếm: người vừa gõ từ khoá muốn thấy kết quả ngay, đẩy nó xuống dưới một
+          khối trang trí là cản đúng việc họ đang làm. */}
+      {keyword ? (
+        <PageHeader
+          title="Khám phá quiz"
+          description={`Kết quả cho “${keyword}” — ${data?.totalElements ?? 0} quiz`}
+        />
+      ) : (
+        <div className="browse-hero p-8">
+          <h1 className="mb-2! text-3xl font-bold text-white sm:text-4xl">
+            Học bằng câu hỏi, nhớ lâu hơn
+          </h1>
+          <p className="mb-0! max-w-2xl text-sm text-white/85 sm:text-base">
+            Làm quiz, đấu trí thời gian thực với bạn bè, và hỏi trợ lý AI ngay trên học liệu của bạn.
+          </p>
+        </div>
+      )}
 
       {/* Gợi ý cá nhân hoá (features/07) — tự ẩn khi chưa có dữ liệu, không hiện ô trống.
           Không hiện khi đang tìm kiếm: lúc đó người dùng đã biết mình muốn gì rồi. */}

@@ -290,7 +290,7 @@ export default function RoomPage() {
             playerCount={players.length}
           />
 
-          <div className="border border-line bg-white p-5">
+          <div className="soft-panel p-5">
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <Text className="font-bold!">
                 Người chơi ({players.length}) · {room.readyCount} đã sẵn sàng
@@ -325,7 +325,7 @@ export default function RoomPage() {
 
       {room.status === 'PLAYING' && question && (
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          <div className="border border-line bg-white p-5">
+          <div className="soft-panel p-5">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <Text className="text-ink-soft text-xs font-bold">
                 Câu {question.index + 1}/{question.total}
@@ -349,7 +349,7 @@ export default function RoomPage() {
               <img
                 src={question.imageUrl}
                 alt="Ảnh minh hoạ của câu hỏi"
-                className="mb-4 max-h-56 w-auto max-w-full border border-line object-contain"
+                className="mb-4 max-h-56 w-auto max-w-full border border-line rounded-card object-contain"
               />
             )}
 
@@ -362,11 +362,11 @@ export default function RoomPage() {
                   className="w-full"
                 >
                   <Space direction="vertical" size={8} className="w-full">
-                    {question.options.map((option) => (
+                    {question.options.map((option, i) => (
                       <Checkbox
                         key={option.id}
                         value={option.id}
-                        className={`w-full border p-3 ${optionTone(option.id, closed, selected)}`}
+                        className={`room-option w-full border p-3 ${optionTone(option.id, closed, selected, i)}`}
                       >
                         {option.content}
                       </Checkbox>
@@ -381,11 +381,11 @@ export default function RoomPage() {
                   className="w-full"
                 >
                   <Space direction="vertical" size={8} className="w-full">
-                    {question.options.map((option) => (
+                    {question.options.map((option, i) => (
                       <Radio
                         key={option.id}
                         value={option.id}
-                        className={`w-full border p-3 ${optionTone(option.id, closed, selected)}`}
+                        className={`room-option w-full border p-3 ${optionTone(option.id, closed, selected, i)}`}
                       >
                         {option.content}
                       </Radio>
@@ -441,7 +441,7 @@ export default function RoomPage() {
 
       {room.status === 'FINISHED' && (
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          <div className="border border-line bg-white p-8 text-center">
+          <div className="soft-panel p-8 text-center">
             <Title level={3} className="mb-2!">
               Ván đấu kết thúc
             </Title>
@@ -476,13 +476,36 @@ export default function RoomPage() {
   )
 }
 
-/** Tô màu lựa chọn: chỉ tô sau khi câu đã đóng, trước đó tô là lộ đáp án. */
-function optionTone(optionId: string, closed: QuestionClosed | null, selected: string[]): string {
+/**
+ * Tô màu lựa chọn trong phòng đấu.
+ *
+ * ## Trước khi câu đóng: mỗi phương án MỘT MÀU riêng
+ * Bốn ô trắng xếp dọc là hình ảnh của một biểu mẫu, không phải của một trò chơi tính điểm theo tốc độ.
+ * Cho mỗi vị trí một màu giúp người chơi **nhắm được ô mình muốn bấm trước khi kịp đọc hết chữ** — đúng
+ * thứ một trò hỏi đáp cần, và cũng là lý do Kahoot làm vậy.
+ *
+ * Màu buộc vào **vị trí**, không vào nội dung: vị trí là thứ ổn định trong suốt một câu, còn nếu buộc
+ * vào nội dung thì cùng một phương án ở hai câu khác nhau lại đổi màu.
+ *
+ * ## Sau khi câu đóng: bỏ hết màu vị trí
+ * Lúc đó chỉ còn hai thông tin đáng nói — **đâu là đáp án đúng** và **mình có chọn sai không**. Giữ
+ * màu vị trí ở bước này là để bốn màu vô nghĩa cạnh tranh với hai màu có nghĩa.
+ *
+ * Và chỉ tô sau khi đóng, không tô trước: tô trước là lộ đáp án.
+ */
+const MAU_VI_TRI = ['room-option-a', 'room-option-b', 'room-option-c', 'room-option-d']
+
+function optionTone(
+  optionId: string,
+  closed: QuestionClosed | null,
+  selected: string[],
+  index: number,
+): string {
   if (!closed) {
-    return 'border-line'
+    return MAU_VI_TRI[index % MAU_VI_TRI.length]
   }
   if (closed.correctOptionIds.includes(optionId)) {
-    return 'border-green-500 bg-green-50'
+    return 'border-green-500 bg-correct'
   }
-  return selected.includes(optionId) ? 'border-red-500 bg-red-50' : 'border-line'
+  return selected.includes(optionId) ? 'border-red-500 bg-wrong' : 'border-line'
 }
