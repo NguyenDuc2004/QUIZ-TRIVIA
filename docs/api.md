@@ -10,6 +10,7 @@ POST   /api/v1/auth/refresh         Làm mới token (rotation: token cũ bị t
 POST   /api/v1/auth/logout          Đăng xuất → 204, thu hồi refresh token          ✅
 POST   /api/v1/auth/logout-all       Đăng xuất mọi thiết bị (mất máy)                ✅
 POST   /api/v1/auth/change-password Đổi mật khẩu (cần đăng nhập) → 204              ✅
+PATCH  /api/v1/auth/my-role         Tự đổi vai trò LEARNER ↔ CREATOR → token MỚI     ✅
 POST   /api/v1/auth/forgot-password Gửi mã OTP đặt lại mật khẩu → 204               ✅
 POST   /api/v1/auth/reset-password  Đặt lại mật khẩu bằng mã OTP → 204              ✅
 POST   /api/v1/auth/google          Đăng nhập/đăng ký bằng Google (ID token) → token  ✅

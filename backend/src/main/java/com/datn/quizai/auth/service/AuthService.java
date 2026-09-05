@@ -220,6 +220,58 @@ public class AuthService {
     }
 
     /**
+     * Người dùng tự đổi vai trò của chính mình giữa <b>LEARNER và CREATOR</b>.
+     *
+     * <h3>Vì sao KHÔNG cần admin duyệt</h3>
+     * Vì CREATOR đã tự chọn được ngay ở màn đăng ký, và đó là quyết định đã ghi ở ba nơi trong mã
+     * nguồn: <i>"ranh giới an ninh của dự án là ADMIN, không phải CREATOR"</i>. Một hàng chờ duyệt
+     * cho người ĐANG có tài khoản, trong khi người MỚI chỉ cần bấm một ô lúc đăng ký, là thủ tục
+     * hình thức: ai bị từ chối chỉ việc tạo tài khoản thứ hai trong ba mươi giây.
+     *
+     * Cái bất đối xứng trước khi có hàm này còn khó chịu hơn: người mới lấy CREATOR miễn phí, còn
+     * người đã dùng hệ thống một thời gian rồi mới muốn soạn đề thì <b>không có đường nào</b> ngoài
+     * việc nhờ admin. Nó phạt đúng người dùng lâu năm.
+     *
+     * <h3>Nếu muốn CREATOR thành vai trò được duyệt</h3>
+     * Thì phải bỏ CREATOR khỏi màn đăng ký TRƯỚC. Thêm cửa duyệt mà vẫn để cửa đăng ký mở là dựng
+     * một cái chốt trên cánh cửa còn bức tường bên cạnh thì trống.
+     *
+     * <h3>Thu hồi phiên rồi cấp lại token ngay</h3>
+     * Vai trò nằm TRONG access token, nên không làm gì thì token đang cầm vẫn mang vai trò cũ tới khi
+     * hết hạn (15 phút): người vừa lên CREATOR bấm vào menu mới và nhận 403, còn người vừa xuống
+     * LEARNER thì giữ nguyên quyền cũ — cái sau mới đáng lo.
+     *
+     * Thu hồi mọi phiên rồi cấp một cặp token mới cho đúng thiết bị đang gọi: các thiết bị khác phải
+     * đăng nhập lại (đúng, vì chúng đang cầm vai trò cũ), còn người đang thao tác thì không bị đá ra.
+     */
+    @Transactional
+    public AuthResponse doiVaiTroCuaToi(UUID userId, Role vaiTroMoi) {
+        if (vaiTroMoi == null || vaiTroMoi == Role.ADMIN) {
+            throw BusinessException.badRequest("Chỉ đổi được giữa Người học và Người tạo nội dung.");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> BusinessException.notFound("Không tìm thấy người dùng"));
+
+        if (user.getRole() == Role.ADMIN) {
+            // Admin tự hạ quyền bằng đường này thì hệ thống có thể mất admin cuối cùng mà không ai
+            // ngăn — `AdminUserService.changeRole` đã chặn đúng chuyện đó, đường này không được mở lại.
+            throw BusinessException.badRequest(
+                    "Tài khoản quản trị không đổi vai trò bằng đường này.");
+        }
+
+        if (user.getRole() != vaiTroMoi) {
+            Role cu = user.getRole();
+            user.setRole(vaiTroMoi);
+            int daThuHoi = refreshTokenService.revokeAll(userId);
+            log.info("Người dùng {} tự đổi vai trò: {} -> {}, thu hồi {} phiên",
+                    userId, cu, vaiTroMoi, daThuHoi);
+        }
+
+        return issueTokens(user);
+    }
+
+    /**
      * Vai trò cho tài khoản Google <b>mới</b> — cùng luật với {@code register}.
      * <p>
      * Bỏ trống hoặc ADMIN đều thành LEARNER. Ranh giới an ninh của dự án là ADMIN, không phải CREATOR:

@@ -77,6 +77,35 @@ export function useRegister() {
   })
 }
 
+/**
+ * Tự đổi vai trò giữa Người học và Người tạo nội dung.
+ *
+ * `clearQueryCache` là bắt buộc, không phải cho gọn: cache đang giữ kết quả của những truy vấn hỏi
+ * theo vai trò cũ — danh sách quiz của tôi, học liệu, trạng thái AI. Giữ nguyên thì người vừa lên
+ * Creator mở trang mới và thấy dữ liệu rỗng đã cache từ lúc còn là người học.
+ *
+ * KHÔNG điều hướng đi đâu: người dùng đang ở trang Hồ sơ và vừa bấm một nút ở đó, đá họ sang trang
+ * khác là lấy mất chỗ đứng của họ mà không ai yêu cầu.
+ */
+export function useDoiVaiTro() {
+  const setSession = useAuthStore((state) => state.setSession)
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (role: 'LEARNER' | 'CREATOR') => authApi.doiVaiTro(role),
+    onSuccess: (result) => {
+      clearQueryCache(queryClient)
+      setSession(result)
+      message.success(
+        result.user.role === 'CREATOR'
+          ? 'Bạn đã là Người tạo nội dung — menu Thư viện và Sinh đề AI đã mở'
+          : 'Đã chuyển về vai trò Người học',
+      )
+    },
+    onError: (error) => message.error(getApiErrorMessage(error, 'Không đổi được vai trò')),
+  })
+}
+
 export function useLogout() {
   const clearSession = useAuthStore((state) => state.clearSession)
   const queryClient = useQueryClient()

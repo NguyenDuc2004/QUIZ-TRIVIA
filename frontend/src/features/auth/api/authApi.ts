@@ -40,6 +40,15 @@ export const authApi = {
   login: (body: LoginBody) =>
     apiClient.post<AuthResult>('/auth/login', body).then((res) => res.data),
 
+  /**
+   * Tự đổi vai trò giữa Người học và Người tạo nội dung.
+   *
+   * Trả về cặp token MỚI vì vai trò nằm trong access token — client phải thay token đang lưu, nếu
+   * không thì đổi vai trò xong vẫn mang vai trò cũ tới 15 phút.
+   */
+  doiVaiTro: (role: 'LEARNER' | 'CREATOR') =>
+    apiClient.patch<AuthResult>('/auth/my-role', { role }).then((res) => res.data),
+
   /** Gửi ID token của Google; backend tự xác minh chữ ký rồi cấp token của hệ thống. */
   /**
    * Đăng nhập / đăng ký bằng Google.

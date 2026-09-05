@@ -4,6 +4,7 @@ import com.datn.quizai.auth.service.AuthService;
 import com.datn.quizai.auth.service.JwtService;
 import com.datn.quizai.auth.dto.AuthResponse;
 import com.datn.quizai.auth.dto.ChangePasswordRequest;
+import com.datn.quizai.auth.dto.DoiVaiTroRequest;
 import com.datn.quizai.auth.dto.ForgotPasswordRequest;
 import com.datn.quizai.auth.dto.ResetPasswordRequest;
 import com.datn.quizai.auth.dto.GoogleLoginRequest;
@@ -16,6 +17,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -95,5 +97,21 @@ public class AuthController {
             @Valid @RequestBody ChangePasswordRequest request) {
         authService.changePassword(currentUser.id(), request);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Người dùng tự đổi vai trò của chính mình giữa Người học và Người tạo nội dung.
+     * <p>
+     * Đặt ở {@code AuthController} chứ không ở {@code UserController} vì nó <b>cấp token mới</b> — vai
+     * trò nằm trong access token, nên đổi vai trò mà không cấp lại token thì người dùng vẫn mang vai
+     * trò cũ tới 15 phút. Kiểu trả về {@code AuthResponse} nói rõ chỗ này thuộc về nhóm nào.
+     */
+    @PatchMapping("/my-role")
+    @Operation(summary = "Tự đổi vai trò giữa LEARNER và CREATOR. Trả về cặp token MỚI — client phải "
+            + "thay token đang lưu, vì vai trò nằm trong access token. Mọi phiên khác bị thu hồi.")
+    public AuthResponse doiVaiTroCuaToi(
+            @AuthenticationPrincipal JwtService.AuthenticatedUser current,
+            @Valid @RequestBody DoiVaiTroRequest request) {
+        return authService.doiVaiTroCuaToi(current.id(), request.role());
     }
 }

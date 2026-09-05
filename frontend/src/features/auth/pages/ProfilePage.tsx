@@ -7,6 +7,7 @@ import { getApiErrorMessage } from '@/shared/api/client'
 import PageHeader from '@/shared/components/PageHeader'
 import ImageUploader from '@/shared/components/ImageUploader'
 import { authApi } from '../api/authApi'
+import { useDoiVaiTro } from '../hooks/useAuthMutations'
 import { useAuthStore } from '../store/authStore'
 
 const { Paragraph, Text } = Typography
@@ -49,6 +50,8 @@ export default function ProfilePage() {
 
   const user = data ?? cachedUser
   const canCreate = user?.role === 'CREATOR' || user?.role === 'ADMIN'
+  const role = user?.role
+  const doiVaiTro = useDoiVaiTro()
 
   const [dangSua, setDangSua] = useState(false)
   const [ten, setTen] = useState('')
@@ -195,6 +198,33 @@ export default function ProfilePage() {
           </Button>
         </Space>
       </div>
+
+      {/* Đổi vai trò — chỉ hiện với LEARNER và CREATOR, KHÔNG hiện với ADMIN.
+
+          Admin đổi vai trò bằng đường này thì hệ thống có thể mất admin cuối cùng mà không ai ngăn;
+          `AdminUserService.changeRole` đã chặn đúng chuyện đó và backend cũng chặn ở đây, nhưng
+          không nên bày ra một nút chỉ để báo lỗi. */}
+      {role !== 'ADMIN' && (
+        <div className="soft-panel p-5">
+          <Paragraph className="mb-3! font-bold!">Vai trò của bạn</Paragraph>
+          <Paragraph className="mb-4! text-ink-soft">
+            {canCreate
+              ? 'Bạn đang là Người tạo nội dung: soạn quiz, dùng ngân hàng câu hỏi và sinh đề bằng AI. Chuyển về Người học nếu chỉ muốn luyện tập.'
+              : 'Bạn đang là Người học. Chuyển sang Người tạo nội dung để soạn quiz, dùng ngân hàng câu hỏi và sinh đề bằng AI — đổi lại lúc nào cũng được.'}
+          </Paragraph>
+          <Paragraph className="mb-4! text-ink-soft text-xs">
+            Đổi vai trò sẽ <b>đăng xuất các thiết bị khác</b>. Vai trò nằm trong phiên đăng nhập, nên
+            thiết bị chưa đăng nhập lại vẫn mang vai trò cũ.
+          </Paragraph>
+          <Button
+            type="primary"
+            loading={doiVaiTro.isPending}
+            onClick={() => doiVaiTro.mutate(canCreate ? 'LEARNER' : 'CREATOR')}
+          >
+            {canCreate ? 'Chuyển về Người học' : 'Trở thành Người tạo nội dung'}
+          </Button>
+        </div>
+      )}
     </Space>
   )
 }

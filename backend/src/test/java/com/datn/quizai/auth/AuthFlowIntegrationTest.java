@@ -19,6 +19,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -152,6 +153,80 @@ class AuthFlowIntegrationTest {
         mockMvc.perform(get("/api/v1/auth/khong-he-ton-tai")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Người học tự lên CREATOR được, và nhận token MỚI mang vai trò mới")
+    void tuLenCreator() throws Exception {
+        String token = dangKy("len-creator@example.com", "LEARNER");
+
+        String body = mockMvc.perform(patch("/api/v1/auth/my-role")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"CREATOR\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.role").value("CREATOR"))
+                .andReturn().getResponse().getContentAsString();
+
+        // Token MỚI phải dùng được ngay. Không cấp lại token thì vai trò cũ còn nằm trong access token
+        // đang cầm tới 15 phút — người vừa lên Creator bấm vào menu mới và nhận 403.
+        String tokenMoi = objectMapper.readTree(body).get("accessToken").asText();
+        mockMvc.perform(get("/api/v1/ai/status")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenMoi))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Không tự cấp ADMIN cho mình bằng đường đổi vai trò")
+    void khongTuLenAdmin() throws Exception {
+        // Đây là chốt chặn quan trọng nhất của endpoint này: nếu thủng thì mọi tài khoản đều thành
+        // quản trị được, trong khi cả `register` lẫn đường Google đều đã chặn cẩn thận.
+        String token = dangKy("doi-lam-admin@example.com", "LEARNER");
+
+        mockMvc.perform(patch("/api/v1/auth/my-role")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/v1/admin/users")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Khách chưa đăng nhập không đổi được vai trò của ai")
+    void khachKhongDoiDuocVaiTro() throws Exception {
+        mockMvc.perform(patch("/api/v1/auth/my-role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"CREATOR\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Creator chuyển ngược về Người học được — đường một chiều thì người ta ngại bấm")
+    void quayVeNguoiHoc() throws Exception {
+        String token = dangKy("ve-nguoi-hoc@example.com", "CREATOR");
+
+        mockMvc.perform(patch("/api/v1/auth/my-role")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"LEARNER\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.role").value("LEARNER"));
+    }
+
+    /** Đăng ký nhanh, trả access token. */
+    private String dangKy(String email, String role) throws Exception {
+        String body = mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"%s","password":"MatKhau@123","displayName":"Người dùng",
+                                 "role":"%s"}
+                                """.formatted(email, role)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(body).get("accessToken").asText();
     }
 
     @Test

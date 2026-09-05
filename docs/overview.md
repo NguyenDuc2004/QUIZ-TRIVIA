@@ -36,11 +36,20 @@
 | Tác nhân | Mô tả | Quyền chính |
 |----------|-------|-------------|
 | **Guest** | Khách chưa đăng nhập | **Chỉ xem** danh sách & thông tin giới thiệu quiz công khai (tiêu đề, mô tả, danh mục, độ khó, số câu). **Không được làm bài, không xem nội dung câu hỏi.** *Ngoại lệ duy nhất:* vào **phòng đấu** khi biết mã PIN **và** host đã bật `allowGuests` cho phòng đó |
-| **Learner** | Người học đã đăng ký | Chơi quiz, vào phòng đấu, xem tiến độ, chatbot, nhận gợi ý |
+| **Learner** | Người học đã đăng ký | Chơi quiz, vào phòng đấu, xem tiến độ, chatbot, nhận gợi ý, **nạp học liệu riêng của mình** (tối đa 10) |
 | **Creator** | Người tạo nội dung | Quyền Learner + tạo/sửa quiz, sinh đề bằng AI, tạo phòng, xem thống kê |
 | **Admin** | Quản trị | Quản lý user & nội dung, cấu hình AI provider, giám sát log & chi phí |
 
 > Một user có thể vừa là Learner vừa là Creator.
+
+**Chuyển giữa Learner và Creator là việc người dùng tự làm** (`PATCH /auth/my-role`, trang Hồ sơ), không
+qua admin duyệt. Lý do: **màn đăng ký vốn đã cho tự chọn Creator**, nên dựng hàng chờ duyệt cho người đã
+có tài khoản — trong khi người mới chỉ cần bấm một ô — là thủ tục hình thức, ai bị từ chối chỉ việc tạo
+tài khoản thứ hai. Chi tiết và các chốt chặn ở `features/01-auth.md`.
+
+**Ranh giới an ninh của dự án là ADMIN, không phải CREATOR.** Admin không tự đăng ký được, không tự cấp
+cho mình được, và tài khoản admin đầu tiên do `AdminBootstrap` tạo từ biến môi trường lúc khởi động
+(`security.md §1`).
 
 **Quy tắc bắt buộc đăng nhập:** mọi hành vi tạo ra dữ liệu học tập đều yêu cầu tài khoản — làm bài (attempt), vào phòng đấu, chatbot, gợi ý, flashcard. Guest chỉ được duyệt nội dung công khai để biết hệ thống có gì rồi đăng ký.
 
