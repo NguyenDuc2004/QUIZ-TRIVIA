@@ -612,6 +612,28 @@ class ChatIntegrationTest {
         //
         // Đo được: lớp này xanh sạch ở 20 phép kiểm, và đỏ đúng MỘT ca mỗi lượt chạy khi lên 25 —
         // mỗi lượt một ca khác nhau, dấu hiệu của cạn tài nguyên chứ không phải lỗi của ca nào.
+        //
+        // ── VÒNG SỬA THỨ TƯ (05/09/2026): thử hai cách nữa, cả hai ĐỀU HỎNG. Ghi lại để người sau
+        //    không đi lại ──
+        //
+        // (a) Mở sẵn kết nối bằng một `GET` idempotent rồi mới `POST` trên đúng kết nối đó. Ý tưởng:
+        //     `GET` không đổi gì nên thử lại thoải mái, nó chịu cú "mở kết nối" thay cho `POST` —
+        //     giữ nguyên luật "không bao giờ thử lại request có tác dụng phụ" ở vòng 2.
+        //     ĐO: 4 xanh / 2 đỏ trong 6 lượt. KHÔNG khá hơn mốc (khoảng 1 đỏ trong 3).
+        //
+        //     Nhưng phép đo trả về một thông tin LẬT NGƯỢC chẩn đoán: lỗi nổ ở chính dòng `POST`,
+        //     trên kết nối mà `GET` ngay trước đó vừa chứng minh là sống. Tức nó hỏng trên CẢ kết
+        //     nối mới lẫn kết nối đang dùng dở — **bác bỏ** giả thuyết "kết nối cũ nằm lại trong bể"
+        //     mà chú thích phía trên khẳng định suốt ba vòng. Giả thuyết đó vẫn đứng đây vì nó mô tả
+        //     đúng những gì quan sát được ở vòng 1–3, nhưng nó KHÔNG còn giải thích được vòng này.
+        //
+        // (b) Bỏ hẳn HTTP thật, chuyển sang `MockMvc` + `asyncDispatch`. Chết ở chỗ khác và dứt
+        //     khoát: `MockHttpServletResponse` KHÔNG thread-safe, mà controller trả `Flux` nên phần
+        //     ghi response chạy trên thread của Reactor còn test đọc trên thread của mình →
+        //     `ConcurrentModificationException` trong `LinkedCaseInsensitiveMap`. Đây là giới hạn
+        //     của công cụ, không phải thứ vá được từ phía test.
+        //
+        // Nên bản đang chạy vẫn là bản tốt nhất ĐO ĐƯỢC. Phần còn lại ghi `[!]` trong nhật ký.
         byte[] raw;
         try (java.net.http.HttpClient client = newJdkClient()) {
             raw = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofByteArray()).body();

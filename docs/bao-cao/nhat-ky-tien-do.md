@@ -3734,9 +3734,26 @@ một lựa chọn thiết kế*. Nó chỉ lộ ra khi có một chỗ lệch *
   phiên chat), nên lượt thử lại đẻ ra phiên thứ hai. Lỗi hiện tại là "không đọc được byte nào", tức
   **không biết** server đã xử lý request hay chưa, nên retry vẫn không an toàn vì đúng lý do cũ.
 
-  Hướng còn lại nếu quyết dứt điểm: bỏ HTTP thật, dùng `MockMvc` + `asyncDispatch` cho các ca SSE.
-  Đổi lại mất phần kiểm "đường ống SSE chạy được trên Tomcat thật", vốn là lý do các ca này tồn tại.
-  Cần cân nhắc chứ không nên đổi cho hết đỏ.
+  **Đã thử dứt điểm, hai cách, cả hai hỏng — và cách thứ nhất trả về thông tin đáng giá hơn một
+  bản vá:**
+
+  **(a) Mở sẵn kết nối bằng `GET` idempotent rồi mới `POST`.** Ý tưởng giữ nguyên luật "không bao giờ
+  thử lại request có tác dụng phụ": đẩy rủi ro "mở kết nối" sang một request chỉ đọc, thử lại thoải
+  mái. **Đo: 4 xanh / 2 đỏ trong 6 lượt — không khá hơn mốc.**
+
+  Nhưng phép đo cho thấy lỗi nổ ở **chính dòng `POST`**, trên kết nối mà `GET` ngay trước đó vừa
+  chứng minh là sống. Tức nó hỏng trên **cả** kết nối mới lẫn kết nối đang dùng dở — **bác bỏ** giả
+  thuyết *"kết nối cũ nằm lại trong bể sau khi luồng SSE đóng"* mà chú thích trong tệp đã khẳng định
+  suốt ba vòng sửa. Ba vòng trước đều chữa đúng thứ mình tin, và niềm tin đó sai.
+
+  **(b) Bỏ HTTP thật, dùng `MockMvc` + `asyncDispatch`.** Chết ở chỗ khác và dứt khoát:
+  `MockHttpServletResponse` **không thread-safe**, mà controller trả `Flux` nên phần ghi response
+  chạy trên thread của Reactor còn test đọc trên thread của mình → `ConcurrentModificationException`.
+  Đây là giới hạn của công cụ, không vá được từ phía test.
+
+  **Kết luận: giữ bản tốt nhất đo được, không ship một bản vá ngang bằng mà thêm phức tạp.** Đã ghi
+  cả hai hướng đã thử vào chú thích trong tệp để người sau không đi lại. Việc còn lại cần một chẩn
+  đoán ở tầng khác (Tomcat/OS), không phải thêm một vòng đoán nữa ở tầng client.
 
 ### Ghi chú báo cáo
 
