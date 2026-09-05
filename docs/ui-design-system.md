@@ -546,6 +546,27 @@ hành động đó là chính, dù thẻ nằm trong lưới bốn thẻ.
 
 ## 6. Component dùng chung (bắt buộc dùng lại, không tự vẽ)
 
+### Ảnh bìa quiz — luôn dùng `QuizCover`
+
+**Không tự dựng khối bìa.** Mọi chỗ quiz xuất hiện đều gọi `QuizCover`: lưới Khám phá, thẻ gợi ý,
+trang giới thiệu quiz, ảnh nhỏ trong bảng "Quiz của tôi". Chỉ đổi `coIcon` (`lon` 72px / `vua` 54px /
+`nho` 18px) theo bề ngang chỗ đặt — **khuôn thì không đổi**.
+
+Trước đó mỗi trang tự dựng, và chúng trôi khỏi nhau: ảnh nhỏ trong bảng dùng tỉ lệ 16:10, trang giới
+thiệu **không vẽ gì** khi quiz chưa có ảnh, còn thẻ có ảnh thật thì cao hơn thẻ vẽ gradient ~40px.
+Quy ước *"một quiz phải trông như chính nó ở mọi chỗ"* đã nằm trong chú thích từ lâu — nhưng quy ước
+chỉ nằm trong lời văn thì nó bị phá ở trang thứ tư.
+
+**Bẫy đã sập một lần, ghi lại để không sập nữa:** ảnh bên trong khuôn `aspect-video` phải
+`absolute inset-0`, **không** `h-full`. `height: 100%` phân giải theo chiều cao khối chứa, mà chiều
+cao đó do `aspect-ratio` suy ra từ bề ngang nên nó là `auto` — phần trăm không phân giải được, ảnh rơi
+về chiều cao gốc của tệp và **kéo khuôn phình theo**. Khối gradient không có con nào nên nó giữ đúng
+16:9, và hai thứ lệch nhau. `absolute` đo theo hộp của phần tử định vị gần nhất — một giá trị xác định
+— nên ảnh không tác động được tới khuôn.
+
+Đó cũng là điều kiện để câu *"mọi ảnh bìa bằng nhau"* đúng với **mọi tệp người dùng tải lên**, dù nó
+vuông, dọc hay siêu rộng: `object-cover` cắt cho vừa khuôn thay vì bắt khuôn giãn theo ảnh.
+
 | Component | Ở đâu | Dùng khi |
 |---|---|---|
 | `PageHeader` | `shared/components/PageHeader.tsx` | Đầu mọi trang: tiêu đề + mô tả + vùng nút |

@@ -69,7 +69,6 @@ export function boMatCua(categoryName: string | null | undefined, title: string)
   return duPhongCua(categoryName ?? title)
 }
 
-/** Chỉ lấy nền — giữ lại cho những chỗ chỉ cần màu, không cần biểu tượng. */
-export function coverOf(categoryName: string | null | undefined, title: string): string {
-  return boMatCua(categoryName, title).nen
-}
+/* `coverOf` (chỉ trả về nền, bỏ biểu tượng) đã xoá ngày 05/09/2026: từ khi có `QuizCover` thì không
+   còn chỗ nào chỉ cần màu mà không cần biểu tượng, và một hàm export không ai gọi là một lời mời
+   dựng lại khối bìa bằng tay ở chỗ tiếp theo. */
