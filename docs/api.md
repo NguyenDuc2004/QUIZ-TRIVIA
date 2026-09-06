@@ -124,6 +124,12 @@ riêng: chỉ trả chủ đề của chính người gọi.
 | `FILL_BLANK` | ≥ 1 đáp án; hệ thống tự đánh dấu tất cả là đúng (các cách viết được chấp nhận) |
 | `SHORT_ANSWER` | đúng 1 đáp án mẫu, dùng làm căn cứ khi AI chấm |
 
+> **Mã lỗi cho tham số sai kiểu** *(sửa 06/09/2026)*: biến **đường dẫn** sai kiểu → **404**
+> (`/attempts/me` khớp `/attempts/{id}` với `id="me"`; nhìn từ client thì cả đường dẫn không trỏ tới
+> tài nguyên nào, và trả 400 sẽ tiết lộ rằng route có tồn tại). Tham số **truy vấn** sai kiểu → **400**
+> kèm tên tham số (`?difficulty=abc`) — ở đó địa chỉ đúng, chỉ dữ liệu vào sai. Trước đó cả hai đều
+> rơi xuống chốt cuối và trả **500**.
+
 ## 4. Chơi quiz (đơn) — `/attempts`
 ```
 POST   /api/v1/quizzes/{id}/attempts    Bắt đầu làm bài (body { mode })            ✅

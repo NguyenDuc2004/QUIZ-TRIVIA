@@ -12,6 +12,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
@@ -120,6 +122,47 @@ public class GlobalExceptionHandler {
      * Không có handler này thì lỗi rơi xuống chốt cuối và client nhận "Đã có lỗi xảy ra" — người
      * gọi API không có cách nào biết mình chỉ dùng sai động từ.
      */
+    /**
+     * Tham số sai kiểu — ví dụ chỗ chờ UUID lại nhận chuỗi thường.
+     *
+     * <h3>404 hay 400 tuỳ tham số nằm ở ĐÂU</h3>
+     * Không có handler này thì mọi trường hợp rơi xuống chốt cuối và trả <b>500 "Đã có lỗi xảy ra"</b>
+     * — client không phân biệt được mình gõ sai với server hỏng, còn log thì đầy stack trace của
+     * những lần gõ sai địa chỉ.
+     *
+     * <ul>
+     *   <li><b>Biến đường dẫn → 404.</b> {@code GET /attempts/me} khớp route {@code /attempts/{id}}
+     *       với {@code id="me"}, và "me" không phải UUID. Nhìn từ phía client thì <i>cả đường dẫn</i>
+     *       không trỏ tới tài nguyên nào — đúng nghĩa 404, và cùng cách trả lời với một id đúng định
+     *       dạng nhưng không tồn tại. Trả 400 ở đây sẽ tiết lộ rằng route có tồn tại và chỉ sai định
+     *       dạng, tức nói nhiều hơn cần thiết.</li>
+     *   <li><b>Tham số truy vấn hay biểu mẫu → 400.</b> Ở đó địa chỉ đúng, chỉ dữ liệu vào sai
+     *       ({@code ?page=abc}), nên người gọi cần biết chính xác trường nào hỏng để sửa.</li>
+     * </ul>
+     *
+     * Ghi log mức {@code debug}: gõ sai địa chỉ là chuyện thường của Internet, không phải sự kiện cần
+     * ai đọc — đẩy lên {@code warn} thì mức đó loãng đi đúng bằng lượng bot quét đường dẫn.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                       HttpServletRequest request) {
+        String traceId = newTraceId();
+        boolean laBienDuongDan = ex.getParameter().hasParameterAnnotation(PathVariable.class);
+
+        log.debug("[{}] {} {} → tham số '{}' sai kiểu", traceId, request.getMethod(),
+                request.getRequestURI(), ex.getName());
+
+        if (laBienDuongDan) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(
+                    404, "Not Found", "Không tìm thấy tài nguyên", request.getRequestURI(), traceId));
+        }
+
+        return ResponseEntity.badRequest().body(ApiError.of(
+                400, "Bad Request",
+                "Giá trị của tham số '" + ex.getName() + "' không hợp lệ",
+                request.getRequestURI(), traceId));
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiError> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex,
                                                            HttpServletRequest request) {
