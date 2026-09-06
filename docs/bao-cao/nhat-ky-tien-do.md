@@ -50,7 +50,7 @@
 | 21/08 | **Người học không đổi được ảnh đại diện (403)** — tách đường tải riêng, mỗi người một file · dọn phòng chờ: bỏ IP dưới QR, cho "sẵn sàng" có hậu quả — 578 test BE / 67 FE | 2/2 | 🟢 xong |
 | 04/09 | **Trợ lý học tập vô dụng với người học đơn lẻ** — mở quyền nạp học liệu cho Learner (tách `MaterialController`, trần 10 tài liệu) · kho rỗng thì không gọi mô hình · 2 ca test cũ khẳng định luật đã hết hạn | 6/6 | 🟢 xong — do người dùng chỉ ra |
 | 05/09 | **Modern Soft UI cho toàn bộ giao diện** — đổi ở tầng token nên cả trăm màn hình theo cùng lúc · nút chính sang tím · 3 lỗi người dùng chỉ ra + 3 lỗi tự phát hiện khi đo | 7/7 | 🟢 xong — 6 lỗi, 3 do người dùng chỉ ra |
-| 06/09 | **Bảy lỗ hổng lộ ra từ những câu hỏi ngắn của người dùng** — bế tắc không tạo được admin đầu tiên · đường dẫn sai trả 500 · người học bị mời làm việc bị 403 · không đổi được vai trò · phiên đăng nhập không tắt được · 6/37 biến môi trường không ai biết · người soạn đề không biết cú pháp công thức | 8/8 | 🟢 xong — hầu hết do người dùng hỏi mà ra |
+| 06/09 | **Bảy lỗ hổng lộ ra từ những câu hỏi ngắn của người dùng** — bế tắc không tạo được admin đầu tiên · đường dẫn sai trả 500 · người học bị mời làm việc bị 403 · không đổi được vai trò · phiên đăng nhập không tắt được · 6/37 biến môi trường không ai biết · người soạn đề không biết cú pháp công thức · **nạp dữ liệu ba nguồn**: 6→19 quiz, 25→151 câu, 13→45 người dùng | 9/9 | 🟢 xong — hầu hết do người dùng hỏi mà ra |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -3794,6 +3794,30 @@ ra một lỗ mà không phép kiểm nào bắt được.
 thấy**, không chỉ endpoint vừa mở. Ba trong bảy lỗ trên đều là phần bỏ sót của lần mở quyền nạp học
 liệu cho người học hôm 04/09.
 
+### Phần hai trong ngày — nạp dữ liệu, từ 6 quiz lên 19
+
+Câu hỏi tiếp theo: *"có cách nào để cào dữ liệu về không, hiện tại web đang ít bản ghi quá"*. Trả lời:
+có, nhưng **không cào**. Ba loại dữ liệu khác nhau cần ba nguồn khác nhau, và không nguồn nào là parser
+HTML tự chế.
+
+| Nguồn | Nạp gì | Vì sao chọn nguồn đó |
+|---|---|---|
+| **Open Trivia DB** — `scripts/seed-them.mjs` | câu hỏi tiếng Anh, sẵn danh mục / độ khó / loại câu | API công khai, dữ liệu **đã có cấu trúc**. Cào web cho một bản demo là vừa mất công dựng parser vừa vướng bản quyền |
+| **Giả lập hành vi** — cùng tệp | 30 người học, ~200 lượt làm bài, mỗi người mạnh/yếu chủ đề khác nhau | Bảng xếp hạng và gợi ý Neo4j **vô nghĩa nếu dữ liệu đồng đều**. Phải có người giỏi Toán kém Sử thì `WEAK_IN` mới sinh ra gợi ý khác nhau giữa hai tài khoản |
+| **Chính module AI của dự án** — `scripts/seed-ai.mjs` | 5 bộ đề **tiếng Việt**, 46 câu | Vừa là dữ liệu, vừa là **phép thử đầu-cuối** của trụ cột sinh đề |
+
+Đo trên hệ đang chạy sau khi nạp: quiz **6 → 19**, câu hỏi **25 → 151**, người dùng **13 → 45**, lượt
+làm bài **37 → 233**, và 220 dòng `ai_request_logs` cho trang giám sát chi phí.
+
+**Vì sao `seed-ai.mjs` đi qua API của dự án chứ không gọi thẳng Gemini.** Gọi thẳng nhà cung cấp thì
+sinh ra dữ liệu *trông giống* dữ liệu thật nhưng thiếu đúng những thứ làm nó thật: không qua
+`AiOrchestrator` (mất đường dự phòng Gemini→Groq), không qua bộ kiểm hợp lệ JSON, không qua **bước
+duyệt của con người**, không ghi `ai_request_logs`. Đi đường vòng thì mỗi bộ đề là một lượt chạy thật
+của tính năng — và 4/5 bộ **bị Gemini chặn hạn mức 3–36 giây rồi tự vượt qua** mà không cần ai can
+thiệp, tức có bằng chứng chạy thật cho cơ chế thử lại chứ không chỉ có test.
+
+Công thức trong đề AI sinh cũng ra đúng dạng đã sửa hôm 05/09: `$y = (3x^2 + 2x)(\sin x)$`.
+
 ### Vướng mắc
 
 - **Thử tay bắt được lỗi mà 13 phép kiểm bỏ qua.** Hàm khoanh vùng công thức xanh hết, nhưng mọi ca
@@ -3807,6 +3831,18 @@ liệu cho người học hôm 04/09.
 - **Xoá nhầm hai mục tài liệu.** Bản viết lại mục 4 hôm 05/09 thay nguyên khối từ `## 4` tới `### 4.1`,
   mà hai mục 4.5/4.6 lại nằm đúng trong đó. Không có gì báo; chỉ phát hiện khi tình cờ sửa lại tài liệu
   hôm sau. Đã lấy nguyên văn từ commit cũ.
+- **`&deg;` sống sót qua bảng giải mã thực thể HTML tự viết** — ngay lượt nạp đầu tiên, câu hỏi hiện
+  ra `100&deg;C`. Cách sửa không phải bổ sung thêm một dòng vào bảng tra mà là bỏ hẳn cả lớp vấn đề:
+  Open Trivia DB có tham số `encode=base64`, giải mã base64 thì không còn thực thể nào để sót.
+- **`seed-ai.mjs` hỏi `/ai/status` trước khi đăng nhập** → 401. Không tốn hạn mức AI nào, nhưng thông
+  báo "cần đăng nhập" đọc lên **giống lỗi cấu hình AI**, dẫn người chạy script đi tìm nhầm chỗ. Đã đảo
+  thứ tự và ghi lý do ngay tại dòng đó.
+- **Một câu hỏi thật bị ghi đè bởi chính lần thử tay hôm trước.** Lúc kiểm chứng công thức trong đề AI
+  sinh mới phát hiện câu *"Đạo hàm của hàm số $y = 2^{x^2 - x}$ là:"* đã thành `$y = x^2$` từ 18:23
+  hôm 05/09 — lần thử màn xem trước công thức bấm **Lưu** thay vì Huỷ, trong khi bốn lựa chọn vẫn là
+  đáp án của đề gốc. Đề hỏi một đằng, đáp án một nẻo, và **không có gì báo**. Đã khôi phục nội dung
+  lẫn lựa chọn bị sửa; cờ đáp án đúng vẫn nguyên vị trí. Bài học về quy trình: bảo người dùng gõ thử
+  vào một bản ghi **thật** là mời một lỗi dữ liệu; thử nghiệm phải diễn ra trên bản ghi tạo riêng.
 
 ### Ghi chú báo cáo
 
@@ -3820,6 +3856,12 @@ liệu cho người học hôm 04/09.
 - **Mục 3.4:** thêm hai phép kiểm chặn **cả lớp lỗi** thay vì một trường hợp — `BienMoiTruongCoTaiLieu`
   (quét `${VAR}` trong application.yml, đòi có trong `.env.example`) và ca "`.env.example` không chứa
   secret". Cả hai đều đã **kiểm ngược**: cố tình đưa lỗi trở lại thì test đỏ và chỉ đúng chỗ.
+- **Mục 3.1 + Tài liệu tham khảo:** nguồn dữ liệu mẫu là **Open Trivia DB** (`opentdb.com`, giấy phép
+  CC BY-SA 4.0) — phải trích dẫn, không được để như dữ liệu tự có.
+- **Mục 3.6 (độ chính xác AI):** lượt nạp này cho số liệu đầu tiên đo trên hệ thật — 5/5 bộ đề sinh
+  thành công, 46/50 câu qua bộ kiểm hợp lệ, 4/5 bộ gặp chặn hạn mức và tự vượt qua trong 3–36 giây.
+  Vẫn **chưa phải** số liệu chính thức của mục 3.6: mới đo tỉ lệ sinh được, chưa chấm đúng/sai nội
+  dung. Ghi rõ để không nhầm hai thứ với nhau.
 
 ---
 
