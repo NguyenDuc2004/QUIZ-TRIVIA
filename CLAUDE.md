@@ -75,6 +75,8 @@ cd frontend && npm run dev            # chạy FE (http://localhost:5173)
 cd frontend && npm test               # chạy test FE (vitest, chạy một lượt rồi thoát)
 cd frontend && npm run build          # oxlint + tsc -b + vite build — CHẠY CẢ LỆNH NÀY sau khi đổi cấu hình
 node scripts/seed-demo.mjs            # nạp dữ liệu demo (cần BE đang chạy); chạy lại không nhân đôi
+node scripts/seed-them.mjs            # nạp THÊM khối lượng: câu hỏi Open Trivia DB + 30 người học,
+                                      # ~200 lượt làm bài. Cần cho bảng xếp hạng và gợi ý Neo4j
 ```
 
 > **`npm run build` chạy `oxlint` trước khi biên dịch.** Luật `react/rules-of-hooks` đã bật từ đầu và bắt
