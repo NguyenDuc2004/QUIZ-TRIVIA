@@ -390,7 +390,7 @@ màu tiêu đề; nền giữ trắng vì bên trong có ô chọn và ô nhập
 người đặt hệ điều hành ở chế độ giảm chuyển động — một biểu tượng nhấp nháy liên tục là thứ gây khó chịu
 thật, và đó là trang người học mở thường xuyên.
 
-## 4.2. Màn hình hẹp
+### 4.2. Màn hình hẹp
 
 **Điện thoại là thiết bị chính, không phải thiết bị phụ.** Kịch bản dùng chính của phòng đấu là quét mã QR
 trong lớp học — người chơi vào bằng điện thoại, chủ phòng chiếu máy chiếu. Một giao diện chỉ chạy tốt trên
@@ -450,7 +450,7 @@ Khung ngoài có thêm `overflow-x-clip` làm **chốt cuối**, không phải g
 `hidden`: `overflow-hidden` biến phần tử thành khối cuộn và làm hỏng `position: sticky` của thanh điều
 hướng ngay bên trong.
 
-## 4.3. Bảng danh sách
+### 4.3. Bảng danh sách
 
 **Cột thao tác: một hành động chính, phần còn lại vào menu ba chấm** (`RowActions`).
 
@@ -483,7 +483,45 @@ tử đó giờ là một mục trong menu — menu đóng ngay khi bấm nên h
 **Hàng bảng** có `padding` dọc 14px thay cho mặc định: nhiều bảng ở đây có ô hai dòng (nội dung + dòng
 phụ), nên hàng dính sát nhau và khó dò theo hàng ngang.
 
-## 4.4. Công thức toán — `<MathText>`
+### 4.4. Công thức toán — `<MathText>`
+
+### Người viết phải BIẾT là có cú pháp đó
+
+Luật "không tự đoán" chỉ công bằng nếu người viết **biết cách tự đánh dấu**. Trước 06/09/2026 không có
+gì trong màn soạn câu hỏi nhắc tới `$...$`, nên một giáo viên gõ `y = x^2` sẽ mãi gõ như vậy và không
+hiểu vì sao đề của mình trông thô hơn đề AI sinh.
+
+`<XemTruocCongThuc>` đặt dưới ô nội dung và dưới mỗi lựa chọn:
+
+| Trạng thái | Hiện gì |
+|---|---|
+| Đã có `$...$` | **Xem trước** công thức đã dựng, để người viết kiểm lại cú pháp |
+| Có `^` hoặc lệnh LaTeX viết trần | Một dòng **gợi ý** cú pháp, kèm ví dụ |
+| Chữ thường | **Không hiện gì** |
+
+Kèm nút **"Bọc thành công thức"**: bấm một cái là nó chèn `$...$` quanh đoạn trông giống toán. Người
+viết thấy dấu `$` hiện ra trong chính ô mình đang gõ và thấy kết quả ở hộp xem trước — đoán sai thì xoá
+hai dấu đô la là xong.
+
+Khoanh vùng theo hai bước, và bước thứ hai mới là bước khó:
+
+1. **Theo ký tự** — chữ cái tiếng Việt có dấu (`à`, `ố`) không thuộc tập ký tự toán, nên chúng tự cắt
+   biên. `Đạo hàm của hàm số y = x^2 là:` tự đứt ở `số` và `là`.
+2. **Theo từ** — tiếng Việt có rất nhiều từ **không dấu** (`khi`, `cho`, `tam`, `va`), và xét theo ký
+   tự thì chúng giống hệt biến số. Xét theo từ thì phân biệt được: biến trong đề phổ thông gần như luôn
+   là **một** chữ cái, còn từ tiếng Việt từ hai chữ trở lên. Có danh sách trắng cho tên hàm (`ln`,
+   `log`, `sin`…) — thiếu nó thì đáp án của mọi câu đạo hàm hàm mũ bị cắt ngay trước `ln`.
+
+Bước 2 do **thử tay bắt được**, không phải nghĩ ra trước: bộ kiểm ban đầu chỉ có câu chứa chữ có dấu
+nên xanh hết mà vẫn sai. Hai ca đó đã thành phép kiểm.
+
+**Chỗ này ĐOÁN — và đoán được, vì nó chỉ đề nghị chứ không sửa.** Đoán sai thì người viết bỏ qua một
+dòng chữ; đoán sai lúc tự đổi nội dung thì họ mất chữ. Hai việc khác hẳn nhau về hậu quả nên chịu được
+hai mức chắc chắn khác nhau.
+
+Bắt **hẹp**: chỉ `^` và lệnh LaTeX, **không** bắt `/` hay `*` — chúng đầy trong câu chữ bình thường
+("km/h", "và/hoặc"), và một gợi ý nhảy ra sai chỗ vài lần là người dùng thôi đọc nó. Chữ thường thì im
+lặng hẳn: một dòng nhắc thường trực ở mọi câu hỏi sẽ bị đọc lướt qua ngay từ câu thứ ba.
 
 **Chỉ dựng ở nội dung do HỆ THỐNG hoặc NGƯỜI RA ĐỀ viết, không dựng ở chữ người dùng vừa gõ.** Mô
 hình và người soạn đề được dặn dùng `$...$` nên với họ dấu `$` là mốc có chủ ý; người học gõ tự do,
@@ -506,6 +544,72 @@ sau **và** phần ở giữa không rỗng. `100$$ một tháng` giữ đủ ha
 
 **Prompt sinh đề đã được cập nhật** để mô hình xuất LaTeX trong `$...$`. Câu hỏi tạo trước thay đổi này
 vẫn là chữ thường và hiện nguyên xi — đúng như thiết kế, vì hệ thống không tự suy diễn.
+
+### 4.5. Bề ngang vùng nội dung
+
+Mặc định **72rem (1152px)**, và lề trống hai bên trên màn rộng là **cố ý**: nó giữ lưới thẻ ở 4 cột và
+giữ dòng chữ đủ ngắn để mắt không phải quét ngang cả gang tay. Kéo hết bề ngang thì được cái đầy, mất
+cái đọc được.
+
+**Không lấp lề bằng nội dung phụ.** Bảng xếp hạng phụ, "chủ đề thịnh hành", số lượt xem — hoặc trùng
+với thứ đã có, hoặc phải **bịa dữ liệu**, thứ mục 7 cấm rõ.
+
+**Ngoại lệ: trang có bảng dày** khai thêm lớp `trang-rong` để nới lên 90rem. Ở đó thứ quyết định không
+còn là độ dài dòng chữ mà là quét theo hàng ngang, và các bảng này đặt `scroll={{ x: 'max-content' }}`
+— thiếu chỗ thì bảng **cuộn ngang bên trong khung**, tức người dùng phải kéo để xem cột cuối ngay cạnh
+một vùng trống rộng bằng nửa cái bảng.
+
+Sáu trang đang dùng: Học liệu · Quiz của tôi · Ngân hàng câu hỏi · Thống kê quiz · Lịch sử làm bài ·
+Kết quả bài tập. Khu quản trị vốn đã full-width nên không thuộc diện này.
+
+**Dùng `:has()` chứ không một danh sách route trong `AppLayout`.** Danh sách route đặt quyết định về bề
+ngang của một trang ở một tệp khác hẳn trang đó; thêm trang mới nghĩa là phải *nhớ ra* có cái danh sách
+ấy, và người quên không nhận được tín hiệu nào. Với `:has()`, trang tự khai bằng một lớp trên chính nó
+— quyết định nằm cạnh thứ nó nói về. Trình duyệt quá cũ không hiểu thì bỏ qua luật và trang giữ bề
+ngang mặc định: hỏng về phía an toàn, không vỡ bố cục.
+
+### 4.6. Màn hội thoại: chỉ khung chat cuộn
+
+Trang Trợ lý ràng chiều cao bằng `.chat-trang` (`calc(100dvh - 136px)`, chỉ từ `lg`), rồi để **mỗi
+khối tự cuộn trong lòng nó**. Bản trước để khối chat `min-h-[60vh]` nên nó phình theo số tin nhắn và
+thứ cuộn là *cả trang*: đọc tới câu trả lời thứ ba thì tiêu đề và cột học liệu đã trôi mất, muốn đổi
+tài liệu phải cuộn ngược lên.
+
+Ba điều dễ sai khi dựng kiểu bố cục này:
+
+1. **`min-h-0` phải có ở MỌI mắt xích** từ khung ngoài tới vùng cuộn. Mặc định `min-height` của flex/
+   grid item là `auto` — nó nở đúng bằng nội dung và không bao giờ nhỏ hơn để mà phải cuộn. CSS không
+   báo gì; nó chỉ lặng lẽ cuộn cả trang.
+2. **Không bọc bằng `<Space>`.** `Space` đặt mỗi phần tử con vào một `.ant-space-item` riêng, nên
+   `flex-1` áp vào cái bọc chứ không tới được phần tử thật.
+3. **Chỉ áp từ `lg`.** Dưới ngưỡng đó bố cục xếp dọc; nhồi ba vùng cuộn vào màn hình điện thoại thì
+   mỗi vùng còn vài dòng, để cả trang cuộn như thường là đúng hơn.
+
+Con số 136px = 72px thanh điều hướng (token `Layout.headerHeight`) + 64px đệm dọc của `Content`.
+`dvh` chứ không `vh`: trên trình duyệt điện thoại `vh` tính theo khung lúc thanh địa chỉ ẩn, nên đáy
+trang — đúng chỗ đặt ô nhập — bị đẩy khỏi vùng nhìn thấy.
+
+**Ô nhập trong khung nổi phải tắt viền và vòng focus của Ant Design ở mọi trạng thái**, và thắng bằng
+cách thêm tên thẻ vào bộ chọn (`textarea.ant-input:focus` = (0,2,1)) chứ **không** bằng `!important`.
+AntD v6 sinh CSS lúc chạy và chèn sau tệp của dự án, nên bằng điểm đặc hiệu là nó thắng nhờ đứng sau;
+còn `!important` thì từng thắng đúng luật rồi làm vỡ bố cục nội bộ của `Input.Search` (§4.2). Dấu
+hiệu focus không mất — nó chuyển ra viền của cả khung qua `:focus-within`.
+
+### 4.7. Cột phụ: nền chìm thay cho lưới viền
+
+Cột danh sách đứng cạnh một khung nội dung chính (danh sách hội thoại, danh sách học liệu ở màn Trợ
+lý) dùng **một nền `--color-surface-subtle` bo 12px, không kẻ viền quanh từng khối và từng dòng**.
+
+Bản đầu của màn Trợ lý kẻ viền đủ cả hai: viền quanh khối, viền dưới mỗi dòng, viền quanh khung chat.
+Kết quả là một bàn cờ — mắt phải bỏ qua hàng chục đường kẻ mới đọc được tên hội thoại, trong khi thứ
+duy nhất cần phân biệt là "cột phụ" với "nội dung chính". Một nền chìm làm đúng việc đó mà không thêm
+đường nào.
+
+**Thao tác phá hoại trong danh sách kiểu này ẩn cho tới khi rê chuột** (`.chat-rail-xoa`) — nhưng ẩn
+bằng `opacity`, không bằng `display: none`, và phải hiện lại ở `:focus-within`. Phần tử ẩn bằng
+`display` không nhận được focus bàn phím, nên người dùng bàn phím sẽ Tab tới một nút vô hình mà không
+có cách nào biết mình đang đứng ở đâu. Trên thiết bị chạm (`@media (hover: none)`) nút luôn hiện: ở đó
+`:hover` hoặc không bao giờ đúng, hoặc dính lại sau khi chạm.
 
 ## 5. Nút
 
@@ -545,6 +649,27 @@ hành động đó là chính, dù thẻ nằm trong lưới bốn thẻ.
 | "Mở phòng đấu trí" ở trang giới thiệu quiz → **mặc định** | Primary — nó là lựa chọn *thay thế* cho "Bắt đầu làm bài" ngay phía trên, hai primary trong một khối thì không còn cái nào là chính |
 
 ## 6. Component dùng chung (bắt buộc dùng lại, không tự vẽ)
+
+### Ảnh bìa quiz — luôn dùng `QuizCover`
+
+**Không tự dựng khối bìa.** Mọi chỗ quiz xuất hiện đều gọi `QuizCover`: lưới Khám phá, thẻ gợi ý,
+trang giới thiệu quiz, ảnh nhỏ trong bảng "Quiz của tôi". Chỉ đổi `coIcon` (`lon` 72px / `vua` 54px /
+`nho` 18px) theo bề ngang chỗ đặt — **khuôn thì không đổi**.
+
+Trước đó mỗi trang tự dựng, và chúng trôi khỏi nhau: ảnh nhỏ trong bảng dùng tỉ lệ 16:10, trang giới
+thiệu **không vẽ gì** khi quiz chưa có ảnh, còn thẻ có ảnh thật thì cao hơn thẻ vẽ gradient ~40px.
+Quy ước *"một quiz phải trông như chính nó ở mọi chỗ"* đã nằm trong chú thích từ lâu — nhưng quy ước
+chỉ nằm trong lời văn thì nó bị phá ở trang thứ tư.
+
+**Bẫy đã sập một lần, ghi lại để không sập nữa:** ảnh bên trong khuôn `aspect-video` phải
+`absolute inset-0`, **không** `h-full`. `height: 100%` phân giải theo chiều cao khối chứa, mà chiều
+cao đó do `aspect-ratio` suy ra từ bề ngang nên nó là `auto` — phần trăm không phân giải được, ảnh rơi
+về chiều cao gốc của tệp và **kéo khuôn phình theo**. Khối gradient không có con nào nên nó giữ đúng
+16:9, và hai thứ lệch nhau. `absolute` đo theo hộp của phần tử định vị gần nhất — một giá trị xác định
+— nên ảnh không tác động được tới khuôn.
+
+Đó cũng là điều kiện để câu *"mọi ảnh bìa bằng nhau"* đúng với **mọi tệp người dùng tải lên**, dù nó
+vuông, dọc hay siêu rộng: `object-cover` cắt cho vừa khuôn thay vì bắt khuôn giãn theo ảnh.
 
 | Component | Ở đâu | Dùng khi |
 |---|---|---|

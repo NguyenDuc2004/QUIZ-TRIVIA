@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Alert, Button, Form, Input, Typography } from 'antd'
+import { Alert, Button, Checkbox, Form, Input, Typography } from 'antd'
 import GoogleLoginButton from '../components/GoogleLoginButton'
 import { useLogin } from '../hooks/useAuthMutations'
+import { emailDaLuu } from '../emailDaLuu'
 import { loginSchema, type LoginForm } from '../schema'
 import ThemeToggle from '@/shared/components/ThemeToggle'
 
@@ -12,6 +14,7 @@ const { Title, Paragraph } = Typography
 /** Trang đăng nhập — khối giữa trang, viền mảnh, nút đen full-width (docs/ui-design-system.md). */
 export default function LoginPage() {
   const login = useLogin()
+  const [ghiNho, setGhiNho] = useState(true)
   // `?expired=1` do axios interceptor gắn khi phiên hết hạn. Bị đưa về đây mà không được nói vì sao
   // thì người dùng tưởng hệ thống lỗi — nhất là khi họ đang làm dở việc gì.
   const [searchParams] = useSearchParams()
@@ -22,7 +25,8 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    // Điền sẵn email của lần trước. Mật khẩu luôn để trống — nó là việc của trình duyệt.
+    defaultValues: { email: emailDaLuu.doc(), password: '' },
   })
 
   return (
@@ -60,7 +64,7 @@ export default function LoginPage() {
         )}
 
         {/* Validation do React Hook Form + Zod đảm nhiệm, antd chỉ lo phần hiển thị */}
-        <Form layout="vertical" onFinish={handleSubmit((values) => login.mutate(values))}>
+        <Form layout="vertical" onFinish={handleSubmit((values) => login.mutate({ ...values, ghiNho }))}>
           <Form.Item
             label={<span className="font-bold">Email</span>}
             validateStatus={errors.email && 'error'}
@@ -94,11 +98,22 @@ export default function LoginPage() {
             />
           </Form.Item>
 
-          <div className="mb-3 text-right">
+          {/* Mặc định TICK — giữ nguyên hành vi đã có trước khi thêm ô này, và đó cũng là điều
+              phần lớn người dùng muốn trên máy riêng. Bỏ tick là lựa chọn có ý thức cho máy chung. */}
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <Checkbox checked={ghiNho} onChange={(e) => setGhiNho(e.target.checked)}>
+              Ghi nhớ đăng nhập
+            </Checkbox>
             <Link to="/forgot-password" className="text-sm font-bold">
               Quên mật khẩu?
             </Link>
           </div>
+
+          {!ghiNho && (
+            <Paragraph className="text-ink-soft mb-3! text-xs">
+              Đóng trình duyệt là bạn phải đăng nhập lại. Chọn cách này khi dùng máy chung.
+            </Paragraph>
+          )}
 
           <Button type="primary" htmlType="submit" size="large" block loading={login.isPending}>
             Đăng nhập

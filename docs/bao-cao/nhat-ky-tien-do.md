@@ -50,6 +50,7 @@
 | 21/08 | **Người học không đổi được ảnh đại diện (403)** — tách đường tải riêng, mỗi người một file · dọn phòng chờ: bỏ IP dưới QR, cho "sẵn sàng" có hậu quả — 578 test BE / 67 FE | 2/2 | 🟢 xong |
 | 04/09 | **Trợ lý học tập vô dụng với người học đơn lẻ** — mở quyền nạp học liệu cho Learner (tách `MaterialController`, trần 10 tài liệu) · kho rỗng thì không gọi mô hình · 2 ca test cũ khẳng định luật đã hết hạn | 6/6 | 🟢 xong — do người dùng chỉ ra |
 | 05/09 | **Modern Soft UI cho toàn bộ giao diện** — đổi ở tầng token nên cả trăm màn hình theo cùng lúc · nút chính sang tím · 3 lỗi người dùng chỉ ra + 3 lỗi tự phát hiện khi đo | 7/7 | 🟢 xong — 6 lỗi, 3 do người dùng chỉ ra |
+| 06/09 | **Bảy lỗ hổng lộ ra từ những câu hỏi ngắn của người dùng** — bế tắc không tạo được admin đầu tiên · đường dẫn sai trả 500 · người học bị mời làm việc bị 403 · không đổi được vai trò · phiên đăng nhập không tắt được · 6/37 biến môi trường không ai biết · người soạn đề không biết cú pháp công thức | 8/8 | 🟢 xong — hầu hết do người dùng hỏi mà ra |
 
 > 🔴 chưa bắt đầu · 🟡 đang làm · 🟢 xong · 🔵 nghỉ/đệm
 
@@ -3768,6 +3769,57 @@ một lựa chọn thiết kế*. Nó chỉ lộ ra khi có một chỗ lệch *
 - **Mục 3.3 (giao diện):** ba chỗ cố ý không làm theo yêu cầu ở bảng trên là dẫn chứng cho ý *quy ước
   giao diện phải bám vào hệ quả kỹ thuật, không bám vào thị hiếu* — nhất là chuyện giữ lại viền vì
   `forced-colors` loại bỏ bóng đổ.
+
+---
+
+## 📅 CN — 06/09/2026 — Bảy lỗ hổng, phần lớn lộ ra từ một câu hỏi ngắn
+
+**Mục tiêu hôm nay:** không có mục tiêu định trước. Người dùng dùng thật rồi hỏi, và mỗi câu hỏi kéo
+ra một lỗ mà không phép kiểm nào bắt được.
+
+### Đã làm được
+
+| Câu hỏi của người dùng | Lỗ thật nằm ở đâu |
+|---|---|
+| *"tạo cho tôi 1 tài khoản admin"* | **Không có đường nào tạo admin đầu tiên.** Tự đăng ký ADMIN bị hạ xuống LEARNER, còn đổi vai trò thì phải là admin — hai luật khoá lẫn nhau trên CSDL mới. Cách duy nhất là gõ tay `UPDATE users SET role='ADMIN'` |
+| *(khi tra lỗi trên)* | **Đường dẫn không tồn tại trả 500** kèm stack trace mức ERROR. Handler `NoHandlerFoundException` có sẵn nhưng là **nhánh chết** — Spring Boot 3 ném `NoResourceFoundException`, một kiểu khác hẳn |
+| *"người học thì ẩn nút sinh đề AI đi được không"* | Thấy **một** chỗ, rà ra **ba**. Nặng nhất không phải cái nút: `GET /ai/status` trả 403 với người học, nên trang Học liệu của họ **không bao giờ** hiện được cảnh báo "chưa cấu hình API key" — tệp dừng ở trạng thái Lỗi mà không có lý do |
+| *"nếu người dùng yêu cầu lên role creator thì sao"* | Câu trả lời đúng **không phải** dựng hàng chờ duyệt: màn đăng ký vốn đã cho tự chọn CREATOR. Bất đối xứng là người mới lấy miễn phí còn người đã có tài khoản thì bế tắc — nó phạt đúng người dùng lâu năm |
+| *"có nên đặt hạn mức không nhỉ"* | Chưa nên (17 lượt/ngày, đặt 20 là chặn chính mình). Nhưng tra ra **6/37 biến môi trường không có trong `.env.example`** — trong đó `UPLOAD_DIR` mặc định là đường dẫn tương đối, triển khai container là mất sạch ảnh người dùng |
+| *"có chức năng ghi nhớ mật khẩu không"* | Token luôn vào `localStorage`, tức "ghi nhớ" **bật vĩnh viễn** không có ô nào tắt. Sinh viên đăng nhập ở máy thư viện, đóng trình duyệt đi về, tài khoản còn mở 14 ngày |
+| *"mấy phép tính này không hiện hẳn hoi được hả"* | Bốn câu đó là dữ liệu cũ. Lỗ thật: **người soạn đề bằng tay không có cách nào biết `$...$` tồn tại** |
+| *"2 bên sidebar đang trống có nên thêm gì không"* | Không nên lấp. Nhưng trang có bảng dày đang **cuộn ngang bên trong khung** trong khi hai bên còn 740px trống |
+
+**Một chủ đề chạy suốt cả ngày: mở quyền cho một vai trò thì phải rà lại MỌI THỨ vai trò đó nhìn
+thấy**, không chỉ endpoint vừa mở. Ba trong bảy lỗ trên đều là phần bỏ sót của lần mở quyền nạp học
+liệu cho người học hôm 04/09.
+
+### Vướng mắc
+
+- **Thử tay bắt được lỗi mà 13 phép kiểm bỏ qua.** Hàm khoanh vùng công thức xanh hết, nhưng mọi ca
+  kiểm đều dùng câu có **chữ mang dấu** — mà dấu chính là thứ cắt biên giúp. Chạy thử 8 câu thật thì
+  hai câu sai ngay: `khi`, `tam`, `Cho` (từ tiếng Việt **không dấu**) bị hút vào công thức và dựng
+  thành ký hiệu nghiêng giữa câu. Bài học: *test đúng cái mình đã nghĩ tới thì nó xanh, và cái mình
+  chưa nghĩ tới vẫn nguyên đó.*
+- **Bẫy `\f` trong text block Java cắn lần thứ tư**, lần này ngay trong đoạn văn viết **về chính nó**
+  — dấu chéo bị co lại nên nhật ký in ra ký tự form-feed thay vì chữ, và regex trong script kiểm tra
+  thành neo đầu/cuối dòng. Từ đây dùng `chr(92)` để không viết dấu chéo trong lệnh.
+- **Xoá nhầm hai mục tài liệu.** Bản viết lại mục 4 hôm 05/09 thay nguyên khối từ `## 4` tới `### 4.1`,
+  mà hai mục 4.5/4.6 lại nằm đúng trong đó. Không có gì báo; chỉ phát hiện khi tình cờ sửa lại tài liệu
+  hôm sau. Đã lấy nguyên văn từ commit cũ.
+
+### Ghi chú báo cáo
+
+- **Mục 2.3 (phi chức năng) / 3.4:** ngày này là ví dụ tập trung nhất cho ý *lỗ hổng nguy hiểm nhất là
+  lỗ không làm gì đỏ cả*. Bảy lỗ, không lỗ nào làm test đỏ, không lỗ nào ném lỗi lúc chạy — chúng chỉ
+  lộ ra khi có người **dùng thật rồi hỏi một câu**.
+- **Mục 2.3 (bảo mật):** cặp "admin đầu tiên" và "tự đổi vai trò" cho một lập luận hoàn chỉnh về ranh
+  giới an ninh: ADMIN là ranh giới thật nên khoá cả hai đầu và bootstrap bằng biến môi trường (không
+  seed bằng Flyway vì đó là **commit mật khẩu quản trị vào repo**); CREATOR không phải ranh giới nên
+  hàng chờ duyệt ở đó chỉ là thủ tục hình thức.
+- **Mục 3.4:** thêm hai phép kiểm chặn **cả lớp lỗi** thay vì một trường hợp — `BienMoiTruongCoTaiLieu`
+  (quét `${VAR}` trong application.yml, đòi có trong `.env.example`) và ca "`.env.example` không chứa
+  secret". Cả hai đều đã **kiểm ngược**: cố tình đưa lỗi trở lại thì test đỏ và chỉ đúng chỗ.
 
 ---
 

@@ -10,6 +10,7 @@ POST   /api/v1/auth/refresh         Làm mới token (rotation: token cũ bị t
 POST   /api/v1/auth/logout          Đăng xuất → 204, thu hồi refresh token          ✅
 POST   /api/v1/auth/logout-all       Đăng xuất mọi thiết bị (mất máy)                ✅
 POST   /api/v1/auth/change-password Đổi mật khẩu (cần đăng nhập) → 204              ✅
+PATCH  /api/v1/auth/my-role         Tự đổi vai trò LEARNER ↔ CREATOR → token MỚI     ✅
 POST   /api/v1/auth/forgot-password Gửi mã OTP đặt lại mật khẩu → 204               ✅
 POST   /api/v1/auth/reset-password  Đặt lại mật khẩu bằng mã OTP → 204              ✅
 POST   /api/v1/auth/google          Đăng nhập/đăng ký bằng Google (ID token) → token  ✅
@@ -315,7 +316,8 @@ PATCH  /api/v1/ai/materials/{id}/shared  Bật/tắt chia sẻ học liệu cho 
 |---|---|---|
 | `GET/POST/DELETE /ai/materials*` | **mọi tài khoản đã đăng nhập** | Người học phải nạp được tài liệu của chính họ, không thì trợ lý học tập chết hẳn với người học đơn lẻ — xem features/08 |
 | `PATCH /ai/materials/{id}/shared` | **CREATOR/ADMIN** | Bật `shared` là đẩy tài liệu vào trợ lý của *mọi* người học: một hành vi xuất bản, và một bề mặt kiểm duyệt |
-| `/ai/generate-questions`, `/ai/jobs/*`, `/ai/status` | **CREATOR/ADMIN** | Công cụ soạn nội dung, giữ nguyên luật cũ |
+| `/ai/generate-questions`, `/ai/jobs/*` | **CREATOR/ADMIN** | Công cụ soạn nội dung, giữ nguyên luật cũ |
+| `GET /ai/status` | **mọi tài khoản đã đăng nhập** | Tách sang `AiStatusController` (05/09/2026). Nó từng trả 403 với người học, nên trang Học liệu của họ **không bao giờ** hiện được cảnh báo "chưa cấu hình API key" — dù việc nạp tài liệu của họ phụ thuộc vào đúng dịch vụ đó. Chỉ lộ "AI có chạy được không" và tên nhà cung cấp; khoá, hạn mức và số liệu dùng vẫn nằm ở khu quản trị |
 
 Học liệu và job là **dữ liệu riêng**: của người khác trả **404**. Mở quyền *nạp* không kéo theo mở
 quyền *đọc* — mọi phương thức của `MaterialService` vẫn đi qua `requireOwned`.

@@ -15,6 +15,8 @@ Cho phép người dùng đăng ký, đăng nhập an toàn và phân quyền tr
 - **FR-2** [M] ✅ Đăng nhập/đăng xuất; Access Token (JWT HS256, 15 phút) + Refresh Token (Redis, 14 ngày, có rotation).
 - **FR-3** [S] ✅ Đăng nhập bằng **Google** (Google Identity Services, luồng ID token).
 - **FR-4** [M] ✅ Quên/đặt lại mật khẩu bằng **mã OTP 6 chữ số gửi qua email** (Gmail SMTP + App Password).
+- **FR-4b** [S] ✅ Người dùng **tự đổi vai trò LEARNER ↔ CREATOR** ở trang Hồ sơ (`PATCH /auth/my-role`), không cần admin duyệt.
+- **FR-4c** [S] ✅ Ô **"Ghi nhớ đăng nhập"** ở màn đăng nhập — bỏ tick thì đóng trình duyệt là hết phiên (dành cho máy chung).
 
 ### Đăng nhập Google — vì sao chọn luồng ID token
 
@@ -60,6 +62,34 @@ Khoá liên kết là `sub` của Google chứ **không phải email** — `sub`
 Tài khoản chỉ-Google không có "mật khẩu hiện tại" để đối chiếu, nên `change-password` trả **400** kèm
 hướng dẫn dùng **Quên mật khẩu** để đặt mật khẩu đầu tiên — đường đó chạy được vì OTP gửi về chính
 hòm thư Google đã xác minh.
+
+### Tự đổi vai trò — vì sao không có hàng chờ duyệt
+
+Câu hỏi tự nhiên: *"người dùng xin lên CREATOR thì duyệt thế nào?"*. Câu trả lời là **không duyệt**, và
+lý do nằm ngay ở mục trên: **đăng ký thường vốn đã cho tự chọn CREATOR**.
+
+Cái bất đối xứng trước 05/09/2026 mới là thứ cần sửa:
+
+| | Trước | Sau |
+|---|---|---|
+| Người **mới** | Chọn CREATOR ngay ở màn đăng ký, không ai duyệt | Không đổi |
+| Người **đã có tài khoản** | **Không có đường nào** — phải nhờ admin | Tự đổi ở trang Hồ sơ |
+
+Nó phạt đúng người dùng lâu năm: ai dùng hệ thống một thời gian rồi mới muốn soạn đề thì bế tắc, còn
+người vừa tới thì lấy CREATOR miễn phí.
+
+**Một hàng chờ duyệt ở đây là thủ tục hình thức.** Ai bị từ chối chỉ việc tạo tài khoản thứ hai trong ba
+mươi giây. Muốn CREATOR thành vai trò được duyệt thật thì phải **bỏ nó khỏi màn đăng ký trước** — thêm
+cửa duyệt mà vẫn để cửa đăng ký mở là dựng một cái chốt trên cánh cửa còn bức tường bên cạnh thì trống.
+
+| Quyết định | Lý do |
+|---|---|
+| Trả về **cặp token mới** | Vai trò nằm *trong* access token. Không cấp lại thì người vừa lên CREATOR bấm menu mới và nhận 403 — đổi vai trò xong mà giao diện nói dối trong 15 phút |
+| **Thu hồi mọi phiên khác** | Chúng đang cầm vai trò cũ. Nguy hiểm nhất là chiều xuống: người vừa về LEARNER vẫn giữ quyền CREATOR trên máy khác cho tới khi token hết hạn |
+| Thiết bị đang thao tác **không bị đá ra** | Nó nhận token mới ngay trong phản hồi |
+| **Đổi được hai chiều** | Đường một chiều thì người ta ngại bấm — và bắt họ nhờ admin để quay lại là dựng lại đúng cái bế tắc vừa gỡ |
+| ADMIN chặn ở **cả hai đầu** | Không đổi *sang* ADMIN; tài khoản *đang là* ADMIN cũng không dùng đường này, nếu không admin cuối cùng có thể tự hạ quyền và không còn ai mở lại được |
+| Giao diện **xoá cache truy vấn** | Cache đang giữ kết quả hỏi theo vai trò cũ; giữ nguyên thì người vừa lên Creator mở trang mới và thấy dữ liệu rỗng đã cache từ lúc còn là người học |
 
 ### Quên mật khẩu qua OTP — bốn lớp bảo vệ
 

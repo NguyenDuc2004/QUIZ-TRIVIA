@@ -5,6 +5,7 @@ import { Alert, Button, Checkbox, Radio, Skeleton, Space, Table, Tag, Typography
 import type { ColumnsType } from 'antd/es/table'
 import { getApiErrorMessage } from '@/shared/api/client'
 import EmptyState from '@/shared/components/EmptyState'
+import QuizCover from '@/features/quiz/components/QuizCover'
 import PageHeader from '@/shared/components/PageHeader'
 import { DIFFICULTY_COLOR, DIFFICULTY_LABEL } from '@/features/quiz/constants'
 import { useQuizSummary } from '@/features/quiz/hooks/useQuizQueries'
@@ -95,13 +96,18 @@ export default function QuizIntroPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="flex flex-col gap-4">
-          {quiz.thumbnailUrl && (
-            <img
-              src={quiz.thumbnailUrl}
-              alt=""
-              className="aspect-video w-full border border-line rounded-card object-cover"
-            />
-          )}
+          {/* Vẽ bìa cả khi quiz CHƯA có ảnh.
+
+              Trước đây chỗ này `{quiz.thumbnailUrl && …}` nên quiz chưa có ảnh thì trang giới thiệu
+              trống hẳn phần đầu — trong khi ở lưới Khám phá chính quiz đó có một khối gradient kèm
+              biểu tượng. Người dùng bấm vào một thẻ có hình rồi tới nơi thấy hình biến mất. */}
+          <QuizCover
+            thumbnailUrl={quiz.thumbnailUrl}
+            categoryName={quiz.categoryName}
+            title={quiz.title}
+            hienNhan
+            className="border border-line rounded-card"
+          />
 
           <div className="soft-panel p-5">
             <Text className="text-ink-soft text-xs font-bold">Giới thiệu</Text>

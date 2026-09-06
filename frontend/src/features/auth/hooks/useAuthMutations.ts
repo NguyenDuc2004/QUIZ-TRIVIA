@@ -4,6 +4,7 @@ import { message } from 'antd'
 import { getApiErrorMessage } from '@/shared/api/client'
 import { tokenStorage } from '@/shared/api/tokenStorage'
 import { authApi, type LoginBody, type RegisterBody, type Role } from '../api/authApi'
+import { emailDaLuu } from '../emailDaLuu'
 import { useAuthStore } from '../store/authStore'
 
 /**
@@ -29,12 +30,19 @@ export function useLogin() {
   const navigate = useNavigate()
 
   return useMutation({
-    mutationFn: (body: LoginBody) => authApi.login(body),
-    onSuccess: (result) => {
+    // `ghiNho` KHÔNG gửi lên server: nó chỉ quyết định phía client lưu token ở đâu. Backend đã cấp
+    // refresh token 14 ngày cho mọi phiên rồi — "không ghi nhớ" nghĩa là máy này quên sớm hơn, chứ
+    // không phải server cấp phiên ngắn hơn.
+    mutationFn: ({ ghiNho: _bo, ...body }: LoginBody & { ghiNho: boolean }) => authApi.login(body),
+    onSuccess: (result, bien) => {
       // Xoá TRƯỚC khi đặt phiên mới: không để tồn tại khoảnh khắc nào mà danh tính đã là người mới
       // trong khi cache vẫn là dữ liệu người cũ
       clearQueryCache(queryClient)
-      setSession(result)
+      setSession(result, bien.ghiNho)
+      // Lưu SAU khi đăng nhập thành công, không lưu lúc đang gõ — nếu không thì nhớ luôn cả email gõ
+      // sai. Dùng email server trả về chứ không phải chuỗi người dùng gõ: backend chuẩn hoá chữ
+      // thường, nên gõ "Ban@Example.com" thì lần sau điền sẵn đúng dạng đã lưu.
+      emailDaLuu.luu(result.user.email, bien.ghiNho)
       message.success(`Xin chào ${result.user.displayName}`)
       navigate('/', { replace: true })
     },
@@ -74,6 +82,35 @@ export function useRegister() {
       navigate('/', { replace: true })
     },
     onError: (error) => message.error(getApiErrorMessage(error, 'Đăng ký thất bại')),
+  })
+}
+
+/**
+ * Tự đổi vai trò giữa Người học và Người tạo nội dung.
+ *
+ * `clearQueryCache` là bắt buộc, không phải cho gọn: cache đang giữ kết quả của những truy vấn hỏi
+ * theo vai trò cũ — danh sách quiz của tôi, học liệu, trạng thái AI. Giữ nguyên thì người vừa lên
+ * Creator mở trang mới và thấy dữ liệu rỗng đã cache từ lúc còn là người học.
+ *
+ * KHÔNG điều hướng đi đâu: người dùng đang ở trang Hồ sơ và vừa bấm một nút ở đó, đá họ sang trang
+ * khác là lấy mất chỗ đứng của họ mà không ai yêu cầu.
+ */
+export function useDoiVaiTro() {
+  const setSession = useAuthStore((state) => state.setSession)
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (role: 'LEARNER' | 'CREATOR') => authApi.doiVaiTro(role),
+    onSuccess: (result) => {
+      clearQueryCache(queryClient)
+      setSession(result)
+      message.success(
+        result.user.role === 'CREATOR'
+          ? 'Bạn đã là Người tạo nội dung — menu Thư viện và Sinh đề AI đã mở'
+          : 'Đã chuyển về vai trò Người học',
+      )
+    },
+    onError: (error) => message.error(getApiErrorMessage(error, 'Không đổi được vai trò')),
   })
 }
 

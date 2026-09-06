@@ -70,8 +70,10 @@ export default function AppFooter() {
             {laNguoiTao ? 'Soạn nội dung' : 'Của tôi'}
           </Text>
           <ul className="flex list-none flex-col gap-1.5 p-0">
-            {/* Danh sách đổi theo vai trò: người học không vào được ngân hàng câu hỏi hay khu AI
-                (ProtectedRoute chặn), nên hiện link ở đó chỉ để họ bấm vào rồi bị đá ra */}
+            {/* Danh sách đổi theo vai trò: người học không vào được ngân hàng câu hỏi hay trang
+                sinh đề (ProtectedRoute chặn), nên hiện link ở đó chỉ để họ bấm vào rồi bị đá ra.
+                Riêng HỌC LIỆU thì cả hai vai trò đều vào được từ 04/09/2026 — chỉ khác nhãn, vì với
+                người học nó là tài liệu của chính họ chứ không phải nguồn để soạn nội dung. */}
             {laNguoiTao ? (
               <>
                 <FooterLink to="/my-quizzes">Quiz của tôi</FooterLink>
@@ -84,6 +86,10 @@ export default function AppFooter() {
                 <FooterLink to="/my-attempts">Bài đã làm</FooterLink>
                 <FooterLink to="/my-progress">Tiến độ học</FooterLink>
                 <FooterLink to="/my-assignments">Bài tập được giao</FooterLink>
+                {/* Từ 04/09/2026 người học sở hữu học liệu của chính mình, nên mục này thuộc về cột
+                    của họ. Thanh điều hướng đã thêm hôm đó, chân trang thì bỏ sót — hai chỗ liệt kê
+                    cùng một bộ mục mà lệch nhau. */}
+                <FooterLink to="/ai/materials">Học liệu của tôi</FooterLink>
                 <FooterLink to="/profile">Hồ sơ của tôi</FooterLink>
               </>
             )}

@@ -16,6 +16,7 @@ import { getApiErrorMessage } from '@/shared/api/client'
 import type { ColumnsType } from 'antd/es/table'
 import EmptyState from '@/shared/components/EmptyState'
 import PageHeader from '@/shared/components/PageHeader'
+import QuizCover from '../components/QuizCover'
 import Pill from '@/shared/components/Pill'
 import RowActions from '@/shared/components/RowActions'
 import { quizApi, type Difficulty, type QuizSummary, type Visibility } from '../api/quizApi'
@@ -64,17 +65,20 @@ export default function MyQuizzesPage() {
       dataIndex: 'title',
       render: (title: string, row) => (
         <div className="flex items-center gap-3">
-          {/* Ảnh nhỏ để nhận ra quiz nhanh; quiz chưa có ảnh thì để ô trống cùng kích thước cho bảng khỏi so le */}
-          {row.thumbnailUrl ? (
-            <img
-              src={row.thumbnailUrl}
-              alt=""
-              loading="lazy"
-              className="h-10 w-16 shrink-0 border border-line rounded-card object-cover"
+          {/* Cùng khuôn `QuizCover` với lưới Khám phá, chỉ khác bề ngang.
+
+              Trước đây chỗ này tự dựng: ảnh 64×40 (tỉ lệ 16:10, không khớp 16:9 ở mọi nơi khác), và
+              quiz chưa có ảnh thì vẽ một ô viền đứt trống trơn — tức cùng một quiz trông khác hẳn ở
+              hai trang. Nay nó nhận đúng khối gradient và biểu tượng của chính nó, thu nhỏ lại. */}
+          <div className="w-16 shrink-0">
+            <QuizCover
+              thumbnailUrl={row.thumbnailUrl}
+              categoryName={row.categoryName}
+              title={title}
+              coIcon="nho"
+              className="border border-line rounded-card"
             />
-          ) : (
-            <div className="h-10 w-16 shrink-0 border border-dashed border-line bg-surface-subtle" />
-          )}
+          </div>
           <Link to={`/my-quizzes/${row.id}`} className="font-bold">
             {title}
           </Link>
@@ -231,7 +235,10 @@ export default function MyQuizzesPage() {
   }
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space direction="vertical" size="large" className="trang-rong w-full">
+      {/* `trang-rong` — nới bề ngang vùng nội dung cho bảng dày, xem `.khung-noi-dung`
+          trong index.css. Bảng này khai `scroll={{ x }}` nên thiếu chỗ là nó cuộn ngang
+          bên trong, trong khi hai bên màn hình còn trống. */}
       <PageHeader
         title="Quiz của tôi"
         description="Quiz bạn tạo, gồm cả quiz đang ở chế độ riêng tư."

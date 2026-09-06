@@ -12,6 +12,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
@@ -81,9 +82,32 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(), traceId));
     }
 
-    @ExceptionHandler(NoHandlerFoundException.class)
-    public ResponseEntity<ApiError> handleNotFound(NoHandlerFoundException ex,
-                                                  HttpServletRequest request) {
+    /**
+     * Đường dẫn không tồn tại → <b>404</b>.
+     *
+     * <h3>Vì sao phải bắt CẢ HAI kiểu ngoại lệ</h3>
+     * Bản đầu chỉ bắt {@code NoHandlerFoundException}, và đó là một <b>nhánh chết</b>: Spring Boot 3
+     * chỉ ném nó khi bật {@code spring.mvc.throw-exception-if-no-handler-found}, mà dự án không bật.
+     * Thực tế request không khớp controller nào sẽ rơi xuống bộ xử lý tài nguyên tĩnh, và chỗ đó ném
+     * {@code NoResourceFoundException} — một kiểu khác hẳn, không có quan hệ kế thừa với kiểu trên.
+     *
+     * Hệ quả trước khi sửa: gõ sai một đường dẫn thì nhận <b>500 "Đã có lỗi xảy ra"</b> kèm một
+     * stack trace đầy đủ ghi ở mức {@code ERROR}. Hai cái giá phải trả:
+     * <ul>
+     *   <li>Client không phân biệt được "gõ sai địa chỉ" với "server hỏng" — hai chuyện xử lý khác
+     *       hẳn nhau.</li>
+     *   <li>Log đầy stack trace của những đường dẫn gõ sai, làm loãng đúng thứ mức {@code ERROR}
+     *       sinh ra để đánh dấu.</li>
+     * </ul>
+     *
+     * Giữ lại {@code NoHandlerFoundException} thay vì xoá: nếu sau này ai bật cấu hình kia thì nó
+     * thành nhánh sống, và lúc đó không phải nhớ ra chuyện này lần nữa.
+     *
+     * <b>Không ghi log</b>: đường dẫn không tồn tại là chuyện thường của Internet (bot quét, link cũ),
+     * không phải sự kiện cần ai đọc.
+     */
+    @ExceptionHandler({NoHandlerFoundException.class, NoResourceFoundException.class})
+    public ResponseEntity<ApiError> handleNotFound(Exception ex, HttpServletRequest request) {
         String traceId = newTraceId();
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(
                 404, "Not Found", "Không tìm thấy tài nguyên", request.getRequestURI(), traceId));

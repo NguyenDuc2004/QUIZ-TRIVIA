@@ -199,7 +199,10 @@ export default function MaterialsPage() {
   ]
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space direction="vertical" size="large" className="trang-rong w-full">
+      {/* `trang-rong` — nới bề ngang vùng nội dung cho bảng dày, xem `.khung-noi-dung`
+          trong index.css. Bảng này khai `scroll={{ x }}` nên thiếu chỗ là nó cuộn ngang
+          bên trong, trong khi hai bên màn hình còn trống. */}
       <PageHeader
         title={canShare ? 'Học liệu' : 'Học liệu của tôi'}
         description={
@@ -261,15 +264,37 @@ export default function MaterialsPage() {
         />
       </div>
 
+      {/* Bước tiếp theo KHÁC NHAU theo vai trò, và người học không bị bỏ trống.
+
+          Trước đây khối này luôn dẫn sang "Sinh đề bằng AI" — một trang mà route chặn ở CREATOR/ADMIN
+          và backend trả 403. Người học nạp tài liệu xong được mời làm đúng một việc họ không có
+          quyền làm.
+
+          Giấu hẳn khối đi thì họ hết bị mời sai, nhưng cũng hết luôn lối đi tiếp — trong khi họ nạp
+          tài liệu CHÍNH LÀ để hỏi trợ lý. Nên đổi đích, không xoá khối. */}
       <div className="soft-panel p-5">
         <Text className="font-bold!">Tiếp theo</Text>
-        <Paragraph className="mt-2! mb-3! text-ink-soft">
-          Khi tài liệu đã ở trạng thái <b>Sẵn sàng</b>, sang trang Sinh đề bằng AI để tạo câu hỏi
-          bám theo nội dung của nó.
-        </Paragraph>
-        <Link to="/ai/generate">
-          <Button type="primary">Sinh đề bằng AI</Button>
-        </Link>
+        {canShare ? (
+          <>
+            <Paragraph className="mt-2! mb-3! text-ink-soft">
+              Khi tài liệu đã ở trạng thái <b>Sẵn sàng</b>, sang trang Sinh đề bằng AI để tạo câu hỏi
+              bám theo nội dung của nó.
+            </Paragraph>
+            <Link to="/ai/generate">
+              <Button type="primary">Sinh đề bằng AI</Button>
+            </Link>
+          </>
+        ) : (
+          <>
+            <Paragraph className="mt-2! mb-3! text-ink-soft">
+              Khi tài liệu đã ở trạng thái <b>Sẵn sàng</b>, sang Trợ lý học tập để hỏi trên nội dung
+              của nó. Trợ lý trả lời kèm đoạn đã dựa vào để bạn đối chiếu lại.
+            </Paragraph>
+            <Link to="/assistant">
+              <Button type="primary">Hỏi trợ lý học tập</Button>
+            </Link>
+          </>
+        )}
       </div>
 
       <PasteMaterialModal open={pasteOpen} onClose={() => setPasteOpen(false)} />

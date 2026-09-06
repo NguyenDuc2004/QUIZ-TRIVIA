@@ -5,11 +5,37 @@
 - **Mật khẩu:** băm bằng **BCrypt**, không lưu plaintext.
 - **Mã OTP đặt lại mật khẩu:** cũng băm bằng BCrypt trước khi lưu Redis — ai đọc được Redis (log, dump, backup) cũng không dùng lại được mã của người khác. Sinh bằng `SecureRandom`, sống 10 phút, dùng một lần, sai quá 5 lần thì huỷ, và giãn cách 60 giây giữa hai lần xin mã.
 - **JWT:** access token ngắn hạn (15 phút) + refresh token dài hạn; xoay vòng (rotation) refresh token.
+- **"Ghi nhớ đăng nhập" quyết định NƠI LƯU ở client, không đổi hạn phiên ở server** *(thêm 05/09/2026)*. Tick (mặc định) → `localStorage`, phiên sống tới 14 ngày như trước. Bỏ tick → `sessionStorage`, đóng trình duyệt là mất. Backend không nhận cờ này: nó vẫn cấp refresh token 14 ngày cho mọi phiên, còn "không ghi nhớ" nghĩa là **máy này quên sớm hơn**.
+  - **Vị trí của token CHÍNH LÀ cái cờ** — không lưu thêm biến "đã chọn ghi nhớ chưa", nên không có cách nào để cờ và thực tế lệch nhau. Mỗi lần ghi đều xoá bên còn lại; sót một bản ở kho kia thì lần đọc sau có thể nhặt trúng nó.
+  - **Xoay refresh token phải GIỮ NGUYÊN chỗ lưu.** Axios interceptor gọi `save()` mỗi 15 phút và nó không biết người dùng đã chọn gì — mặc định về `localStorage` thì mọi phiên "chỉ trong lần này" tự nâng thành vĩnh viễn ngay ở lần làm mới đầu tiên. Có phép kiểm riêng cho đúng chỗ này.
+  - **Hồ sơ người dùng đi theo cùng quy tắc.** Token và hồ sơ được lưu bởi hai cơ chế khác nhau (`tokenStorage` và `persist` của zustand); chỉ đổi chỗ lưu token thì tính năng đúng một nửa — phiên hết khi đóng trình duyệt, nhưng tên/email/ảnh vẫn nằm lại `localStorage`, đúng thứ người dùng bỏ tick để tránh khi ngồi máy chung.
+  - **Trình duyệt lưu mật khẩu hộ** vẫn hoạt động độc lập: form đăng nhập khai `autoComplete="email"` / `"current-password"` và submit bằng `<Form>` thật, đủ điều kiện để trình duyệt và trình quản lý mật khẩu đề nghị lưu.
+- **Ứng dụng KHÔNG BAO GIỜ tự lưu mật khẩu.** Nó chỉ nhớ **email** của lần đăng nhập gần nhất để điền sẵn (`emailDaLuu`). Lưu mật khẩu vào `localStorage` thì bất kỳ JavaScript nào chạy trên trang cũng đọc được — một thư viện npm bị chèn mã độc, hay một lỗ XSS, là lộ **mật khẩu gốc**, thứ người dùng thường dùng lại ở nơi khác nên thiệt hại vượt xa ứng dụng này. Token lộ thì chỉ mất một phiên và thu hồi được bằng `POST /auth/logout-all`; mật khẩu lộ thì không.
+  - Email lưu **sau khi đăng nhập thành công**, và lấy bản **server trả về** (đã chuẩn hoá chữ thường) chứ không phải chuỗi người dùng gõ — lưu lúc đang gõ thì nhớ luôn cả email gõ sai.
+  - Đi theo lựa chọn "ghi nhớ đăng nhập": bỏ tick thì **không lưu và xoá bản cũ** — giữ email lại vẫn để lộ *ai vừa dùng máy này*, đúng thứ họ bỏ tick để tránh, và người dùng trước có thể đã tick.
+  - **Đăng xuất không xoá** email: đăng xuất là "tôi xong việc", không phải "quên tôi đi".
 - **Đăng nhập nhiều thiết bị:** mỗi lần đăng nhập cấp một refresh token riêng (`session:{token}` ở Redis), nên máy tính và điện thoại dùng song song được, không ai đá ai ra. Đăng xuất chỉ thu hồi phiên của thiết bị đó.
   - ✅ **Đổi mật khẩu thu hồi phiên trên MỌI thiết bị**, kể cả thiết bị đang gọi — người dùng đổi mật khẩu thường tin là mình vừa cắt hết truy cập, hệ thống phải làm đúng điều đó. Client buộc phải đăng nhập lại.
   - ✅ **`POST /auth/logout-all`** — đăng xuất khỏi mọi thiết bị, dùng khi mất máy (đăng xuất trên máy đang cầm không giúp gì, vì phiên nằm ở chiếc máy đã mất). Trả về số phiên đã thu hồi.
   - Cả hai dựa trên chỉ mục ngược Redis `user-sessions:{userId}`; không có nó thì phải `SCAN` toàn bộ key `session:*` để tìm phiên của một người.
 - **RBAC:** phân quyền theo vai trò ở tầng controller bằng `@PreAuthorize("hasRole('CREATOR')")`.
+- **Người dùng tự đổi vai trò LEARNER ↔ CREATOR** (`PATCH /auth/my-role`, thêm 05/09/2026) — **không cần admin duyệt**, vì CREATOR vốn đã tự chọn được ngay ở màn đăng ký. Một hàng chờ duyệt cho người *đang có* tài khoản, trong khi người *mới* chỉ cần bấm một ô lúc đăng ký, là thủ tục hình thức: ai bị từ chối chỉ việc tạo tài khoản thứ hai trong ba mươi giây. Muốn CREATOR thành vai trò được duyệt thì phải **bỏ nó khỏi màn đăng ký trước** — thêm cửa duyệt mà vẫn để cửa đăng ký mở là dựng một cái chốt trên cánh cửa còn bức tường bên cạnh thì trống.
+  - **Trả về cặp token MỚI, và thu hồi mọi phiên khác.** Vai trò nằm *trong* access token, nên không cấp lại thì người vừa đổi vẫn mang vai trò cũ tới 15 phút — người lên CREATOR bấm menu mới và nhận 403, còn người xuống LEARNER thì **giữ nguyên quyền cũ**, và cái sau mới đáng lo. Thu hồi phiên khác vì chúng đang cầm vai trò cũ; thiết bị đang thao tác nhận token mới nên không bị đá ra.
+  - **ADMIN bị chặn ở cả hai đầu:** không đổi *sang* ADMIN, và tài khoản *đang là* ADMIN không dùng đường này (nếu không, admin cuối cùng có thể tự hạ quyền và không còn ai mở lại được — đúng chuyện `AdminUserService.changeRole` đã chặn).
+- **ADMIN không tự đăng ký được:** `AuthService` hạ mọi yêu cầu `role: ADMIN` xuống `LEARNER`, kể cả qua đăng nhập Google. Ranh giới an ninh của dự án là ADMIN, không phải CREATOR.
+- **Tài khoản ADMIN đầu tiên — `AdminBootstrap`** *(thêm 05/09/2026)*. Hai luật trên khoá lẫn nhau trên một CSDL mới: không có admin nào, và không có đường nào tạo admin. Trước đó cách duy nhất là gõ tay `UPDATE users SET role='ADMIN'` — một bước không nằm trong tài liệu nào và phải làm lại mỗi lần dựng máy mới.
+
+  Lúc khởi động, **nếu hệ thống có đúng 0 admin**, ứng dụng đọc `APP_ADMIN_EMAIL` / `APP_ADMIN_PASSWORD` từ `.env` và tạo tài khoản đó.
+
+  | Quyết định | Lý do |
+  |---|---|
+  | **Không** seed bằng Flyway | Chuỗi bcrypt trong migration là **mật khẩu quản trị bị commit vào repo** — ai đọc mã nguồn cũng đăng nhập được. Migration đã commit lại không sửa được để đổi mật khẩu đi |
+  | Chỉ chạy khi có **đúng 0 admin** | Đây là điều kiện chặn quan trọng nhất: đã có admin thì cấu hình này bị bỏ qua hoàn toàn, nên không dùng được để leo thang về sau |
+  | Khai **nửa vời thì dừng khởi động** | Bỏ qua trong im lặng thì người vận hành tưởng đã cấu hình xong, mà hệ thống vẫn không có admin — và họ chỉ phát hiện đúng lúc cần vào khu quản trị |
+  | Email đã là tài khoản thường → **nâng quyền**, log `WARN` | Từ chối cho "an toàn" thì để lại đúng cái bế tắc cần gỡ. Điều kiện "0 admin" đã chặn phần nguy hiểm: hệ thống lúc đó chưa dựng xong, không phải đang vận hành bình thường. Chỉ đổi vai trò, **không** đổi mật khẩu của người ta |
+  | Mật khẩu tối thiểu 8 ký tự | Tài khoản quyền cao nhất không được yếu hơn tài khoản người học |
+
+  Không bao giờ ghi mật khẩu ra log.
 - **Đăng nhập Google:** xác minh ID token bằng `GoogleIdTokenVerifier` chính chủ — kiểm chữ ký, `iss`, hạn dùng, và **`aud` phải khớp Client ID của ứng dụng** (không kiểm `aud` thì token cấp cho ứng dụng khác vẫn vào được). Từ chối token có email chưa xác minh, vì tài khoản Google mang email người khác sẽ chiếm được tài khoản của họ. Liên kết theo `sub` chứ không theo email. Tài khoản tạo qua Google luôn là **LEARNER**. Client ID là giá trị công khai, không phải secret; luồng ID token nên **không cần Client Secret**.
 - **WebSocket:** xác thực ở **frame STOMP CONNECT** (không phải lúc handshake HTTP — trình duyệt không gắn được header vào yêu cầu nâng cấp WebSocket). Chấp nhận `Authorization: Bearer <JWT>` cho thành viên, hoặc `X-Guest-Key` cho khách vãng lai.
 - **Khoá phiên khách:** ngẫu nhiên 32 byte, lưu Redis `roomguest:{key}` với TTL 6 giờ, **gắn chặt với đúng một phòng**. Không phải JWT nên không mở được bất kỳ API nào khác; hết ván là hết giá trị.

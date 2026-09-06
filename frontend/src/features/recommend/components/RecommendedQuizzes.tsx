@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Skeleton, Tag, Typography, message } from 'antd'
 import { getApiErrorMessage } from '@/shared/api/client'
-import { boMatCua } from '@/features/quiz/coverGradient'
+import QuizCover from '@/features/quiz/components/QuizCover'
 import { recommendApi, type RecommendationSource } from '../api/recommendApi'
 import { useRecommendedQuizzes } from '../hooks/useRecommendQueries'
 
@@ -105,28 +105,17 @@ export default function RecommendedQuizzes() {
           <div key={item.quizId} className="browse-card flex flex-col overflow-hidden">
             {/*
               Ảnh bìa 16:9, cùng khuôn với thẻ ở lưới Khám phá — một quiz phải trông như chính nó ở
-              mọi chỗ nó xuất hiện. Chưa có ảnh thì vẽ khối màu bằng `coverOf` dùng chung, nên cùng
-              quiz ra cùng màu ở cả hai trang.
+              mọi chỗ nó xuất hiện. Từ 05/09/2026 câu đó được `QuizCover` bảo đảm bằng mã chứ không
+              chỉ bằng lời văn — cùng một khuôn, cùng một khối gradient, cùng một biểu tượng.
             */}
-            {item.thumbnailUrl ? (
-              <img
-                src={item.thumbnailUrl}
-                alt=""
-                loading="lazy"
-                className="aspect-video w-full object-cover"
-              />
-            ) : (
-              <div
-                className="flex aspect-video w-full items-center justify-center"
-                style={{ background: boMatCua(item.categoryName, item.title).nen }}
-              >
-                {/* 54px — đúng gấp rưỡi bản cũ, và nhỏ hơn thẻ ở lưới Khám phá (72px) theo đúng tỉ
-                    lệ khối bìa của hai chỗ: thẻ gợi ý hẹp hơn nên icon cùng cỡ sẽ chạm mép. */}
-                <span aria-hidden className="select-none text-[54px] leading-none opacity-90">
-                  {boMatCua(item.categoryName, item.title).icon}
-                </span>
-              </div>
-            )}
+            {/* `coIcon="vua"` (54px) chứ không "lon" (72px): thẻ gợi ý hẹp hơn thẻ ở lưới Khám phá,
+                icon cùng cỡ sẽ chạm mép. Khuôn bìa thì vẫn y hệt — đó mới là thứ phải bằng nhau. */}
+            <QuizCover
+              thumbnailUrl={item.thumbnailUrl}
+              categoryName={item.categoryName}
+              title={item.title}
+              coIcon="vua"
+            />
 
             <div className="flex flex-1 flex-col p-4">
               <Tag color={SOURCE_COLOR[item.source]} className="mr-0! mb-2 self-start">

@@ -1,7 +1,7 @@
 import { Tag, Typography } from 'antd'
 import type { QuizSummary } from '../api/quizApi'
 import { DIFFICULTY_COLOR, DIFFICULTY_LABEL } from '../constants'
-import { boMatCua } from '../coverGradient'
+import QuizCover from './QuizCover'
 
 const { Text } = Typography
 
@@ -13,45 +13,20 @@ const { Text } = Typography
  */
 export default function QuizCard({ quiz, onClick }: { quiz: QuizSummary; onClick?: () => void }) {
   const minutes = quiz.timeLimitSec ? Math.round(quiz.timeLimitSec / 60) : null
-  const boMat = boMatCua(quiz.categoryName, quiz.title)
 
   return (
     <article
       className="browse-card flex h-full cursor-pointer flex-col overflow-hidden"
       onClick={onClick}
     >
-      {/* Ảnh bìa 16:9. Quiz chưa có ảnh thì vẽ khối màu theo tiêu đề thay vì để trống. */}
-      {quiz.thumbnailUrl ? (
-        <div className="relative aspect-video">
-          <img
-            src={quiz.thumbnailUrl}
-            alt=""
-            loading="lazy"
-            className="h-full w-full object-cover"
-          />
-          {/* Lớp phủ tối dần để chữ danh mục đọc được trên ảnh sáng */}
-          <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/60 to-transparent p-3 text-xs font-bold text-white">
-            {quiz.categoryName ?? 'Chưa phân loại'}
-          </span>
-        </div>
-      ) : (
-        /* Khối bìa thay ảnh: biểu tượng lớn ở giữa, tên danh mục ở đáy.
-           Bản đầu chỉ có nền màu và một dòng chữ nhỏ ở góc, nên phần lớn diện tích thẻ là một mảng màu
-           trống. Biểu tượng lấp đúng khoảng đó và nhận ra được khi lướt nhanh mà chưa kịp đọc chữ. */
-        <div
-          className="relative flex aspect-video items-center justify-center overflow-hidden"
-          style={{ background: boMat.nen }}
-        >
-          {/* `select-none` để kéo chọn chữ trên lưới không tô xanh cả loạt biểu tượng.
-              Hơi mờ để nó là nền chứ không tranh chỗ với tiêu đề quiz ngay bên dưới. */}
-          <span aria-hidden className="select-none text-7xl opacity-90 drop-shadow-sm">
-            {boMat.icon}
-          </span>
-          <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/45 to-transparent p-3 text-xs font-bold text-white">
-            {quiz.categoryName ?? 'Chưa phân loại'}
-          </span>
-        </div>
-      )}
+      {/* Ảnh bìa 16:9 — khuôn dùng chung, xem `QuizCover`. Quiz chưa có ảnh thì vẽ khối màu theo
+          tiêu đề thay vì để trống. */}
+      <QuizCover
+        thumbnailUrl={quiz.thumbnailUrl}
+        categoryName={quiz.categoryName}
+        title={quiz.title}
+        hienNhan
+      />
 
       <div className="flex flex-1 flex-col gap-1 p-3">
         <h3 className="line-clamp-2-title mb-0! text-base leading-snug font-bold text-ink">
