@@ -156,6 +156,39 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
+    @DisplayName("Biến đường dẫn sai kiểu → 404, KHÔNG phải 500")
+    void bienDuongDanSaiKieuTra404() throws Exception {
+        String token = dangKy("sai-kieu-duong-dan@example.com", "LEARNER");
+
+        // `/attempts/me` khớp route `/attempts/{id}` với id="me", mà "me" không phải UUID. Trước khi
+        // sửa: rơi xuống chốt cuối và trả 500 "Đã có lỗi xảy ra" kèm stack trace mức ERROR.
+        //
+        // 404 chứ không 400: nhìn từ phía client thì CẢ ĐƯỜNG DẪN không trỏ tới tài nguyên nào, và
+        // đây cũng đúng cách trả lời cho một id đúng định dạng nhưng không tồn tại. Trả 400 sẽ tiết
+        // lộ rằng route có tồn tại và chỉ sai định dạng.
+        mockMvc.perform(get("/api/v1/attempts/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Tham số TRUY VẤN sai kiểu → 400 kèm tên tham số, vì địa chỉ vẫn đúng")
+    void thamSoTruyVanSaiKieuTra400() throws Exception {
+        String token = dangKy("sai-kieu-truy-van@example.com", "LEARNER");
+
+        // Khác trường hợp trên: địa chỉ đúng, chỉ dữ liệu vào sai — nên người gọi cần biết TRƯỜNG NÀO
+        // hỏng để sửa, chứ không phải một câu 404 chung chung.
+        //
+        // Dùng `difficulty` (kiểu enum) chứ không `page`: `page` do `PageableHandlerMethodArgumentResolver`
+        // xử lý, và nó ÂM THẦM quay về trang 0 khi giá trị sai thay vì ném lỗi — ca kiểm đầu tiên viết
+        // với `page` nên xanh giả, trả về 200.
+        mockMvc.perform(get("/api/v1/quizzes?difficulty=khong-phai-do-kho")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("difficulty")));
+    }
+
+    @Test
     @DisplayName("Người học tự lên CREATOR được, và nhận token MỚI mang vai trò mới")
     void tuLenCreator() throws Exception {
         String token = dangKy("len-creator@example.com", "LEARNER");
