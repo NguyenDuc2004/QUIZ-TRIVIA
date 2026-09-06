@@ -77,6 +77,8 @@ cd frontend && npm run build          # oxlint + tsc -b + vite build — CHẠY 
 node scripts/seed-demo.mjs            # nạp dữ liệu demo (cần BE đang chạy); chạy lại không nhân đôi
 node scripts/seed-them.mjs            # nạp THÊM khối lượng: câu hỏi Open Trivia DB + 30 người học,
                                       # ~200 lượt làm bài. Cần cho bảng xếp hạng và gợi ý Neo4j
+node scripts/seed-ai.mjs              # sinh 5 quiz TIẾNG VIỆT bằng chính module AI của dự án.
+                                      # TỐN HẠN MỨC AI — mỗi bộ đề là một lượt gọi mô hình
 ```
 
 > **`npm run build` chạy `oxlint` trước khi biên dịch.** Luật `react/rules-of-hooks` đã bật từ đầu và bắt
