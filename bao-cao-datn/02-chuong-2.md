@@ -348,75 +348,17 @@ Phía giao diện cũng tổ chức theo tính năng dưới `src/features/<tên
 
 ### 2.2.3. Thiết kế giao diện
 
-Giao diện được thiết kế theo một bộ quy ước thống nhất để tránh việc mỗi trang có một phong cách riêng: màu sắc, bo góc và đổ bóng khai báo tập trung dưới dạng biến chứ không viết trực tiếp trong từng thành phần; nút hành động chính dùng màu tối, màu tím chỉ dành cho liên kết; trang dành cho người học trình bày theo lưới thẻ, trang quản lý trình bày theo bảng; các thành phần dùng chung như tiêu đề trang và trạng thái danh sách rỗng được tái sử dụng. Một quy tắc quan trọng là giao diện **không hiển thị dữ liệu không có thật**: các nền tảng thương mại thường hiện điểm đánh giá và số lượt học, hệ thống này chưa có dữ liệu đó nên không bịa ra để giao diện trông phong phú hơn. Phần này trình bày bản thiết kế của một số màn hình tiêu biểu.
+Giao diện tuân theo một bộ quy ước thống nhất để mỗi trang không mang một phong cách riêng: màu sắc, bo góc và đổ bóng khai báo tập trung dưới dạng biến thay vì viết trực tiếp trong từng thành phần; nút hành động chính dùng một màu nhấn duy nhất trên toàn hệ thống; trang dành cho người học trình bày theo lưới thẻ, trang quản lý theo bảng; tiêu đề trang và trạng thái danh sách rỗng dùng lại thành phần chung. Một quy tắc riêng: giao diện **không hiển thị dữ liệu không có thật**. Các nền tảng thương mại thường hiện điểm đánh giá và số lượt học; hệ thống này chưa thu thập những số đó nên không sinh ra để trang trông phong phú hơn.
 
-Màn hình đăng nhập và đăng ký (Hình 2.30) dùng chung cho mọi vai trò, có thêm lối đăng nhập bằng tài khoản Google và liên kết đặt lại mật khẩu.
+Hai bố cục vừa nêu được minh họa bằng hai màn tiêu biểu: trang khám phá quiz đại diện lưới thẻ của khu học tập (Hình 2.30), trang quản lý người dùng đại diện bảng của khu quản trị (Hình 2.31).
 
-[HÌNH 2.30: Thiết kế giao diện màn hình Đăng nhập và Đăng ký — cần chèn]
+[HÌNH 2.30: Thiết kế giao diện trang khám phá quiz — cần chèn]
 
-Trang khám phá quiz (Hình 2.31) hiển thị lưới thẻ quiz kèm thanh tìm kiếm và bộ lọc theo danh mục, độ khó; đây cũng là trang khách chưa đăng nhập xem được, nhưng không truy cập được nội dung câu hỏi.
+[HÌNH 2.31: Thiết kế giao diện quản lý người dùng (khu quản trị) — cần chèn]
 
-[HÌNH 2.31: Thiết kế giao diện trang khám phá quiz — cần chèn]
+Các màn còn lại không đưa bản phác vào đây, vì Chương 3 đã có ảnh chụp của chính chúng sau khi hiện thực: đăng nhập (Hình 3.2), làm bài (Hình 3.4), kết quả làm bài (Hình 3.5), phòng đấu (Hình 3.6), học liệu và sinh đề (Hình 3.7), trợ lý học tập (Hình 3.8), gợi ý và lộ trình học (Hình 3.9), giám sát AI (Hình 3.15).
 
-Màn hình làm bài (Hình 2.32) gồm nội dung câu hỏi, danh sách phương án, đồng hồ đếm ngược với bài có tính giờ, lưới điều hướng giữa các câu và nút nộp bài.
-
-[HÌNH 2.32: Thiết kế giao diện màn hình làm bài — cần chèn]
-
-Màn hình kết quả (Hình 2.33) hiển thị tổng điểm, danh sách câu kèm đáp án đúng và lời giải thích; riêng câu tự luận có thêm nhận xét và gợi ý cải thiện do AI sinh.
-
-[HÌNH 2.33: Thiết kế giao diện màn hình kết quả làm bài — cần chèn]
-
-Sảnh chờ và phòng đấu (Hình 2.34) gồm ô nhập mã PIN, danh sách người chơi đang chờ kèm mã QR để chia sẻ; khi vào ván, màn hình hiển thị câu hỏi và bảng xếp hạng cập nhật trực tiếp sau mỗi câu.
-
-[HÌNH 2.34: Thiết kế giao diện sảnh chờ và phòng đấu thời gian thực — cần chèn]
-
-Màn hình học liệu và sinh đề bằng AI (Hình 2.35) gồm danh sách học liệu kèm trạng thái xử lý và công tắc chia sẻ, biểu mẫu cấu hình sinh đề (học liệu nguồn, chủ đề, loại câu, số lượng, độ khó), và danh sách câu hỏi nháp chờ duyệt kèm đoạn học liệu nguồn để đối chiếu.
-
-[HÌNH 2.35: Thiết kế giao diện học liệu và sinh đề bằng AI — cần chèn]
-
-Màn hình trợ lý học tập (Hình 2.36) gồm cột danh sách hội thoại đã lưu, khung hội thoại chính, ô nhập câu hỏi và khối trích dẫn nguồn hiển thị dưới mỗi câu trả lời.
-
-[HÌNH 2.36: Thiết kế giao diện màn hình trợ lý học tập — cần chèn]
-
-Màn hình gợi ý và lộ trình học (Hình 2.37) hiển thị danh sách quiz được gợi ý kèm lý do gợi ý, cùng thứ tự chủ đề nên ôn dựa trên năng lực hiện tại.
-
-[HÌNH 2.37: Thiết kế giao diện gợi ý và lộ trình học — cần chèn]
-
-### Khu quản trị dùng khung giao diện riêng
-
-Bảy màn trên thuộc khu học tập và dùng chung một khung: thanh điều hướng ngang cố định trên đầu. Khu
-quản trị **không** dùng khung đó mà có bố cục riêng với thanh điều hướng dọc (sidebar) nền tối. Đây là
-quyết định thiết kế, không phải khác biệt thẩm mỹ, dựa trên ba lý do xếp theo mức quan trọng:
-
-**Thứ nhất, trông khác là một lớp an toàn.** Mọi thao tác ở khu học tập chỉ tác động lên dữ liệu của
-chính người đang dùng. Ở khu quản trị thì khác: khoá tài khoản và đổi vai trò tác động lên **người
-khác**, và không có nút hoàn tác. Một bố cục khác hẳn khiến quản trị viên luôn nhận biết mình đang ở
-khu nào, thay vì tưởng vẫn ở trang cá nhân rồi thực hiện một thao tác không lấy lại được.
-
-**Thứ hai, đây là hai ngữ cảnh làm việc khác nhau.** Các mục *Khám phá, Phòng đấu, Trợ lý AI, Lộ trình,
-Tiến độ* không liên quan gì tới việc xem chi phí gọi mô hình hay xử lý một tài khoản vi phạm. Trộn hai
-nhóm chức năng vào cùng một thanh menu buộc người dùng tự lọc ra mục mình cần ở mỗi lần dùng.
-
-**Thứ ba, thanh dọc mở rộng được.** Với vai trò người tạo nội dung, thanh ngang của khu học tập đã có
-mười mục và sẽ tràn hàng trên màn hình hẹp; trong khi khu quản trị còn hai nhóm chức năng dự kiến bổ
-sung là kiểm duyệt nội dung và cấu hình nhà cung cấp AI.
-
-Việc chuyển giữa hai khu đi được **cả hai chiều**: lối vào là mục *"Khu quản trị"* trong menu tài khoản
-(chỉ hiện với vai trò quản trị viên), lối ra là mục *"Về khu học tập"* đặt ngay trong sidebar. Đặt lối
-vào ở menu tài khoản chứ không ở thanh menu nội dung, vì vào khu quản trị là **chuyển ngữ cảnh** chứ
-không phải điều hướng trong cùng một ngữ cảnh.
-
-Màn hình quản lý người dùng (Hình 2.38) gồm sidebar điều hướng, bộ lọc theo từ khoá, vai trò và trạng
-thái, cùng bảng danh sách người dùng với thao tác đổi vai trò và khoá tài khoản. **Không có thao tác xoá
-người dùng** — lý do đã trình bày ở mục 2.2.1.
-
-[HÌNH 2.38: Thiết kế giao diện quản lý người dùng (khu quản trị) — cần chèn]
-
-Màn hình giám sát AI (Hình 2.39) gồm bốn thẻ số liệu tổng quan (tổng lượt gọi, tỉ lệ thất bại, tổng
-token, độ trễ), cảnh báo khi có lượt phải dùng nhà cung cấp dự phòng, và hai bảng tách theo chức năng và
-theo nhà cung cấp.
-
-[HÌNH 2.39: Thiết kế giao diện giám sát chi phí AI (khu quản trị) — cần chèn]
+**Khu quản trị dùng khung giao diện riêng.** Khu học tập dùng thanh điều hướng ngang; khu quản trị dùng thanh điều hướng dọc nền tối. Đây là quyết định thiết kế, không phải khác biệt thẩm mỹ: thao tác ở khu học tập chỉ tác động lên dữ liệu của chính người dùng, còn khóa tài khoản hay đổi vai trò tác động lên người khác và không có nút hoàn tác, nên một bố cục khác hẳn giúp quản trị viên luôn nhận biết mình đang ở khu nào. Ngoài ra hai khu là hai ngữ cảnh làm việc khác nhau, và thanh dọc còn chỗ mở rộng khi bổ sung chức năng quản trị. Lối vào đặt ở menu tài khoản, lối ra đặt trong thanh dọc — vào khu quản trị là chuyển ngữ cảnh chứ không phải điều hướng trong cùng một ngữ cảnh.
 
 ## 2.3. Kết luận chương 2
 
