@@ -12,7 +12,7 @@ Nhờ vậy sửa nội dung là sửa file `.md` rồi build lại, không ph�
 | `01-chuong-1.md` | Chương 1 — Tổng quan về đề tài |
 | `02-chuong-2.md` | Chương 2 — Phân tích và thiết kế hệ thống |
 | `05-tai-lieu-tham-khao.md` | Tài liệu tham khảo `[1]`–`[15]` |
-| `assets/` | 39 hình PNG đã sinh (`hinh-1.1.png` … `hinh-2.37.png`) |
+| `assets/` | 41 hình PNG đã sinh (`hinh-1.1.png` … `hinh-2.37.png`, `hinh-3.1.png`, `hinh-3.17.png`) |
 | `build/` | Script sinh hình và dựng file Word |
 
 | `03-chuong-3.md` | Chương 3 — Thực nghiệm và đánh giá (số liệu 3.5 và 3.6 đã đo thật) |
@@ -21,9 +21,16 @@ Nhờ vậy sửa nội dung là sửa file `.md` rồi build lại, không ph�
 
 Bộ nội dung đã **đủ**. `build.js` vẫn tự bỏ qua file chưa tồn tại nên thêm/bớt phần đều không làm đổ build.
 
-**17 hình của Chương 3 (3.1–3.17) chưa có ảnh** — chúng là ảnh chụp màn hình sản phẩm và một biểu đồ,
-không sinh được từ định nghĩa text. `build.js` chèn khung xám thay chỗ. Script `capture/capture.mjs`
+**Còn thiếu 15 ảnh chụp màn hình của Chương 3 — `hinh-3.2` … `hinh-3.16`.** Đó là ảnh sản phẩm đang
+chạy, không sinh được từ định nghĩa text; `build.js` chèn khung xám thay chỗ. Script `capture/capture.mjs`
 hiện là bản của **đồ án khác** (nói về Khoa, Môn học, gv.demo) nên chưa dùng lại được.
+
+Hai hình còn lại của chương này **không** phải ảnh chụp và đã sinh xong:
+
+| Hình | Sinh bằng | Vì sao không phải ảnh chụp |
+|---|---|---|
+| `3.1` sơ đồ triển khai | `gen-diagrams.js` | Là sơ đồ, cùng loại với 1.1 và 2.29 |
+| `3.17` biểu đồ độ trễ | `gen-chart.js` | Vẽ từ bảng số liệu mục 3.5, sửa số là sinh lại |
 
 ## Dựng lại bản Word
 
@@ -53,7 +60,13 @@ cd build
 node gen-diagrams.js       # Mermaid  -> 1.1, 1.2, 2.28 (ERD), 2.29 (mô-đun)
 node gen-plantuml.js       # PlantUML -> 2.1–2.27 (use case, sequence, VOPC)
 node gen-mockup.js         # HTML     -> 2.30–2.37 (wireframe, chụp bằng Chrome)
+node gen-chart.js          # SVG      -> 3.17 (biểu đồ độ trễ P50/P95)
 ```
+
+`gen-chart.js` giữ số liệu ngay trong tệp, lấy từ `docs/bao-cao/so-lieu-3.5-hieu-nang-realtime.md`.
+**Sửa số ở đó thì phải sửa cả bảng trong `03-chuong-3.md`** — hai chỗ phải khớp. Đầu tệp ghi rõ ba
+quyết định về cách vẽ (trục tung tuyến tính chứ không log, trục hoành theo giá trị thật chứ không chia
+đều, phân biệt hai đường bằng nét chứ không bằng màu) để người sau không "sửa cho đẹp" rồi làm sai nghĩa.
 
 Yêu cầu ngoài `npm install`:
 
