@@ -79,7 +79,14 @@ node scripts/seed-them.mjs            # nạp THÊM khối lượng: câu hỏi 
                                       # ~200 lượt làm bài. Cần cho bảng xếp hạng và gợi ý Neo4j
 node scripts/seed-ai.mjs              # sinh 5 quiz TIẾNG VIỆT bằng chính module AI của dự án.
                                       # TỐN HẠN MỨC AI — mỗi bộ đề là một lượt gọi mô hình
+node scripts/seed-hoc-lieu.mjs        # nạp 3 học liệu mẫu cho gv.demo qua pipeline RAG thật.
+                                      # Thiếu nó thì màn Học liệu trống và Trợ lý không trích dẫn được gì
+cd bao-cao-datn/build && node gen-screens.js   # chụp ảnh màn hình Chương 3 (cần BE+FE đang chạy)
 ```
+
+> **Cổng backend.** Trên máy phát triển hiện tại cổng 8080 bị dịch vụ khác của Windows chiếm, nên
+> `frontend/.env` trỏ `BACKEND_ORIGIN=http://localhost:8081`. Chạy BE kèm `-Dspring-boot.run.arguments=--server.port=8081`
+> cho khớp, nếu không FE sẽ proxy vào chỗ trống.
 
 > **`npm run build` chạy `oxlint` trước khi biên dịch.** Luật `react/rules-of-hooks` đã bật từ đầu và bắt
 > đúng lỗi "gọi hook sau lệnh return sớm" — nhưng nó chỉ chạy khi ai đó gõ `npm run lint`, mà không ai gõ.
