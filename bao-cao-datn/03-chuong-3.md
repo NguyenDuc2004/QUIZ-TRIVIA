@@ -120,39 +120,22 @@ Bảng 3.2 trình bày các kịch bản tiêu biểu, chọn theo tiêu chí **
 
 **Bảng 3.2. Các kịch bản kiểm thử tiêu biểu**
 
-| STT | Chức năng | Kịch bản | Dữ liệu kiểm thử | Kết quả mong đợi | Kết quả |
-|----:|-----------|----------|------------------|------------------|---------|
-| 1 | Đăng ký | Email đã tồn tại | Email trùng tài khoản có sẵn | Mã lỗi 409, không tạo tài khoản thứ hai | Đạt |
-| 2 | Đăng ký | Tự đăng ký vai trò quản trị | `role=ADMIN` | Hạ xuống vai trò người học | Đạt |
-| 3 | Đăng nhập Google | Tài khoản mới, chọn vai trò người tạo | `role=CREATOR` | Tạo tài khoản đúng vai trò đã chọn | Đạt |
-| 4 | Đăng nhập Google | Tài khoản **đã có**, gửi kèm vai trò cao hơn | Tài khoản người học gửi `role=CREATOR` | **Giữ nguyên** vai trò cũ | Đạt |
-| 5 | Đổi mật khẩu | Sau khi đổi | Hai thiết bị đang đăng nhập | Thu hồi phiên trên **mọi** thiết bị | Đạt |
-| 6 | Xem quiz | Khách chưa đăng nhập xem quiz công khai | Không có token | Trả về thông tin giới thiệu, **không** kèm câu hỏi | Đạt |
-| 7 | Xem quiz | Khách xem quiz riêng tư của người khác | Mã quiz riêng tư | Trả về 404 chứ không phải 403 | Đạt |
-| 8 | Làm bài | Chủ quiz sửa đề khi có người đang làm dở | Sửa quiz giữa chừng | Lượt đang làm giữ nguyên đề đã chốt | Đạt |
-| 9 | Làm bài | Hết giờ | Quiz có thời lượng | Tự chuyển sang trạng thái hết hạn | Đạt |
-| 10 | Chấm tự luận | Mô hình trả điểm vượt trần | Điểm lớn hơn điểm tối đa của câu | Giới hạn cứng về trần thật của câu | Đạt |
-| 11 | Chấm tự luận | Người đã chấm tay, AI trả kết quả sau | Ghi đè điểm rồi mới có phản hồi AI | Bỏ qua kết quả AI | Đạt |
-| 12 | Chấm tự luận | Gọi mô hình thất bại | Ngắt nhà cung cấp | Chuyển trạng thái dừng rõ ràng, không treo | Đạt |
-| 13 | Phòng đấu | Khách vào phòng khi chủ phòng **chưa** bật | Mã PIN đúng, cờ tắt | Từ chối với mã 403 | Đạt |
-| 14 | Phòng đấu | Mất kết nối rồi vào lại | Ngắt WebSocket giữa ván | Giữ nguyên điểm đã có | Đạt |
-| 15 | Phòng đấu | Hai tiến trình máy chủ | Người chơi chia hai instance | Cả hai bên nhận đủ sự kiện | Đạt |
-| 16 | Sinh đề AI | Người dùng đã hết hạn mức | Hạn mức trong ngày đã dùng hết | Trả 429 **ngay**, không nhận việc rồi hỏng | Đạt |
-| 17 | Sinh đề AI | Câu trả về sai định dạng | JSON thiếu trường | Bộ kiểm cấu trúc loại câu đó | Đạt |
-| 18 | Trợ lý học tập | Hỏi ngoài phạm vi học liệu | Câu hỏi không liên quan | Trả lời không biết, không suy đoán | Đạt |
-| 19 | Trợ lý học tập | Học liệu của người khác chưa chia sẻ | Tài liệu riêng tư | Không xuất hiện trong kết quả truy hồi | Đạt |
-| 20 | Gợi ý | Neo4j ngừng hoạt động | Dừng dịch vụ đồ thị | API trả danh sách rỗng, **không** làm hỏng việc nộp bài | Đạt |
-| 21 | Tải ảnh | Tệp giả dạng ảnh | Tệp mã lệnh đặt đuôi `.png` | Từ chối theo chữ ký byte | Đạt |
-| 22 | Ảnh đại diện | Người học đổi ảnh | Ảnh đã tải lên hệ thống | Cho phép, và chỉ giữ **một** tệp cho mỗi người | Đạt |
-| 23 | Ảnh đại diện | Dán URL bên ngoài | Địa chỉ máy chủ lạ | Từ chối với mã 400 | Đạt |
-| 24 | Giao bài | Nộp sau hạn | Nộp quá hạn nộp | Vẫn nhận, đánh dấu là nộp trễ | Đạt |
-| 25 | Giao bài | Xoá quiz đang được giao | Quiz gắn với bài tập | Chặn thao tác xoá | Đạt |
-| 26 | Gamification | Cùng một hành động ghi nhận hai lần | Gọi lại sự kiện cộng điểm | Chỉ cộng đúng một lần | Đạt |
-| 27 | Xếp hạng mùa | Mùa có dưới mười người tham gia | 3 người | **Không** phân hạng cho ai | Đạt |
-| 28 | Thông báo | Công việc nhắc ôn chạy lại trong ngày | Khởi động lại máy chủ | Không gửi trùng | Đạt |
-| 29 | Chống gian lận | Gửi tín hiệu cho lượt **luyện tập** | Lượt không tính điểm | Máy chủ từ chối ghi nhận | Đạt |
-| 29b | Chống gian lận | Câu chữ hiện cho người thi | Đã ghi nhận 5 lần rời trang | **Không** chứa chữ mang nghĩa buộc tội; nói rõ giáo viên là người kết luận | Đạt |
-| 30 | Chống gian lận | Mốc thời gian ở tương lai | Đồng hồ máy khách sai | Cắt về thời điểm hiện tại của máy chủ | Đạt |
+| STT | Chức năng | Kịch bản | Kết quả mong đợi | Kết quả |
+|----:|-----------|----------|------------------|---------|
+| 1 | Đăng ký | Tự đăng ký vai trò quản trị | Hạ xuống vai trò người học | Đạt |
+| 2 | Đăng nhập Google | Tài khoản đã có, gửi kèm vai trò cao hơn | Giữ nguyên vai trò cũ | Đạt |
+| 3 | Đổi mật khẩu | Hai thiết bị đang đăng nhập | Thu hồi phiên trên **mọi** thiết bị | Đạt |
+| 4 | Xem quiz | Khách xem quiz riêng tư của người khác | Trả về 404 chứ không phải 403 | Đạt |
+| 5 | Làm bài | Chủ quiz sửa đề khi có người đang làm dở | Lượt đang làm giữ nguyên đề đã chốt | Đạt |
+| 6 | Chấm tự luận | Mô hình trả điểm vượt trần của câu | Giới hạn cứng về trần thật | Đạt |
+| 7 | Phòng đấu | Người chơi chia trên hai tiến trình máy chủ | Cả hai bên nhận đủ sự kiện | Đạt |
+| 8 | Sinh đề AI | Người dùng đã hết hạn mức trong ngày | Trả 429 ngay, không gọi mô hình | Đạt |
+| 9 | Trợ lý học tập | Học liệu của người khác chưa chia sẻ | Không xuất hiện trong truy hồi | Đạt |
+| 10 | Gợi ý | Neo4j ngừng hoạt động | Trả danh sách rỗng, không làm hỏng việc nộp bài | Đạt |
+| 11 | Tải ảnh | Tệp mã lệnh đặt đuôi `.png` | Từ chối theo chữ ký byte | Đạt |
+| 12 | Chống gian lận | Mốc thời gian ở tương lai do đồng hồ máy khách sai | Cắt về thời điểm hiện tại | Đạt |
+
+Danh sách kịch bản đầy đủ cùng dữ liệu kiểm thử của từng ca được trình bày trong tài liệu kế hoạch và ca kiểm thử kèm theo đồ án; bảng trên chỉ giữ mỗi nhóm chức năng một kịch bản đại diện.
 
 ### 3.4.3. Kết quả kiểm thử
 
@@ -168,26 +151,17 @@ Bộ kiểm thử máy chủ chạy sau lệnh dọn sạch thư mục biên d�
 
 **Bảng 3.4. Phân bố phép kiểm theo nhóm chức năng (máy chủ)**
 
-| Nhóm chức năng | Số phép kiểm |
-|----------------|-------------:|
-| AI: RAG, sinh đề, chấm tự luận, hạn mức | 116 |
-| Làm bài và chấm điểm | 57 |
-| Xác thực và phân quyền | 43 |
-| Quản lý quiz và câu hỏi | 38 |
-| Lớp học và giao bài | 38 |
-| Chống gian lận | 33 |
-| Phòng đấu thời gian thực | 30 |
-| Tải ảnh lên | 28 |
-| Gợi ý cá nhân hoá (Neo4j) | 28 |
-| Flashcard và lặp lại ngắt quãng | 25 |
-| Thông báo và nhắc ôn | 24 |
-| Bảng xếp hạng theo mùa | 24 |
-| Gamification | 21 |
-| Trợ lý học tập | 20 |
-| Quản trị hệ thống | 19 |
-| Thống kê và báo cáo | 17 |
-| Hồ sơ người dùng | 16 |
-| Khởi động ứng dụng | 1 |
+| Nhóm chức năng | Số phép kiểm | Nhóm chức năng | Số phép kiểm |
+|----------------|-------------:|----------------|-------------:|
+| AI: RAG, sinh đề, chấm tự luận, hạn mức | 116 | Flashcard và lặp lại ngắt quãng | 25 |
+| Làm bài và chấm điểm | 57 | Thông báo và nhắc ôn | 24 |
+| Xác thực và phân quyền | 43 | Bảng xếp hạng theo mùa | 24 |
+| Quản lý quiz và câu hỏi | 38 | Gamification | 21 |
+| Lớp học và giao bài | 38 | Trợ lý học tập | 20 |
+| Chống gian lận | 33 | Quản trị hệ thống | 19 |
+| Phòng đấu thời gian thực | 30 | Thống kê và báo cáo | 17 |
+| Tải ảnh lên | 28 | Hồ sơ người dùng | 16 |
+| Gợi ý cá nhân hoá (Neo4j) | 28 | Khởi động ứng dụng | 1 |
 
 Nhóm chức năng AI chiếm tỉ trọng lớn nhất, phản ánh đúng đặc điểm của phần này: kết quả trả về từ mô hình ngôn ngữ **không xác định**, nên phần lớn phép kiểm không kiểm nội dung câu trả lời mà kiểm **hàng rào quanh nó** — giới hạn miền điểm, bộ kiểm cấu trúc JSON, điều kiện chuyển nhà cung cấp dự phòng, hạn mức, và cách ly quyền đọc học liệu.
 
