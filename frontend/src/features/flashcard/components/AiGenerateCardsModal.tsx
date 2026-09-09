@@ -119,7 +119,7 @@ export default function AiGenerateCardsModal({
             type="info"
             showIcon
             className="mb-4"
-            message="Bắt buộc chọn một học liệu"
+            title="Bắt buộc chọn một học liệu"
             description="Thẻ ghi nhớ được ôn lại hàng chục lần theo lịch, nên một thẻ sai sẽ bị học thuộc. Có tài liệu nguồn thì bạn đối chiếu được trước khi lưu."
           />
 
@@ -173,7 +173,7 @@ export default function AiGenerateCardsModal({
               type="info"
               showIcon
               icon={<Spin size="small" />}
-              message="Đang sinh thẻ…"
+              title="Đang sinh thẻ…"
               description={
                 (job?.aiThrottledSeconds ?? 0) > 0
                   ? `Nhà cung cấp AI đang chặn hạn mức, còn khoảng ${job?.aiThrottledSeconds} giây. Hệ thống tự chờ, bạn không cần bấm lại.`
@@ -186,7 +186,7 @@ export default function AiGenerateCardsModal({
             <Alert
               type="error"
               showIcon
-              message="Sinh thẻ không thành công"
+              title="Sinh thẻ không thành công"
               description={job.errorMessage ?? 'Thử lại sau.'}
             />
           )}
@@ -199,7 +199,7 @@ export default function AiGenerateCardsModal({
           <Alert
             type="warning"
             showIcon
-            message={`AI tạo ${theNhap.length} thẻ — hãy đọc rồi chọn thẻ muốn giữ`}
+            title={`AI tạo ${theNhap.length} thẻ — hãy đọc rồi chọn thẻ muốn giữ`}
             description="Thẻ chưa được lưu. Đối chiếu với đoạn học liệu ở cuối nếu có thẻ đáng ngờ."
           />
 

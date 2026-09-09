@@ -37,7 +37,7 @@ export default function AdminOverviewPage() {
       <Alert
         type="error"
         showIcon
-        message="Không tải được số liệu tổng quan"
+        title="Không tải được số liệu tổng quan"
         description="Hãy thử lại; nếu vẫn lỗi thì kiểm tra kết nối tới cơ sở dữ liệu."
       />
     )

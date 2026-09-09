@@ -55,7 +55,7 @@ export default function AdminQuizDetailPage() {
       <Alert
         type="info"
         showIcon
-        message="Trang chỉ đọc"
+        title="Trang chỉ đọc"
         description="Bạn đang xem nội dung do người dùng khác soạn, để có căn cứ trước khi kiểm duyệt. Mọi thao tác ẩn/hiện nằm ở trang danh sách."
       />
 

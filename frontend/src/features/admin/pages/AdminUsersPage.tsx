@@ -59,7 +59,7 @@ export default function AdminUsersPage() {
       render: (value: Role, row) => {
         const isSelf = row.id === currentUserId
         return (
-          <Space direction="vertical" size={2}>
+          <Space orientation="vertical" size={2}>
             <Select<Role>
               size="small"
               value={value}
@@ -158,7 +158,7 @@ export default function AdminUsersPage() {
   ]
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space orientation="vertical" size="large" className="w-full">
       <PageHeader
         title="Quản lý người dùng"
         description="Đổi vai trò và khoá tài khoản. Khoá là chặn đường vào — dữ liệu của người dùng vẫn giữ nguyên."

@@ -82,7 +82,7 @@ export default function ProfilePage() {
   const tenHopLe = ten.trim().length > 0 && ten.trim().length <= 100
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space orientation="vertical" size="large" className="w-full">
       <PageHeader
         title="Hồ sơ của tôi"
         description="Thông tin tài khoản đang đăng nhập."
@@ -91,7 +91,7 @@ export default function ProfilePage() {
         }
       />
 
-      {error && <Alert type="error" showIcon message={getApiErrorMessage(error)} />}
+      {error && <Alert type="error" showIcon title={getApiErrorMessage(error)} />}
 
       <div className="soft-panel p-5">
         {isPending && !cachedUser ? (

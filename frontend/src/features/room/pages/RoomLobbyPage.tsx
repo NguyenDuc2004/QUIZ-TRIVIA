@@ -110,7 +110,7 @@ export default function RoomLobbyPage() {
     !luaChonQuiz.some((m) => m.value === quizIdTuUrl)
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space orientation="vertical" size="large" className="w-full">
       {/* Khối mở đầu của sảnh phòng đấu.
 
           Phòng đấu là một trong ba bộ mặt được phép rực (ui-design-system.md §1 và §4.1), nhưng sảnh
@@ -142,12 +142,12 @@ export default function RoomLobbyPage() {
             Bạn sẽ là chủ phòng: điều khiển lúc bắt đầu và chuyển câu.
           </Paragraph>
 
-          <Space direction="vertical" size={12} className="w-full">
+          <Space orientation="vertical" size={12} className="w-full">
             {khongDungDuocQuizTuUrl && (
               <Alert
                 type="warning"
                 showIcon
-                message="Không mở được phòng cho quiz bạn vừa chọn"
+                title="Không mở được phòng cho quiz bạn vừa chọn"
                 description={
                   quizTuUrl && quizTuUrl.questionCount === 0
                     ? 'Quiz đó chưa có câu hỏi nào. Hãy chọn một quiz khác bên dưới.'
@@ -192,7 +192,7 @@ export default function RoomLobbyPage() {
             Mã phòng gồm 6 chữ số, hoặc quét mã QR chủ phòng chiếu lên.
           </Paragraph>
 
-          <Space direction="vertical" size={12} className="w-full">
+          <Space orientation="vertical" size={12} className="w-full">
             <Input
               size="large"
               placeholder="VD: 482913"

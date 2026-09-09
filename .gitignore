@@ -132,3 +132,6 @@ test-results/
 # ==========================================================
 backend/uploads/
 uploads/
+
+# Kết quả bộ quét lỗi web — sinh lại được bằng scripts/kiem-tra-web.mjs
+bao-cao-datn/kiem-tra-web.json

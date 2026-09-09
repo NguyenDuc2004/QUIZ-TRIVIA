@@ -51,7 +51,7 @@ export default function RoomInviteCard({
         <Alert
           type="warning"
           showIcon
-          message="Điện thoại sẽ không quét được mã QR này"
+          title="Điện thoại sẽ không quét được mã QR này"
           description={
             <>
               Máy chủ không tìm được địa chỉ mạng LAN nào, nên đường dẫn đang là{' '}

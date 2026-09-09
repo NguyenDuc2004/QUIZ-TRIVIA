@@ -56,7 +56,7 @@ export default function LoginPage() {
             type="warning"
             showIcon
             className="mb-4"
-            message="Phiên đăng nhập đã hết"
+            title="Phiên đăng nhập đã hết"
             // Nói đúng thứ được giữ: mỗi câu được lưu lên server ngay khi chọn/rời ô, nên bài dở làm
             // tiếp được. Hứa "không mất gì" thì sai — chữ đang gõ mà chưa rời ô thì vẫn mất.
             description="Đăng nhập lại để tiếp tục. Những câu bạn đã trả lời vẫn được lưu."

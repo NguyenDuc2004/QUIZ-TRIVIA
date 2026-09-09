@@ -32,7 +32,7 @@ export default function AdminRoomsPage() {
         <Alert
           type="warning"
           showIcon
-          message={`${soTreo} phòng đang treo`}
+          title={`${soTreo} phòng đang treo`}
           description="Bản ghi phòng còn nhưng trạng thái ở Redis đã mất — người chơi không vào được. Đóng phòng để dọn."
         />
       )}

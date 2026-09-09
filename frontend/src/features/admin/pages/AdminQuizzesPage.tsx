@@ -34,7 +34,7 @@ export default function AdminQuizzesPage() {
       <Alert
         type="info"
         showIcon
-        message="Ẩn quiz đưa nó về riêng tư, không xoá"
+        title="Ẩn quiz đưa nó về riêng tư, không xoá"
         description="Chủ quiz vẫn giữ nội dung, sửa lại rồi công khai lại được. Lượt làm bài và bảng xếp hạng cũ giữ nguyên."
       />
 

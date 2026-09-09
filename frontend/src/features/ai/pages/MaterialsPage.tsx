@@ -100,7 +100,7 @@ export default function MaterialsPage() {
         key: 'shared',
         width: 210,
         render: (_, row) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Switch
               size="small"
               checked={row.shared}
@@ -126,7 +126,7 @@ export default function MaterialsPage() {
       title: 'Tài liệu',
       dataIndex: 'title',
       render: (title: string, row) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text className="font-bold!">{title}</Text>
           <Text className="text-ink-soft text-xs">
             {row.topic ? `${row.topic} · ` : ''}
@@ -150,7 +150,7 @@ export default function MaterialsPage() {
       dataIndex: 'status',
       width: 190,
       render: (value: MaterialStatus, row) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Pill mau={STATUS_PILL[value]} chamMau={STATUS_DOT[value]}>
             {STATUS_LABEL[value]}
           </Pill>
@@ -199,7 +199,7 @@ export default function MaterialsPage() {
   ]
 
   return (
-    <Space direction="vertical" size="large" className="trang-rong w-full">
+    <Space orientation="vertical" size="large" className="trang-rong w-full">
       {/* `trang-rong` — nới bề ngang vùng nội dung cho bảng dày, xem `.khung-noi-dung`
           trong index.css. Bảng này khai `scroll={{ x }}` nên thiếu chỗ là nó cuộn ngang
           bên trong, trong khi hai bên màn hình còn trống. */}
@@ -233,7 +233,7 @@ export default function MaterialsPage() {
         <Alert
           type="warning"
           showIcon
-          message="Chưa cấu hình API key cho dịch vụ AI"
+          title="Chưa cấu hình API key cho dịch vụ AI"
           description="Thêm GEMINI_API_KEY vào file .env rồi khởi động lại backend. Trước đó, tài liệu tải lên sẽ dừng ở trạng thái Lỗi."
         />
       )}

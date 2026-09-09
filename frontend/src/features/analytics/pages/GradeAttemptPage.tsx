@@ -65,7 +65,7 @@ export default function GradeAttemptPage() {
   const pending = data.answers.filter((answer) => answer.needsGrading)
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space orientation="vertical" size="large" className="w-full">
       <PageHeader
         title="Chấm bài tự luận"
         description={
@@ -91,7 +91,7 @@ export default function GradeAttemptPage() {
         <Alert
           type="warning"
           showIcon
-          message={`${pending.length} câu đang chờ bạn chấm`}
+          title={`${pending.length} câu đang chờ bạn chấm`}
           description="Điểm tổng ở trên chưa tính những câu này, nên nó chưa phải điểm cuối của bài."
         />
       )}
@@ -141,7 +141,7 @@ function EssayCard({ answer, attemptId }: { answer: EssayAnswer; attemptId: stri
         </div>
       }
     >
-      <Space direction="vertical" size="middle" className="w-full">
+      <Space orientation="vertical" size="middle" className="w-full">
         <div>
           <Text className="text-ink-soft text-xs">Đề bài</Text>
           <Paragraph className="mb-0!">{answer.questionContent}</Paragraph>
@@ -186,7 +186,7 @@ function EssayCard({ answer, attemptId }: { answer: EssayAnswer; attemptId: stri
           <Alert
             type="info"
             showIcon
-            message="AI không chấm được câu này"
+            title="AI không chấm được câu này"
             description="Thường là do hết hạn mức của mô hình miễn phí. Bài làm vẫn nguyên, chỉ cần bạn cho điểm."
           />
         )}

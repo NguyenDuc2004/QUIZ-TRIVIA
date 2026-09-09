@@ -156,7 +156,7 @@ export default function QuizStatsPage() {
   ]
 
   return (
-    <Space direction="vertical" size="large" className="trang-rong w-full">
+    <Space orientation="vertical" size="large" className="trang-rong w-full">
       {/* `trang-rong` — nới bề ngang vùng nội dung cho bảng dày, xem `.khung-noi-dung`
           trong index.css. Bảng này khai `scroll={{ x }}` nên thiếu chỗ là nó cuộn ngang
           bên trong, trong khi hai bên màn hình còn trống. */}
@@ -174,7 +174,7 @@ export default function QuizStatsPage() {
         <Alert
           type="warning"
           showIcon
-          message={`${needGrading.length} bài đang chờ bạn chấm câu tự luận`}
+          title={`${needGrading.length} bài đang chờ bạn chấm câu tự luận`}
           description="AI không chấm được những câu này (thường vì hết hạn mức). Điểm hiện tại của các bài đó chưa phải điểm cuối."
         />
       )}
@@ -185,7 +185,7 @@ export default function QuizStatsPage() {
         <Alert
           type="warning"
           showIcon
-          message={`${canRaSoat.length} bài có nhiều tín hiệu hành vi đáng xem`}
+          title={`${canRaSoat.length} bài có nhiều tín hiệu hành vi đáng xem`}
           description="Mở bài để đọc lý do cụ thể rồi tự kết luận. Tín hiệu thu từ trình duyệt có thể bị chặn hoặc giả mạo và mỗi tín hiệu đều có cách giải thích vô hại, nên đây không phải bằng chứng gian lận — hệ thống không tự xử lý bài nào."
         />
       )}

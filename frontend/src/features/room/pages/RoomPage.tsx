@@ -175,7 +175,7 @@ export default function RoomPage() {
   if (loadError) {
     return (
       <div className="mx-auto max-w-2xl p-6">
-        <Alert type="error" showIcon message={getApiErrorMessage(loadError)} />
+        <Alert type="error" showIcon title={getApiErrorMessage(loadError)} />
       </div>
     )
   }
@@ -361,7 +361,7 @@ export default function RoomPage() {
                   onChange={(values) => setSelected(values as string[])}
                   className="w-full"
                 >
-                  <Space direction="vertical" size={8} className="w-full">
+                  <Space orientation="vertical" size={8} className="w-full">
                     {question.options.map((option, i) => (
                       <Checkbox
                         key={option.id}
@@ -380,7 +380,7 @@ export default function RoomPage() {
                   onChange={(event) => setSelected([event.target.value])}
                   className="w-full"
                 >
-                  <Space direction="vertical" size={8} className="w-full">
+                  <Space orientation="vertical" size={8} className="w-full">
                     {question.options.map((option, i) => (
                       <Radio
                         key={option.id}

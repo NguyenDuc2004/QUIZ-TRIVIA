@@ -30,7 +30,7 @@ export default function ProctoringNotice({ compact = false }: { compact?: boolea
         type="info"
         showIcon
         icon={<EyeOutlined />}
-        message={
+        title={
           <Text className="text-sm">
             Bài thi đang ghi nhận số lần rời trang, sao chép và dán — <b>không</b> ghi hình, <b>không</b> đọc
             nội dung. Hệ thống không tự kết luận.
@@ -45,7 +45,7 @@ export default function ProctoringNotice({ compact = false }: { compact?: boolea
       type="info"
       showIcon
       icon={<EyeOutlined />}
-      message="Bài thi này có ghi nhận một số tín hiệu hành vi"
+      title="Bài thi này có ghi nhận một số tín hiệu hành vi"
       description={
         <div className="flex flex-col gap-1">
           <Text className="text-sm">

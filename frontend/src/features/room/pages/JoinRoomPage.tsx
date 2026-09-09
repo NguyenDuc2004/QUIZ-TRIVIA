@@ -69,7 +69,7 @@ export default function JoinRoomPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface-subtle p-4">
         <div className="w-full max-w-md soft-panel p-8">
-          <Alert type="error" showIcon message={loadError} />
+          <Alert type="error" showIcon title={loadError} />
           <Link to="/rooms">
             {/* Lối ra duy nhất của màn báo lỗi. Để nó chìm thì người dùng đọc xong lỗi rồi không
                 thấy rõ phải bấm đâu. */}
@@ -119,12 +119,12 @@ export default function JoinRoomPage() {
             className="mb-4"
             type="warning"
             showIcon
-            message={room.status === 'PLAYING' ? 'Ván đấu đã bắt đầu' : 'Ván đấu đã kết thúc'}
+            title={room.status === 'PLAYING' ? 'Ván đấu đã bắt đầu' : 'Ván đấu đã kết thúc'}
           />
         )}
 
         {room.allowGuests ? (
-          <Space direction="vertical" size={16} className="w-full">
+          <Space orientation="vertical" size={16} className="w-full">
             <div>
               <Text className="text-ink-soft text-xs font-bold">Biệt danh của bạn</Text>
               <Input
@@ -156,11 +156,11 @@ export default function JoinRoomPage() {
             </Text>
           </Space>
         ) : (
-          <Space direction="vertical" size={12} className="w-full">
+          <Space orientation="vertical" size={12} className="w-full">
             <Alert
               type="info"
               showIcon
-              message="Phòng này yêu cầu đăng nhập"
+              title="Phòng này yêu cầu đăng nhập"
               description="Chủ phòng không bật chế độ cho khách. Đăng nhập rồi bạn sẽ được đưa vào phòng."
             />
             <Link to={`/login?next=${encodeURIComponent(`/join/${room.roomCode}`)}`}>

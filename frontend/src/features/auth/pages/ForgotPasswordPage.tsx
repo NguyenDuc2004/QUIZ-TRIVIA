@@ -127,7 +127,7 @@ export default function ForgotPasswordPage() {
               className="mb-4"
               type="info"
               showIcon
-              message="Kiểm tra hòm thư của bạn"
+              title="Kiểm tra hòm thư của bạn"
               description={
                 <>
                   Nếu <Text code>{email.trim()}</Text> có tài khoản, chúng tôi vừa gửi một mã gồm 6

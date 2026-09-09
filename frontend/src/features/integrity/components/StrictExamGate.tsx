@@ -60,7 +60,7 @@ export function StrictExamReminder({ onVao }: { onVao: () => void }) {
     <Alert
       type="warning"
       showIcon
-      message="Bạn đã thoát khỏi chế độ toàn màn hình"
+      title="Bạn đã thoát khỏi chế độ toàn màn hình"
       description={
         <div className="flex flex-col items-start gap-2">
           <Text className="text-sm">

@@ -20,7 +20,7 @@ export default function LearningPathPage() {
   const rebuild = useRebuildGraph()
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space orientation="vertical" size="large" className="w-full">
       <PageHeader
         title="Lộ trình học của bạn"
         description="Chủ đề đang yếu nhất xếp lên trước, dựa trên tỷ lệ trả lời đúng của chính bạn"
@@ -39,7 +39,7 @@ export default function LearningPathPage() {
             <Alert
               type="info"
               showIcon
-              message={data.note}
+              title={data.note}
               description={
                 data.topics.length === 0 ? (
                   <>

@@ -41,7 +41,7 @@ export default function AttemptPage() {
   const { data, isPending, error } = useAttempt(id)
 
   if (error) {
-    return <Alert type="error" showIcon message={getApiErrorMessage(error)} />
+    return <Alert type="error" showIcon title={getApiErrorMessage(error)} />
   }
   if (isPending || !data) {
     return <Skeleton active paragraph={{ rows: 8 }} />
@@ -159,7 +159,7 @@ function TakeAttempt({ detail }: { detail: AttemptDetail }) {
     })
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space orientation="vertical" size="large" className="w-full">
       <PageHeader
         title={attempt.quizTitle}
         description={
@@ -356,7 +356,7 @@ function AttemptResult({ detail }: { detail: AttemptDetail }) {
   )
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space orientation="vertical" size="large" className="w-full">
       <PageHeader
         title="Kết quả bài làm"
         description={
@@ -411,7 +411,7 @@ function AttemptResult({ detail }: { detail: AttemptDetail }) {
         <Alert
           type="info"
           showIcon
-          message={
+          title={
             throttled > 0
               ? `Đang xếp hàng chờ dịch vụ AI — khoảng ${throttled} giây nữa`
               : `AI đang chấm ${pendingAi} câu tự luận`
@@ -428,7 +428,7 @@ function AttemptResult({ detail }: { detail: AttemptDetail }) {
         <Alert
           type="warning"
           showIcon
-          message={`${failedAi} câu chưa chấm tự động được`}
+          title={`${failedAi} câu chưa chấm tự động được`}
           description="Những câu này đang tính 0 điểm và cần giáo viên chấm tay. Liên hệ người tạo quiz nếu bạn cho rằng điểm chưa đúng."
         />
       )}
