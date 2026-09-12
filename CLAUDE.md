@@ -82,6 +82,8 @@ node scripts/seed-ai.mjs              # sinh 5 quiz TIẾNG VIỆT bằng chính
 node scripts/seed-hoc-lieu.mjs        # nạp 3 học liệu mẫu cho gv.demo qua pipeline RAG thật.
                                       # Thiếu nó thì màn Học liệu trống và Trợ lý không trích dẫn được gì
 cd bao-cao-datn/build && node gen-screens.js   # chụp ảnh màn hình Chương 3 (cần BE+FE đang chạy)
+cd bao-cao-datn/build && node gen-testdocs.js  # sinh Test_Plan_QuizAI.docx + Test_Case_QuizAI.xlsx
+node scripts/kiem-tra-web.mjs         # quét 38 trang bằng 4 vai trò, thu lỗi console/API
 ```
 
 > **Cổng backend.** Trên máy phát triển hiện tại cổng 8080 bị dịch vụ khác của Windows chiếm, nên

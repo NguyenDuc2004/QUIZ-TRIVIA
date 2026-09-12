@@ -63,6 +63,17 @@ node gen-mockup.js         # HTML     -> 2.30–2.37 (wireframe, chụp bằng C
 node gen-chart.js          # SVG      -> 3.17 (biểu đồ độ trễ P50/P95)
 ```
 
+## Bộ tài liệu kiểm thử
+
+```bash
+cd build
+node gen-testdocs.js       # -> ../Testcase+TestPlan/Test_Plan_QuizAI.docx + Test_Case_QuizAI.xlsx
+```
+
+Hai tệp này là **sản phẩm bàn giao** kèm đồ án, được mục 3.4 của báo cáo dẫn tới. Số liệu trong đó lấy
+từ Bảng 3.2 và Bảng 3.4 của báo cáo cùng lượt chạy `./mvnw test` / `npm test` — sửa một nơi thì phải
+sửa cả nơi kia, nếu không hai tài liệu sẽ nói khác nhau.
+
 `gen-chart.js` giữ số liệu ngay trong tệp, lấy từ `docs/bao-cao/so-lieu-3.5-hieu-nang-realtime.md`.
 **Sửa số ở đó thì phải sửa cả bảng trong `03-chuong-3.md`** — hai chỗ phải khớp. Đầu tệp ghi rõ ba
 quyết định về cách vẽ (trục tung tuyến tính chứ không log, trục hoành theo giá trị thật chứ không chia

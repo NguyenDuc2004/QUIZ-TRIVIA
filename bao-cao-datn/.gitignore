@@ -6,7 +6,11 @@
 # Bản sao lưu khi đổi nội dung mockup
 *.bak-*
 
-# Tài liệu test còn của đồ án khác — sẽ thay khi làm Chương 3 (mục 3.4), chưa thuộc đề tài này
+# Kế hoạch và bảng ca kiểm thử: sản phẩm SINH RA được bằng `node build/gen-testdocs.js`, cùng lý do
+# với *.docx ở trên. Định nghĩa nội dung nằm trong chính script đó và được track.
+#
+# (Trước 12/09/2026 thư mục này chứa bài mẫu của HAI đồ án khác — EduExam AI và Phụ Kiện Việt — mà
+# mục 3.4 của báo cáo lại dẫn sang như thể là tài liệu của đề tài này. Đã xoá và thay bằng bản thật.)
 Testcase+TestPlan/
 
 # Ảnh chụp/thư mục kết quả do script capture và perf sinh ra

@@ -135,7 +135,7 @@ Bảng 3.2 trình bày các kịch bản tiêu biểu, chọn theo tiêu chí **
 | 11 | Tải ảnh | Tệp mã lệnh đặt đuôi `.png` | Từ chối theo chữ ký byte | Đạt |
 | 12 | Chống gian lận | Mốc thời gian ở tương lai do đồng hồ máy khách sai | Cắt về thời điểm hiện tại | Đạt |
 
-Danh sách kịch bản đầy đủ cùng dữ liệu kiểm thử của từng ca được trình bày trong tài liệu kế hoạch và ca kiểm thử kèm theo đồ án; bảng trên chỉ giữ mỗi nhóm chức năng một kịch bản đại diện.
+Bảng trên giữ mỗi nhóm chức năng một kịch bản đại diện. Toàn bộ 31 ca kiểm thử kèm dữ liệu và kết quả từng ca nằm ở tệp `Test_Case_QuizAI.xlsx`, còn phạm vi, chiến lược theo tầng và tiêu chí chấp nhận sản phẩm nằm ở `Test_Plan_QuizAI.docx`; cả hai là sản phẩm bàn giao kèm đồ án.
 
 ### 3.4.3. Kết quả kiểm thử
 
