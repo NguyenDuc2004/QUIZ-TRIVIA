@@ -245,8 +245,15 @@ for (const [tieuDe, hinh, chu] of MAN) {
     s.addText(t, { x: 0.78, y: yy, w: 2.3, h: 0.8, fontSize: 13.5, bold: true, color: TIM, valign: "middle" });
     s.addText(m, { x: 3.05, y: yy, w: W - 3.6, h: 0.8, fontSize: 12, color: DAM, valign: "middle" });
   });
-  s.addText("Ảnh chụp phòng chờ và màn chơi sẽ chèn vào slide này (Hình 3.6 của báo cáo).", {
-    x: 0.55, y: 4.8, w: W - 1.1, h: 0.35, fontSize: 10, italic: true, color: MUC, align: "center",
+}
+
+/* Ảnh phòng đấu — hinh-3.6 ghép phòng chờ trên màn chơi, nên để riêng một slide mới đủ chỗ. */
+{
+  const s = trang("4. Phòng đấu — phòng chờ và màn chơi");
+  const p = anh("3.6");
+  if (p) datAnh(s, p, { x: 0.5, y: 0.8, w: W - 1.0, h: 3.6 });
+  s.addText("Mã PIN sáu số và mã QR để vào phòng; bảng xếp hạng cập nhật ngay sau mỗi câu.", {
+    x: 0.55, y: 4.5, w: W - 1.1, h: 0.45, fontSize: 11.5, color: MUC, align: "center", valign: "middle",
   });
 }
 

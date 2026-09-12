@@ -27,6 +27,7 @@
 const fs = require("fs");
 const path = require("path");
 const puppeteer = require("puppeteer");
+const sharp = require("sharp");
 
 const FE = process.env.FE_URL || "http://localhost:5173";
 const CHROME = "C:/Program Files/Google/Chrome/Application/chrome.exe";
@@ -55,6 +56,8 @@ async function epSang(page) {
 const MAT_KHAU = "MatKhau@123";
 const GV = { email: "gv.demo@quizai.local", matKhau: MAT_KHAU };
 const HS = { email: "hs1.demo@quizai.local", matKhau: MAT_KHAU };
+/** Người chơi thứ hai — phòng đấu cần ít nhất hai người thì bảng xếp hạng mới có nghĩa. */
+const HS2 = { email: "hs2.demo@quizai.local", matKhau: MAT_KHAU };
 /* Admin dựng từ APP_ADMIN_EMAIL/APP_ADMIN_PASSWORD trong .env (xem AdminBootstrap) */
 const QT = { email: process.env.APP_ADMIN_EMAIL, matKhau: process.env.APP_ADMIN_PASSWORD };
 
@@ -104,6 +107,102 @@ async function dangNhap(browser, tk, nhan) {
 async function toi(page, duongDan, chờ = 1500) {
   await page.goto(FE + duongDan, { waitUntil: "networkidle2", timeout: 30000 });
   await nghi(chờ);
+}
+
+const API = process.env.API || "http://localhost:8081/api/v1";
+
+/** Đăng nhập bằng API, trả token. Dùng cho các bước cần dữ liệu chứ không cần giao diện. */
+async function tokenHocVien() {
+  const r = await fetch(`${API}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: HS.email, password: HS.matKhau }),
+  });
+  if (!r.ok) throw new Error(`đăng nhập API hỏng: ${r.status}`);
+  return (await r.json()).accessToken;
+}
+
+/** Bắt đầu một lượt làm bài mới, trả mã lượt. Chọn quiz công khai đầu tiên có câu hỏi. */
+async function batDauLamBai() {
+  const t = await tokenHocVien();
+  const h = { Authorization: "Bearer " + t, "Content-Type": "application/json" };
+  const ds = await fetch(`${API}/quizzes?size=30`, { headers: h }).then((r) => r.json());
+  for (const q of ds.content ?? []) {
+    const r = await fetch(`${API}/quizzes/${q.id}/attempts`, { method: "POST", headers: h, body: "{}" });
+    // Mã lượt nằm trong `attempt.id`, KHÔNG phải `id` ở cấp một. Lấy nhầm thì trang mở ra
+    // `/attempts/undefined` và chụp về một ảnh "Không tìm thấy tài nguyên" mà script vẫn báo thành công.
+    if (r.ok) return (await r.json()).attempt.id;
+  }
+  throw new Error("không bắt đầu được lượt làm bài nào");
+}
+
+/** Mã lượt đã nộp VÀ có câu được AI chấm — để màn kết quả có khối nhận xét. */
+async function luotDaChamAI() {
+  const t = await tokenHocVien();
+  const h = { Authorization: "Bearer " + t };
+  const ds = await fetch(`${API}/attempts?size=50`, { headers: h }).then((r) => r.json()).catch(() => null);
+  const ls = ds?.content ?? [];
+
+  /* Chọn lượt có câu AI chấm ĐẠT ĐIỂM CAO NHẤT, không phải lượt đầu gặp. Một bài "Em không nhớ rõ"
+   * nhận 0 điểm vẫn chứng minh AI có chấm, nhưng minh hoạ cho báo cáo thì yếu: nó không cho thấy mô
+   * hình đọc hiểu được nội dung, chỉ cho thấy nó biết bài trống. */
+  let tot = null;
+  for (const a of ls) {
+    if (a.status !== "SUBMITTED") continue;
+    const ct = await fetch(`${API}/attempts/${a.id}`, { headers: h }).then((r) => r.json());
+    for (const c of ct.questions ?? []) {
+      if (!c.aiFeedback) continue;
+      const ty = (c.score ?? 0) / (c.maxScore || 1);
+      if (!tot || ty > tot.ty) tot = { id: a.id, ty };
+    }
+  }
+  if (tot) return tot.id;
+  throw new Error("không có lượt nào đã được AI chấm — làm một bài có câu tự luận rồi chạy lại");
+}
+
+/** Đăng nhập bằng API cho một tài khoản bất kỳ. */
+async function token(tk) {
+  const r = await fetch(`${API}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: tk.email, password: tk.matKhau }),
+  });
+  if (!r.ok) throw new Error(`đăng nhập ${tk.email} hỏng: ${r.status}`);
+  return (await r.json()).accessToken;
+}
+
+/** Mở phòng từ quiz công khai đầu tiên, trả mã phòng. */
+async function moPhong() {
+  const t = await token(HS);
+  const h = { Authorization: "Bearer " + t, "Content-Type": "application/json" };
+  const ds = await fetch(`${API}/quizzes?size=10`, { headers: h }).then((r) => r.json());
+  const q = (ds.content ?? [])[0];
+  if (!q) throw new Error("không có quiz công khai nào để mở phòng");
+  const r = await fetch(`${API}/rooms`, {
+    method: "POST",
+    headers: h,
+    body: JSON.stringify({ quizId: q.id, secondsPerQuestion: 30, allowGuests: true }),
+  });
+  if (!r.ok) throw new Error(`mở phòng hỏng: ${r.status}`);
+  const v = await r.json();
+  return { ma: v.code ?? v.roomCode, tokenHost: t };
+}
+
+/** Cho một tài khoản vào phòng qua API. */
+async function vaoPhong(tk, ma) {
+  const t = await token(tk);
+  const r = await fetch(`${API}/rooms/${ma}/join`, { method: "POST", headers: { Authorization: "Bearer " + t } });
+  if (!r.ok) throw new Error(`${tk.email} vào phòng hỏng: ${r.status}`);
+}
+
+/** Đăng nhập bằng GIAO DIỆN trên một trang đã có sẵn (dùng cho phiên thứ hai). */
+async function dangNhapTrang(page, tk) {
+  await page.goto(`${FE}/login`, { waitUntil: "networkidle2" });
+  await page.type('input[name="email"]', tk.email);
+  await page.type('input[name="password"]', tk.matKhau);
+  await page.click('button[type="submit"]');
+  await page.waitForFunction(() => !location.pathname.startsWith("/login"), { timeout: 20000 });
+  await nghi(800);
 }
 
 async function main() {
@@ -169,6 +268,35 @@ async function main() {
     await chup(gv, "3.8");
   });
 
+  /* Màn LÀM BÀI. Lượt làm được tạo qua API để lấy mã lượt, rồi mới mở bằng trình duyệt — bấm dò nút
+   * "Bắt đầu làm bài" qua nhiều bố cục trang giới thiệu thì mong manh hơn nhiều. Chọn vài phương án
+   * trước khi chụp để ảnh không phải là một đề còn trắng tinh. */
+  await man("3.4", "Đang làm bài", async () => {
+    const id = await batDauLamBai();
+    await toi(hs, `/attempts/${id}`, 2500);
+    // Chọn hai phương án đầu của hai câu đầu, nếu bấm được
+    await hs.evaluate(() => {
+      const o = [...document.querySelectorAll('input[type="radio"], .ant-radio-wrapper, [role="radio"]')];
+      o.slice(0, 1).forEach((e) => e.click?.());
+    });
+    await nghi(1200);
+    await chup(hs, "3.4");
+  });
+
+  /* Màn KẾT QUẢ. Dùng lượt ĐÃ CÓ SẴN và đã được AI chấm thay vì làm bài mới: chú thích hình đòi có
+   * nhận xét của AI cho câu tự luận, mà chấm lại là tốn một lượt gọi mô hình cho thứ đã có. Cuộn tới
+   * đúng khối nhận xét vì nó nằm dưới màn hình đầu. */
+  await man("3.5", "Kết quả bài làm", async () => {
+    const id = await luotDaChamAI();
+    await toi(hs, `/attempts/${id}`, 2500);
+    await hs.evaluate(() => {
+      const el = [...document.querySelectorAll("*")].find((e) => /^Nhận xét · /.test(e.textContent ?? "") && e.children.length === 0);
+      el?.scrollIntoView({ block: "center" });
+    });
+    await nghi(1200);
+    await chup(hs, "3.5");
+  });
+
   /* Trang CHI TIẾT lớp, không phải danh sách — chú thích hình đòi có danh sách thành viên, bài tập
    * kèm hạn nộp và bảng theo dõi nộp bài, những thứ chỉ trang chi tiết mới có. Bấm vào thẻ đầu thay
    * vì gắn cứng UUID, để script không hỏng khi nạp lại dữ liệu demo. */
@@ -185,6 +313,66 @@ async function main() {
     await gv.waitForFunction(() => /^\/classrooms\/[^/]+$/.test(location.pathname), { timeout: 15000 });
     await nghi(2500);
     await chup(gv, "3.11");
+  });
+
+  /* PHÒNG ĐẤU. Chú thích hình đòi CẢ phòng chờ (mã PIN, mã QR, danh sách người chơi) LẪN màn chơi
+   * (câu hỏi, bảng xếp hạng trực tiếp), nên chụp hai ảnh rồi ghép dọc thành một hình.
+   *
+   * Phòng và lượt vào phòng đi qua API để lấy mã phòng chắc chắn; phần nhìn thì vẫn là giao diện thật.
+   * Cần hai phiên trình duyệt độc lập — một người chơi thì bảng xếp hạng chỉ có một dòng. */
+  await man("3.6", "Phòng chờ và phòng đấu", async () => {
+    const { ma, tokenHost } = await moPhong();
+
+    const ctx2 = await browser.createBrowserContext();
+    const p2 = await ctx2.newPage();
+    await p2.setViewport(KHUNG);
+    await epSang(p2);
+    await dangNhapTrang(p2, HS2);
+    await vaoPhong(HS2, ma);
+    await toi(p2, `/rooms/${ma}`, 1500);
+
+    const host = hs;
+    await toi(host, `/rooms/${ma}`, 2500);
+
+    const tmp1 = path.join(ASSETS, "_tmp-3.6-cho.png");
+    const tmp2 = path.join(ASSETS, "_tmp-3.6-choi.png");
+    await host.screenshot({ path: tmp1 });
+
+    /* Bắt đầu ván. Khi còn người chưa bấm sẵn sàng, nút này KHÔNG gửi lệnh ngay mà mở một hộp thoại
+     * xác nhận (xem `batDauVan` trong RoomPage.tsx) — bỏ qua bước bấm "Vẫn bắt đầu" thì phòng đứng
+     * nguyên ở phòng chờ và lệnh chờ câu hỏi sẽ hết giờ mà không có lỗi nào rõ ràng. */
+    await host.evaluate(() => {
+      const b = [...document.querySelectorAll("button")].find((e) => /Bắt đầu ván/.test(e.textContent ?? ""));
+      b?.click();
+    });
+    await nghi(800);
+    await host.evaluate(() => {
+      const ok = [...document.querySelectorAll(".ant-modal button, button")].find((e) => /Vẫn bắt đầu/.test(e.textContent ?? ""));
+      ok?.click();
+    });
+    await host.waitForFunction(() => /Câu \s*\d+\s*\/\s*\d+/.test(document.body.innerText), { timeout: 30000 });
+    await nghi(2000);
+    await host.screenshot({ path: tmp2 });
+
+    /* Ghép dọc: hai ảnh cùng bề rộng nên chỉ cần cộng chiều cao, chừa một vạch trắng phân cách. */
+    const a = sharp(tmp1);
+    const b = sharp(tmp2);
+    const ma_ = await a.metadata();
+    const mb = await b.metadata();
+    const KE = 10;
+    await sharp({ create: { width: ma_.width, height: ma_.height + mb.height + KE, channels: 3, background: "#ffffff" } })
+      .composite([
+        { input: await a.toBuffer(), top: 0, left: 0 },
+        { input: await b.toBuffer(), top: ma_.height + KE, left: 0 },
+      ])
+      .png()
+      .toFile(path.join(ASSETS, "hinh-3.6.png"));
+
+    fs.unlinkSync(tmp1);
+    fs.unlinkSync(tmp2);
+    await ctx2.close();
+    console.log(`  ✓ hinh-3.6.png  (${fs.statSync(path.join(ASSETS, "hinh-3.6.png")).size} bytes, ghép 2 ảnh)`);
+    xong.push("3.6");
   });
 
   // ── Quản trị ───────────────────────────────────────────────────────────
@@ -224,11 +412,7 @@ async function main() {
 
 /* Những màn script không dựng thay người được. Ghi ra đây thay vì lặng lẽ bỏ qua, để người chạy biết
  * chính xác còn nợ gì — và biết vì sao, để đừng mất công tự động hoá lại thứ đã cân nhắc rồi. */
-const TU_CHUP_TAY = [
-  { so: "3.4", vi_sao: "màn làm bài — phải bắt đầu một lượt thật rồi chụp lúc đồng hồ đang chạy" },
-  { so: "3.5", vi_sao: "màn kết quả — cần một lượt đã nộp có câu tự luận đã được AI chấm" },
-  { so: "3.6", vi_sao: "phòng đấu — cần host và ít nhất một người chơi khác cùng lúc" },
-];
+const TU_CHUP_TAY = [];
 
 main().catch((e) => {
   console.error("\nHỏng:", e.message);
