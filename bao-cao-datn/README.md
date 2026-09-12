@@ -68,6 +68,7 @@ node gen-chart.js          # SVG      -> 3.17 (biểu đồ độ trễ P50/P95)
 ```bash
 cd build
 node gen-testdocs.js       # -> ../Testcase+TestPlan/Test_Plan_QuizAI.docx + Test_Case_QuizAI.xlsx
+node gen-slides.js         # -> ../Slide-BaoVe-QuizAI.pptx (22 slide bảo vệ)
 ```
 
 Hai tệp này là **sản phẩm bàn giao** kèm đồ án, được mục 3.4 của báo cáo dẫn tới. Số liệu trong đó lấy

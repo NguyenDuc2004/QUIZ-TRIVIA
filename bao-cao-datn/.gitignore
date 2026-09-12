@@ -3,6 +3,9 @@
 # File vẫn nằm trên đĩa để đem đi in hoặc gửi giảng viên.
 *.docx
 
+# Slide bảo vệ: cùng lý do, dựng lại bằng `node build/gen-slides.js`
+*.pptx
+
 # Bản sao lưu khi đổi nội dung mockup
 *.bak-*
 
