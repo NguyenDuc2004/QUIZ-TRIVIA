@@ -21,16 +21,16 @@ Nhờ vậy sửa nội dung là sửa file `.md` rồi build lại, không ph�
 
 Bộ nội dung đã **đủ**. `build.js` vẫn tự bỏ qua file chưa tồn tại nên thêm/bớt phần đều không làm đổ build.
 
-**Còn thiếu 15 ảnh chụp màn hình của Chương 3 — `hinh-3.2` … `hinh-3.16`.** Đó là ảnh sản phẩm đang
-chạy, không sinh được từ định nghĩa text; `build.js` chèn khung xám thay chỗ. Script `capture/capture.mjs`
-hiện là bản của **đồ án khác** (nói về Khoa, Môn học, gv.demo) nên chưa dùng lại được.
+**Cả 17 hình của Chương 3 đã có**, và đều sinh lại được bằng script:
 
-Hai hình còn lại của chương này **không** phải ảnh chụp và đã sinh xong:
+| Hình | Sinh bằng |
+|---|---|
+| `3.1` sơ đồ triển khai | `gen-diagrams.js` |
+| `3.2` – `3.16` ảnh chụp màn hình | `gen-screens.js` (cần BE + FE đang chạy) |
+| `3.17` biểu đồ độ trễ | `gen-chart.js`, vẽ từ bảng số liệu mục 3.5 |
 
-| Hình | Sinh bằng | Vì sao không phải ảnh chụp |
-|---|---|---|
-| `3.1` sơ đồ triển khai | `gen-diagrams.js` | Là sơ đồ, cùng loại với 1.1 và 2.29 |
-| `3.17` biểu đồ độ trễ | `gen-chart.js` | Vẽ từ bảng số liệu mục 3.5, sửa số là sinh lại |
+Hai hình `3.6` và `3.10` là ảnh **ghép dọc** hai màn, vì chú thích đòi cả hai (phòng chờ + màn chơi;
+danh sách bộ thẻ + phiên ôn).
 
 ## Dựng lại bản Word
 
