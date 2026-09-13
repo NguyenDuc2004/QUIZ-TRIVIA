@@ -84,6 +84,8 @@ node scripts/seed-hoc-lieu.mjs        # nạp 3 học liệu mẫu cho gv.demo q
 cd bao-cao-datn/build && node gen-screens.js   # chụp ảnh màn hình Chương 3 (cần BE+FE đang chạy)
 cd bao-cao-datn/build && node gen-testdocs.js  # sinh Test_Plan_QuizAI.docx + Test_Case_QuizAI.xlsx
 cd bao-cao-datn/build && node gen-slides.js    # sinh Slide-BaoVe-QuizAI.pptx
+cd bao-cao-datn/build && node gen-poster.js    # sinh Poster-QuizAI.png (A0 dọc)
+cd bao-cao-datn/build && node gen-huongdan.js  # sinh HuongDanThuyetTrinh-QuizAI.docx
 node scripts/kiem-tra-web.mjs         # quét 38 trang bằng 4 vai trò, thu lỗi console/API
 ```
 

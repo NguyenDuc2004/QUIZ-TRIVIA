@@ -68,8 +68,14 @@ node gen-chart.js          # SVG      -> 3.17 (biểu đồ độ trễ P50/P95)
 ```bash
 cd build
 node gen-testdocs.js       # -> ../Testcase+TestPlan/Test_Plan_QuizAI.docx + Test_Case_QuizAI.xlsx
-node gen-slides.js         # -> ../Slide-BaoVe-QuizAI.pptx (22 slide bảo vệ)
+node gen-slides.js         # -> ../Slide-BaoVe-QuizAI.pptx (23 slide bảo vệ)
+node gen-poster.js         # -> ../Poster-QuizAI.png (A0 dọc, ~192 DPI)
+node gen-huongdan.js       # -> ../HuongDanThuyetTrinh-QuizAI.docx
 ```
+
+`gen-poster.js` dựng poster bằng HTML rồi chụp bằng Chrome, cùng lý do với các hình khác: sửa một dòng
+chữ là dựng lại được. Khổ A0 là **khung cứng** — nội dung dài quá sẽ bị cắt lặng lẽ, nên ô ảnh có chiều
+cao cố định. Sau khi sửa nội dung, kiểm lại chiều cao thân trang phải bằng đúng 4494 px.
 
 Hai tệp này là **sản phẩm bàn giao** kèm đồ án, được mục 3.4 của báo cáo dẫn tới. Số liệu trong đó lấy
 từ Bảng 3.2 và Bảng 3.4 của báo cáo cùng lượt chạy `./mvnw test` / `npm test` — sửa một nơi thì phải

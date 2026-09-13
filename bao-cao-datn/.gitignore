@@ -6,6 +6,13 @@
 # Slide bảo vệ: cùng lý do, dựng lại bằng `node build/gen-slides.js`
 *.pptx
 
+# Poster: ảnh 3,6 MB dựng lại bằng `node build/gen-poster.js`; định nghĩa nằm trong script
+Poster-*.png
+
+# Tệp tạm của gen-poster.js
+build/_poster.html
+build/_do-poster.js
+
 # Bản sao lưu khi đổi nội dung mockup
 *.bak-*
 
