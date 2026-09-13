@@ -160,6 +160,24 @@ async function luotDaChamAI() {
   throw new Error("không có lượt nào đã được AI chấm — làm một bài có câu tự luận rồi chạy lại");
 }
 
+/** Ghép dọc hai ảnh cùng bề rộng thành một, chừa vạch trắng phân cách. */
+async function ghepDoc(tren, duoi, ra) {
+  const a = sharp(tren);
+  const b = sharp(duoi);
+  const ma = await a.metadata();
+  const mb = await b.metadata();
+  const KE = 10;
+  await sharp({ create: { width: ma.width, height: ma.height + mb.height + KE, channels: 3, background: "#ffffff" } })
+    .composite([
+      { input: await a.toBuffer(), top: 0, left: 0 },
+      { input: await b.toBuffer(), top: ma.height + KE, left: 0 },
+    ])
+    .png()
+    .toFile(ra);
+  fs.unlinkSync(tren);
+  fs.unlinkSync(duoi);
+}
+
 /** Đăng nhập bằng API cho một tài khoản bất kỳ. */
 async function token(tk) {
   const r = await fetch(`${API}/auth/login`, {
@@ -235,9 +253,26 @@ async function main() {
     await chup(hs, "3.9");
   });
 
-  await man("3.10", "Thẻ ghi nhớ", async () => {
-    await toi(hs, "/flashcards", 2000);
-    await chup(hs, "3.10");
+  /* Chú thích hình đòi CẢ danh sách bộ thẻ (kèm số thẻ đến hạn) LẪN phiên ôn (thẻ lật được, bốn nút
+   * tự đánh giá mức nhớ), nên chụp hai màn rồi ghép dọc — cùng cách làm với hình phòng đấu. */
+  await man("3.10", "Thẻ ghi nhớ và phiên ôn tập", async () => {
+    await toi(hs, "/flashcards", 2200);
+    const t1 = path.join(ASSETS, "_tmp-3.10-ds.png");
+    await hs.screenshot({ path: t1 });
+
+    await toi(hs, "/flashcards/review", 2500);
+    // Lật thẻ để lộ mặt sau và bốn nút tự đánh giá
+    await hs.evaluate(() => {
+      const b = [...document.querySelectorAll("button")].find((e) => /Lật thẻ|Xem đáp án|Hiện mặt sau/i.test(e.textContent ?? ""));
+      b?.click();
+    });
+    await nghi(1200);
+    const t2 = path.join(ASSETS, "_tmp-3.10-on.png");
+    await hs.screenshot({ path: t2 });
+
+    await ghepDoc(t1, t2, path.join(ASSETS, "hinh-3.10.png"));
+    console.log(`  ✓ hinh-3.10.png  (${fs.statSync(path.join(ASSETS, "hinh-3.10.png")).size} bytes, ghép 2 ảnh)`);
+    xong.push("3.10");
   });
 
   await man("3.12", "Thành tích và xếp hạng mùa", async () => {
@@ -393,8 +428,23 @@ async function main() {
     await chup(qt, "3.15");
   });
 
+  /* Bấm "Xem" để mở thẻ chi tiết: chú thích hình đòi có nhận định của mô hình và hai nút kết luận,
+   * mà chúng chỉ hiện sau khi mở một dòng cụ thể. Danh sách rỗng thì bỏ qua bước bấm. */
   await man("3.16", "Báo cáo tính toàn vẹn", async () => {
-    await toi(qt, "/admin/integrity", 2500);
+    await toi(qt, "/admin/integrity", 2800);
+    await qt.evaluate(() => {
+      const b = [...document.querySelectorAll("button")].find((e) => /^\s*Xem\s*$/.test(e.textContent ?? ""));
+      b?.click();
+    });
+    await nghi(2000);
+    // Thẻ chi tiết mở ra BÊN DƯỚI bảng nên nằm ngoài màn hình đầu; không cuộn thì ảnh cắt mất đúng
+    // phần chú thích hình đòi — nhận định của mô hình và hai nút kết luận.
+    await qt.evaluate(() => {
+      const el = [...document.querySelectorAll("*")].find((e) => /^Tính toàn vẹn bài thi$/.test((e.textContent ?? "").trim()) && e.children.length === 0);
+      el?.scrollIntoView({ block: "start" });
+      window.scrollBy(0, -90);
+    });
+    await nghi(1200);
     await chup(qt, "3.16");
   });
 
