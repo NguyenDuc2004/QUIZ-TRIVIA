@@ -79,7 +79,7 @@ export default function AdminAiUsagePage() {
 
   if (!data || data.tongLuotGoi === 0) {
     return (
-      <Space direction="vertical" size="large" className="w-full">
+      <Space orientation="vertical" size="large" className="w-full">
         <PageHeader title="Giám sát AI" description="Chi phí, độ tin cậy và độ trễ của các lời gọi mô hình" />
         {/* Trạng thái cấu hình hiện cả ở nhánh rỗng — chưa có lượt gọi nào chính là lúc cần biết
             "AI có cấu hình được chưa", và câu trả lời có thể là chưa hề có khoá nào */}
@@ -95,7 +95,7 @@ export default function AdminAiUsagePage() {
   const tiLeThatBai = data.tongLuotGoi === 0 ? 0 : (data.luotThatBai / data.tongLuotGoi) * 100
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space orientation="vertical" size="large" className="w-full">
       <PageHeader
         title="Giám sát AI"
         description="Chi phí, độ tin cậy và độ trễ của các lời gọi mô hình. Không hiển thị khoá API hay nội dung câu hỏi."
@@ -122,7 +122,7 @@ export default function AdminAiUsagePage() {
             value={tiLeThatBai}
             precision={1}
             suffix="%"
-            valueStyle={tiLeThatBai > 5 ? { color: '#c0392b' } : undefined}
+            styles={{ content: tiLeThatBai > 5 ? { color: '#c0392b' } : undefined }}
           />
           <Text className="text-ink-soft text-xs">{data.luotThatBai} / {data.tongLuotGoi} lượt</Text>
         </div>
@@ -148,7 +148,7 @@ export default function AdminAiUsagePage() {
         <Alert
           type="warning"
           showIcon
-          message={`${data.luotDungDuPhong} lượt phải dùng nhà cung cấp dự phòng`}
+          title={`${data.luotDungDuPhong} lượt phải dùng nhà cung cấp dự phòng`}
           description="Nhà cung cấp chính đang lỗi tạm thời hoặc hạn mức bị đụng trần. Hệ thống vẫn trả lời được, nhưng nên kiểm tra hạn mức và trạng thái dịch vụ."
         />
       )}

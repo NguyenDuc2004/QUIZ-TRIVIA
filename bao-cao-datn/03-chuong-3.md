@@ -26,57 +26,35 @@ Toàn bộ hạ tầng dữ liệu khởi động bằng một lệnh `docker co
 
 **Khoá bí mật không nằm trong mã nguồn.** Khoá của hai nhà cung cấp mô hình, mật khẩu cơ sở dữ liệu, khoá ký JWT và mật khẩu ứng dụng của hộp thư đều đọc từ biến môi trường trong tệp `.env`; tệp này bị loại khỏi hệ thống quản lý phiên bản, và kho mã chỉ chứa tệp mẫu `.env.example` liệt kê **tên biến** kèm hướng dẫn lấy khoá, không chứa giá trị nào.
 
-[HÌNH 3.1: Sơ đồ triển khai — máy chủ ứng dụng, giao diện, ba hệ quản trị dữ liệu trong Docker và hai nhà cung cấp mô hình bên ngoài — cần chèn]
-
-*Hình 3.1. Sơ đồ triển khai hệ thống*
+[HÌNH 3.1: Sơ đồ triển khai hệ thống — cần chèn]
 
 ## 3.2. Giao diện phía người dùng
 
 Giao diện tuân theo bộ quy ước đã trình bày ở mục 2.2.3: màu sắc, bo góc và đổ bóng khai báo tập trung dưới dạng biến; trang dành cho người học trình bày theo lưới thẻ, trang quản lý theo bảng; các thành phần dùng chung như tiêu đề trang và trạng thái danh sách rỗng được tái sử dụng.
 
-[HÌNH 3.2: Màn hình đăng nhập và đăng ký — biểu mẫu email, nút đăng nhập bằng Google, ô chọn vai trò — cần chèn]
+Mười một màn dưới đây trải đủ các nhóm chức năng của người học. Màn đăng nhập có thêm lối đăng nhập bằng tài khoản Google và ô chọn vai trò; trang khám phá có thanh tìm kiếm, bộ lọc theo danh mục và độ khó, cùng lưới thẻ quiz; màn làm bài hiển thị đồng hồ đếm ngược và thanh điều hướng giữa các câu; màn kết quả liệt kê từng câu kèm đáp án đúng, lời giải thích và nhận xét của AI cho câu tự luận. Phòng đấu gồm phòng chờ có mã PIN sáu số cùng mã QR, và màn chơi có bảng xếp hạng cập nhật sau mỗi câu. Các màn còn lại lần lượt là học liệu và sinh đề bằng AI, trợ lý học tập kèm khối trích dẫn nguồn, gợi ý cùng lộ trình học, thẻ ghi nhớ với bốn mức tự đánh giá, lớp học kèm bảng theo dõi nộp bài, và trang thành tích cùng bảng xếp hạng theo mùa.
 
-*Hình 3.2. Màn hình đăng nhập và đăng ký*
+[HÌNH 3.2: Màn hình đăng nhập — cần chèn]
 
-[HÌNH 3.3: Màn hình khám phá quiz — thanh tìm kiếm, bộ lọc danh mục và độ khó, lưới thẻ quiz kèm số người đã học — cần chèn]
+[HÌNH 3.3: Trang khám phá quiz — cần chèn]
 
-*Hình 3.3. Màn hình khám phá quiz*
+[HÌNH 3.4: Màn hình làm bài — cần chèn]
 
-[HÌNH 3.4: Màn hình làm bài — nội dung câu hỏi, danh sách phương án, đồng hồ đếm ngược, điều hướng câu — cần chèn]
+[HÌNH 3.5: Màn hình kết quả bài làm — cần chèn]
 
-*Hình 3.4. Màn hình làm bài quiz*
+[HÌNH 3.6: Phòng chờ và phòng đấu — cần chèn]
 
-[HÌNH 3.5: Màn hình kết quả — tổng điểm, danh sách câu kèm đáp án đúng, lời giải thích và nhận xét của AI cho câu tự luận — cần chèn]
+[HÌNH 3.7: Trang học liệu và sinh đề bằng AI — cần chèn]
 
-*Hình 3.5. Màn hình kết quả làm bài*
+[HÌNH 3.8: Màn hình trợ lý học tập — cần chèn]
 
-[HÌNH 3.6: Phòng chờ và phòng đấu — mã PIN sáu số, mã QR, danh sách người chơi kèm nhân vật; màn chơi với câu hỏi và bảng xếp hạng trực tiếp — cần chèn]
+[HÌNH 3.9: Trang gợi ý và lộ trình học — cần chèn]
 
-*Hình 3.6. Phòng đấu thời gian thực*
+[HÌNH 3.10: Thẻ ghi nhớ và phiên ôn tập — cần chèn]
 
-[HÌNH 3.7: Màn hình học liệu và sinh đề bằng AI — danh sách học liệu kèm trạng thái xử lý, biểu mẫu sinh đề, danh sách câu hỏi nháp chờ duyệt kèm đoạn học liệu nguồn — cần chèn]
+[HÌNH 3.11: Trang lớp học — cần chèn]
 
-*Hình 3.7. Màn hình học liệu và sinh đề bằng AI*
-
-[HÌNH 3.8: Màn hình trợ lý học tập — khung hội thoại, phản hồi hiện dần theo luồng, khối trích dẫn nguồn dưới câu trả lời — cần chèn]
-
-*Hình 3.8. Màn hình trợ lý học tập*
-
-[HÌNH 3.9: Màn hình gợi ý và lộ trình học — danh sách quiz được gợi ý kèm lý do, thứ tự chủ đề nên ôn — cần chèn]
-
-*Hình 3.9. Màn hình gợi ý và lộ trình học*
-
-[HÌNH 3.10: Màn hình thẻ ghi nhớ và phiên ôn tập — danh sách bộ thẻ kèm số thẻ đến hạn, thẻ lật được và bốn nút tự đánh giá mức nhớ — cần chèn]
-
-*Hình 3.10. Màn hình thẻ ghi nhớ và phiên ôn tập*
-
-[HÌNH 3.11: Màn hình lớp học — trang lớp với danh sách thành viên, danh sách bài tập kèm hạn nộp, bảng theo dõi nộp bài — cần chèn]
-
-*Hình 3.11. Màn hình lớp học và giao bài*
-
-[HÌNH 3.12: Màn hình thành tích và bảng xếp hạng mùa — cấp độ, huy hiệu, chuỗi ngày học, thử thách hằng ngày, bảng xếp hạng kèm phân hạng — cần chèn]
-
-*Hình 3.12. Màn hình thành tích và bảng xếp hạng theo mùa*
+[HÌNH 3.12: Thành tích và bảng xếp hạng mùa — cần chèn]
 
 **Một quyết định giao diện cần nêu rõ.** Thẻ quiz trên màn hình khám phá hiển thị **số người đã học**, nhưng không hiển thị điểm đánh giá. Hệ thống chưa có chức năng đánh giá nên chưa có dữ liệu đó; hiển thị một con số không có thật ở vị trí này không phải lỗi trang trí mà là **đưa ra một lời khuyên sai**, vì điểm đánh giá chính là thứ người học dựa vào để chọn bài học. Cùng lý do, số người đã học đếm theo **người** chứ không theo **lượt**: hệ thống khuyến khích ôn lại nhiều lần, nên đếm theo lượt sẽ khiến một người làm mười lần đọc thành mười người đã học.
 
@@ -84,21 +62,15 @@ Giao diện tuân theo bộ quy ước đã trình bày ở mục 2.2.3: màu s�
 
 Khu quản trị dùng khung giao diện riêng, tách khỏi khung của người dùng thường, để không nhầm lẫn giữa thao tác học tập và thao tác quản trị.
 
-[HÌNH 3.13: Trang tổng quan quản trị — các chỉ số người dùng, quiz, lượt làm bài, phòng đang chạy, chi phí AI trong tháng, biểu đồ tăng trưởng — cần chèn]
+Bốn màn quản trị dưới đây phục vụ bốn việc khác nhau. Trang tổng quan gom các chỉ số người dùng, quiz, lượt làm bài, phòng đang chạy và chi phí AI trong tháng. Trang quản lý người dùng cho lọc theo vai trò và trạng thái khoá, kèm thao tác khoá tài khoản, đổi vai trò và thu hồi phiên. Trang giám sát AI ghi nhật ký từng lời gọi kèm nhà cung cấp, số token, độ trễ và tỉ lệ dùng nhà cung cấp dự phòng, cùng ô đặt hạn mức mỗi ngày cho từng người dùng. Trang rà soát tính toàn vẹn liệt kê những lượt thi vượt ngưỡng rủi ro kèm lý do cụ thể của từng cờ, nhận định của mô hình và hai nút kết luận.
 
-*Hình 3.13. Trang tổng quan quản trị*
+[HÌNH 3.13: Trang tổng quan quản trị — cần chèn]
 
-[HÌNH 3.14: Trang quản lý người dùng — danh sách có lọc theo vai trò và trạng thái khoá, thao tác khoá, đổi vai trò, thu hồi phiên — cần chèn]
+[HÌNH 3.14: Trang quản lý người dùng — cần chèn]
 
-*Hình 3.14. Trang quản lý người dùng*
+[HÌNH 3.15: Trang giám sát AI — cần chèn]
 
-[HÌNH 3.15: Trang giám sát AI — nhật ký lời gọi kèm nhà cung cấp, số token, độ trễ, tỉ lệ lỗi và tỉ lệ dùng dự phòng; ô đặt hạn mức mỗi ngày cho từng người dùng — cần chèn]
-
-*Hình 3.15. Trang giám sát chi phí và độ tin cậy AI*
-
-[HÌNH 3.16: Trang báo cáo tính toàn vẹn — danh sách lượt thi kèm điểm rủi ro và cờ có lý do cụ thể, thẻ chi tiết kèm nhận định của mô hình và hai nút kết luận — cần chèn]
-
-*Hình 3.16. Trang báo cáo tính toàn vẹn*
+[HÌNH 3.16: Trang rà soát tính toàn vẹn — cần chèn]
 
 Trang cấu hình nhà cung cấp mô hình chỉ hiển thị **trạng thái** của mỗi khoá — *đã cấu hình* hoặc *để trống* — chứ không hiển thị giá trị khoá, kể cả ở dạng che một phần. Một khoá bị lộ trên màn hình quản trị vẫn là một khoá bị lộ.
 
@@ -120,39 +92,22 @@ Bảng 3.2 trình bày các kịch bản tiêu biểu, chọn theo tiêu chí **
 
 **Bảng 3.2. Các kịch bản kiểm thử tiêu biểu**
 
-| STT | Chức năng | Kịch bản | Dữ liệu kiểm thử | Kết quả mong đợi | Kết quả |
-|----:|-----------|----------|------------------|------------------|---------|
-| 1 | Đăng ký | Email đã tồn tại | Email trùng tài khoản có sẵn | Mã lỗi 409, không tạo tài khoản thứ hai | Đạt |
-| 2 | Đăng ký | Tự đăng ký vai trò quản trị | `role=ADMIN` | Hạ xuống vai trò người học | Đạt |
-| 3 | Đăng nhập Google | Tài khoản mới, chọn vai trò người tạo | `role=CREATOR` | Tạo tài khoản đúng vai trò đã chọn | Đạt |
-| 4 | Đăng nhập Google | Tài khoản **đã có**, gửi kèm vai trò cao hơn | Tài khoản người học gửi `role=CREATOR` | **Giữ nguyên** vai trò cũ | Đạt |
-| 5 | Đổi mật khẩu | Sau khi đổi | Hai thiết bị đang đăng nhập | Thu hồi phiên trên **mọi** thiết bị | Đạt |
-| 6 | Xem quiz | Khách chưa đăng nhập xem quiz công khai | Không có token | Trả về thông tin giới thiệu, **không** kèm câu hỏi | Đạt |
-| 7 | Xem quiz | Khách xem quiz riêng tư của người khác | Mã quiz riêng tư | Trả về 404 chứ không phải 403 | Đạt |
-| 8 | Làm bài | Chủ quiz sửa đề khi có người đang làm dở | Sửa quiz giữa chừng | Lượt đang làm giữ nguyên đề đã chốt | Đạt |
-| 9 | Làm bài | Hết giờ | Quiz có thời lượng | Tự chuyển sang trạng thái hết hạn | Đạt |
-| 10 | Chấm tự luận | Mô hình trả điểm vượt trần | Điểm lớn hơn điểm tối đa của câu | Giới hạn cứng về trần thật của câu | Đạt |
-| 11 | Chấm tự luận | Người đã chấm tay, AI trả kết quả sau | Ghi đè điểm rồi mới có phản hồi AI | Bỏ qua kết quả AI | Đạt |
-| 12 | Chấm tự luận | Gọi mô hình thất bại | Ngắt nhà cung cấp | Chuyển trạng thái dừng rõ ràng, không treo | Đạt |
-| 13 | Phòng đấu | Khách vào phòng khi chủ phòng **chưa** bật | Mã PIN đúng, cờ tắt | Từ chối với mã 403 | Đạt |
-| 14 | Phòng đấu | Mất kết nối rồi vào lại | Ngắt WebSocket giữa ván | Giữ nguyên điểm đã có | Đạt |
-| 15 | Phòng đấu | Hai tiến trình máy chủ | Người chơi chia hai instance | Cả hai bên nhận đủ sự kiện | Đạt |
-| 16 | Sinh đề AI | Người dùng đã hết hạn mức | Hạn mức trong ngày đã dùng hết | Trả 429 **ngay**, không nhận việc rồi hỏng | Đạt |
-| 17 | Sinh đề AI | Câu trả về sai định dạng | JSON thiếu trường | Bộ kiểm cấu trúc loại câu đó | Đạt |
-| 18 | Trợ lý học tập | Hỏi ngoài phạm vi học liệu | Câu hỏi không liên quan | Trả lời không biết, không suy đoán | Đạt |
-| 19 | Trợ lý học tập | Học liệu của người khác chưa chia sẻ | Tài liệu riêng tư | Không xuất hiện trong kết quả truy hồi | Đạt |
-| 20 | Gợi ý | Neo4j ngừng hoạt động | Dừng dịch vụ đồ thị | API trả danh sách rỗng, **không** làm hỏng việc nộp bài | Đạt |
-| 21 | Tải ảnh | Tệp giả dạng ảnh | Tệp mã lệnh đặt đuôi `.png` | Từ chối theo chữ ký byte | Đạt |
-| 22 | Ảnh đại diện | Người học đổi ảnh | Ảnh đã tải lên hệ thống | Cho phép, và chỉ giữ **một** tệp cho mỗi người | Đạt |
-| 23 | Ảnh đại diện | Dán URL bên ngoài | Địa chỉ máy chủ lạ | Từ chối với mã 400 | Đạt |
-| 24 | Giao bài | Nộp sau hạn | Nộp quá hạn nộp | Vẫn nhận, đánh dấu là nộp trễ | Đạt |
-| 25 | Giao bài | Xoá quiz đang được giao | Quiz gắn với bài tập | Chặn thao tác xoá | Đạt |
-| 26 | Gamification | Cùng một hành động ghi nhận hai lần | Gọi lại sự kiện cộng điểm | Chỉ cộng đúng một lần | Đạt |
-| 27 | Xếp hạng mùa | Mùa có dưới mười người tham gia | 3 người | **Không** phân hạng cho ai | Đạt |
-| 28 | Thông báo | Công việc nhắc ôn chạy lại trong ngày | Khởi động lại máy chủ | Không gửi trùng | Đạt |
-| 29 | Chống gian lận | Gửi tín hiệu cho lượt **luyện tập** | Lượt không tính điểm | Máy chủ từ chối ghi nhận | Đạt |
-| 29b | Chống gian lận | Câu chữ hiện cho người thi | Đã ghi nhận 5 lần rời trang | **Không** chứa chữ mang nghĩa buộc tội; nói rõ giáo viên là người kết luận | Đạt |
-| 30 | Chống gian lận | Mốc thời gian ở tương lai | Đồng hồ máy khách sai | Cắt về thời điểm hiện tại của máy chủ | Đạt |
+| STT | Chức năng | Kịch bản | Kết quả mong đợi | Kết quả |
+|----:|-----------|----------|------------------|---------|
+| 1 | Đăng ký | Tự đăng ký vai trò quản trị | Hạ xuống vai trò người học | Đạt |
+| 2 | Đăng nhập Google | Tài khoản đã có, gửi kèm vai trò cao hơn | Giữ nguyên vai trò cũ | Đạt |
+| 3 | Đổi mật khẩu | Hai thiết bị đang đăng nhập | Thu hồi phiên trên **mọi** thiết bị | Đạt |
+| 4 | Xem quiz | Khách xem quiz riêng tư của người khác | Trả về 404 chứ không phải 403 | Đạt |
+| 5 | Làm bài | Chủ quiz sửa đề khi có người đang làm dở | Lượt đang làm giữ nguyên đề đã chốt | Đạt |
+| 6 | Chấm tự luận | Mô hình trả điểm vượt trần của câu | Giới hạn cứng về trần thật | Đạt |
+| 7 | Phòng đấu | Người chơi chia trên hai tiến trình máy chủ | Cả hai bên nhận đủ sự kiện | Đạt |
+| 8 | Sinh đề AI | Người dùng đã hết hạn mức trong ngày | Trả 429 ngay, không gọi mô hình | Đạt |
+| 9 | Trợ lý học tập | Học liệu của người khác chưa chia sẻ | Không xuất hiện trong truy hồi | Đạt |
+| 10 | Gợi ý | Neo4j ngừng hoạt động | Trả danh sách rỗng, không làm hỏng việc nộp bài | Đạt |
+| 11 | Tải ảnh | Tệp mã lệnh đặt đuôi `.png` | Từ chối theo chữ ký byte | Đạt |
+| 12 | Chống gian lận | Mốc thời gian ở tương lai do đồng hồ máy khách sai | Cắt về thời điểm hiện tại | Đạt |
+
+Bảng trên giữ mỗi nhóm chức năng một kịch bản đại diện. Toàn bộ 31 ca kiểm thử kèm dữ liệu và kết quả từng ca nằm ở tệp `Test_Case_QuizAI.xlsx`, còn phạm vi, chiến lược theo tầng và tiêu chí chấp nhận sản phẩm nằm ở `Test_Plan_QuizAI.docx`; cả hai là sản phẩm bàn giao kèm đồ án.
 
 ### 3.4.3. Kết quả kiểm thử
 
@@ -168,26 +123,17 @@ Bộ kiểm thử máy chủ chạy sau lệnh dọn sạch thư mục biên d�
 
 **Bảng 3.4. Phân bố phép kiểm theo nhóm chức năng (máy chủ)**
 
-| Nhóm chức năng | Số phép kiểm |
-|----------------|-------------:|
-| AI: RAG, sinh đề, chấm tự luận, hạn mức | 116 |
-| Làm bài và chấm điểm | 57 |
-| Xác thực và phân quyền | 43 |
-| Quản lý quiz và câu hỏi | 38 |
-| Lớp học và giao bài | 38 |
-| Chống gian lận | 33 |
-| Phòng đấu thời gian thực | 30 |
-| Tải ảnh lên | 28 |
-| Gợi ý cá nhân hoá (Neo4j) | 28 |
-| Flashcard và lặp lại ngắt quãng | 25 |
-| Thông báo và nhắc ôn | 24 |
-| Bảng xếp hạng theo mùa | 24 |
-| Gamification | 21 |
-| Trợ lý học tập | 20 |
-| Quản trị hệ thống | 19 |
-| Thống kê và báo cáo | 17 |
-| Hồ sơ người dùng | 16 |
-| Khởi động ứng dụng | 1 |
+| Nhóm chức năng | Số phép kiểm | Nhóm chức năng | Số phép kiểm |
+|----------------|-------------:|----------------|-------------:|
+| AI: RAG, sinh đề, chấm tự luận, hạn mức | 116 | Flashcard và lặp lại ngắt quãng | 25 |
+| Làm bài và chấm điểm | 57 | Thông báo và nhắc ôn | 24 |
+| Xác thực và phân quyền | 43 | Bảng xếp hạng theo mùa | 24 |
+| Quản lý quiz và câu hỏi | 38 | Gamification | 21 |
+| Lớp học và giao bài | 38 | Trợ lý học tập | 20 |
+| Chống gian lận | 33 | Quản trị hệ thống | 19 |
+| Phòng đấu thời gian thực | 30 | Thống kê và báo cáo | 17 |
+| Tải ảnh lên | 28 | Hồ sơ người dùng | 16 |
+| Gợi ý cá nhân hoá (Neo4j) | 28 | Khởi động ứng dụng | 1 |
 
 Nhóm chức năng AI chiếm tỉ trọng lớn nhất, phản ánh đúng đặc điểm của phần này: kết quả trả về từ mô hình ngôn ngữ **không xác định**, nên phần lớn phép kiểm không kiểm nội dung câu trả lời mà kiểm **hàng rào quanh nó** — giới hạn miền điểm, bộ kiểm cấu trúc JSON, điều kiện chuyển nhà cung cấp dự phòng, hạn mức, và cách ly quyền đọc học liệu.
 
@@ -251,9 +197,7 @@ Kế hoạch ban đầu dự định dùng k6 hoặc Gatling. Cả hai **không 
 | 150 | 11 454 ms | 542 ms | 566 ms | 568 ms | **0** |
 | 200 | 25 101 ms | 1 411 ms | 1 509 ms | 1 511 ms | **0** |
 
-[HÌNH 3.17: Biểu đồ độ trễ P50 và P95 theo số người chơi trong phòng, trục hoành 10–200 người — cần chèn]
-
-*Hình 3.17. Độ trễ phát câu hỏi theo số người chơi*
+[HÌNH 3.17: Độ trễ phát câu hỏi theo số người chơi — cần chèn]
 
 Hai nhận xét quan trọng.
 

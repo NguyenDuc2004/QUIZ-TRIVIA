@@ -42,7 +42,7 @@ export default function AnswerInput({
           onChange={(event) => commitOptions([event.target.value])}
           className="w-full"
         >
-          <Space direction="vertical" size={8} className="w-full">
+          <Space orientation="vertical" size={8} className="w-full">
             {question.options.map((option) => (
               <Radio key={option.id} value={option.id} className="w-full border border-line rounded-card p-3">
                 {option.content}
@@ -60,7 +60,7 @@ export default function AnswerInput({
           onChange={(values) => commitOptions(values as string[])}
           className="w-full"
         >
-          <Space direction="vertical" size={8} className="w-full">
+          <Space orientation="vertical" size={8} className="w-full">
             {question.options.map((option) => (
               <Checkbox key={option.id} value={option.id} className="w-full border border-line rounded-card p-3">
                 {option.content}

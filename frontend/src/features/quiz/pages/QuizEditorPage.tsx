@@ -115,11 +115,11 @@ export default function QuizEditorPage() {
   ]
 
   if (error) {
-    return <Alert type="error" showIcon message={getApiErrorMessage(error)} />
+    return <Alert type="error" showIcon title={getApiErrorMessage(error)} />
   }
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space orientation="vertical" size="large" className="w-full">
       <PageHeader
         title={data?.quiz.title ?? 'Đang tải…'}
         description={
@@ -168,7 +168,7 @@ export default function QuizEditorPage() {
       />
 
       {isDirty && (
-        <Alert type="warning" showIcon message="Danh sách câu hỏi đã thay đổi nhưng chưa lưu." />
+        <Alert type="warning" showIcon title="Danh sách câu hỏi đã thay đổi nhưng chưa lưu." />
       )}
 
       <div className="soft-panel">

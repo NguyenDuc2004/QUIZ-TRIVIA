@@ -111,7 +111,7 @@ export default function ClassroomDetailPage() {
         <Alert
           type="info"
           showIcon
-          message={
+          title={
             <span>
               Mã lớp:{' '}
               <Text className="font-mono text-base font-bold! tracking-widest">{lop.classCode}</Text>

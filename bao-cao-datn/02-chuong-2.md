@@ -244,95 +244,50 @@ Cơ sở dữ liệu quan hệ được thiết kế theo các quy ước: dùng
 
 [HÌNH 2.28: Sơ đồ thực thể quan hệ (ERD) tổng quan — cần chèn]
 
-Lược đồ quan hệ gồm 35 bảng trên PostgreSQL, tạo qua 23 tệp migration Flyway được đánh số, tổ chức theo các nhóm chức năng. Bảng 2.10 đến Bảng 2.14 liệt kê nhóm dữ liệu lõi, Bảng 2.15 đến Bảng 2.19 liệt kê nhóm dữ liệu của các chức năng mở rộng, kèm mô tả ngắn gọn.
+Lược đồ quan hệ gồm 35 bảng trên PostgreSQL, tạo qua 23 tệp migration Flyway được đánh số và tổ chức theo nhóm chức năng. Bảng 2.10 liệt kê các nhóm này kèm mô tả ngắn gọn cho từng bảng.
 
-**Bảng 2.10. Nhóm người dùng và danh mục**
+**Bảng 2.10. Các nhóm bảng trong lược đồ cơ sở dữ liệu**
 
-| Bảng | Mô tả |
-|------|-------|
-| `users` | Tài khoản người dùng: email, mật khẩu băm, định danh Google, tên hiển thị, ảnh đại diện, vai trò. Ràng buộc kiểm tra bảo đảm mỗi tài khoản có ít nhất một cách đăng nhập (mật khẩu hoặc Google) |
-| `categories` | Danh mục quiz (tên, chuỗi định danh trên đường dẫn, mô tả) |
-
-**Bảng 2.11. Nhóm quiz và ngân hàng câu hỏi**
-
-| Bảng | Mô tả |
-|------|-------|
-| `quizzes` | Quiz: tiêu đề, mô tả, danh mục, độ khó, chế độ hiển thị, thời lượng, ảnh bìa, cờ đánh dấu nội dung sinh từ AI |
-| `questions` | Câu hỏi trong ngân hàng (năm loại): nội dung, loại, độ khó, điểm, chủ đề dạng chữ tự do, lời giải thích, tiêu chí chấm cho câu tự luận, nguồn tạo và siêu dữ liệu AI |
-| `question_options` | Phương án trả lời cho câu trắc nghiệm, kèm cờ đáp án đúng và thứ tự hiển thị |
-| `quiz_questions` | Bảng nối nhiều-nhiều giữa quiz và câu hỏi, kèm thứ tự câu trong đề |
-
-**Bảng 2.12. Nhóm làm bài và chấm điểm**
-
-| Bảng | Mô tả |
-|------|-------|
-| `quiz_attempts` | Lượt làm bài của một người học: chế độ, trạng thái, thời điểm bắt đầu và hết hạn, tổng điểm và điểm tối đa chốt lúc bắt đầu. Chỉ mục một phần bảo đảm mỗi người tối đa một bài đang làm dở trên một quiz |
-| `attempt_answers` | Từng câu trong đề của riêng một lượt làm bài, sinh sẵn lúc bắt đầu để chốt đề; lưu câu trả lời dạng `jsonb`, điểm, nhận xét và gợi ý của AI, người chấm và thời điểm chấm |
-
-**Bảng 2.13. Nhóm học liệu, RAG và tác vụ AI**
-
-| Bảng | Mô tả |
-|------|-------|
-| `learning_materials` | Học liệu người dùng nạp lên: tiêu đề, chủ đề, loại nguồn, trạng thái xử lý, số ký tự và số đoạn, lý do thất bại, và cờ `shared` cho phép người học khác hỏi trợ lý trên tài liệu này (mặc định tắt) |
-| `material_chunks` | Các đoạn học liệu kèm vector nhúng 768 chiều (pgvector) phục vụ truy hồi ngữ nghĩa |
-| `ai_jobs` | Tác vụ AI chạy nền (nạp học liệu, sinh đề): loại, trạng thái, tham số và kết quả dạng `jsonb` |
-| `ai_request_logs` | Nhật ký mọi lời gọi mô hình: chức năng, nhà cung cấp, mô hình, số token vào/ra, độ trễ, trạng thái. Ghi trong giao dịch riêng để công việc chính thất bại thì bản ghi giám sát vẫn còn |
-
-**Bảng 2.14. Nhóm phòng đấu và trợ lý học tập**
-
-| Bảng | Mô tả |
-|------|-------|
-| `game_rooms` | Phòng đấu: mã PIN sáu ký tự, chủ phòng, quiz, trạng thái, thời gian mỗi câu, cờ cho phép khách vào chơi. Trạng thái đang chơi nằm ở Redis, không ở đây |
-| `game_room_players` | Người chơi trong phòng: biệt danh và ảnh đại diện chốt tại thời điểm chơi, cờ khách vãng lai, điểm cuối ván. Cột người dùng cho phép rỗng để khách chơi được; ràng buộc duy nhất dùng chỉ mục một phần chỉ áp cho người có tài khoản |
-| `chat_sessions` | Phiên hội thoại với trợ lý học tập, tiêu đề cắt từ câu hỏi đầu tiên |
-| `chat_messages` | Từng lượt hỏi và trả lời trong một phiên hội thoại |
-
-**Bảng 2.15. Nhóm thẻ ghi nhớ và lặp lại ngắt quãng**
-
-| Bảng | Mô tả |
-|------|-------|
-| `flashcard_decks` | Bộ thẻ của một người dùng: tiêu đề, chủ đề |
-| `flashcards` | Thẻ ghi nhớ: mặt trước, mặt sau, gợi ý, thẻ nhãn, và nguồn tạo (tự soạn, sinh từ AI, hoặc dựng từ câu đã làm sai) |
-| `flashcard_reviews` | **Trạng thái lặp lại ngắt quãng theo từng cặp (thẻ, người dùng)**: hệ số dễ, khoảng cách ngày, số lần ôn đúng liên tiếp, ngày đến hạn. Tách riêng khỏi `flashcards` vì một thẻ dùng chung có thể được nhiều người ôn với lịch hoàn toàn khác nhau |
-
-**Bảng 2.16. Nhóm trò chơi hóa và bảng xếp hạng theo mùa**
-
-| Bảng | Mô tả |
-|------|-------|
-| `user_stats` | Tổng hợp cho mỗi người dùng: tổng điểm kinh nghiệm, cấp độ, chuỗi ngày học hiện tại và dài nhất, ngày hoạt động gần nhất |
-| `xp_events` | Sổ từng lần cộng điểm kinh nghiệm: nguồn, khóa của hành động, số điểm. Ràng buộc duy nhất trên (người dùng, loại nguồn, khóa nguồn) là chốt **idempotent** ở tầng cơ sở dữ liệu — một hành động chỉ cộng điểm đúng một lần dù có gọi lại |
-| `badges`, `user_badges` | Định nghĩa huy hiệu (mã, tên, điều kiện dạng `jsonb`) và bản ghi trao huy hiệu cho người dùng kèm thời điểm |
-| `daily_challenges`, `user_daily_progress` | Thử thách của từng ngày (luật dạng `jsonb`, điểm thưởng) và tiến độ của mỗi người trên thử thách đó |
-| `seasons`, `season_rankings` | Mùa giải (khoảng thời gian, trạng thái) và bảng xếp hạng **chốt lại khi mùa kết thúc**. Bảng xếp hạng đang diễn ra nằm ở Redis dạng Sorted Set, không ở đây — nó là chỉ mục dựng lại được từ `xp_events`, không phải nguồn sự thật |
-
-**Bảng 2.17. Nhóm chống gian lận thi**
-
-| Bảng | Mô tả |
-|------|-------|
-| `proctoring_events` | Nhật ký tín hiệu hành vi trong chế độ thi: loại tín hiệu (sáu loại, có ràng buộc kiểm tra), thời điểm phát sinh, và chi tiết dạng `jsonb`. Chi tiết **chỉ chứa số** — với thao tác dán chỉ lưu độ dài đoạn văn bản, không lưu nội dung |
-| `attempt_integrity` | Bản tổng hợp của mỗi lượt thi: điểm rủi ro 0–100, danh sách cờ giải thích lý do dạng `jsonb`, nhận định của mô hình ngôn ngữ, và trạng thái rà soát. Ràng buộc duy nhất trên lượt thi bảo đảm tính lại không sinh dòng thứ hai |
-| `room_proctoring_events` | Tín hiệu hành vi trong **phòng đấu thời gian thực**, tách riêng khỏi `proctoring_events` vì danh tính người chơi ở đây là định danh trong phạm vi phòng chứ không phải tài khoản — một phần người chơi là khách vãng lai nên bảng **không có** khóa ngoại tới `users`. Cột chỉ số câu hỏi là thứ làm nên khái niệm *khuôn lặp*: đếm số câu **khác nhau** có tín hiệu mới phân biệt được một lần bị gián đoạn với việc lặp đi lặp lại ở mọi câu |
+| Nhóm | Bảng | Mô tả |
+|------|------|-------|
+| người dùng và danh mục | `users` | Tài khoản người dùng: email, mật khẩu băm, định danh Google, tên hiển thị, ảnh đại diện, vai trò. Ràng buộc kiểm tra bảo đảm mỗi tài khoản có ít nhất một cách đăng nhập (mật khẩu hoặc Google) |
+|  | `categories` | Danh mục quiz (tên, chuỗi định danh trên đường dẫn, mô tả) |
+| quiz và ngân hàng câu hỏi | `quizzes` | Quiz: tiêu đề, mô tả, danh mục, độ khó, chế độ hiển thị, thời lượng, ảnh bìa, cờ đánh dấu nội dung sinh từ AI |
+|  | `questions` | Câu hỏi trong ngân hàng (năm loại): nội dung, loại, độ khó, điểm, chủ đề dạng chữ tự do, lời giải thích, tiêu chí chấm cho câu tự luận, nguồn tạo và siêu dữ liệu AI |
+|  | `question_options` | Phương án trả lời cho câu trắc nghiệm, kèm cờ đáp án đúng và thứ tự hiển thị |
+|  | `quiz_questions` | Bảng nối nhiều-nhiều giữa quiz và câu hỏi, kèm thứ tự câu trong đề |
+| làm bài và chấm điểm | `quiz_attempts` | Lượt làm bài của một người học: chế độ, trạng thái, thời điểm bắt đầu và hết hạn, tổng điểm và điểm tối đa chốt lúc bắt đầu. Chỉ mục một phần bảo đảm mỗi người tối đa một bài đang làm dở trên một quiz |
+|  | `attempt_answers` | Từng câu trong đề của riêng một lượt làm bài, sinh sẵn lúc bắt đầu để chốt đề; lưu câu trả lời dạng `jsonb`, điểm, nhận xét và gợi ý của AI, người chấm và thời điểm chấm |
+| học liệu, RAG và tác vụ AI | `learning_materials` | Học liệu người dùng nạp lên: tiêu đề, chủ đề, loại nguồn, trạng thái xử lý, số ký tự và số đoạn, lý do thất bại, và cờ `shared` cho phép người học khác hỏi trợ lý trên tài liệu này (mặc định tắt) |
+|  | `material_chunks` | Các đoạn học liệu kèm vector nhúng 768 chiều (pgvector) phục vụ truy hồi ngữ nghĩa |
+|  | `ai_jobs` | Tác vụ AI chạy nền (nạp học liệu, sinh đề): loại, trạng thái, tham số và kết quả dạng `jsonb` |
+|  | `ai_request_logs` | Nhật ký mọi lời gọi mô hình: chức năng, nhà cung cấp, mô hình, số token vào/ra, độ trễ, trạng thái. Ghi trong giao dịch riêng để công việc chính thất bại thì bản ghi giám sát vẫn còn |
+| phòng đấu và trợ lý học tập | `game_rooms` | Phòng đấu: mã PIN sáu ký tự, chủ phòng, quiz, trạng thái, thời gian mỗi câu, cờ cho phép khách vào chơi. Trạng thái đang chơi nằm ở Redis, không ở đây |
+|  | `game_room_players` | Người chơi trong phòng: biệt danh và ảnh đại diện chốt tại thời điểm chơi, cờ khách vãng lai, điểm cuối ván. Cột người dùng cho phép rỗng để khách chơi được; ràng buộc duy nhất dùng chỉ mục một phần chỉ áp cho người có tài khoản |
+|  | `chat_sessions` | Phiên hội thoại với trợ lý học tập, tiêu đề cắt từ câu hỏi đầu tiên |
+|  | `chat_messages` | Từng lượt hỏi và trả lời trong một phiên hội thoại |
+| thẻ ghi nhớ và lặp lại ngắt quãng | `flashcard_decks` | Bộ thẻ của một người dùng: tiêu đề, chủ đề |
+|  | `flashcards` | Thẻ ghi nhớ: mặt trước, mặt sau, gợi ý, thẻ nhãn, và nguồn tạo (tự soạn, sinh từ AI, hoặc dựng từ câu đã làm sai) |
+|  | `flashcard_reviews` | **Trạng thái lặp lại ngắt quãng theo từng cặp (thẻ, người dùng)**: hệ số dễ, khoảng cách ngày, số lần ôn đúng liên tiếp, ngày đến hạn. Tách riêng khỏi `flashcards` vì một thẻ dùng chung có thể được nhiều người ôn với lịch hoàn toàn khác nhau |
+| trò chơi hóa và bảng xếp hạng theo mùa | `user_stats` | Tổng hợp cho mỗi người dùng: tổng điểm kinh nghiệm, cấp độ, chuỗi ngày học hiện tại và dài nhất, ngày hoạt động gần nhất |
+|  | `xp_events` | Sổ từng lần cộng điểm kinh nghiệm: nguồn, khóa của hành động, số điểm. Ràng buộc duy nhất trên (người dùng, loại nguồn, khóa nguồn) là chốt **idempotent** ở tầng cơ sở dữ liệu — một hành động chỉ cộng điểm đúng một lần dù có gọi lại |
+|  | `badges`, `user_badges` | Định nghĩa huy hiệu (mã, tên, điều kiện dạng `jsonb`) và bản ghi trao huy hiệu cho người dùng kèm thời điểm |
+|  | `daily_challenges`, `user_daily_progress` | Thử thách của từng ngày (luật dạng `jsonb`, điểm thưởng) và tiến độ của mỗi người trên thử thách đó |
+|  | `seasons`, `season_rankings` | Mùa giải (khoảng thời gian, trạng thái) và bảng xếp hạng **chốt lại khi mùa kết thúc**. Bảng xếp hạng đang diễn ra nằm ở Redis dạng Sorted Set, không ở đây — nó là chỉ mục dựng lại được từ `xp_events`, không phải nguồn sự thật |
+| chống gian lận thi | `proctoring_events` | Nhật ký tín hiệu hành vi trong chế độ thi: loại tín hiệu (sáu loại, có ràng buộc kiểm tra), thời điểm phát sinh, và chi tiết dạng `jsonb`. Chi tiết **chỉ chứa số** — với thao tác dán chỉ lưu độ dài đoạn văn bản, không lưu nội dung |
+|  | `attempt_integrity` | Bản tổng hợp của mỗi lượt thi: điểm rủi ro 0–100, danh sách cờ giải thích lý do dạng `jsonb`, nhận định của mô hình ngôn ngữ, và trạng thái rà soát. Ràng buộc duy nhất trên lượt thi bảo đảm tính lại không sinh dòng thứ hai |
+|  | `room_proctoring_events` | Tín hiệu hành vi trong **phòng đấu thời gian thực**, tách riêng khỏi `proctoring_events` vì danh tính người chơi ở đây là định danh trong phạm vi phòng chứ không phải tài khoản — một phần người chơi là khách vãng lai nên bảng **không có** khóa ngoại tới `users`. Cột chỉ số câu hỏi là thứ làm nên khái niệm *khuôn lặp*: đếm số câu **khác nhau** có tín hiệu mới phân biệt được một lần bị gián đoạn với việc lặp đi lặp lại ở mọi câu |
+| lớp học và giao bài | `classrooms` | Lớp học: tên, mô tả, giáo viên chủ nhiệm, và **mã lớp sáu ký tự** để học viên tự tham gia. Mã dùng chữ và số nhưng bỏ các ký tự dễ đọc nhầm, vì nó được đọc to trong lớp và chép tay lên bảng; dùng cả chữ chứ không chỉ số như mã PIN phòng đấu vì lớp học sống cả học kỳ nên cần không gian mã lớn hơn nhiều |
+|  | `classroom_members` | Thành viên lớp kèm vai trò trong lớp (học viên hoặc trợ giảng). **Giáo viên chủ nhiệm không nằm trong bảng này** — họ là cột chủ sở hữu của `classrooms`; thêm một dòng thành viên nữa cho chủ nhiệm là tạo hai nguồn sự thật cho cùng một câu hỏi, và sớm muộn hai nguồn sẽ lệch nhau |
+|  | `assignments` | Bài tập: gắn một quiz cho một lớp, kèm thời gian mở và hạn nộp đều tùy chọn. Khóa ngoại tới quiz đặt ở chế độ **hạn chế xóa** thay vì xóa lan truyền như phần lớn khóa ngoại khác, vì xóa một quiz đang được giao sẽ xóa luôn bài tập và mọi điểm số gắn với nó. Bảng **không** lưu trạng thái nộp: năm trạng thái (chưa làm, đang làm, đã nộp, nộp trễ, quá hạn) được tính khi hiển thị từ hạn nộp, lượt làm bài và thời điểm hiện tại — lưu thành cột thì phải có một công việc nền cập nhật nó lúc quá hạn, tức thêm một thứ có thể chết để giữ một giá trị vốn suy ra được |
+| thông báo | `notifications` | Thông báo gửi tới một người dùng: loại, tiêu đề, nội dung, dữ liệu điều hướng dạng `jsonb`, cờ đã đọc, và **khóa chống trùng**. Chống trùng chặn bằng ràng buộc duy nhất ở tầng cơ sở dữ liệu chứ không kiểm trong mã ứng dụng: kiểm trong mã thua cuộc khi hai tiến trình máy chủ cùng thức dậy đúng mốc giờ đã hẹn, mà đó chính là tình huống sẽ xảy ra. Khóa để rỗng cho thông báo không cần chống trùng — ràng buộc duy nhất của PostgreSQL coi mỗi giá trị rỗng là khác nhau nên nhiều dòng cùng tồn tại được |
+|  | `notification_settings` | Cài đặt của mỗi người dùng, lưu **danh sách loại đã tắt** chứ không phải danh sách đã bật. Người chưa từng mở trang cài đặt thì danh sách rỗng, nghĩa là nhận đủ mọi loại; lưu ngược lại thì người chưa cấu hình sẽ không nhận được gì |
 
 Nhóm bảng chống gian lận có bốn đặc điểm thiết kế xuất phát từ **ràng buộc đạo đức** chứ không từ nhu cầu kỹ thuật, nên cần nêu rõ. Thứ nhất, hai bảng này **chỉ có dữ liệu cho lượt thi tính điểm**; lượt luyện tập không sinh dòng nào, và máy chủ từ chối tín hiệu gửi lên cho lượt luyện tập. Thứ hai, cột chi tiết được máy chủ **dựng lại từ một danh sách trường vô hại** thay vì lưu nguyên gói tin của phía trình duyệt — phía trình duyệt đã chỉ đọc độ dài đoạn dán rồi bỏ chuỗi đi, nhưng nếu chỉ có một lớp bảo vệ thì một bản mã nguồn phía người dùng bị sửa đủ để nội dung chảy vào cơ sở dữ liệu. Thứ ba, cột trạng thái rà soát mặc định là *chờ rà soát* và **không có đường nào để hệ thống tự đổi giá trị đó**: tín hiệu thu từ trình duyệt có thể bị chặn hoặc giả mạo, nên chúng chỉ là cảnh báo hỗ trợ quyết định của con người. Giao diện phản ánh đúng điều này — mọi báo cáo đều hiện kèm một câu nhắc rằng điểm rủi ro không phải bằng chứng gian lận, và câu nhắc đó đặt ngay cạnh con số chứ không ở cuối trang. Thứ tư, **người thi được biết mình đang bị ghi nhận cái gì**: thông báo đầy đủ hiện ở trang giới thiệu quiz kèm ô xác nhận đã đọc — tức trước khi đồng hồ chạy, khi họ còn kịp đóng bớt tab hay chọn chỗ ngồi — và trong lúc làm bài có một dòng đếm số lần đã ghi nhận. Dòng đếm dùng chữ *đã ghi nhận* chứ không phải *vi phạm*, vì rời trang một lần do thông báo bật lên không phải gian lận, và người có tư cách kết luận điều đó là giáo viên chứ không phải hệ thống. Hai loại tín hiệu cố ý không hiện cho người thi: sao chép đề bài — việc bình thường của người học nghiêm túc — và *trả lời nhanh bất thường*, vốn là một suy đoán của hệ thống chứ không phải hành động người thi tự biết mình vừa làm.
 
 Riêng bảng `material_chunks` có một đặc điểm thiết kế cần nêu rõ: cột vector nhúng **không** được lập chỉ mục xấp xỉ. Nguyên nhân đã trình bày ở mục 1.3.2 — truy vấn RAG phải lọc quyền đọc trước rồi mới xếp theo khoảng cách, trong khi chỉ mục xấp xỉ làm ngược lại nên bỏ sót kết quả một cách im lặng. Ở quy mô vài trăm tới vài nghìn đoạn, quét tuần tự trên tập đã lọc quyền vừa nhanh vừa không bỏ sót; khi kho vượt cỡ vài chục nghìn đoạn mới cần chỉ mục xấp xỉ, và lúc đó phải bật kèm cơ chế quét lặp của pgvector để chỉ mục tự tìm thêm khi bộ lọc quyền loại bớt ứng viên.
 
 Mô hình đồ thị trên Neo4j gồm ba loại nút `User`, `Quiz`, `Topic` và ba loại quan hệ `ATTEMPTED`, `PRACTICED`, `COVERS` như đã trình bày ở mục 1.3.5; ràng buộc duy nhất trên định danh của cả ba loại nút được tạo lúc ứng dụng khởi động, thiếu bước này thì lệnh `MERGE` vẫn chạy nhưng quét toàn bộ nút mỗi lần và chậm dần theo kích thước đồ thị mà không có triệu chứng gì. Dữ liệu trên Redis gồm trạng thái phòng đang chơi, kênh xuất bản sự kiện ván đấu, khóa phiên khách vãng lai, refresh token cùng chỉ mục ngược từ người dùng tới các phiên của họ, mã OTP đặt lại mật khẩu cùng bộ đếm số lần thử sai, bộ đếm hạn mức gọi AI theo ngày, mốc tạm ngừng gọi nhà cung cấp AI đang quá tải, bộ đệm lời giải thích lý do gợi ý, bảng xếp hạng mùa đang chạy dạng tập hợp có thứ tự, và các khóa chống trùng của thông báo. Điểm chung của mọi khóa trên là chúng **dựng lại được**: Redis giữ chỉ mục và trạng thái ngắn hạn, PostgreSQL giữ nguồn sự thật.
-
-**Bảng 2.18. Nhóm lớp học và giao bài**
-
-| Bảng | Mô tả |
-|------|-------|
-| `classrooms` | Lớp học: tên, mô tả, giáo viên chủ nhiệm, và **mã lớp sáu ký tự** để học viên tự tham gia. Mã dùng chữ và số nhưng bỏ các ký tự dễ đọc nhầm, vì nó được đọc to trong lớp và chép tay lên bảng; dùng cả chữ chứ không chỉ số như mã PIN phòng đấu vì lớp học sống cả học kỳ nên cần không gian mã lớn hơn nhiều |
-| `classroom_members` | Thành viên lớp kèm vai trò trong lớp (học viên hoặc trợ giảng). **Giáo viên chủ nhiệm không nằm trong bảng này** — họ là cột chủ sở hữu của `classrooms`; thêm một dòng thành viên nữa cho chủ nhiệm là tạo hai nguồn sự thật cho cùng một câu hỏi, và sớm muộn hai nguồn sẽ lệch nhau |
-| `assignments` | Bài tập: gắn một quiz cho một lớp, kèm thời gian mở và hạn nộp đều tùy chọn. Khóa ngoại tới quiz đặt ở chế độ **hạn chế xóa** thay vì xóa lan truyền như phần lớn khóa ngoại khác, vì xóa một quiz đang được giao sẽ xóa luôn bài tập và mọi điểm số gắn với nó. Bảng **không** lưu trạng thái nộp: năm trạng thái (chưa làm, đang làm, đã nộp, nộp trễ, quá hạn) được tính khi hiển thị từ hạn nộp, lượt làm bài và thời điểm hiện tại — lưu thành cột thì phải có một công việc nền cập nhật nó lúc quá hạn, tức thêm một thứ có thể chết để giữ một giá trị vốn suy ra được |
-
-**Bảng 2.19. Nhóm thông báo**
-
-| Bảng | Mô tả |
-|------|-------|
-| `notifications` | Thông báo gửi tới một người dùng: loại, tiêu đề, nội dung, dữ liệu điều hướng dạng `jsonb`, cờ đã đọc, và **khóa chống trùng**. Chống trùng chặn bằng ràng buộc duy nhất ở tầng cơ sở dữ liệu chứ không kiểm trong mã ứng dụng: kiểm trong mã thua cuộc khi hai tiến trình máy chủ cùng thức dậy đúng mốc giờ đã hẹn, mà đó chính là tình huống sẽ xảy ra. Khóa để rỗng cho thông báo không cần chống trùng — ràng buộc duy nhất của PostgreSQL coi mỗi giá trị rỗng là khác nhau nên nhiều dòng cùng tồn tại được |
-| `notification_settings` | Cài đặt của mỗi người dùng, lưu **danh sách loại đã tắt** chứ không phải danh sách đã bật. Người chưa từng mở trang cài đặt thì danh sách rỗng, nghĩa là nhận đủ mọi loại; lưu ngược lại thì người chưa cấu hình sẽ không nhận được gì |
 
 Sơ đồ Hình 2.28 chỉ vẽ nhóm dữ liệu lõi. Các bảng của chức năng mở rộng không xuất hiện trên sơ đồ đó vì cùng lý do đã nêu với `users`: gần như mọi bảng trong ba nhóm cuối đều chỉ nối về `users` bằng một cạnh duy nhất, nên vẽ đủ 35 bảng chỉ làm sơ đồ dàn ngang mà không thêm thông tin nào về cấu trúc.
 
@@ -348,75 +303,17 @@ Phía giao diện cũng tổ chức theo tính năng dưới `src/features/<tên
 
 ### 2.2.3. Thiết kế giao diện
 
-Giao diện được thiết kế theo một bộ quy ước thống nhất để tránh việc mỗi trang có một phong cách riêng: màu sắc, bo góc và đổ bóng khai báo tập trung dưới dạng biến chứ không viết trực tiếp trong từng thành phần; nút hành động chính dùng màu tối, màu tím chỉ dành cho liên kết; trang dành cho người học trình bày theo lưới thẻ, trang quản lý trình bày theo bảng; các thành phần dùng chung như tiêu đề trang và trạng thái danh sách rỗng được tái sử dụng. Một quy tắc quan trọng là giao diện **không hiển thị dữ liệu không có thật**: các nền tảng thương mại thường hiện điểm đánh giá và số lượt học, hệ thống này chưa có dữ liệu đó nên không bịa ra để giao diện trông phong phú hơn. Phần này trình bày bản thiết kế của một số màn hình tiêu biểu.
+Giao diện tuân theo một bộ quy ước thống nhất để mỗi trang không mang một phong cách riêng: màu sắc, bo góc và đổ bóng khai báo tập trung dưới dạng biến thay vì viết trực tiếp trong từng thành phần; nút hành động chính dùng một màu nhấn duy nhất trên toàn hệ thống; trang dành cho người học trình bày theo lưới thẻ, trang quản lý theo bảng; tiêu đề trang và trạng thái danh sách rỗng dùng lại thành phần chung. Một quy tắc riêng: giao diện **không hiển thị dữ liệu không có thật**. Các nền tảng thương mại thường hiện điểm đánh giá và số lượt học; hệ thống này chưa thu thập những số đó nên không sinh ra để trang trông phong phú hơn.
 
-Màn hình đăng nhập và đăng ký (Hình 2.30) dùng chung cho mọi vai trò, có thêm lối đăng nhập bằng tài khoản Google và liên kết đặt lại mật khẩu.
+Hai bố cục vừa nêu được minh họa bằng hai màn tiêu biểu: trang khám phá quiz đại diện lưới thẻ của khu học tập (Hình 2.30), trang quản lý người dùng đại diện bảng của khu quản trị (Hình 2.31).
 
-[HÌNH 2.30: Thiết kế giao diện màn hình Đăng nhập và Đăng ký — cần chèn]
+[HÌNH 2.30: Thiết kế giao diện trang khám phá quiz — cần chèn]
 
-Trang khám phá quiz (Hình 2.31) hiển thị lưới thẻ quiz kèm thanh tìm kiếm và bộ lọc theo danh mục, độ khó; đây cũng là trang khách chưa đăng nhập xem được, nhưng không truy cập được nội dung câu hỏi.
+[HÌNH 2.31: Thiết kế giao diện quản lý người dùng (khu quản trị) — cần chèn]
 
-[HÌNH 2.31: Thiết kế giao diện trang khám phá quiz — cần chèn]
+Các màn còn lại không đưa bản phác vào đây, vì Chương 3 đã có ảnh chụp của chính chúng sau khi hiện thực: đăng nhập (Hình 3.2), làm bài (Hình 3.4), kết quả làm bài (Hình 3.5), phòng đấu (Hình 3.6), học liệu và sinh đề (Hình 3.7), trợ lý học tập (Hình 3.8), gợi ý và lộ trình học (Hình 3.9), giám sát AI (Hình 3.15).
 
-Màn hình làm bài (Hình 2.32) gồm nội dung câu hỏi, danh sách phương án, đồng hồ đếm ngược với bài có tính giờ, lưới điều hướng giữa các câu và nút nộp bài.
-
-[HÌNH 2.32: Thiết kế giao diện màn hình làm bài — cần chèn]
-
-Màn hình kết quả (Hình 2.33) hiển thị tổng điểm, danh sách câu kèm đáp án đúng và lời giải thích; riêng câu tự luận có thêm nhận xét và gợi ý cải thiện do AI sinh.
-
-[HÌNH 2.33: Thiết kế giao diện màn hình kết quả làm bài — cần chèn]
-
-Sảnh chờ và phòng đấu (Hình 2.34) gồm ô nhập mã PIN, danh sách người chơi đang chờ kèm mã QR để chia sẻ; khi vào ván, màn hình hiển thị câu hỏi và bảng xếp hạng cập nhật trực tiếp sau mỗi câu.
-
-[HÌNH 2.34: Thiết kế giao diện sảnh chờ và phòng đấu thời gian thực — cần chèn]
-
-Màn hình học liệu và sinh đề bằng AI (Hình 2.35) gồm danh sách học liệu kèm trạng thái xử lý và công tắc chia sẻ, biểu mẫu cấu hình sinh đề (học liệu nguồn, chủ đề, loại câu, số lượng, độ khó), và danh sách câu hỏi nháp chờ duyệt kèm đoạn học liệu nguồn để đối chiếu.
-
-[HÌNH 2.35: Thiết kế giao diện học liệu và sinh đề bằng AI — cần chèn]
-
-Màn hình trợ lý học tập (Hình 2.36) gồm cột danh sách hội thoại đã lưu, khung hội thoại chính, ô nhập câu hỏi và khối trích dẫn nguồn hiển thị dưới mỗi câu trả lời.
-
-[HÌNH 2.36: Thiết kế giao diện màn hình trợ lý học tập — cần chèn]
-
-Màn hình gợi ý và lộ trình học (Hình 2.37) hiển thị danh sách quiz được gợi ý kèm lý do gợi ý, cùng thứ tự chủ đề nên ôn dựa trên năng lực hiện tại.
-
-[HÌNH 2.37: Thiết kế giao diện gợi ý và lộ trình học — cần chèn]
-
-### Khu quản trị dùng khung giao diện riêng
-
-Bảy màn trên thuộc khu học tập và dùng chung một khung: thanh điều hướng ngang cố định trên đầu. Khu
-quản trị **không** dùng khung đó mà có bố cục riêng với thanh điều hướng dọc (sidebar) nền tối. Đây là
-quyết định thiết kế, không phải khác biệt thẩm mỹ, dựa trên ba lý do xếp theo mức quan trọng:
-
-**Thứ nhất, trông khác là một lớp an toàn.** Mọi thao tác ở khu học tập chỉ tác động lên dữ liệu của
-chính người đang dùng. Ở khu quản trị thì khác: khoá tài khoản và đổi vai trò tác động lên **người
-khác**, và không có nút hoàn tác. Một bố cục khác hẳn khiến quản trị viên luôn nhận biết mình đang ở
-khu nào, thay vì tưởng vẫn ở trang cá nhân rồi thực hiện một thao tác không lấy lại được.
-
-**Thứ hai, đây là hai ngữ cảnh làm việc khác nhau.** Các mục *Khám phá, Phòng đấu, Trợ lý AI, Lộ trình,
-Tiến độ* không liên quan gì tới việc xem chi phí gọi mô hình hay xử lý một tài khoản vi phạm. Trộn hai
-nhóm chức năng vào cùng một thanh menu buộc người dùng tự lọc ra mục mình cần ở mỗi lần dùng.
-
-**Thứ ba, thanh dọc mở rộng được.** Với vai trò người tạo nội dung, thanh ngang của khu học tập đã có
-mười mục và sẽ tràn hàng trên màn hình hẹp; trong khi khu quản trị còn hai nhóm chức năng dự kiến bổ
-sung là kiểm duyệt nội dung và cấu hình nhà cung cấp AI.
-
-Việc chuyển giữa hai khu đi được **cả hai chiều**: lối vào là mục *"Khu quản trị"* trong menu tài khoản
-(chỉ hiện với vai trò quản trị viên), lối ra là mục *"Về khu học tập"* đặt ngay trong sidebar. Đặt lối
-vào ở menu tài khoản chứ không ở thanh menu nội dung, vì vào khu quản trị là **chuyển ngữ cảnh** chứ
-không phải điều hướng trong cùng một ngữ cảnh.
-
-Màn hình quản lý người dùng (Hình 2.38) gồm sidebar điều hướng, bộ lọc theo từ khoá, vai trò và trạng
-thái, cùng bảng danh sách người dùng với thao tác đổi vai trò và khoá tài khoản. **Không có thao tác xoá
-người dùng** — lý do đã trình bày ở mục 2.2.1.
-
-[HÌNH 2.38: Thiết kế giao diện quản lý người dùng (khu quản trị) — cần chèn]
-
-Màn hình giám sát AI (Hình 2.39) gồm bốn thẻ số liệu tổng quan (tổng lượt gọi, tỉ lệ thất bại, tổng
-token, độ trễ), cảnh báo khi có lượt phải dùng nhà cung cấp dự phòng, và hai bảng tách theo chức năng và
-theo nhà cung cấp.
-
-[HÌNH 2.39: Thiết kế giao diện giám sát chi phí AI (khu quản trị) — cần chèn]
+**Khu quản trị dùng khung giao diện riêng.** Khu học tập dùng thanh điều hướng ngang; khu quản trị dùng thanh điều hướng dọc nền tối. Đây là quyết định thiết kế, không phải khác biệt thẩm mỹ: thao tác ở khu học tập chỉ tác động lên dữ liệu của chính người dùng, còn khóa tài khoản hay đổi vai trò tác động lên người khác và không có nút hoàn tác, nên một bố cục khác hẳn giúp quản trị viên luôn nhận biết mình đang ở khu nào. Ngoài ra hai khu là hai ngữ cảnh làm việc khác nhau, và thanh dọc còn chỗ mở rộng khi bổ sung chức năng quản trị. Lối vào đặt ở menu tài khoản, lối ra đặt trong thanh dọc — vào khu quản trị là chuyển ngữ cảnh chứ không phải điều hướng trong cùng một ngữ cảnh.
 
 ## 2.3. Kết luận chương 2
 

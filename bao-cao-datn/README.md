@@ -12,7 +12,7 @@ Nhờ vậy sửa nội dung là sửa file `.md` rồi build lại, không ph�
 | `01-chuong-1.md` | Chương 1 — Tổng quan về đề tài |
 | `02-chuong-2.md` | Chương 2 — Phân tích và thiết kế hệ thống |
 | `05-tai-lieu-tham-khao.md` | Tài liệu tham khảo `[1]`–`[15]` |
-| `assets/` | 39 hình PNG đã sinh (`hinh-1.1.png` … `hinh-2.37.png`) |
+| `assets/` | 41 hình PNG đã sinh (`hinh-1.1.png` … `hinh-2.37.png`, `hinh-3.1.png`, `hinh-3.17.png`) |
 | `build/` | Script sinh hình và dựng file Word |
 
 | `03-chuong-3.md` | Chương 3 — Thực nghiệm và đánh giá (số liệu 3.5 và 3.6 đã đo thật) |
@@ -21,9 +21,16 @@ Nhờ vậy sửa nội dung là sửa file `.md` rồi build lại, không ph�
 
 Bộ nội dung đã **đủ**. `build.js` vẫn tự bỏ qua file chưa tồn tại nên thêm/bớt phần đều không làm đổ build.
 
-**17 hình của Chương 3 (3.1–3.17) chưa có ảnh** — chúng là ảnh chụp màn hình sản phẩm và một biểu đồ,
-không sinh được từ định nghĩa text. `build.js` chèn khung xám thay chỗ. Script `capture/capture.mjs`
-hiện là bản của **đồ án khác** (nói về Khoa, Môn học, gv.demo) nên chưa dùng lại được.
+**Cả 17 hình của Chương 3 đã có**, và đều sinh lại được bằng script:
+
+| Hình | Sinh bằng |
+|---|---|
+| `3.1` sơ đồ triển khai | `gen-diagrams.js` |
+| `3.2` – `3.16` ảnh chụp màn hình | `gen-screens.js` (cần BE + FE đang chạy) |
+| `3.17` biểu đồ độ trễ | `gen-chart.js`, vẽ từ bảng số liệu mục 3.5 |
+
+Hai hình `3.6` và `3.10` là ảnh **ghép dọc** hai màn, vì chú thích đòi cả hai (phòng chờ + màn chơi;
+danh sách bộ thẻ + phiên ôn).
 
 ## Dựng lại bản Word
 
@@ -53,7 +60,31 @@ cd build
 node gen-diagrams.js       # Mermaid  -> 1.1, 1.2, 2.28 (ERD), 2.29 (mô-đun)
 node gen-plantuml.js       # PlantUML -> 2.1–2.27 (use case, sequence, VOPC)
 node gen-mockup.js         # HTML     -> 2.30–2.37 (wireframe, chụp bằng Chrome)
+node gen-chart.js          # SVG      -> 3.17 (biểu đồ độ trễ P50/P95)
 ```
+
+## Bộ tài liệu kiểm thử
+
+```bash
+cd build
+node gen-testdocs.js       # -> ../Testcase+TestPlan/Test_Plan_QuizAI.docx + Test_Case_QuizAI.xlsx
+node gen-slides.js         # -> ../Slide-BaoVe-QuizAI.pptx (23 slide bảo vệ)
+node gen-poster.js         # -> ../Poster-QuizAI.png (A0 dọc, ~192 DPI)
+node gen-huongdan.js       # -> ../HuongDanThuyetTrinh-QuizAI.docx
+```
+
+`gen-poster.js` dựng poster bằng HTML rồi chụp bằng Chrome, cùng lý do với các hình khác: sửa một dòng
+chữ là dựng lại được. Khổ A0 là **khung cứng** — nội dung dài quá sẽ bị cắt lặng lẽ, nên ô ảnh có chiều
+cao cố định. Sau khi sửa nội dung, kiểm lại chiều cao thân trang phải bằng đúng 4494 px.
+
+Hai tệp này là **sản phẩm bàn giao** kèm đồ án, được mục 3.4 của báo cáo dẫn tới. Số liệu trong đó lấy
+từ Bảng 3.2 và Bảng 3.4 của báo cáo cùng lượt chạy `./mvnw test` / `npm test` — sửa một nơi thì phải
+sửa cả nơi kia, nếu không hai tài liệu sẽ nói khác nhau.
+
+`gen-chart.js` giữ số liệu ngay trong tệp, lấy từ `docs/bao-cao/so-lieu-3.5-hieu-nang-realtime.md`.
+**Sửa số ở đó thì phải sửa cả bảng trong `03-chuong-3.md`** — hai chỗ phải khớp. Đầu tệp ghi rõ ba
+quyết định về cách vẽ (trục tung tuyến tính chứ không log, trục hoành theo giá trị thật chứ không chia
+đều, phân biệt hai đường bằng nét chứ không bằng màu) để người sau không "sửa cho đẹp" rồi làm sai nghĩa.
 
 Yêu cầu ngoài `npm install`:
 

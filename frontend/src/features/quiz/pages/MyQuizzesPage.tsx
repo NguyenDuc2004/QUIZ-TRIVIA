@@ -235,7 +235,7 @@ export default function MyQuizzesPage() {
   }
 
   return (
-    <Space direction="vertical" size="large" className="trang-rong w-full">
+    <Space orientation="vertical" size="large" className="trang-rong w-full">
       {/* `trang-rong` — nới bề ngang vùng nội dung cho bảng dày, xem `.khung-noi-dung`
           trong index.css. Bảng này khai `scroll={{ x }}` nên thiếu chỗ là nó cuộn ngang
           bên trong, trong khi hai bên màn hình còn trống. */}

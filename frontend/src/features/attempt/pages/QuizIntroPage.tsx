@@ -37,7 +37,7 @@ export default function QuizIntroPage() {
   const [daHieu, setDaHieu] = useState(false)
 
   if (error) {
-    return <Alert type="error" showIcon message={getApiErrorMessage(error)} />
+    return <Alert type="error" showIcon title={getApiErrorMessage(error)} />
   }
   if (isPending || !quiz) {
     return <Skeleton active paragraph={{ rows: 6 }} />
@@ -48,7 +48,7 @@ export default function QuizIntroPage() {
   const isOwner = currentUser?.id === quiz.ownerId
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space orientation="vertical" size="large" className="w-full">
       <PageHeader
         title={quiz.title}
         description={
@@ -70,7 +70,7 @@ export default function QuizIntroPage() {
         <Alert
           type="info"
           showIcon
-          message="Đây là quiz của bạn. Bạn vẫn làm bài được để tự kiểm đề — đáp án bị giấu y như với người học. Bài của bạn không tính vào bảng xếp hạng vì bạn đã biết trước đáp án."
+          title="Đây là quiz của bạn. Bạn vẫn làm bài được để tự kiểm đề — đáp án bị giấu y như với người học. Bài của bạn không tính vào bảng xếp hạng vì bạn đã biết trước đáp án."
           action={
             <Link to={`/my-quizzes/${quizId}`}>
               <Button size="small">Soạn câu hỏi</Button>
@@ -83,7 +83,7 @@ export default function QuizIntroPage() {
         <Alert
           type="warning"
           showIcon
-          message="Bạn đang có một bài làm dở trên quiz này."
+          title="Bạn đang có một bài làm dở trên quiz này."
           action={
             <Link to={`/attempts/${inProgress.id}`}>
               <Button size="small" type="primary">
@@ -186,7 +186,7 @@ export default function QuizIntroPage() {
             onChange={(event) => setMode(event.target.value)}
             className="mt-2 mb-2 w-full"
           >
-            <Space direction="vertical" size={4} className="w-full">
+            <Space orientation="vertical" size={4} className="w-full">
               <Radio value="EXAM">{MODE_LABEL.EXAM}</Radio>
               <Radio value="PRACTICE">{MODE_LABEL.PRACTICE}</Radio>
             </Space>
@@ -220,7 +220,7 @@ export default function QuizIntroPage() {
               type="warning"
               showIcon
               className="mb-4"
-              message="Bài này bật chế độ thi nghiêm ngặt"
+              title="Bài này bật chế độ thi nghiêm ngặt"
               description="Bạn sẽ được yêu cầu vào toàn màn hình trước khi làm bài, và chuột phải bị khoá. Bạn vẫn thoát toàn màn hình được, nhưng mỗi lần thoát đều được ghi lại."
             />
           )}

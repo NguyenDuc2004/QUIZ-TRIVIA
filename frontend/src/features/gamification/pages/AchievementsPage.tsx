@@ -43,7 +43,7 @@ export default function AchievementsPage() {
               <Statistic
                 title={<span className="text-white/80">Cấp độ</span>}
                 value={overview.level}
-                valueStyle={{ color: '#fff', fontWeight: 700 }}
+                styles={{ content: { color: '#fff', fontWeight: 700 } }}
               />
               <Text className="text-sm text-white/85">{overview.totalXp} XP</Text>
             </div>
@@ -56,7 +56,7 @@ export default function AchievementsPage() {
               }
               showInfo={false}
               strokeColor="#fde047"
-              trailColor="rgba(255,255,255,.25)"
+              railColor="rgba(255,255,255,.25)"
             />
             <Text className="text-xs text-white/85">
               {oCapToiDa
@@ -107,7 +107,7 @@ export default function AchievementsPage() {
               type="success"
               showIcon
               icon={<CheckCircleOutlined />}
-              message="Đã hoàn thành hôm nay"
+              title="Đã hoàn thành hôm nay"
               description={`Bạn đã nhận ${daily.xpReward} XP thưởng.`}
             />
           ) : (

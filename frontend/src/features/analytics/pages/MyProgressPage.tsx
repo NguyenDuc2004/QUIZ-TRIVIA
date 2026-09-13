@@ -24,7 +24,7 @@ export default function MyProgressPage() {
   }
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space orientation="vertical" size="large" className="w-full">
       <PageHeader
         title="Tiến độ của bạn"
         description="Số bài đã làm, điểm trung bình và mức tiến bộ qua từng lượt"

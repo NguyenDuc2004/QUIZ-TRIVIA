@@ -72,7 +72,7 @@ export default function RoomProctoringSummary({ roomCode }: { roomCode: string }
           type="warning"
           showIcon
           className="mb-3"
-          message={`${soBiGanCo} người có khuôn lặp đáng để hỏi lại`}
+          title={`${soBiGanCo} người có khuôn lặp đáng để hỏi lại`}
           description={
             'Tín hiệu do trình duyệt người chơi gửi lên nên chặn được và giả mạo được. Bảng này để bạn ' +
             'biết nên hỏi ai, không phải để kết luận ai gian lận. Hệ thống không trừ điểm của bất kỳ ai.'

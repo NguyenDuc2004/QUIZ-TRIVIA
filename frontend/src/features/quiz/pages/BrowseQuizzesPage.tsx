@@ -50,7 +50,7 @@ export default function BrowseQuizzesPage() {
     }`
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space orientation="vertical" size="large" className="w-full">
       {/* Khối mở đầu.
 
           Đây là trang chủ thật của người học (`/` chỉ chuyển hướng về đây), nên nó là màn hình đầu tiên

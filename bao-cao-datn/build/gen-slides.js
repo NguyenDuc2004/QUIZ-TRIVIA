@@ -1,365 +1,372 @@
-/* Sinh slide bảo vệ ĐATN EduExam AI (.pptx) bằng pptxgenjs.
- * Chạy: cd bao-cao/build && node gen-slides.js  -> ../Slide-BaoVe-EduExam.pptx
+/* Sinh slide bảo vệ ĐATN Quiz/Trivia tích hợp AI (.pptx) bằng pptxgenjs.
+ *
+ * Chạy:  cd bao-cao-datn/build && node gen-slides.js  -> ../Slide-BaoVe-QuizAI.pptx
+ *
+ * ## Nguyên tắc nội dung
+ * Mọi con số trên slide phải là số ĐÃ ĐO, truy được về mục tương ứng của báo cáo. Slide bảo vệ là nơi
+ * người ta hỏi lại từng con số, nên một số ước lượng lọt vào đây nguy hiểm hơn nằm trong báo cáo.
+ *
+ * ## Hình
+ * Dùng lại đúng bộ hình của báo cáo trong `../assets/`. Hình nào thiếu thì slide vẫn dựng nhưng in
+ * cảnh báo ra màn hình — thà biết slide nào đang trống còn hơn phát hiện lúc đang trình bày.
  */
 const path = require("path");
 const fs = require("fs");
 const pptxgen = require("pptxgenjs");
 
 const ASSETS = path.join(__dirname, "..", "assets");
-const OUT = path.join(__dirname, "..", "Slide-BaoVe-EduExam.pptx");
+const OUT = path.join(__dirname, "..", "Slide-BaoVe-QuizAI.pptx");
 
-// ---- palette (navy + teal + amber) ----
-const NAVY = "0E2A47", NAVY2 = "16395E", TEAL = "0D9488", TEALL = "14B8A6";
-const AMBER = "F59E0B", BGSOFT = "F4F7FB", INK = "1E293B", MUTED = "64748B", WHITE = "FFFFFF";
-const HF = "Georgia", BF = "Calibri"; // header / body font
+/* Bảng màu lấy theo giao diện sản phẩm (docs/ui-design-system.md): tím đặc làm màu nhấn. */
+const TIM = "7C3AED";
+const TIM_NHAT = "F5F3FF";
+const MUC = "475569";
+const DAM = "0F172A";
+const NEN = "FFFFFF";
+const VIEN = "E2E8F0";
+
+const thieu = [];
+const anh = (ten) => {
+  const p = path.join(ASSETS, `hinh-${ten}.png`);
+  if (!fs.existsSync(p)) {
+    thieu.push(`hinh-${ten}.png`);
+    return null;
+  }
+  return p;
+};
+
+/** Kích thước thật của PNG, để đặt ảnh vừa khung mà không méo tỉ lệ. */
+function coAnh(p) {
+  const b = fs.readFileSync(p);
+  return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+}
+
+/** Đặt ảnh vào giữa khung cho trước, giữ nguyên tỉ lệ. */
+function datAnh(s, p, khung) {
+  const { w, h } = coAnh(p);
+  const ty = Math.min(khung.w / w, khung.h / h);
+  const W = w * ty;
+  const H = h * ty;
+  s.addImage({ path: p, x: khung.x + (khung.w - W) / 2, y: khung.y + (khung.h - H) / 2, w: W, h: H });
+}
 
 const pres = new pptxgen();
-pres.defineLayout({ name: "W", width: 13.333, height: 7.5 });
-pres.layout = "W";
-pres.author = "Thừa Văn An";
-pres.title = "EduExam AI — Đồ án tốt nghiệp";
-const W = 13.333, H = 7.5;
+pres.layout = "LAYOUT_16x9"; // 10 x 5.625 inch
+const W = 10;
+const H = 5.625;
 
-const shadow = () => ({ type: "outer", color: "0E2A47", blur: 7, offset: 3, angle: 135, opacity: 0.18 });
+pres.defineSlideMaster({
+  title: "CHINH",
+  background: { color: NEN },
+  objects: [
+    { rect: { x: 0, y: 0, w: W, h: 0.62, fill: { color: TIM } } },
+    { rect: { x: 0, y: H - 0.32, w: W, h: 0.32, fill: { color: TIM_NHAT } } },
+  ],
+});
 
-function pngWH(p) { const b = fs.readFileSync(p); return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) }; }
-function img(slide, name, box) { // box: {x,y, maxW, maxH} -> contain
-  const p = path.join(ASSETS, name);
-  const { w, h } = pngWH(p);
-  const s = Math.min(box.maxW / w, box.maxH / h);
-  const W2 = w * s, H2 = h * s;
-  slide.addImage({ path: p, x: box.x + (box.maxW - W2) / 2, y: box.y + (box.maxH - H2) / 2, w: W2, h: H2 });
-}
+let so = 0;
 
-let pageNo = 0;
-function content(title) {
-  const s = pres.addSlide();
-  s.background = { color: WHITE };
-  s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: W, h: 1.05, fill: { color: NAVY } });
-  s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 1.05, w: W, h: 0.06, fill: { color: TEAL } });
-  s.addText(title, { x: 0.6, y: 0.12, w: 12.1, h: 0.8, margin: 0, fontFace: HF, fontSize: 25, bold: true, color: WHITE, valign: "middle" });
-  pageNo++;
-  s.addText("EduExam AI — Hệ thống thi trực tuyến tích hợp AI", { x: 0.6, y: 7.05, w: 9, h: 0.35, margin: 0, fontFace: BF, fontSize: 9, color: MUTED });
-  s.addText(String(pageNo), { x: 12.4, y: 7.05, w: 0.5, h: 0.35, margin: 0, fontFace: BF, fontSize: 9, color: MUTED, align: "right" });
+/** Slide nội dung: tiêu đề trên nền tím, chân trang có số slide. */
+function trang(tieuDe) {
+  so++;
+  const s = pres.addSlide({ masterName: "CHINH" });
+  s.addText(tieuDe, { x: 0.45, y: 0.06, w: W - 1.4, h: 0.5, fontSize: 20, bold: true, color: "FFFFFF", valign: "middle" });
+  s.addText(`${so}`, { x: W - 0.75, y: H - 0.32, w: 0.4, h: 0.32, fontSize: 10, color: MUC, align: "right", valign: "middle" });
+  s.addText("Quiz/Trivia tích hợp AI · Nguyễn Khắc Minh Đức", { x: 0.45, y: H - 0.32, w: 6, h: 0.32, fontSize: 9, color: MUC, valign: "middle" });
   return s;
 }
-function card(s, x, y, w, h, fill) {
-  s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y, w, h, fill: { color: fill || BGSOFT }, line: { color: "E2E8F0", width: 1 }, rectRadius: 0.08, shadow: shadow() });
-}
-function chip(s, x, y, label, color) {
-  s.addShape(pres.shapes.OVAL, { x, y, w: 0.5, h: 0.5, fill: { color } });
-  s.addText(label, { x, y, w: 0.5, h: 0.5, margin: 0, align: "center", valign: "middle", fontFace: HF, fontSize: 18, bold: true, color: WHITE });
+
+/** Thẻ số liệu — dùng cho các slide kết quả đo. */
+function the(s, x, y, w, h, so_, nhan, phu) {
+  s.addShape(pres.ShapeType.roundRect, { x, y, w, h, fill: { color: TIM_NHAT }, line: { color: VIEN, width: 1 }, rectRadius: 0.08 });
+  s.addText(so_, { x, y: y + 0.1, w, h: h * 0.45, fontSize: 26, bold: true, color: TIM, align: "center", valign: "middle" });
+  s.addText(nhan, { x, y: y + h * 0.5, w, h: h * 0.26, fontSize: 11, color: DAM, align: "center", valign: "middle" });
+  if (phu) s.addText(phu, { x, y: y + h * 0.74, w, h: h * 0.24, fontSize: 9, color: MUC, align: "center", valign: "middle" });
 }
 
-// ============ 1. BÌA ============
+/** Danh sách gạch đầu dòng, cỡ chữ đủ lớn để đọc từ cuối phòng. */
+function y(s, muc, o = {}) {
+  s.addText(
+    muc.map((t) => (typeof t === "string" ? { text: t, options: { bullet: { code: "2022" }, breakLine: true } } : t)),
+    { x: o.x ?? 0.55, y: o.y ?? 0.95, w: o.w ?? W - 1.1, h: o.h ?? 3.9, fontSize: o.co ?? 14, color: DAM, lineSpacingMultiple: 1.35, valign: "top" },
+  );
+}
+
+/* ─────────────────────────────── 1. Bìa ─────────────────────────────── */
 {
   const s = pres.addSlide();
-  s.background = { color: NAVY };
-  s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: W, h: 0.18, fill: { color: TEAL } });
-  s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 7.32, w: W, h: 0.18, fill: { color: AMBER } });
-  s.addText("TRƯỜNG ĐẠI HỌC CÔNG NGHIỆP HÀ NỘI  •  KHOA CÔNG NGHỆ THÔNG TIN", { x: 0.8, y: 0.55, w: 11.7, h: 0.4, margin: 0, fontFace: BF, fontSize: 13, color: "9FB6D4", align: "center", charSpacing: 1 });
-  s.addText("ĐỒ ÁN TỐT NGHIỆP", { x: 0.8, y: 1.15, w: 11.7, h: 0.5, margin: 0, fontFace: BF, fontSize: 15, bold: true, color: AMBER, align: "center", charSpacing: 3 });
-  s.addText("Hệ thống thi trực tuyến tích hợp AI", { x: 0.8, y: 1.95, w: 11.7, h: 0.9, margin: 0, fontFace: HF, fontSize: 38, bold: true, color: WHITE, align: "center" });
-  s.addText("Tự động hóa công tác ra đề và giám sát hành vi gian lận", { x: 0.8, y: 2.95, w: 11.7, h: 0.6, margin: 0, fontFace: HF, fontSize: 19, italic: true, color: "CADCFC", align: "center" });
-  s.addShape(pres.shapes.RECTANGLE, { x: 5.17, y: 3.85, w: 3.0, h: 0.04, fill: { color: TEAL } });
-  s.addText([
-    { text: "Giảng viên hướng dẫn:  ", options: { color: "9FB6D4" } }, { text: "Phạm Văn Hà", options: { bold: true, color: WHITE, breakLine: true } },
-    { text: "Sinh viên thực hiện:  ", options: { color: "9FB6D4" } }, { text: "Thừa Văn An", options: { bold: true, color: WHITE, breakLine: true } },
-    { text: "Mã số sinh viên:  ", options: { color: "9FB6D4" } }, { text: "2022601712", options: { bold: true, color: WHITE, breakLine: true } },
-    { text: "Ngành:  ", options: { color: "9FB6D4" } }, { text: "Kỹ thuật phần mềm — Khóa 17", options: { bold: true, color: WHITE } },
-  ], { x: 3.8, y: 4.25, w: 5.7, h: 2.0, margin: 0, fontFace: BF, fontSize: 15, align: "center", lineSpacingMultiple: 1.35 });
-  s.addText("Hà Nội — 2026", { x: 0.8, y: 6.6, w: 11.7, h: 0.4, margin: 0, fontFace: BF, fontSize: 13, color: "9FB6D4", align: "center" });
-}
-
-// ============ 2. NỘI DUNG TRÌNH BÀY ============
-{
-  const s = content("Nội dung trình bày");
-  const items = [
-    ["1", "Đặt vấn đề & mục tiêu", "Bối cảnh, hai thách thức, phạm vi đề tài"],
-    ["2", "Cơ sở lý thuyết & công nghệ", "Kiến trúc, RAG, giám sát, bảo mật"],
-    ["3", "Phân tích & thiết kế hệ thống", "Use case, cơ sở dữ liệu, giao diện"],
-    ["4", "Kết quả & kiểm thử", "Sản phẩm, bộ kiểm thử, đánh giá AI"],
-    ["5", "Kết luận & hướng phát triển", "Kết quả đạt được, hạn chế, định hướng"],
-  ];
-  let y = 1.55;
-  for (const [n, t, d] of items) {
-    chip(s, 0.9, y + 0.05, n, n === "3" ? AMBER : TEAL);
-    s.addText(t, { x: 1.6, y: y - 0.05, w: 10.8, h: 0.45, margin: 0, fontFace: HF, fontSize: 19, bold: true, color: NAVY });
-    s.addText(d, { x: 1.6, y: y + 0.4, w: 10.8, h: 0.35, margin: 0, fontFace: BF, fontSize: 13, color: MUTED });
-    y += 1.08;
-  }
-}
-
-// ============ 3. ĐẶT VẤN ĐỀ ============
-{
-  const s = content("Đặt vấn đề");
-  s.addText("Thi trực tuyến là nhu cầu tất yếu của chuyển đổi số giáo dục, nhưng đặt ra hai thách thức chưa được giải quyết trọn vẹn:", { x: 0.6, y: 1.3, w: 12.1, h: 0.6, margin: 0, fontFace: BF, fontSize: 15, color: INK });
-  card(s, 0.6, 2.1, 5.95, 2.5, BGSOFT);
-  s.addText("01", { x: 0.9, y: 2.3, w: 1.5, h: 0.8, margin: 0, fontFace: HF, fontSize: 40, bold: true, color: TEAL });
-  s.addText("Ra đề tốn nhiều công sức", { x: 0.9, y: 3.05, w: 5.4, h: 0.5, margin: 0, fontFace: HF, fontSize: 18, bold: true, color: NAVY });
-  s.addText("Soạn ngân hàng câu hỏi đủ lớn để mỗi sinh viên một đề khác nhau mất hàng giờ thủ công.", { x: 0.9, y: 3.55, w: 5.4, h: 0.9, margin: 0, fontFace: BF, fontSize: 13.5, color: INK });
-  card(s, 6.78, 2.1, 5.95, 2.5, BGSOFT);
-  s.addText("02", { x: 7.08, y: 2.3, w: 1.5, h: 0.8, margin: 0, fontFace: HF, fontSize: 40, bold: true, color: AMBER });
-  s.addText("Khó bảo đảm trung thực", { x: 7.08, y: 3.05, w: 5.4, h: 0.5, margin: 0, fontFace: HF, fontSize: 18, bold: true, color: NAVY });
-  s.addText("Một giảng viên không thể quan sát hàng chục sinh viên ở nhiều địa điểm khác nhau.", { x: 7.08, y: 3.55, w: 5.4, h: 0.9, margin: 0, fontFace: BF, fontSize: 13.5, color: INK });
-  s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 0.6, y: 4.85, w: 12.13, h: 1.7, fill: { color: NAVY }, rectRadius: 0.08 });
-  s.addText("Giải pháp", { x: 0.95, y: 5.05, w: 3, h: 0.4, margin: 0, fontFace: HF, fontSize: 15, bold: true, color: AMBER });
-  s.addText("Ứng dụng AI: dùng kỹ thuật RAG sinh câu hỏi trực tiếp từ tài liệu giảng dạy, và giám sát thi bằng sự kiện trình duyệt kết hợp nhận diện khuôn mặt phía máy khách — không lưu video, tôn trọng quyền riêng tư.", { x: 0.95, y: 5.45, w: 11.4, h: 0.95, margin: 0, fontFace: BF, fontSize: 14.5, color: WHITE });
-}
-
-// ============ 4. MỤC TIÊU & PHẠM VI ============
-{
-  const s = content("Mục tiêu & phạm vi");
-  card(s, 0.6, 1.35, 5.95, 5.0);
-  s.addShape(pres.shapes.RECTANGLE, { x: 0.6, y: 1.35, w: 0.1, h: 5.0, fill: { color: TEAL } });
-  s.addText("Mục tiêu", { x: 0.95, y: 1.55, w: 5.4, h: 0.5, margin: 0, fontFace: HF, fontSize: 20, bold: true, color: NAVY });
-  s.addText([
-    { text: "Làm chủ Spring Boot (Java 21), React + TypeScript, PostgreSQL/pgvector và tích hợp AI (Gemini) qua RAG", options: { bullet: true, breakLine: true } },
-    { text: "Tự động sinh đề thi từ tài liệu giảng dạy", options: { bullet: true, breakLine: true } },
-    { text: "Giám sát hành vi gian lận thời gian thực, bảo đảm quyền riêng tư", options: { bullet: true, breakLine: true } },
-    { text: "Xây dựng hệ thống thi trực tuyến hoàn chỉnh ba vai trò", options: { bullet: true } },
-  ], { x: 0.95, y: 2.15, w: 5.35, h: 3.9, margin: 0, fontFace: BF, fontSize: 14.5, color: INK, paraSpaceAfter: 10, valign: "top" });
-  card(s, 6.78, 1.35, 5.95, 5.0);
-  s.addShape(pres.shapes.RECTANGLE, { x: 6.78, y: 1.35, w: 0.1, h: 5.0, fill: { color: AMBER } });
-  s.addText("Phạm vi", { x: 7.13, y: 1.55, w: 5.4, h: 0.5, margin: 0, fontFace: HF, fontSize: 20, bold: true, color: NAVY });
-  s.addText([
-    { text: "Ứng dụng web ba vai trò: Sinh viên, Giảng viên, Quản trị viên", options: { bullet: true, breakLine: true } },
-    { text: "Xác thực & phân quyền; quản lý lớp và ngân hàng câu hỏi", options: { bullet: true, breakLine: true } },
-    { text: "Sinh đề RAG; tổ chức & làm bài thi có tự động lưu, khôi phục", options: { bullet: true, breakLine: true } },
-    { text: "Giám sát thi; chấm điểm tự động & báo cáo kết quả", options: { bullet: true, breakLine: true } },
-    { text: "Công cụ hỗ trợ giám sát, không thay thế giám thị; không thương mại", options: { bullet: true } },
-  ], { x: 7.13, y: 2.15, w: 5.35, h: 3.9, margin: 0, fontFace: BF, fontSize: 14.5, color: INK, paraSpaceAfter: 10, valign: "top" });
-}
-
-// ============ 5. KHẢO SÁT HIỆN TRẠNG ============
-{
-  const s = content("Khảo sát hiện trạng");
-  s.addText("Phần lớn công cụ phổ biến mới dừng ở mức số hóa quy trình thi; hầu như chưa có công cụ nào sinh câu hỏi tự động từ tài liệu của giảng viên.", { x: 0.6, y: 1.3, w: 12.1, h: 0.55, margin: 0, fontFace: BF, fontSize: 14, color: INK });
-  const hd = (t) => ({ text: t, options: { fill: { color: NAVY }, color: WHITE, bold: true, align: "center", valign: "middle", fontFace: BF, fontSize: 13 } });
-  const rows = [
-    [hd("Hệ thống"), hd("Sinh đề bằng AI"), hd("Chống gian lận"), hd("Tiếng Việt"), hd("Chi phí")],
-    ["Google Forms", "Không", "Không", "Tốt", "Miễn phí"],
-    ["Microsoft Forms", "Không", "Không", "Tốt", "Theo gói Office"],
-    ["Moodle Quiz", "Không (random bank)", "Hạn chế (plugin)", "Tốt", "Mã nguồn mở"],
-    ["Azota", "Không", "Cơ bản", "Tốt", "Có gói trả phí"],
-    [{ text: "EduExam AI", options: { bold: true, color: NAVY } }, { text: "Có (RAG)", options: { bold: true, color: TEAL } }, { text: "Hai lớp", options: { bold: true, color: TEAL } }, { text: "Tốt", options: { color: INK } }, { text: "Miễn phí", options: { color: INK } }],
-  ];
-  s.addTable(rows, {
-    x: 0.6, y: 2.0, w: 12.13, colW: [3.0, 2.6, 2.6, 1.93, 2.0], rowH: 0.62,
-    fontFace: BF, fontSize: 13, color: INK, valign: "middle", align: "center",
-    border: { pt: 0.5, color: "D5DEE9" }, fill: { color: WHITE },
+  s.background = { color: TIM };
+  s.addText("TRƯỜNG ĐẠI HỌC CÔNG NGHIỆP HÀ NỘI — KHOA CÔNG NGHỆ THÔNG TIN", {
+    x: 0.6, y: 0.5, w: W - 1.2, h: 0.3, fontSize: 12, color: "DDD6FE", align: "center",
   });
-  s.addText("Bảng so sánh tập trung vào hai bài toán cốt lõi của đề tài: sinh đề tự động và giám sát chống gian lận.", { x: 0.6, y: 6.4, w: 12.1, h: 0.4, margin: 0, fontFace: BF, fontSize: 12, italic: true, color: MUTED });
-}
-
-// ============ 6. CÔNG NGHỆ ============
-{
-  const s = content("Công nghệ sử dụng");
-  const blocks = [
-    ["Backend", TEAL, ["Java 21 (LTS)", "Spring Boot 3.3", "Spring Security + JPA", "LangChain4j, Apache Tika", "JJWT, Flyway, MapStruct"]],
-    ["Frontend", NAVY2, ["React 18 + Vite 5", "TypeScript (strict)", "Tailwind + shadcn/ui", "TanStack Query, Zustand", "MediaPipe (WASM)"]],
-    ["AI / LLM", AMBER, ["Google Gemini Flash", "gemini-embedding-001", "Vector 768 chiều", "Kỹ thuật RAG", "Human-in-the-loop"]],
-    ["Cơ sở dữ liệu", "6D2E46", ["PostgreSQL 16", "pgvector (HNSW)", "Flyway migration", "49 bảng dữ liệu", "Docker Compose"]],
-  ];
-  let x = 0.6;
-  for (const [t, c, items] of blocks) {
-    card(s, x, 1.45, 2.93, 4.9);
-    s.addShape(pres.shapes.RECTANGLE, { x, y: 1.45, w: 2.93, h: 0.7, fill: { color: c } });
-    s.addText(t, { x, y: 1.45, w: 2.93, h: 0.7, margin: 0, align: "center", valign: "middle", fontFace: HF, fontSize: 16, bold: true, color: WHITE });
-    s.addText(items.map((it, i) => ({ text: it, options: { bullet: true, breakLine: i < items.length - 1 } })),
-      { x: x + 0.25, y: 2.35, w: 2.45, h: 3.8, margin: 0, fontFace: BF, fontSize: 13, color: INK, paraSpaceAfter: 10, valign: "top" });
-    x += 3.04;
-  }
-}
-
-// ============ 7. KIẾN TRÚC HỆ THỐNG ============
-{
-  const s = content("Kiến trúc tổng thể");
-  img(s, "hinh-1.1.png", { x: 0.5, y: 1.35, maxW: 8.3, maxH: 5.5 });
-  card(s, 9.05, 1.5, 3.7, 4.85, BGSOFT);
-  s.addText("Đặc điểm", { x: 9.3, y: 1.7, w: 3.2, h: 0.4, margin: 0, fontFace: HF, fontSize: 16, bold: true, color: NAVY });
-  s.addText([
-    { text: "Monolith mô-đun hóa, phân lớp Web–Service–Domain–Persistence", options: { bullet: true, breakLine: true } },
-    { text: "REST cho nghiệp vụ, WebSocket cho giám sát thời gian thực", options: { bullet: true, breakLine: true } },
-    { text: "Backend không trạng thái với JWT trong header", options: { bullet: true, breakLine: true } },
-    { text: "pgvector lưu & truy vấn embedding ngay trong CSDL quan hệ", options: { bullet: true } },
-  ], { x: 9.3, y: 2.25, w: 3.25, h: 4.0, margin: 0, fontFace: BF, fontSize: 13, color: INK, paraSpaceAfter: 12, valign: "top" });
-}
-
-// ============ 8. SINH ĐỀ RAG ============
-{
-  const s = content("Nhánh AI 1 — Sinh đề tự động (RAG)");
-  img(s, "hinh-1.2.png", { x: 0.5, y: 1.3, maxW: 3.3, maxH: 5.6 });
-  s.addText("Truy hồi tăng cường sinh (RAG) bổ sung các đoạn tài liệu liên quan vào ngữ cảnh mô hình → câu hỏi bám sát nguồn, kèm trích dẫn để kiểm chứng.", { x: 4.2, y: 1.4, w: 8.5, h: 0.9, margin: 0, fontFace: BF, fontSize: 14.5, color: INK });
-  card(s, 4.2, 2.45, 4.15, 1.85, BGSOFT);
-  s.addText("Pha lập chỉ mục", { x: 4.45, y: 2.6, w: 3.7, h: 0.4, margin: 0, fontFace: HF, fontSize: 15, bold: true, color: TEAL });
-  s.addText("Tika bóc tách → chia đoạn ~800 token → embedding 768 chiều → lưu document_chunks (chỉ mục HNSW)", { x: 4.45, y: 3.0, w: 3.65, h: 1.2, margin: 0, fontFace: BF, fontSize: 12.5, color: INK });
-  card(s, 8.55, 2.45, 4.18, 1.85, BGSOFT);
-  s.addText("Pha sinh câu hỏi", { x: 8.8, y: 2.6, w: 3.7, h: 0.4, margin: 0, fontFace: HF, fontSize: 15, bold: true, color: AMBER });
-  s.addText("Truy hồi top-8 đoạn (cosine) → dựng prompt → Gemini Flash sinh câu hỏi + trích dẫn → giảng viên duyệt", { x: 8.8, y: 3.0, w: 3.7, h: 1.2, margin: 0, fontFace: BF, fontSize: 12.5, color: INK });
-  s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 4.2, y: 4.5, w: 8.53, h: 1.95, fill: { color: NAVY }, rectRadius: 0.08 });
-  const stat = (x, num, lbl) => { s.addText(num, { x, y: 4.65, w: 2.0, h: 0.7, margin: 0, align: "center", fontFace: HF, fontSize: 30, bold: true, color: TEALL }); s.addText(lbl, { x: x - 0.3, y: 5.4, w: 2.6, h: 0.8, margin: 0, align: "center", fontFace: BF, fontSize: 11.5, color: "CADCFC" }); };
-  stat(4.5, "768", "chiều vector"); stat(6.55, "top-8", "đoạn truy hồi"); stat(8.6, "< 60s", "sinh 10 câu"); stat(10.6, "10/giờ", "giới hạn tần suất");
-}
-
-// ============ 9. GIÁM SÁT ============
-{
-  const s = content("Nhánh AI 2 — Giám sát thi (Proctoring)");
-  img(s, "hinh-1.3.png", { x: 0.5, y: 1.3, maxW: 7.2, maxH: 4.0 });
-  card(s, 8.0, 1.4, 4.73, 5.0, BGSOFT);
-  s.addText("Cơ chế", { x: 8.25, y: 1.55, w: 4.2, h: 0.4, margin: 0, fontFace: HF, fontSize: 16, bold: true, color: NAVY });
-  s.addText([
-    { text: "Phân tích hình ảnh hoàn toàn phía máy khách, KHÔNG lưu video", options: { bullet: true, breakLine: true } },
-    { text: "Nhận diện khuôn mặt bằng MediaPipe (WebAssembly)", options: { bullet: true, breakLine: true } },
-    { text: "Sự kiện trình duyệt: chuyển tab, thoát toàn màn hình, sao chép/dán, devtools", options: { bullet: true, breakLine: true } },
-    { text: "Truyền thời gian thực qua WebSocket (STOMP), xác thực JWT, tự kết nối lại & gửi lại sự kiện đã đệm", options: { bullet: true, breakLine: true } },
-    { text: "Mỗi sự kiện gắn mức độ; vi phạm chỉ ghi log, KHÔNG tự trừ điểm", options: { bullet: true } },
-  ], { x: 8.25, y: 2.1, w: 4.25, h: 4.2, margin: 0, fontFace: BF, fontSize: 13.5, color: INK, paraSpaceAfter: 11, valign: "top" });
-  s.addText("Tuân thủ Nghị định 13/2023/NĐ-CP: có thông báo và xác nhận đồng ý trước khi giám sát.", { x: 0.5, y: 5.7, w: 7.2, h: 0.7, margin: 0, fontFace: BF, fontSize: 13, italic: true, color: NAVY, align: "center" });
-}
-
-// ============ 10. PHÂN TÍCH & THIẾT KẾ ============
-{
-  const s = content("Phân tích & thiết kế hệ thống");
-  img(s, "hinh-2.1.png", { x: 0.5, y: 1.3, maxW: 3.2, maxH: 5.6 });
-  s.addText("Biểu đồ use case tổng quát — ba tác nhân", { x: 0.4, y: 6.55, w: 3.4, h: 0.35, margin: 0, fontFace: BF, fontSize: 11, italic: true, color: MUTED, align: "center" });
-  const roles = [
-    ["Sinh viên", TEAL, "Tham gia lớp bằng mã; làm bài thi có giám sát; luyện tập, ôn tập SM-2; xem điểm và phân tích"],
-    ["Giảng viên", NAVY2, "Quản lý lớp & ngân hàng câu hỏi; sinh đề bằng AI; tạo kỳ thi; cấu hình giám sát; xem kết quả & vi phạm"],
-    ["Quản trị viên", AMBER, "Quản lý tài khoản & dữ liệu nền; dashboard tổng quan; nhật ký kiểm toán chỉ-ghi-thêm"],
-  ];
-  let y = 1.45;
-  for (const [t, c, d] of roles) {
-    card(s, 4.2, y, 8.53, 1.55);
-    s.addShape(pres.shapes.RECTANGLE, { x: 4.2, y, w: 0.12, h: 1.55, fill: { color: c } });
-    s.addText(t, { x: 4.5, y: y + 0.15, w: 8.0, h: 0.45, margin: 0, fontFace: HF, fontSize: 17, bold: true, color: NAVY });
-    s.addText(d, { x: 4.5, y: y + 0.62, w: 8.05, h: 0.8, margin: 0, fontFace: BF, fontSize: 13.5, color: INK });
-    y += 1.72;
-  }
-}
-
-// ============ 11. CHỨC NĂNG CHÍNH ============
-{
-  const s = content("Các chức năng chính");
-  const cols = [
-    ["Ngân hàng câu hỏi", TEAL, ["8 loại câu hỏi", "Phiên bản hóa, thẻ, thư mục", "Bộ lọc thông minh, thùng rác", "Phát hiện trùng theo ngữ nghĩa", "Trợ lý AI: gợi ý, viết lại, chấm chất lượng"]],
-    ["Thi & chấm điểm", NAVY2, ["Kỳ thi cố định/ngẫu nhiên", "Đếm ngược theo giờ máy chủ", "Tự động lưu & khôi phục", "Tự nộp khi hết giờ", "Chấm tự động 8 loại, export Excel"]],
-    ["Học tập & quản trị", AMBER, ["Luyện tập, ôn tập SM-2", "Trò chơi hóa, bảng xếp hạng", "Phân tích IDI / IRT", "Quản lý tài khoản & dữ liệu nền", "Nhật ký kiểm toán"]],
-  ];
-  let x = 0.6;
-  for (const [t, c, items] of cols) {
-    card(s, x, 1.45, 3.91, 4.9);
-    s.addShape(pres.shapes.RECTANGLE, { x, y: 1.45, w: 3.91, h: 0.72, fill: { color: c } });
-    s.addText(t, { x, y: 1.45, w: 3.91, h: 0.72, margin: 0, align: "center", valign: "middle", fontFace: HF, fontSize: 16, bold: true, color: WHITE });
-    s.addText(items.map((it, i) => ({ text: it, options: { bullet: true, breakLine: i < items.length - 1 } })),
-      { x: x + 0.28, y: 2.4, w: 3.4, h: 3.8, margin: 0, fontFace: BF, fontSize: 13, color: INK, paraSpaceAfter: 11, valign: "top" });
-    x += 4.06;
-  }
-}
-
-// ============ 12. KIỂM THỬ ============
-{
-  const s = content("Kết quả kiểm thử");
-  const stat = (x, num, lbl, c) => {
-    card(s, x, 1.5, 2.86, 2.0);
-    s.addText(num, { x, y: 1.7, w: 2.86, h: 0.9, margin: 0, align: "center", fontFace: HF, fontSize: 36, bold: true, color: c });
-    s.addText(lbl, { x: x + 0.1, y: 2.65, w: 2.66, h: 0.7, margin: 0, align: "center", fontFace: BF, fontSize: 12.5, color: MUTED });
-  };
-  stat(0.6, "5.106", "ca kiểm thử tự động", TEAL);
-  stat(3.66, "440", "tệp test (BE + FE)", NAVY2);
-  stat(6.72, "0", "ca thất bại (all-pass)", TEAL);
-  stat(9.78, "~50", "lớp test tích hợp", AMBER);
-  card(s, 0.6, 3.85, 6.0, 2.65);
-  s.addText("Độ phủ mã (coverage)", { x: 0.9, y: 4.0, w: 5.4, h: 0.45, margin: 0, fontFace: HF, fontSize: 16, bold: true, color: NAVY });
-  s.addChart(pres.charts.BAR, [{ name: "Coverage", labels: ["Backend", "Frontend"], values: [91.3, 84.4] }], {
-    x: 0.8, y: 4.5, w: 5.6, h: 1.9, barDir: "col", chartColors: [TEAL, NAVY2],
-    showValue: true, dataLabelPosition: "outEnd", dataLabelColor: INK, dataLabelFontSize: 12,
-    valAxisHidden: true, catAxisLabelColor: MUTED, catAxisLabelFontSize: 12, showLegend: false,
-    valAxisMaxVal: 100, valAxisMinVal: 0, chartArea: { fill: { color: "FFFFFF" } },
+  s.addText("ĐỒ ÁN TỐT NGHIỆP", { x: 0.6, y: 0.95, w: W - 1.2, h: 0.4, fontSize: 16, color: "EDE9FE", align: "center", charSpacing: 3 });
+  s.addText("XÂY DỰNG ỨNG DỤNG QUIZ/TRIVIA\nTÍCH HỢP TRÍ TUỆ NHÂN TẠO", {
+    x: 0.6, y: 1.5, w: W - 1.2, h: 1.3, fontSize: 30, bold: true, color: "FFFFFF", align: "center", lineSpacingMultiple: 1.15,
   });
-  card(s, 6.78, 3.85, 5.95, 2.65, BGSOFT);
-  s.addText("Chiến lược kiểm thử", { x: 7.05, y: 4.0, w: 5.4, h: 0.45, margin: 0, fontFace: HF, fontSize: 16, bold: true, color: NAVY });
-  s.addText([
-    { text: "BE: JUnit 5 + Mockito + AssertJ (đơn vị); Testcontainers + REST Assured (tích hợp)", options: { bullet: true, breakLine: true } },
-    { text: "FE: Vitest + React Testing Library + MSW", options: { bullet: true, breakLine: true } },
-    { text: "Ưu tiên độ phủ cao cho các bộ chấm điểm", options: { bullet: true } },
-  ], { x: 7.05, y: 4.5, w: 5.45, h: 1.9, margin: 0, fontFace: BF, fontSize: 13, color: INK, paraSpaceAfter: 10, valign: "top" });
+  s.addShape(pres.ShapeType.line, { x: W / 2 - 1, y: 2.95, w: 2, h: 0, line: { color: "C4B5FD", width: 2 } });
+  s.addText(
+    [
+      { text: "Sinh viên thực hiện: ", options: { color: "DDD6FE" } },
+      { text: "Nguyễn Khắc Minh Đức", options: { bold: true, color: "FFFFFF" } },
+      { text: "   ·   MSV: 2022601585", options: { color: "DDD6FE", breakLine: true } },
+      { text: "Giảng viên hướng dẫn: ", options: { color: "DDD6FE" } },
+      { text: "ThS. Nguyễn Đức Lưu", options: { bold: true, color: "FFFFFF" } },
+    ],
+    { x: 0.6, y: 3.3, w: W - 1.2, h: 1, fontSize: 14, align: "center", lineSpacingMultiple: 1.4 },
+  );
+  s.addText("Hà Nội, 09/2026", { x: 0.6, y: 4.6, w: W - 1.2, h: 0.3, fontSize: 12, italic: true, color: "DDD6FE", align: "center" });
 }
 
-// ============ 13. ĐÁNH GIÁ AI ============
+/* ─────────────────────────────── 2. Nội dung ─────────────────────────────── */
 {
-  const s = content("Đánh giá các thành phần AI");
-  s.addText("Hai thành phần AI được đánh giá riêng bằng thực nghiệm (kết quả mang tính xác suất). Các mục tiêu đề ra:", { x: 0.6, y: 1.3, w: 12.1, h: 0.55, margin: 0, fontFace: BF, fontSize: 15, color: INK });
-  card(s, 0.6, 2.05, 5.95, 4.4);
-  s.addShape(pres.shapes.RECTANGLE, { x: 0.6, y: 2.05, w: 5.95, h: 0.72, fill: { color: TEAL } });
-  s.addText("Sinh đề (RAG)", { x: 0.6, y: 2.05, w: 5.95, h: 0.72, margin: 0, align: "center", valign: "middle", fontFace: HF, fontSize: 17, bold: true, color: WHITE });
-  s.addText([
-    { text: "Sinh 10 câu trong dưới 60 giây", options: { bullet: true, breakLine: true } },
-    { text: "Trên 70% câu được chấp nhận không cần sửa", options: { bullet: true, breakLine: true } },
-    { text: "Trích dẫn đúng và bám sát tài liệu nguồn", options: { bullet: true } },
-  ], { x: 0.95, y: 3.0, w: 5.3, h: 3.3, margin: 0, fontFace: BF, fontSize: 15, color: INK, paraSpaceAfter: 14, valign: "top" });
-  card(s, 6.78, 2.05, 5.95, 4.4);
-  s.addShape(pres.shapes.RECTANGLE, { x: 6.78, y: 2.05, w: 5.95, h: 0.72, fill: { color: NAVY2 } });
-  s.addText("Giám sát", { x: 6.78, y: 2.05, w: 5.95, h: 0.72, margin: 0, align: "center", valign: "middle", fontFace: HF, fontSize: 17, bold: true, color: WHITE });
-  s.addText([
-    { text: "Phát hiện chuyển tab ≥ 90%", options: { bullet: true, breakLine: true } },
-    { text: "Nhận diện khuôn mặt ≥ 80%", options: { bullet: true, breakLine: true } },
-    { text: "Tỷ lệ báo nhầm dưới 15%", options: { bullet: true } },
-  ], { x: 7.13, y: 3.0, w: 5.3, h: 3.3, margin: 0, fontFace: BF, fontSize: 15, color: INK, paraSpaceAfter: 14, valign: "top" });
-}
-
-// ============ 14. KẾT QUẢ ĐẠT ĐƯỢC ============
-{
-  const s = content("Kết luận — Kết quả đạt được");
-  const items = [
-    ["Sản phẩm", "Ứng dụng web hoàn chỉnh ba vai trò: xác thực & phân quyền, quản lý lớp & ngân hàng câu hỏi đa dạng, tổ chức & làm bài thi có tự động lưu/khôi phục, chấm điểm tự động và quản trị hệ thống."],
-    ["Nhánh AI 1", "Pipeline RAG hoàn chỉnh: upload tài liệu → embedding trên pgvector → truy hồi ngữ nghĩa → sinh câu hỏi kèm trích dẫn, có cơ chế review của giảng viên."],
-    ["Nhánh AI 2", "Giám sát thời gian thực kết hợp sự kiện trình duyệt và nhận diện khuôn mặt phía máy khách, truyền qua WebSocket, tôn trọng quyền riêng tư."],
-    ["Kỹ thuật", "Kiến trúc monolith mô-đun phân lớp, REST + WebSocket, bảo mật JWT + RBAC, bộ kiểm thử tự động quy mô lớn (5.106 ca, độ phủ 84–91%)."],
+  const s = trang("Nội dung trình bày");
+  const muc = [
+    ["1", "Đặt vấn đề và mục tiêu"],
+    ["2", "Công nghệ và kiến trúc hệ thống"],
+    ["3", "Phân tích và thiết kế"],
+    ["4", "Sản phẩm đã hoàn thành"],
+    ["5", "Kết quả đo hiệu năng và độ chính xác AI"],
+    ["6", "Kết luận, hạn chế và hướng phát triển"],
   ];
-  let y = 1.45;
-  for (const [t, d] of items) {
-    s.addShape(pres.shapes.OVAL, { x: 0.65, y: y + 0.05, w: 0.28, h: 0.28, fill: { color: TEAL } });
-    s.addText(t, { x: 1.1, y: y - 0.05, w: 3.0, h: 0.45, margin: 0, fontFace: HF, fontSize: 17, bold: true, color: NAVY });
-    s.addText(d, { x: 4.0, y: y - 0.05, w: 8.7, h: 1.15, margin: 0, fontFace: BF, fontSize: 13.5, color: INK });
-    y += 1.28;
-  }
+  muc.forEach(([n, t], i) => {
+    const yy = 1.0 + i * 0.66;
+    s.addShape(pres.ShapeType.ellipse, { x: 1.35, y: yy, w: 0.42, h: 0.42, fill: { color: TIM } });
+    s.addText(n, { x: 1.35, y: yy, w: 0.42, h: 0.42, fontSize: 14, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
+    s.addText(t, { x: 1.95, y: yy, w: 6.8, h: 0.42, fontSize: 16, color: DAM, valign: "middle" });
+  });
 }
 
-// ============ 15. HẠN CHẾ & HƯỚNG PHÁT TRIỂN ============
+/* ─────────────────────────────── 3. Đặt vấn đề ─────────────────────────────── */
 {
-  const s = content("Hạn chế & hướng phát triển");
-  card(s, 0.6, 1.4, 5.95, 5.0, BGSOFT);
-  s.addShape(pres.shapes.RECTANGLE, { x: 0.6, y: 1.4, w: 0.1, h: 5.0, fill: { color: AMBER } });
-  s.addText("Hạn chế", { x: 0.95, y: 1.6, w: 5.4, h: 0.5, margin: 0, fontFace: HF, fontSize: 19, bold: true, color: NAVY });
-  s.addText([
-    { text: "Chất lượng câu hỏi phụ thuộc mô hình và tài liệu; vẫn cần giảng viên review", options: { bullet: true, breakLine: true } },
-    { text: "Giám sát mới ở mức hỗ trợ; chưa phát hiện gian lận tinh vi, có thể báo nhầm", options: { bullet: true, breakLine: true } },
-    { text: "Chạy trên một máy chủ đơn, chưa tối ưu mở rộng theo chiều ngang", options: { bullet: true, breakLine: true } },
-    { text: "Gói Gemini miễn phí có giới hạn tần suất", options: { bullet: true } },
-  ], { x: 0.95, y: 2.2, w: 5.35, h: 4.0, margin: 0, fontFace: BF, fontSize: 14, color: INK, paraSpaceAfter: 12, valign: "top" });
-  card(s, 6.78, 1.4, 5.95, 5.0, BGSOFT);
-  s.addShape(pres.shapes.RECTANGLE, { x: 6.78, y: 1.4, w: 0.1, h: 5.0, fill: { color: TEAL } });
-  s.addText("Hướng phát triển", { x: 7.13, y: 1.6, w: 5.4, h: 0.5, margin: 0, fontFace: HF, fontSize: 19, bold: true, color: NAVY });
-  s.addText([
-    { text: "Chấm tự luận bằng LLM; đa nhà cung cấp mô hình (Gemini, OpenAI...)", options: { bullet: true, breakLine: true } },
-    { text: "Phát hiện vật thể, theo dõi hướng nhìn, âm thanh đáng ngờ", options: { bullet: true, breakLine: true } },
-    { text: "Ứng dụng di động; tích hợp LMS; SSO/OAuth", options: { bullet: true, breakLine: true } },
-    { text: "Tách dịch vụ, đa trường (multi-tenant), triển khai cloud", options: { bullet: true, breakLine: true } },
-    { text: "Cá nhân hóa lộ trình ôn tập bằng học máy", options: { bullet: true } },
-  ], { x: 7.13, y: 2.2, w: 5.35, h: 4.0, margin: 0, fontFace: BF, fontSize: 14, color: INK, paraSpaceAfter: 11, valign: "top" });
+  const s = trang("1. Đặt vấn đề");
+  y(s, [
+    "Các nền tảng quiz trực tuyến hiện có mạnh ở phần tổ chức trò chơi, nhưng để lại ba khoảng trống:",
+  ], { h: 0.6 });
+  const kt = [
+    ["Soạn đề thủ công", "Giáo viên phải tự gõ từng câu, dù học liệu của môn đã có sẵn dưới dạng tài liệu"],
+    ["Không chấm được câu tự luận", "Chỉ chấm được câu có đáp án xác định; câu trả lời ngắn vẫn phải chấm tay"],
+    ["Gợi ý theo lượt xem, không theo năng lực", "Người học không biết mình yếu chủ đề nào và nên ôn gì tiếp theo"],
+  ];
+  kt.forEach(([t, m], i) => {
+    const yy = 1.5 + i * 1.15;
+    s.addShape(pres.ShapeType.roundRect, { x: 0.55, y: yy, w: W - 1.1, h: 1.0, fill: { color: TIM_NHAT }, line: { color: VIEN, width: 1 }, rectRadius: 0.06 });
+    s.addText(t, { x: 0.8, y: yy + 0.1, w: W - 1.6, h: 0.35, fontSize: 15, bold: true, color: TIM, valign: "middle" });
+    s.addText(m, { x: 0.8, y: yy + 0.45, w: W - 1.6, h: 0.45, fontSize: 12, color: MUC, valign: "top" });
+  });
 }
 
-// ============ 16. CẢM ƠN ============
+/* ─────────────────────────────── 4. Mục tiêu ─────────────────────────────── */
+{
+  const s = trang("1. Mục tiêu — bốn trọng tâm theo phiếu giao đề tài");
+  const tru = [
+    ["Phòng đấu thời gian thực", "Nhiều người chơi cùng lúc, độ trễ thấp, tính điểm theo tốc độ trả lời"],
+    ["Sinh đề và trợ lý bằng RAG", "Sinh câu hỏi từ chính học liệu; trợ lý trả lời kèm trích dẫn nguồn"],
+    ["Gợi ý cá nhân hoá bằng Neo4j", "Phân tích hành vi làm bài trên đồ thị để gợi ý quiz và lộ trình ôn"],
+    ["Đo hiệu năng và độ chính xác AI", "Không chỉ làm chạy được mà phải đo và báo cáo bằng số liệu thật"],
+  ];
+  tru.forEach(([t, m], i) => {
+    const c = i % 2;
+    const r = Math.floor(i / 2);
+    const x = 0.55 + c * 4.5;
+    const yy = 1.0 + r * 1.9;
+    s.addShape(pres.ShapeType.roundRect, { x, y: yy, w: 4.35, h: 1.7, fill: { color: "FFFFFF" }, line: { color: TIM, width: 1.5 }, rectRadius: 0.08 });
+    s.addShape(pres.ShapeType.ellipse, { x: x + 0.22, y: yy + 0.22, w: 0.38, h: 0.38, fill: { color: TIM } });
+    s.addText(String(i + 1), { x: x + 0.22, y: yy + 0.22, w: 0.38, h: 0.38, fontSize: 13, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
+    s.addText(t, { x: x + 0.72, y: yy + 0.2, w: 3.4, h: 0.42, fontSize: 14, bold: true, color: DAM, valign: "middle" });
+    s.addText(m, { x: x + 0.25, y: yy + 0.72, w: 3.85, h: 0.85, fontSize: 11.5, color: MUC, valign: "top" });
+  });
+}
+
+/* ─────────────────────────────── 5. Công nghệ ─────────────────────────────── */
+{
+  const s = trang("2. Công nghệ sử dụng");
+  const nhom = [
+    ["Máy chủ", "Java 21 · Spring Boot 3.5\nSpring Security · Data JPA\nWebSocket (STOMP) · Flyway"],
+    ["Giao diện", "React 19 · TypeScript\nVite 8 · Ant Design v6\nTailwind CSS v4"],
+    ["Dữ liệu", "PostgreSQL 16 + pgvector\nNeo4j 5\nRedis 7"],
+    ["Trí tuệ nhân tạo", "Google Gemini (chính)\nGroq (dự phòng)\nApache Tika · RAG tự viết"],
+  ];
+  nhom.forEach(([t, m], i) => {
+    const x = 0.45 + i * 2.32;
+    s.addShape(pres.ShapeType.roundRect, { x, y: 1.05, w: 2.14, h: 3.3, fill: { color: TIM_NHAT }, line: { color: VIEN, width: 1 }, rectRadius: 0.08 });
+    s.addShape(pres.ShapeType.rect, { x, y: 1.05, w: 2.14, h: 0.5, fill: { color: TIM } });
+    s.addText(t, { x, y: 1.05, w: 2.14, h: 0.5, fontSize: 13, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
+    s.addText(m, { x: x + 0.12, y: 1.7, w: 1.9, h: 2.5, fontSize: 11.5, color: DAM, align: "center", valign: "top", lineSpacingMultiple: 1.3 });
+  });
+  s.addText("Không dùng Spring AI hay LangChain4j — lớp điều phối mô hình tự hiện thực để kiểm soát dự phòng, hạn mức và nhật ký.", {
+    x: 0.55, y: 4.55, w: W - 1.1, h: 0.4, fontSize: 11, italic: true, color: MUC, align: "center",
+  });
+}
+
+/* ─────────────────────────────── 6-8. Hình kiến trúc ─────────────────────────────── */
+const HINH = [
+  ["2. Kiến trúc tổng thể hệ thống", "1.1", "Ba kênh giao tiếp: REST cho nghiệp vụ, WebSocket cho phòng đấu, SSE cho luồng trả lời của trợ lý."],
+  ["2. Pipeline RAG — nạp học liệu và truy hồi", "1.2", "Lọc quyền đọc TRƯỚC khi xếp hạng theo khoảng cách, không dùng chỉ mục xấp xỉ."],
+  ["3. Biểu đồ use case tổng quát", "2.1", "Bốn tác nhân: Khách, Người học, Người tạo nội dung, Quản trị viên."],
+  ["3. Thiết kế cơ sở dữ liệu", "2.28", "35 bảng trên PostgreSQL, dựng qua 23 tệp migration Flyway đánh số."],
+  ["3. Phân lớp và cấu trúc mô-đun", "2.29", "Khối đơn mô-đun hoá, chia theo nghiệp vụ; mỗi mô-đun có đủ năm tầng bên trong."],
+];
+for (const [tieuDe, hinh, chu] of HINH) {
+  const s = trang(tieuDe);
+  const p = anh(hinh);
+  if (p) datAnh(s, p, { x: 0.5, y: 0.85, w: W - 1.0, h: 3.5 });
+  s.addText(chu, { x: 0.55, y: 4.5, w: W - 1.1, h: 0.45, fontSize: 11.5, color: MUC, align: "center", valign: "middle" });
+}
+
+/* ─────────────────────────────── 9-13. Sản phẩm ─────────────────────────────── */
+const MAN = [
+  ["4. Khám phá quiz và gợi ý cá nhân hoá", "3.3", "Gợi ý sinh từ đồ thị Neo4j, kèm lý do vì sao được gợi ý."],
+  ["4. Học liệu và sinh đề bằng AI", "3.7", "Câu hỏi AI sinh phải qua bước người tạo nội dung duyệt mới vào ngân hàng."],
+  ["4. Trợ lý học tập", "3.8", "Trả lời theo luồng, kèm khối trích dẫn đoạn học liệu đã dựa vào."],
+  ["4. Lộ trình học cá nhân hoá", "3.9", "Thứ tự chủ đề nên ôn, dựng từ năng lực đo được trên từng chủ đề."],
+  ["4. Trang quản trị và giám sát chi phí AI", "3.13", "Số liệu đọc trực tiếp từ cơ sở dữ liệu tại thời điểm mở trang."],
+];
+for (const [tieuDe, hinh, chu] of MAN) {
+  const s = trang(tieuDe);
+  const p = anh(hinh);
+  if (p) datAnh(s, p, { x: 0.5, y: 0.85, w: W - 1.0, h: 3.5 });
+  s.addText(chu, { x: 0.55, y: 4.5, w: W - 1.1, h: 0.45, fontSize: 11.5, color: MUC, align: "center", valign: "middle" });
+}
+
+/* ── Phòng đấu: trụ cột số một nhưng CHƯA CÓ ảnh chụp (hinh-3.6 là một trong ba ảnh phải chụp tay).
+ * Dựng slide bằng nội dung thay vì bỏ trống — một trụ cột vắng mặt trong bài bảo vệ tệ hơn nhiều so
+ * với một slide không có ảnh. Có ảnh rồi thì thêm `datAnh` vào đây. */
+{
+  const s = trang("4. Phòng đấu thời gian thực");
+  const b = [
+    ["Vào phòng", "Mã PIN sáu số hoặc quét mã QR. Khách chưa có tài khoản vẫn chơi được khi chủ phòng cho phép, dùng khoá phiên riêng chỉ mở đúng một phòng."],
+    ["Đồng bộ trạng thái", "STOMP trên WebSocket; xác thực tại khung CONNECT vì trình duyệt không cho gắn tiêu đề vào yêu cầu nâng cấp WebSocket."],
+    ["Chạy nhiều tiến trình", "Sự kiện phát tán qua Redis Pub/Sub để mọi tiến trình đang giữ kết nối của phòng đều nhận được và phát tiếp cho người chơi của mình."],
+    ["Tính điểm theo tốc độ", "Điểm phụ thuộc thời gian trả lời — nên độ trễ trở thành yêu cầu chức năng, không chỉ là chỉ tiêu kỹ thuật."],
+  ];
+  b.forEach(([t, m], i) => {
+    const yy = 0.95 + i * 0.95;
+    s.addShape(pres.ShapeType.rect, { x: 0.55, y: yy, w: 0.07, h: 0.8, fill: { color: TIM } });
+    s.addText(t, { x: 0.78, y: yy, w: 2.3, h: 0.8, fontSize: 13.5, bold: true, color: TIM, valign: "middle" });
+    s.addText(m, { x: 3.05, y: yy, w: W - 3.6, h: 0.8, fontSize: 12, color: DAM, valign: "middle" });
+  });
+}
+
+/* Ảnh phòng đấu — hinh-3.6 ghép phòng chờ trên màn chơi, nên để riêng một slide mới đủ chỗ. */
+{
+  const s = trang("4. Phòng đấu — phòng chờ và màn chơi");
+  const p = anh("3.6");
+  if (p) datAnh(s, p, { x: 0.5, y: 0.8, w: W - 1.0, h: 3.6 });
+  s.addText("Mã PIN sáu số và mã QR để vào phòng; bảng xếp hạng cập nhật ngay sau mỗi câu.", {
+    x: 0.55, y: 4.5, w: W - 1.1, h: 0.45, fontSize: 11.5, color: MUC, align: "center", valign: "middle",
+  });
+}
+
+/* ─────────────────────────────── 14. Hiệu năng ─────────────────────────────── */
+{
+  const s = trang("5. Kết quả đo hiệu năng phòng đấu thời gian thực");
+  const p = anh("3.17");
+  if (p) datAnh(s, p, { x: 0.5, y: 0.8, w: 5.9, h: 3.1 });
+  the(s, 6.6, 0.9, 1.5, 1.35, "216 ms", "P95", "ở 100 người");
+  the(s, 8.25, 0.9, 1.3, 1.35, "0", "sự kiện mất", "mọi mức tải");
+  the(s, 6.6, 2.45, 1.5, 1.35, "200", "người/phòng", "mức đã thử");
+  the(s, 8.25, 2.45, 1.3, 1.35, "2 ms", "qua Redis", "mỗi sự kiện");
+  s.addText(
+    "Đo ngày 08/08/2026 trên một máy đơn, KHÔNG bao gồm độ trễ mạng thật — đây là chi phí xử lý của máy chủ và tầng phát tán.",
+    { x: 0.55, y: 4.25, w: W - 1.1, h: 0.6, fontSize: 11, italic: true, color: MUC, align: "center", valign: "middle" },
+  );
+}
+
+/* ─────────────────────────────── 15. Độ chính xác AI ─────────────────────────────── */
+{
+  const s = trang("5. Kết quả đo độ chính xác các chức năng AI");
+  const hang = [
+    ["Chấm tự luận", "Sai lệch điểm trung bình", "0,13 / 10"],
+    ["Chấm tự luận", "Bài có điểm trong khoảng chuẩn", "7 / 8"],
+    ["Chống tiêm chỉ thị", "Bài tấn công bị chặn", "2 / 2"],
+    ["Sinh đề", "Câu đúng chuẩn cấu trúc", "10 / 10"],
+    ["Trợ lý — có học liệu", "Trả lời đúng và có trích dẫn", "3 / 3"],
+    ["Trợ lý — ngoài học liệu", "Nói không biết thay vì suy đoán", "2 / 2"],
+    ["Đường dự phòng", "Câu sinh được qua Groq", "9 / 9"],
+  ];
+  s.addTable(
+    [
+      ["Chức năng", "Chỉ số", "Kết quả"].map((t) => ({ text: t, options: { bold: true, color: "FFFFFF", fill: { color: TIM }, fontSize: 13 } })),
+      ...hang.map((r) => r.map((t, i) => ({ text: t, options: { fontSize: 12.5, bold: i === 2, color: i === 2 ? TIM : DAM, align: i === 2 ? "center" : "left" } }))),
+    ],
+    { x: 0.6, y: 0.95, w: W - 1.2, colW: [2.6, 4.4, 1.8], border: { type: "solid", color: VIEN, pt: 1 }, rowH: 0.36, valign: "middle", margin: 0.06 },
+  );
+  s.addText("Đo ngày 14/08/2026. Cỡ mẫu nhỏ — đủ phát hiện lỗi hệ thống và xu hướng, chưa đủ cho kết luận thống kê.", {
+    x: 0.55, y: 4.35, w: W - 1.1, h: 0.45, fontSize: 11, italic: true, color: MUC, align: "center", valign: "middle",
+  });
+}
+
+/* ─────────────────────────────── 16. Kiểm thử ─────────────────────────────── */
+{
+  const s = trang("5. Kiểm thử");
+  the(s, 0.6, 1.0, 2.0, 1.5, "606", "phép kiểm máy chủ", "54 lớp · 0 hỏng");
+  the(s, 2.8, 1.0, 2.0, 1.5, "128", "phép kiểm giao diện", "21 tệp · 0 hỏng");
+  the(s, 5.0, 1.0, 2.0, 1.5, "31", "ca kiểm thử tay", "trên trình duyệt thật");
+  the(s, 7.2, 1.0, 2.2, 1.5, "38", "trang được quét", "bằng 4 vai trò");
+  y(s, [
+    "Kiểm thử theo tháp: nhiều phép kiểm ở tầng thấp, ít nhưng phủ đường đi thật ở tầng cao.",
+    "Kiểm thử tích hợp dùng Testcontainers dựng PostgreSQL thật có pgvector cho mỗi lần chạy.",
+    "Ba lỗi thật của sản phẩm lộ ra khi dùng thật chứ không qua kiểm thử — một trong số đó có hẳn một phép kiểm khẳng định đúng cái hành vi sai.",
+  ], { y: 2.75, h: 1.6, co: 13 });
+}
+
+/* ─────────────────────────────── 17. Kết luận ─────────────────────────────── */
+{
+  const s = trang("6. Kết luận");
+  s.addText("Đã hoàn thành", { x: 0.55, y: 0.95, w: 4.3, h: 0.35, fontSize: 15, bold: true, color: TIM });
+  y(s, [
+    "16 nhóm chức năng với 87 yêu cầu chức năng",
+    "Bốn trọng tâm của phiếu giao đề tài đều có sản phẩm và số liệu đối chứng",
+    "Bảy nhóm chức năng mở rộng ngoài yêu cầu bắt buộc",
+  ], { x: 0.55, y: 1.35, w: 4.3, h: 2.0, co: 12.5 });
+
+  s.addText("Hạn chế", { x: 5.15, y: 0.95, w: 4.3, h: 0.35, fontSize: 15, bold: true, color: "B45309" });
+  y(s, [
+    "Số liệu đo trên một máy đơn, không có độ trễ mạng thật",
+    "Cỡ mẫu đánh giá AI nhỏ; chấm đối chiếu với đáp án theo tiêu chí, chưa phải với nhiều giáo viên",
+    "Chưa quan sát được một lần chuyển nhà cung cấp mô hình do lỗi tạm thời",
+  ], { x: 5.15, y: 1.35, w: 4.3, h: 2.0, co: 12.5 });
+
+  s.addShape(pres.ShapeType.roundRect, { x: 0.55, y: 3.5, w: W - 1.1, h: 1.0, fill: { color: TIM_NHAT }, line: { color: TIM, width: 1 }, rectRadius: 0.06 });
+  s.addText(
+    "Phần khó nhất của một hệ thống tích hợp mô hình ngôn ngữ không nằm ở việc gọi được mô hình, mà ở việc dựng đủ hàng rào quanh nó: giới hạn miền giá trị, kiểm chứng cấu trúc đầu ra, cách ly quyền đọc dữ liệu, và giữ quyền kết luận cuối cùng cho con người.",
+    { x: 0.8, y: 3.6, w: W - 1.6, h: 0.8, fontSize: 12.5, italic: true, color: DAM, valign: "middle" },
+  );
+}
+
+/* ─────────────────────────────── 18. Hướng phát triển ─────────────────────────────── */
+{
+  const s = trang("6. Hướng phát triển");
+  const gd = [
+    ["Ngắn hạn", "Sửa hạn chế hiển thị nguồn dư của trợ lý bằng cách đo phân bố khoảng cách thực tế rồi mới chọn ngưỡng · dọn tệp ảnh mồ côi"],
+    ["Trung hạn", "Đo trên hạ tầng nhiều máy chủ có độ trễ mạng thật · tăng cỡ mẫu đánh giá AI và mời nhiều người chấm độc lập"],
+    ["Dài hạn", "Ứng dụng di động cho phòng đấu · sinh câu hỏi theo nhiều mức nhận thức · mở rộng phân tích đồ thị sang câu hỏi có giá trị sư phạm"],
+  ];
+  gd.forEach(([t, m], i) => {
+    const yy = 1.05 + i * 1.2;
+    s.addShape(pres.ShapeType.rect, { x: 0.55, y: yy, w: 0.08, h: 1.0, fill: { color: TIM } });
+    s.addText(t, { x: 0.78, y: yy, w: 1.8, h: 0.4, fontSize: 14, bold: true, color: TIM, valign: "middle" });
+    s.addText(m, { x: 0.78, y: yy + 0.38, w: W - 1.5, h: 0.62, fontSize: 12, color: DAM, valign: "top" });
+  });
+}
+
+/* ─────────────────────────────── 19. Cảm ơn ─────────────────────────────── */
 {
   const s = pres.addSlide();
-  s.background = { color: NAVY };
-  s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: W, h: 0.18, fill: { color: TEAL } });
-  s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 7.32, w: W, h: 0.18, fill: { color: AMBER } });
-  s.addText("Trân trọng cảm ơn", { x: 0.8, y: 2.5, w: 11.7, h: 1.0, margin: 0, fontFace: HF, fontSize: 44, bold: true, color: WHITE, align: "center" });
-  s.addText("Kính mong nhận được ý kiến đóng góp của quý thầy cô", { x: 0.8, y: 3.7, w: 11.7, h: 0.6, margin: 0, fontFace: HF, fontSize: 19, italic: true, color: "CADCFC", align: "center" });
-  s.addShape(pres.shapes.RECTANGLE, { x: 5.67, y: 4.55, w: 2.0, h: 0.04, fill: { color: TEAL } });
-  s.addText("Sinh viên: Thừa Văn An  •  GVHD: Phạm Văn Hà", { x: 0.8, y: 4.8, w: 11.7, h: 0.4, margin: 0, fontFace: BF, fontSize: 14, color: "9FB6D4", align: "center" });
+  s.background = { color: TIM };
+  s.addText("EM XIN CHÂN THÀNH CẢM ƠN", { x: 0.6, y: 2.0, w: W - 1.2, h: 0.7, fontSize: 30, bold: true, color: "FFFFFF", align: "center" });
+  s.addText("Kính mong nhận được ý kiến đóng góp của các thầy cô", {
+    x: 0.6, y: 2.8, w: W - 1.2, h: 0.4, fontSize: 15, color: "DDD6FE", align: "center",
+  });
+  s.addText("Nguyễn Khắc Minh Đức · 2022601585 · GVHD: ThS. Nguyễn Đức Lưu", {
+    x: 0.6, y: 3.9, w: W - 1.2, h: 0.35, fontSize: 12, color: "C4B5FD", align: "center",
+  });
 }
 
-pres.writeFile({ fileName: OUT }).then(() => console.log("OK ->", OUT)).catch((e) => { console.error(e); process.exit(1); });
+pres.writeFile({ fileName: OUT }).then(() => {
+  console.log(`OK -> ${path.basename(OUT)}  ${fs.statSync(OUT).size} bytes  (${so + 2} slide)`);
+  if (thieu.length) {
+    console.log(`\nTHIẾU ${thieu.length} hình, slide tương ứng đang trống:`);
+    for (const t of new Set(thieu)) console.log(`  ${t}`);
+  }
+});

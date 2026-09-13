@@ -132,3 +132,17 @@ test-results/
 # ==========================================================
 backend/uploads/
 uploads/
+
+# Kết quả bộ quét lỗi web — sinh lại được bằng scripts/kiem-tra-web.mjs
+bao-cao-datn/kiem-tra-web.json
+
+# Tài liệu của ĐỒ ÁN KHÁC để tham khảo — KHÔNG đưa vào repo của đề tài này.
+#
+# Đã xảy ra hai lần: một lệnh `git add -A` quét luôn thư mục tham khảo mới thả vào, và báo cáo của
+# sinh viên khác nằm trong lịch sử git của đồ án này — vừa phình repo, vừa là thứ không nên có ở đó
+# khi báo cáo phải qua kiểm tra đạo văn. Lần đầu phải viết lại lịch sử mới gỡ được.
+#
+# Thêm dòng vào đây mỗi khi thả tài liệu tham khảo mới vào dự án.
+tham khao/
+docs/*EduExam*
+docs/Poster.pptx

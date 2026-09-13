@@ -153,7 +153,7 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
           <Select value={type} options={QUESTION_TYPE_OPTIONS} onChange={handleTypeChange} />
         </Form.Item>
 
-        <Alert type="info" showIcon className="mb-4!" message={QUESTION_TYPE_HINT[type]} />
+        <Alert type="info" showIcon className="mb-4!" title={QUESTION_TYPE_HINT[type]} />
 
         <Form.Item
           label="Nội dung câu hỏi"
@@ -185,7 +185,7 @@ export default function QuestionFormModal({ open, question, onClose }: Props) {
           validateStatus={errors.options && 'error'}
           help={errors.options?.message ?? (errors.options as unknown as { root?: { message?: string } })?.root?.message}
         >
-          <Space direction="vertical" className="w-full">
+          <Space orientation="vertical" className="w-full">
             {fields.map((fieldItem, index) => (
               <Space key={fieldItem.id} align="start" className="w-full">
                 {/* Đánh dấu đáp án đúng: radio cho loại 1 đáp án, checkbox cho loại nhiều đáp án */}

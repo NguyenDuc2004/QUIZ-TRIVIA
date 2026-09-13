@@ -42,7 +42,7 @@ export default function ProctoringFlagPanel({
         type="warning"
         showIcon
         className="mb-3"
-        message="Đây là dữ kiện, không phải kết luận"
+        title="Đây là dữ kiện, không phải kết luận"
         description={
           'Tín hiệu do trình duyệt của người chơi gửi lên nên có thể bị chặn hoặc làm sai lệch, và vẫn có ' +
           'cách giải thích vô hại. Bạn nhắc riêng được; hệ thống không trừ điểm và không loại ai.'

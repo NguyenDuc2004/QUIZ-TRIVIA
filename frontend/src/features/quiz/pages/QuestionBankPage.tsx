@@ -50,7 +50,7 @@ export default function QuestionBankPage() {
       title: 'Nội dung',
       dataIndex: 'content',
       render: (content: string, row) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text className="font-bold!">
             <MathText>{content}</MathText>
           </Text>
@@ -123,7 +123,7 @@ export default function QuestionBankPage() {
   ]
 
   return (
-    <Space direction="vertical" size="large" className="trang-rong w-full">
+    <Space orientation="vertical" size="large" className="trang-rong w-full">
       {/* `trang-rong` — nới bề ngang vùng nội dung cho bảng dày, xem `.khung-noi-dung`
           trong index.css. Bảng này khai `scroll={{ x }}` nên thiếu chỗ là nó cuộn ngang
           bên trong, trong khi hai bên màn hình còn trống. */}

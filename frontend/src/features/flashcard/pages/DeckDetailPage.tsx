@@ -115,7 +115,7 @@ export default function DeckDetailPage() {
       <Alert
         type="info"
         showIcon
-        message="Sửa nội dung thẻ không làm mất tiến độ ôn"
+        title="Sửa nội dung thẻ không làm mất tiến độ ôn"
         description="Lịch ôn của thẻ giữ nguyên khi bạn sửa chữ. Muốn học lại một thẻ từ đầu thì xoá rồi thêm lại."
       />
 

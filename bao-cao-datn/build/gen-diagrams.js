@@ -5,6 +5,7 @@
  *   Mermaid (file này):  1.1 kiến trúc · 1.2 pipeline RAG · 2.28 ERD · 2.29 phân lớp & mô-đun
  *   PlantUML (gen-plantuml.js): 2.1-2.27 use case, sequence, VOPC
  *   HTML  (gen-mockup.js):      2.30-2.37 wireframe giao diện
+ *   Mermaid (file này):  3.1 sơ đồ triển khai
  */
 const fs = require("fs");
 const path = require("path");
@@ -323,6 +324,56 @@ D["2.29"] = `flowchart TB
   L --> NE
   L --> RE
   X --- M`;
+
+/* ===== CHƯƠNG 3 ===== */
+
+/* 3.1 — Sơ đồ triển khai: một máy đơn, ba CSDL trong Docker, hai nhà cung cấp mô hình bên ngoài.
+ * Cấu hình và cổng lấy đúng theo Bảng 3.1 của báo cáo và docker-compose.yml — sửa bảng thì sửa cả đây. */
+D["3.1"] = `flowchart TB
+  classDef fe fill:#DBEAFE,stroke:#1D4ED8,color:#1E3A8A;
+  classDef be fill:#FEF3C7,stroke:#B45309,color:#7C2D12;
+  classDef data fill:#EDE9FE,stroke:#6D28D9,color:#4C1D95;
+  classDef ext fill:#E5E7EB,stroke:#4B5563,color:#1F2937;
+  classDef cfg fill:#FCE7F3,stroke:#BE185D,color:#831843;
+
+  subgraph MAY["Máy đơn — Windows 11"]
+    direction TB
+
+    BROWSER["Trình duyệt<br/>Chrome"]:::fe
+
+    subgraph APP["Tiến trình chạy trực tiếp trên máy"]
+      direction LR
+      VITE["Giao diện — Vite 8 dev server<br/>React 19 + TypeScript<br/><b>cổng 5173</b>"]:::fe
+      BOOT["Máy chủ ứng dụng — Spring Boot 3.5<br/>Java 21 Temurin, Maven Wrapper<br/><b>cổng 8080</b>"]:::be
+    end
+
+    subgraph DOCKER["Docker Compose — docker compose up -d"]
+      direction LR
+      PG[("PostgreSQL 16 + pgvector<br/>pgvector/pgvector:pg16<br/><b>cổng 5432</b>")]:::data
+      NEO[("Neo4j 5<br/>neo4j:5<br/><b>cổng 7687</b>")]:::data
+      RD[("Redis 7<br/>redis:7-alpine<br/><b>cổng 6379</b>")]:::data
+    end
+
+    ENV["Tệp .env — ngoài quản lý phiên bản<br/>khoá mô hình · mật khẩu CSDL · khoá ký JWT"]:::cfg
+    FLY["Flyway — 23 tệp migration<br/>dựng lược đồ lúc khởi động"]:::cfg
+  end
+
+  subgraph NGOAI["Ngoài máy — Internet"]
+    NCC["<b>Nhà cung cấp mô hình</b><br/>Google Gemini · gemini-3.6-flash <i>(chính)</i><br/>Groq · openai/gpt-oss-120b <i>(dự phòng)</i>"]:::ext
+  end
+
+  BROWSER -->|"HTTP :5173"| VITE
+  BROWSER -->|"REST · SSE · WebSocket :8080"| BOOT
+  VITE -.->|"proxy /api"| BOOT
+
+  BOOT -->|"JDBC"| PG
+  BOOT -->|"Bolt"| NEO
+  BOOT -->|"RESP · Pub/Sub"| RD
+
+  BOOT -->|"HTTPS"| NCC
+
+  ENV -.->|"nạp lúc khởi động"| BOOT
+  FLY -.->|"áp lược đồ"| PG`;
 
 let ok = 0;
 for (const [num, src] of Object.entries(D)) {

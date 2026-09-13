@@ -79,7 +79,7 @@ export default function GenerateQuestionsPage() {
   }
 
   return (
-    <Space direction="vertical" size="large" className="w-full">
+    <Space orientation="vertical" size="large" className="w-full">
       <PageHeader
         title="Sinh đề bằng AI"
         description="AI soạn câu hỏi nháp; bạn xem lại và chọn câu nào đáng giữ mới lưu vào ngân hàng."
@@ -94,7 +94,7 @@ export default function GenerateQuestionsPage() {
         <Alert
           type="warning"
           showIcon
-          message="Chưa cấu hình API key cho dịch vụ AI"
+          title="Chưa cấu hình API key cho dịch vụ AI"
           description="Thêm GEMINI_API_KEY vào file .env rồi khởi động lại backend."
         />
       )}
@@ -144,7 +144,7 @@ export default function GenerateQuestionsPage() {
                 onChange={(e) => setGroundInMaterials(e.target.value)}
                 className="w-full"
               >
-                <Space direction="vertical" size={4} className="w-full">
+                <Space orientation="vertical" size={4} className="w-full">
                   <Radio value={false}>Kiến thức chung</Radio>
                   <Radio value={true} disabled={readyMaterials.length === 0}>
                     Bám theo học liệu (RAG)
@@ -213,7 +213,7 @@ export default function GenerateQuestionsPage() {
           )}
 
           {job?.status === 'FAILED' && (
-            <Alert type="error" showIcon message="Sinh đề thất bại" description={job.errorMessage} />
+            <Alert type="error" showIcon title="Sinh đề thất bại" description={job.errorMessage} />
           )}
 
           {job?.status === 'SUCCEEDED' && job.result && (
@@ -250,7 +250,7 @@ export default function GenerateQuestionsPage() {
                 <Alert
                   type="info"
                   showIcon
-                  message={`${job.result.rejected.length} câu bị loại vì không đúng luật`}
+                  title={`${job.result.rejected.length} câu bị loại vì không đúng luật`}
                   description={
                     <ul className="m-0 pl-4">
                       {job.result.rejected.map((reason) => (

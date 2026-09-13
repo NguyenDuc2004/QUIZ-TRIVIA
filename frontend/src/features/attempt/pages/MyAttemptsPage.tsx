@@ -21,7 +21,7 @@ export default function MyAttemptsPage() {
       title: 'Quiz',
       dataIndex: 'quizTitle',
       render: (title: string, row) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Link to={`/quizzes/${row.quizId}`} className="font-bold">
             {title}
           </Link>
@@ -61,7 +61,7 @@ export default function MyAttemptsPage() {
         }
         const percent = row.maxScore > 0 ? Math.round((row.totalScore / row.maxScore) * 100) : 0
         return (
-          <Space direction="vertical" size={0} className="w-full">
+          <Space orientation="vertical" size={0} className="w-full">
             <Text className="font-bold!">
               {row.totalScore}/{row.maxScore} điểm · {row.correctCount}/{row.questionCount} câu đúng
             </Text>
@@ -97,7 +97,7 @@ export default function MyAttemptsPage() {
   ]
 
   return (
-    <Space direction="vertical" size="large" className="trang-rong w-full">
+    <Space orientation="vertical" size="large" className="trang-rong w-full">
       {/* `trang-rong` — nới bề ngang vùng nội dung cho bảng dày, xem `.khung-noi-dung`
           trong index.css. Bảng này khai `scroll={{ x }}` nên thiếu chỗ là nó cuộn ngang
           bên trong, trong khi hai bên màn hình còn trống. */}

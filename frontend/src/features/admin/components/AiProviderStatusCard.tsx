@@ -85,7 +85,7 @@ export default function AiProviderStatusCard() {
         <Alert
           type="error"
           showIcon
-          message="Không có nhà cung cấp AI nào được cấu hình"
+          title="Không có nhà cung cấp AI nào được cấu hình"
           description="Mọi chức năng AI (sinh đề, chấm tự luận, trợ lý học tập) sẽ báo lỗi. Đặt khoá API trong biến môi trường của máy chủ rồi khởi động lại backend."
         />
       )}

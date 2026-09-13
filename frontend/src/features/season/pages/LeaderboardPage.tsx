@@ -75,7 +75,7 @@ export default function LeaderboardPage() {
         <Alert
           type="info"
           showIcon
-          message="Bạn chưa có điểm trong mùa này"
+          title="Bạn chưa có điểm trong mùa này"
           description="Làm một bài quiz hoặc ôn thẻ ghi nhớ để vào bảng xếp hạng. Mọi XP kiếm được trong mùa đều tính."
         />
       )}

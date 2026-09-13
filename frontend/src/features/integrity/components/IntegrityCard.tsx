@@ -37,7 +37,7 @@ export default function IntegrityCard({ report }: { report: IntegrityReport }) {
         )
       }
     >
-      <Space direction="vertical" size="middle" className="w-full">
+      <Space orientation="vertical" size="middle" className="w-full">
         <div>
           <div className="flex items-baseline justify-between">
             <Text className="text-sm font-bold">Điểm rủi ro</Text>
@@ -73,13 +73,13 @@ export default function IntegrityCard({ report }: { report: IntegrityReport }) {
             type="info"
             showIcon
             icon={<RobotOutlined />}
-            message="Nhận định của AI"
+            title="Nhận định của AI"
             description={<Paragraph className="mb-0!">{report.aiNote}</Paragraph>}
           />
         )}
 
         {/* Câu nhắc đặt CẠNH điểm số, không giấu xuống cuối: người đọc phải thấy nó cùng lúc với con số */}
-        <Alert type="warning" showIcon message="Đọc con số này thế nào" description={report.canhBao} />
+        <Alert type="warning" showIcon title="Đọc con số này thế nào" description={report.canhBao} />
 
         {daKetLuan ? (
           <div>

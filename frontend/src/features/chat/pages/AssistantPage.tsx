@@ -262,7 +262,7 @@ export default function AssistantPage() {
                 onChon={send}
               />
             ) : (
-              <Space direction="vertical" size="large" className="w-full">
+              <Space orientation="vertical" size="large" className="w-full">
                 {messages.map((item) => (
                   <MessageBubble
                     key={item.id}
@@ -270,7 +270,7 @@ export default function AssistantPage() {
                     isStreaming={item.id === 'streaming-answer' && isStreaming}
                   />
                 ))}
-                {streaming?.error && <Alert type="warning" showIcon message={streaming.error} />}
+                {streaming?.error && <Alert type="warning" showIcon title={streaming.error} />}
               </Space>
             )}
             <div ref={bottomRef} />

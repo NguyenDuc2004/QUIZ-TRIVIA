@@ -86,8 +86,23 @@ function figurePlaceholder(num, title) {
   if (fs.existsSync(imgPath)) {
     const data = fs.readFileSync(imgPath);
     const { w, h } = pngSize(data);
-    const maxW = 600, maxH = 820; // px — vừa khổ A4 (lề 3-2-2-2)
-    const scale = Math.min(maxW / w, maxH / h, 1);
+    // Khổ chữ A4 với lề 3-2-2-2 rộng 16 cm = 605 px ở 96 DPI, nên 600 px là ảnh tràn hết khổ chữ.
+    // Mặc định co về 500 px (83% khổ chữ): đo trên 47 hình thì bớt được 6 trang mà không bỏ hình nào.
+    // maxH 620 px = 16,4 cm, thay cho 820 px vốn cho một hình cao chiếm tới 84% chiều cao trang.
+    //
+    // CHỐT ĐỌC ĐƯỢC. Co ảnh làm chữ TRONG sơ đồ nhỏ theo. Mermaid vẽ ở `fontSize` 16px với `-s 2`, nên
+    // chữ cao 32 px trong tệp PNG; sau khi co còn `32 × scale` px, in ở 96 DPI ra `32 × scale / 96 × 25,4`
+    // mm. Chữ 10pt trên giấy cao khoảng 2,5 mm và dưới 1,5 mm thì khó đọc, nên hệ số co không được
+    // xuống dưới 0,177. Hình nào vi phạm thì được giữ nguyên bề rộng 600 px — thà tốn thêm chỗ hơn là
+    // in ra một sơ đồ không ai đọc được. Không có chốt này, lần hạ 600→500 đã đẩy thêm hai sơ đồ
+    // xuống dưới ngưỡng mà không có gì báo.
+    const CHU_PNG_PX = 32;
+    const MM_TOI_THIEU = 1.5;
+    const SCALE_TOI_THIEU = (MM_TOI_THIEU * 96) / (25.4 * CHU_PNG_PX);
+
+    const maxH = 620;
+    let scale = Math.min(500 / w, maxH / h, 1);
+    if (scale < SCALE_TOI_THIEU) scale = Math.min(600 / w, maxH / h, 1);
     const W = Math.round(w * scale), H = Math.round(h * scale);
     return [
       new Paragraph({

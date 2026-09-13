@@ -49,7 +49,7 @@ export default function AdminIntegrityPage() {
       <Alert
         type="warning"
         showIcon
-        message="Điểm rủi ro không phải bằng chứng gian lận"
+        title="Điểm rủi ro không phải bằng chứng gian lận"
         description="Tín hiệu thu từ trình duyệt nên có thể bị chặn hoặc giả mạo, và mỗi tín hiệu đều có cách giải thích vô hại. Hãy đọc lý do cụ thể và cân nhắc hoàn cảnh trước khi kết luận. Hệ thống không tự động xử lý bài nào."
       />
 

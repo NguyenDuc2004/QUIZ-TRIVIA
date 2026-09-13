@@ -3,10 +3,24 @@
 # File vẫn nằm trên đĩa để đem đi in hoặc gửi giảng viên.
 *.docx
 
+# Slide bảo vệ: cùng lý do, dựng lại bằng `node build/gen-slides.js`
+*.pptx
+
+# Poster: ảnh 3,6 MB dựng lại bằng `node build/gen-poster.js`; định nghĩa nằm trong script
+Poster-*.png
+
+# Tệp tạm của gen-poster.js
+build/_poster.html
+build/_do-poster.js
+
 # Bản sao lưu khi đổi nội dung mockup
 *.bak-*
 
-# Tài liệu test còn của đồ án khác — sẽ thay khi làm Chương 3 (mục 3.4), chưa thuộc đề tài này
+# Kế hoạch và bảng ca kiểm thử: sản phẩm SINH RA được bằng `node build/gen-testdocs.js`, cùng lý do
+# với *.docx ở trên. Định nghĩa nội dung nằm trong chính script đó và được track.
+#
+# (Trước 12/09/2026 thư mục này chứa bài mẫu của HAI đồ án khác — EduExam AI và Phụ Kiện Việt — mà
+# mục 3.4 của báo cáo lại dẫn sang như thể là tài liệu của đề tài này. Đã xoá và thay bằng bản thật.)
 Testcase+TestPlan/
 
 # Ảnh chụp/thư mục kết quả do script capture và perf sinh ra

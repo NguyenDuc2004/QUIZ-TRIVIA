@@ -57,6 +57,34 @@ function KhungGiaoDien({ children }: { children: React.ReactNode }) {
   )
 }
 
+/**
+ * Cho các hàm thông báo TĨNH (`message.success(...)`) mượn được theme đang dùng.
+ *
+ * `message.success()` gọi được từ mọi nơi, kể cả trong hook và hàm không phải component — đó là lý do
+ * 119 lời gọi trong dự án đều dùng dạng tĩnh. Cái giá là chúng render trong một cây React riêng, ngoài
+ * `ConfigProvider` ở trên, nên **không thấy theme**: giao diện đang tối thì thông báo vẫn nổi lên nền
+ * sáng. Ant Design cảnh báo đúng chuyện đó ở console.
+ *
+ * `holderRender` là đường Ant Design mở sẵn: nó bọc cây riêng kia bằng chính `ConfigProvider` của mình.
+ * Cách này sửa một chỗ, không phải đổi 119 lời gọi sang `App.useApp()` — mà nhiều lời gọi nằm trong
+ * hook truy vấn, nơi không gọi hook của Ant Design được.
+ *
+ * Đọc chế độ từ store nên khi người dùng đổi Sáng/Tối, thông báo đổi theo.
+ */
+function ThemeChoThongBaoTinh({ children }: { children: React.ReactNode }) {
+  const cheDo = useThemeStore((s) => s.cheDo)
+  const that = quyDoi(cheDo)
+  return (
+    <ConfigProvider locale={viVN} theme={that === 'dark' ? darkTheme : appTheme}>
+      {children}
+    </ConfigProvider>
+  )
+}
+
+ConfigProvider.config({
+  holderRender: (children) => <ThemeChoThongBaoTinh>{children}</ThemeChoThongBaoTinh>,
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

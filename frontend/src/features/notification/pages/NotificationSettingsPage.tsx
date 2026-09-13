@@ -76,7 +76,7 @@ export default function NotificationSettingsPage() {
       <Alert
         type="info"
         showIcon
-        message="Thông báo hệ thống luôn bật"
+        title="Thông báo hệ thống luôn bật"
         description="Đây là kênh để thông báo bảo trì, thay đổi điều khoản hoặc sự cố dữ liệu — những việc bạn cần biết. Đổi lại, kênh này không dùng để giới thiệu tính năng hay tiếp thị."
       />
     </div>
