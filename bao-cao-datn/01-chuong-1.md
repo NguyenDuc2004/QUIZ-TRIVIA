@@ -73,9 +73,26 @@ Các yêu cầu phi chức năng quan trọng được tổng hợp trong Bảng
 
 ### 1.3.1. Kiến trúc và nền tảng phát triển
 
-Hệ thống theo kiến trúc khối đơn mô-đun hóa (Modular Monolith) với các tầng Controller — Service — Repository — Domain, mã nguồn chia theo nghiệp vụ để dễ bảo trì và có thể tách thành dịch vụ riêng về sau. Ba kênh giao tiếp được dùng cho ba dạng dữ liệu khác nhau: REST cho nghiệp vụ thông thường, WebSocket cho phòng đấu thời gian thực, SSE (Server-Sent Events) cho luồng trả lời của trợ lý học tập. Máy chủ thiết kế không trạng thái với JWT trong header. Hình 1.1 thể hiện kiến trúc tổng thể.
+Đề tài chọn triển khai trong một khối đơn thay vì tách dịch vụ, vì ba lý do gắn với chính phạm vi này. Thứ nhất, mười sáu nhóm chức năng dùng chung một tập dữ liệu người dùng và một tập dữ liệu quiz, nên tách ra sẽ sinh ra những lời gọi qua mạng chỉ để đọc lại thứ vốn nằm cùng một chỗ. Thứ hai, đồ án do một người thực hiện trong hai tháng, mà chi phí vận hành nhiều dịch vụ rơi vào khâu triển khai và theo dõi chứ không phải khâu viết mã. Thứ ba, hai phép đo bắt buộc của đề tài đều cần môi trường dựng lại được xác định, và một khối đơn chạy bằng một lệnh dễ tái lập hơn nhiều. Đổi lại, mã nguồn được chia theo nghiệp vụ ngay từ đầu để nếu sau này cần tách thì ranh giới đã sẵn.
 
-Phần máy chủ dùng Java 21 (LTS) và Spring Boot 3.x [3] cùng Apache Tika [11] để bóc tách tài liệu, Flyway quản lý phiên bản lược đồ, Jakarta Bean Validation, Resilience4j làm cầu dao khi gọi AI và springdoc-openapi sinh tài liệu API. Giao diện dùng React 19 + Vite 8 + TypeScript [4] ở chế độ strict, Ant Design v6 cho thành phần kết hợp Tailwind CSS v4 cho bố cục, TanStack Query và Zustand quản lý trạng thái, React Hook Form kết hợp Zod cho biểu mẫu, `@stomp/stompjs` cho kết nối thời gian thực. Dữ liệu lưu theo nguyên tắc đa hệ (polyglot persistence): PostgreSQL 16 [5] mở rộng bằng pgvector [6] cho dữ liệu nghiệp vụ và kho vector học liệu, Neo4j 5 [7] cho đồ thị hành vi, Redis [8] cho dữ liệu ngắn hạn và thông điệp thời gian thực.
+Ba dạng dữ liệu của hệ thống có ba đặc tính truyền khác nhau nên dùng ba kênh: REST cho nghiệp vụ hỏi-đáp thông thường, WebSocket cho phòng đấu nơi máy chủ phải chủ động đẩy sự kiện, và SSE cho luồng trả lời của trợ lý nơi dữ liệu chỉ đi một chiều từ máy chủ về. Máy chủ không giữ trạng thái phiên, định danh đi kèm mỗi yêu cầu trong tiêu đề. Hình 1.1 thể hiện kiến trúc tổng thể.
+
+Bảng 1.3 liệt kê các công nghệ đã dùng kèm lý do chọn cho đúng bài toán của đề tài, thay vì chỉ nêu tên.
+
+**Bảng 1.3. Công nghệ sử dụng và lý do chọn**
+
+| Thành phần | Công nghệ | Vì sao chọn cho đề tài này |
+|---|---|---|
+| Nền máy chủ | Java 21 (LTS), Spring Boot 3.x [3] | Bản LTS để không phải nâng cấp giữa kỳ; hệ sinh thái có sẵn cả bảo mật, truy cập dữ liệu quan hệ lẫn đồ thị và WebSocket trong một khung |
+| Bóc tách học liệu | Apache Tika [11] | Người dùng nạp PDF, DOCX và TXT; viết bộ đọc riêng cho từng định dạng nằm ngoài trọng tâm đề tài |
+| Quản lý lược đồ | Flyway | Hai phép đo cần môi trường dựng lại được từ đầu; 23 tệp migration đánh số cho phép làm điều đó một cách xác định |
+| Chịu lỗi khi gọi mô hình | Resilience4j | Nhà cung cấp mô hình có thể chậm hoặc từ chối; cầu dao ngăn một lời gọi hỏng kéo theo cả hàng đợi |
+| Giao diện | React 19, Vite 8, TypeScript [4] | TypeScript ở chế độ strict bắt lỗi kiểu ngay lúc dịch — đáng giá với một hệ có nhiều dạng câu hỏi và nhiều trạng thái lượt làm bài |
+| Thành phần và bố cục | Ant Design v6, Tailwind CSS v4 | Ant Design cho sẵn bảng, biểu mẫu và hộp thoại của khu quản trị; Tailwind chỉ dùng cho bố cục để không chồng lấn |
+| Trạng thái phía giao diện | TanStack Query, Zustand | Tách rõ dữ liệu lấy từ máy chủ khỏi trạng thái cục bộ, nhờ đó phần đồng bộ lại sau khi mất kết nối gọn hơn |
+| Dữ liệu nghiệp vụ và kho vector | PostgreSQL 16 [5] kèm pgvector [6] | Cho phép lọc quyền đọc **cùng lúc** với tìm kiếm vector trong một truy vấn — điều kiện bắt buộc của hệ thống này |
+| Đồ thị hành vi | Neo4j 5 [7] | Ba truy vấn gợi ý đều là duyệt quan hệ nhiều bậc, loại truy vấn mà mô hình quan hệ phải dựng nhiều phép tự kết |
+| Dữ liệu ngắn hạn | Redis 7 [8] | Trạng thái phòng đang chơi, phiên đăng nhập và hạn mức đều có vòng đời ngắn và đọc ghi liên tục |
 
 [HÌNH 1.1: Kiến trúc tổng thể hệ thống — cần chèn]
 
@@ -83,15 +100,15 @@ Việc dùng chung một cơ sở dữ liệu cho cả dữ liệu nghiệp vụ
 
 ### 1.3.2. Sinh đề tự động và trợ lý học tập bằng kỹ thuật RAG
 
-RAG (Retrieval-Augmented Generation) [1] bổ sung vào ngữ cảnh của mô hình ngôn ngữ những đoạn văn bản truy hồi từ học liệu, thay vì để mô hình tự sinh dựa trên kiến thức đã học; nhờ đó nội dung bám sát nguồn và truy vết được. RAG là nền chung cho hai chức năng của hệ thống — sinh đề từ học liệu và trợ lý học tập — và gồm hai pha (Hình 1.2).
+Yêu cầu đặt ra cho hai chức năng sinh đề và trợ lý là giống nhau: câu trả lời phải nằm trong phạm vi học liệu người dùng đã nạp, và phải chỉ ra được nó dựa vào đoạn nào. Để mô hình tự trả lời bằng kiến thức đã học thì không đáp ứng được cả hai — người học không có cách nào phân biệt câu nào bám tài liệu, câu nào mô hình tự nghĩ. Đề tài vì vậy dựng theo hướng truy hồi rồi mới sinh (Retrieval-Augmented Generation) [1]: tìm trong học liệu những đoạn liên quan nhất, đưa chúng vào ngữ cảnh, rồi mới để mô hình viết câu trả lời dựa trên đó. Cùng một đường ống phục vụ cả hai chức năng, gồm hai pha (Hình 1.2).
 
 Pha lập chỉ mục xử lý học liệu người dùng nạp lên: Apache Tika [11] bóc tách văn bản từ PDF, DOCX và TXT; bộ chia đoạn cắt văn bản theo ranh giới câu và có phần chồng lấp để không làm gãy ngữ nghĩa; mỗi đoạn được sinh vector nhúng 768 chiều và lưu vào bảng `material_chunks`. Pha này chạy nền vì thời gian xử lý phụ thuộc kích thước tài liệu.
 
-Pha truy hồi và sinh nhận yêu cầu của người dùng, sinh vector nhúng cho nó, truy hồi các đoạn gần nhất theo khoảng cách cosine (toán tử `<=>` của pgvector) **trong phạm vi tài liệu người gọi được phép đọc**, loại các đoạn vượt ngưỡng liên quan, ghép phần còn lại thành ngữ cảnh rồi dựng prompt và gọi mô hình. Bảng 1.3 tổng hợp các tham số chính.
+Pha truy hồi và sinh nhận yêu cầu của người dùng, sinh vector nhúng cho nó, truy hồi các đoạn gần nhất theo khoảng cách cosine (toán tử `<=>` của pgvector) **trong phạm vi tài liệu người gọi được phép đọc**, loại các đoạn vượt ngưỡng liên quan, ghép phần còn lại thành ngữ cảnh rồi dựng prompt và gọi mô hình. Bảng 1.4 tổng hợp các tham số chính.
 
 [HÌNH 1.2: Pipeline RAG cho sinh đề và trợ lý học tập — cần chèn]
 
-**Bảng 1.3. Tham số chính của pipeline RAG**
+**Bảng 1.4. Tham số chính của pipeline RAG**
 
 | Tham số | Giá trị | Ghi chú |
 |---------|---------|---------|
@@ -120,7 +137,7 @@ Việc ghi đè điểm là hành động của con người: sau khi người t
 
 ### 1.3.4. Phòng đấu thời gian thực với WebSocket và Redis
 
-WebSocket [9] mở một kết nối song công duy trì liên tục để cả hai phía chủ động gửi dữ liệu bất cứ lúc nào, thay cho cách hỏi lại theo chu kỳ (polling) vốn tạo độ trễ trung bình bằng nửa chu kỳ và sinh nhiều yêu cầu vô ích. Trên nền đó, giao thức STOMP bổ sung khái niệm đích đến, cơ chế đăng ký theo chủ đề và khung tin có tiêu đề; nhờ vậy ứng dụng chỉ cần cho người chơi đăng ký chủ đề của phòng rồi gửi tin tới đó, thay vì tự định nghĩa định dạng tin và tự quản lý danh sách người nhận.
+Phòng đấu đặt ra một ràng buộc mà cách hỏi-đáp thông thường không đáp ứng nổi: khi máy chủ chuyển sang câu tiếp theo, mọi người chơi phải nhận cùng lúc. Nếu để trình duyệt hỏi lại theo chu kỳ thì mỗi người nhận câu hỏi lệch nhau trung bình nửa chu kỳ — mà điểm lại tính theo tốc độ trả lời, nên độ lệch đó thành chênh lệch điểm. Đề tài do đó dùng WebSocket [9], nơi kết nối được giữ mở để máy chủ chủ động đẩy sự kiện. Trên nền đó, STOMP cho sẵn khái niệm đích đến và cơ chế đăng ký theo chủ đề, nhờ vậy hệ thống chỉ cần cho người chơi đăng ký chủ đề của phòng rồi gửi tin tới đó, không phải tự định nghĩa định dạng tin và tự quản lý danh sách người nhận.
 
 Xác thực thực hiện tại khung STOMP CONNECT chứ không phải lúc bắt tay HTTP, vì trình duyệt không cho phép gắn tiêu đề tùy ý vào yêu cầu nâng cấp WebSocket. Thành viên xác thực bằng JWT; khách vãng lai dùng một khóa phiên riêng gắn chặt với đúng một phòng, không phải JWT nên không mở được API nào khác.
 
@@ -130,7 +147,7 @@ Cách tính điểm theo tốc độ khiến độ trễ trở thành yêu cầu
 
 ### 1.3.5. Gợi ý cá nhân hóa bằng cơ sở dữ liệu đồ thị Neo4j
 
-Neo4j [7] lưu dữ liệu dưới dạng nút và quan hệ cùng mang thuộc tính; khác với mô hình quan hệ nơi liên kết được suy ra lúc truy vấn qua phép kết, ở đồ thị quan hệ là đối tượng được lưu trực tiếp và duyệt được với chi phí không phụ thuộc tổng kích thước dữ liệu. Ngôn ngữ Cypher mô tả mẫu cần tìm bằng cú pháp gợi hình: `(a:User)-[:ATTEMPTED]->(q:Quiz)<-[:ATTEMPTED]-(b:User)` diễn tả "hai người dùng cùng làm một bài thi".
+Ba truy vấn gợi ý của hệ thống đều có dạng đi qua nhiều bậc quan hệ. Tìm người học có kết quả tương tự nghĩa là đi từ một người sang các bài họ đã làm rồi vòng ngược về những người khác cũng làm các bài đó — hai bậc. Đề xuất thứ tự ôn tập còn đi xa hơn, qua năng lực trên từng chủ đề rồi mới tới các bài bao chủ đề ấy. Trên mô hình quan hệ, mỗi bậc như vậy là một phép tự kết, và số phép kết tăng theo độ sâu. Đề tài vì vậy đưa phần này sang Neo4j [7], nơi quan hệ được lưu trực tiếp như một đối tượng nên việc duyệt không phụ thuộc tổng kích thước dữ liệu. Truy vấn viết bằng Cypher, mô tả mẫu cần tìm bằng cú pháp gợi hình: `(a:User)-[:ATTEMPTED]->(q:Quiz)<-[:ATTEMPTED]-(b:User)` diễn tả "hai người dùng cùng làm một bài thi".
 
 Mô hình đồ thị của hệ thống gồm ba loại nút `User`, `Quiz`, `Topic` và ba loại quan hệ: `ATTEMPTED` (người học đã làm bài thi, kèm điểm và độ chính xác), `PRACTICED` (năng lực trên một chủ đề) và `COVERS` (bài thi bao gồm chủ đề nào). Mô hình đã được lược bớt có chủ ý so với bản thiết kế ban đầu, theo hai nguyên tắc. Thứ nhất, cạnh giữ *sự thật đo được* còn truy vấn giữ *cách diễn giải*: các quan hệ kiểu "yếu ở chủ đề" thực chất chỉ là `PRACTICED` nhìn qua một ngưỡng, mà đưa ngưỡng vào cạnh thì mỗi lần đổi ngưỡng phải dựng lại toàn bộ đồ thị. Thứ hai, không lưu quan hệ mà hệ thống không có nguồn dữ liệu để suy ra: quan hệ "chủ đề tiên quyết" bị loại vì không ai khai báo chủ đề nào phải học trước chủ đề nào, và tự sinh quan hệ đó là hệ thống bịa ra kiến thức sư phạm mà nó không có.
 
