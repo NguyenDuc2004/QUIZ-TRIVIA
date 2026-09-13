@@ -311,7 +311,7 @@ Hai bố cục vừa nêu được minh họa bằng hai màn tiêu biểu: tran
 
 [HÌNH 2.31: Thiết kế giao diện quản lý người dùng (khu quản trị) — cần chèn]
 
-Các màn còn lại không đưa bản phác vào đây, vì Chương 3 đã có ảnh chụp của chính chúng sau khi hiện thực: đăng nhập (Hình 3.2), làm bài (Hình 3.4), kết quả làm bài (Hình 3.5), phòng đấu (Hình 3.6), học liệu và sinh đề (Hình 3.7), trợ lý học tập (Hình 3.8), gợi ý và lộ trình học (Hình 3.9), giám sát AI (Hình 3.15).
+Các màn còn lại không đưa bản phác vào đây, vì Chương 3 đã có ảnh chụp của chính chúng sau khi hiện thực: làm bài (Hình 3.3), kết quả làm bài (Hình 3.4), phòng đấu (Hình 3.5), học liệu và sinh đề (Hình 3.6), trợ lý học tập (Hình 3.7), gợi ý và lộ trình học (Hình 3.8), giám sát AI (Hình 3.12).
 
 **Khu quản trị dùng khung giao diện riêng.** Khu học tập dùng thanh điều hướng ngang; khu quản trị dùng thanh điều hướng dọc nền tối. Đây là quyết định thiết kế, không phải khác biệt thẩm mỹ: thao tác ở khu học tập chỉ tác động lên dữ liệu của chính người dùng, còn khóa tài khoản hay đổi vai trò tác động lên người khác và không có nút hoàn tác, nên một bố cục khác hẳn giúp quản trị viên luôn nhận biết mình đang ở khu nào. Ngoài ra hai khu là hai ngữ cảnh làm việc khác nhau, và thanh dọc còn chỗ mở rộng khi bổ sung chức năng quản trị. Lối vào đặt ở menu tài khoản, lối ra đặt trong thanh dọc — vào khu quản trị là chuyển ngữ cảnh chứ không phải điều hướng trong cùng một ngữ cảnh.
 

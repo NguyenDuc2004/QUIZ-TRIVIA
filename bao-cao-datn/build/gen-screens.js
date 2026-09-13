@@ -227,35 +227,25 @@ async function main() {
   fs.mkdirSync(ASSETS, { recursive: true });
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: "new", args: ["--no-sandbox"] });
 
-  // ── Khách chưa đăng nhập ───────────────────────────────────────────────
-  await man("3.2", "Đăng nhập", async () => {
-    const page = await browser.newPage();
-    await page.setViewport(KHUNG);
-    await epSang(page);
-    await toi(page, "/login");
-    await chup(page, "3.2");
-    await page.close();
-  });
-
   // ── Người học ──────────────────────────────────────────────────────────
   const hs = await dangNhap(browser, HS, "người học");
 
   /* `/quizzes` nằm trong khu vực bảo vệ: khách vào bị đẩy về `/login`. Lượt chụp đầu vì thế cho ra
    * một ảnh màn đăng nhập thứ hai mà vẫn báo thành công — đúng bytes bằng nhau mới lộ. Chụp bằng
    * phiên người học. */
-  await man("3.3", "Khám phá quiz", async () => {
+  await man("3.2", "Khám phá quiz", async () => {
     await toi(hs, "/quizzes", 2500);
-    await chup(hs, "3.3");
+    await chup(hs, "3.2");
   });
 
-  await man("3.9", "Gợi ý và lộ trình học", async () => {
+  await man("3.8", "Gợi ý và lộ trình học", async () => {
     await toi(hs, "/learning-path", 2500);
-    await chup(hs, "3.9");
+    await chup(hs, "3.8");
   });
 
   /* Chú thích hình đòi CẢ danh sách bộ thẻ (kèm số thẻ đến hạn) LẪN phiên ôn (thẻ lật được, bốn nút
    * tự đánh giá mức nhớ), nên chụp hai màn rồi ghép dọc — cùng cách làm với hình phòng đấu. */
-  await man("3.10", "Thẻ ghi nhớ và phiên ôn tập", async () => {
+  await man("3.9", "Thẻ ghi nhớ và phiên ôn tập", async () => {
     await toi(hs, "/flashcards", 2200);
     const t1 = path.join(ASSETS, "_tmp-3.10-ds.png");
     await hs.screenshot({ path: t1 });
@@ -272,25 +262,20 @@ async function main() {
 
     await ghepDoc(t1, t2, path.join(ASSETS, "hinh-3.10.png"));
     console.log(`  ✓ hinh-3.10.png  (${fs.statSync(path.join(ASSETS, "hinh-3.10.png")).size} bytes, ghép 2 ảnh)`);
-    xong.push("3.10");
-  });
-
-  await man("3.12", "Thành tích và xếp hạng mùa", async () => {
-    await toi(hs, "/achievements", 2000);
-    await chup(hs, "3.12");
+    xong.push("3.9");
   });
 
   // ── Người tạo nội dung ─────────────────────────────────────────────────
   const gv = await dangNhap(browser, GV, "người tạo nội dung");
 
-  await man("3.7", "Học liệu và sinh đề AI", async () => {
+  await man("3.6", "Học liệu và sinh đề AI", async () => {
     await toi(gv, "/ai/materials", 2500);
-    await chup(gv, "3.7");
+    await chup(gv, "3.6");
   });
 
   /* Hỏi thật một câu chứ không chụp khung rỗng: chú thích hình hứa có "khối trích dẫn nguồn dưới câu
    * trả lời", mà khối đó chỉ xuất hiện sau khi mô hình trả lời xong. Tốn một lượt gọi AI. */
-  await man("3.8", "Trợ lý học tập", async () => {
+  await man("3.7", "Trợ lý học tập", async () => {
     await toi(gv, "/assistant", 2500);
     await gv.type(".chat-composer textarea", "Dạng chuẩn 3NF khác 2NF ở điểm nào?");
     await gv.keyboard.press("Enter");
@@ -300,13 +285,13 @@ async function main() {
       return o && !o.disabled && document.querySelectorAll(".chat-composer").length > 0;
     }, { timeout: 90000, polling: 500 });
     await nghi(1500);
-    await chup(gv, "3.8");
+    await chup(gv, "3.7");
   });
 
   /* Màn LÀM BÀI. Lượt làm được tạo qua API để lấy mã lượt, rồi mới mở bằng trình duyệt — bấm dò nút
    * "Bắt đầu làm bài" qua nhiều bố cục trang giới thiệu thì mong manh hơn nhiều. Chọn vài phương án
    * trước khi chụp để ảnh không phải là một đề còn trắng tinh. */
-  await man("3.4", "Đang làm bài", async () => {
+  await man("3.3", "Đang làm bài", async () => {
     const id = await batDauLamBai();
     await toi(hs, `/attempts/${id}`, 2500);
     // Chọn hai phương án đầu của hai câu đầu, nếu bấm được
@@ -315,13 +300,13 @@ async function main() {
       o.slice(0, 1).forEach((e) => e.click?.());
     });
     await nghi(1200);
-    await chup(hs, "3.4");
+    await chup(hs, "3.3");
   });
 
   /* Màn KẾT QUẢ. Dùng lượt ĐÃ CÓ SẴN và đã được AI chấm thay vì làm bài mới: chú thích hình đòi có
    * nhận xét của AI cho câu tự luận, mà chấm lại là tốn một lượt gọi mô hình cho thứ đã có. Cuộn tới
    * đúng khối nhận xét vì nó nằm dưới màn hình đầu. */
-  await man("3.5", "Kết quả bài làm", async () => {
+  await man("3.4", "Kết quả bài làm", async () => {
     const id = await luotDaChamAI();
     await toi(hs, `/attempts/${id}`, 2500);
     await hs.evaluate(() => {
@@ -329,13 +314,13 @@ async function main() {
       el?.scrollIntoView({ block: "center" });
     });
     await nghi(1200);
-    await chup(hs, "3.5");
+    await chup(hs, "3.4");
   });
 
   /* Trang CHI TIẾT lớp, không phải danh sách — chú thích hình đòi có danh sách thành viên, bài tập
    * kèm hạn nộp và bảng theo dõi nộp bài, những thứ chỉ trang chi tiết mới có. Bấm vào thẻ đầu thay
    * vì gắn cứng UUID, để script không hỏng khi nạp lại dữ liệu demo. */
-  await man("3.11", "Lớp học", async () => {
+  await man("3.10", "Lớp học", async () => {
     await toi(gv, "/classrooms", 2000);
     await gv.evaluate(() => {
       const the = document.querySelector('a[href^="/classrooms/"]');
@@ -347,7 +332,7 @@ async function main() {
     });
     await gv.waitForFunction(() => /^\/classrooms\/[^/]+$/.test(location.pathname), { timeout: 15000 });
     await nghi(2500);
-    await chup(gv, "3.11");
+    await chup(gv, "3.10");
   });
 
   /* PHÒNG ĐẤU. Chú thích hình đòi CẢ phòng chờ (mã PIN, mã QR, danh sách người chơi) LẪN màn chơi
@@ -355,7 +340,7 @@ async function main() {
    *
    * Phòng và lượt vào phòng đi qua API để lấy mã phòng chắc chắn; phần nhìn thì vẫn là giao diện thật.
    * Cần hai phiên trình duyệt độc lập — một người chơi thì bảng xếp hạng chỉ có một dòng. */
-  await man("3.6", "Phòng chờ và phòng đấu", async () => {
+  await man("3.5", "Phòng chờ và phòng đấu", async () => {
     const { ma, tokenHost } = await moPhong();
 
     const ctx2 = await browser.createBrowserContext();
@@ -407,30 +392,25 @@ async function main() {
     fs.unlinkSync(tmp2);
     await ctx2.close();
     console.log(`  ✓ hinh-3.6.png  (${fs.statSync(path.join(ASSETS, "hinh-3.6.png")).size} bytes, ghép 2 ảnh)`);
-    xong.push("3.6");
+    xong.push("3.5");
   });
 
   // ── Quản trị ───────────────────────────────────────────────────────────
   const qt = await dangNhap(browser, QT, "quản trị");
 
-  await man("3.13", "Tổng quan quản trị", async () => {
+  await man("3.11", "Tổng quan quản trị", async () => {
     await toi(qt, "/admin", 3000);
-    await chup(qt, "3.13");
+    await chup(qt, "3.11");
   });
 
-  await man("3.14", "Quản lý người dùng", async () => {
-    await toi(qt, "/admin/users", 2500);
-    await chup(qt, "3.14");
-  });
-
-  await man("3.15", "Giám sát AI", async () => {
+  await man("3.12", "Giám sát AI", async () => {
     await toi(qt, "/admin/ai", 2500);
-    await chup(qt, "3.15");
+    await chup(qt, "3.12");
   });
 
   /* Bấm "Xem" để mở thẻ chi tiết: chú thích hình đòi có nhận định của mô hình và hai nút kết luận,
    * mà chúng chỉ hiện sau khi mở một dòng cụ thể. Danh sách rỗng thì bỏ qua bước bấm. */
-  await man("3.16", "Báo cáo tính toàn vẹn", async () => {
+  await man("3.13", "Báo cáo tính toàn vẹn", async () => {
     await toi(qt, "/admin/integrity", 2800);
     await qt.evaluate(() => {
       const b = [...document.querySelectorAll("button")].find((e) => /^\s*Xem\s*$/.test(e.textContent ?? ""));
@@ -445,7 +425,7 @@ async function main() {
       window.scrollBy(0, -90);
     });
     await nghi(1200);
-    await chup(qt, "3.16");
+    await chup(qt, "3.13");
   });
 
   await browser.close();

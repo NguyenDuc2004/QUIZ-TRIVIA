@@ -32,29 +32,25 @@ Toàn bộ hạ tầng dữ liệu khởi động bằng một lệnh `docker co
 
 Giao diện tuân theo bộ quy ước đã trình bày ở mục 2.2.3: màu sắc, bo góc và đổ bóng khai báo tập trung dưới dạng biến; trang dành cho người học trình bày theo lưới thẻ, trang quản lý theo bảng; các thành phần dùng chung như tiêu đề trang và trạng thái danh sách rỗng được tái sử dụng.
 
-Mười một màn dưới đây trải đủ các nhóm chức năng của người học. Màn đăng nhập có thêm lối đăng nhập bằng tài khoản Google và ô chọn vai trò; trang khám phá có thanh tìm kiếm, bộ lọc theo danh mục và độ khó, cùng lưới thẻ quiz; màn làm bài hiển thị đồng hồ đếm ngược và thanh điều hướng giữa các câu; màn kết quả liệt kê từng câu kèm đáp án đúng, lời giải thích và nhận xét của AI cho câu tự luận. Phòng đấu gồm phòng chờ có mã PIN sáu số cùng mã QR, và màn chơi có bảng xếp hạng cập nhật sau mỗi câu. Các màn còn lại lần lượt là học liệu và sinh đề bằng AI, trợ lý học tập kèm khối trích dẫn nguồn, gợi ý cùng lộ trình học, thẻ ghi nhớ với bốn mức tự đánh giá, lớp học kèm bảng theo dõi nộp bài, và trang thành tích cùng bảng xếp hạng theo mùa.
+Tám màn dưới đây là những màn thể hiện rõ nhất phần nghiệp vụ riêng của hệ thống; các màn còn lại theo khuôn quen thuộc của một ứng dụng web nên không đưa vào báo cáo. Trang khám phá có thanh tìm kiếm, bộ lọc theo danh mục và độ khó, cùng lưới thẻ quiz; màn làm bài hiển thị đồng hồ đếm ngược và thanh điều hướng giữa các câu; màn kết quả liệt kê từng câu kèm đáp án đúng, lời giải thích và nhận xét của AI cho câu tự luận. Phòng đấu gồm phòng chờ có mã PIN sáu số cùng mã QR, và màn chơi có bảng xếp hạng cập nhật sau mỗi câu. Bốn màn cuối là học liệu và sinh đề bằng AI, trợ lý học tập kèm khối trích dẫn nguồn, gợi ý cùng lộ trình học, và thẻ ghi nhớ với bốn mức tự đánh giá.
 
-[HÌNH 3.2: Màn hình đăng nhập — cần chèn]
+[HÌNH 3.2: Trang khám phá quiz — cần chèn]
 
-[HÌNH 3.3: Trang khám phá quiz — cần chèn]
+[HÌNH 3.3: Màn hình làm bài — cần chèn]
 
-[HÌNH 3.4: Màn hình làm bài — cần chèn]
+[HÌNH 3.4: Màn hình kết quả bài làm — cần chèn]
 
-[HÌNH 3.5: Màn hình kết quả bài làm — cần chèn]
+[HÌNH 3.5: Phòng chờ và phòng đấu — cần chèn]
 
-[HÌNH 3.6: Phòng chờ và phòng đấu — cần chèn]
+[HÌNH 3.6: Trang học liệu và sinh đề bằng AI — cần chèn]
 
-[HÌNH 3.7: Trang học liệu và sinh đề bằng AI — cần chèn]
+[HÌNH 3.7: Màn hình trợ lý học tập — cần chèn]
 
-[HÌNH 3.8: Màn hình trợ lý học tập — cần chèn]
+[HÌNH 3.8: Trang gợi ý và lộ trình học — cần chèn]
 
-[HÌNH 3.9: Trang gợi ý và lộ trình học — cần chèn]
+[HÌNH 3.9: Thẻ ghi nhớ và phiên ôn tập — cần chèn]
 
-[HÌNH 3.10: Thẻ ghi nhớ và phiên ôn tập — cần chèn]
-
-[HÌNH 3.11: Trang lớp học — cần chèn]
-
-[HÌNH 3.12: Thành tích và bảng xếp hạng mùa — cần chèn]
+[HÌNH 3.10: Trang lớp học — cần chèn]
 
 **Một quyết định giao diện cần nêu rõ.** Thẻ quiz trên màn hình khám phá hiển thị **số người đã học**, nhưng không hiển thị điểm đánh giá. Hệ thống chưa có chức năng đánh giá nên chưa có dữ liệu đó; hiển thị một con số không có thật ở vị trí này không phải lỗi trang trí mà là **đưa ra một lời khuyên sai**, vì điểm đánh giá chính là thứ người học dựa vào để chọn bài học. Cùng lý do, số người đã học đếm theo **người** chứ không theo **lượt**: hệ thống khuyến khích ôn lại nhiều lần, nên đếm theo lượt sẽ khiến một người làm mười lần đọc thành mười người đã học.
 
@@ -62,15 +58,13 @@ Mười một màn dưới đây trải đủ các nhóm chức năng của ngư
 
 Khu quản trị dùng khung giao diện riêng, tách khỏi khung của người dùng thường, để không nhầm lẫn giữa thao tác học tập và thao tác quản trị.
 
-Bốn màn quản trị dưới đây phục vụ bốn việc khác nhau. Trang tổng quan gom các chỉ số người dùng, quiz, lượt làm bài, phòng đang chạy và chi phí AI trong tháng. Trang quản lý người dùng cho lọc theo vai trò và trạng thái khoá, kèm thao tác khoá tài khoản, đổi vai trò và thu hồi phiên. Trang giám sát AI ghi nhật ký từng lời gọi kèm nhà cung cấp, số token, độ trễ và tỉ lệ dùng nhà cung cấp dự phòng, cùng ô đặt hạn mức mỗi ngày cho từng người dùng. Trang rà soát tính toàn vẹn liệt kê những lượt thi vượt ngưỡng rủi ro kèm lý do cụ thể của từng cờ, nhận định của mô hình và hai nút kết luận.
+Ba màn quản trị dưới đây phục vụ ba việc khác nhau. Trang tổng quan gom các chỉ số người dùng, quiz, lượt làm bài, phòng đang chạy và chi phí AI trong tháng. Trang giám sát AI ghi nhật ký từng lời gọi kèm nhà cung cấp, số token, độ trễ và tỉ lệ dùng nhà cung cấp dự phòng, cùng ô đặt hạn mức mỗi ngày cho từng người dùng. Trang rà soát tính toàn vẹn liệt kê những lượt thi vượt ngưỡng rủi ro kèm lý do cụ thể của từng cờ, nhận định của mô hình và hai nút kết luận.
 
-[HÌNH 3.13: Trang tổng quan quản trị — cần chèn]
+[HÌNH 3.11: Trang tổng quan quản trị — cần chèn]
 
-[HÌNH 3.14: Trang quản lý người dùng — cần chèn]
+[HÌNH 3.12: Trang giám sát AI — cần chèn]
 
-[HÌNH 3.15: Trang giám sát AI — cần chèn]
-
-[HÌNH 3.16: Trang rà soát tính toàn vẹn — cần chèn]
+[HÌNH 3.13: Trang rà soát tính toàn vẹn — cần chèn]
 
 Trang cấu hình nhà cung cấp mô hình chỉ hiển thị **trạng thái** của mỗi khoá — *đã cấu hình* hoặc *để trống* — chứ không hiển thị giá trị khoá, kể cả ở dạng che một phần. Một khoá bị lộ trên màn hình quản trị vẫn là một khoá bị lộ.
 
@@ -197,7 +191,7 @@ Kế hoạch ban đầu dự định dùng k6 hoặc Gatling. Cả hai **không 
 | 150 | 11 454 ms | 542 ms | 566 ms | 568 ms | **0** |
 | 200 | 25 101 ms | 1 411 ms | 1 509 ms | 1 511 ms | **0** |
 
-[HÌNH 3.17: Độ trễ phát câu hỏi theo số người chơi — cần chèn]
+[HÌNH 3.14: Độ trễ phát câu hỏi theo số người chơi — cần chèn]
 
 Hai nhận xét quan trọng.
 

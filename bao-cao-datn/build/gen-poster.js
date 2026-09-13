@@ -156,11 +156,11 @@ const html = `<!doctype html>
   <div class="hang">
     <div class="cot">
       ${anhKhoi("1.1", "Hình 1. Kiến trúc tổng thể — ba kênh giao tiếp, ba cơ sở dữ liệu, hai nhà cung cấp mô hình")}
-      ${anhKhoi("3.8", "Hình 3. Trợ lý học tập trả lời kèm trích dẫn nguồn từ học liệu")}
+      ${anhKhoi("3.7", "Hình 3. Trợ lý học tập trả lời kèm trích dẫn nguồn từ học liệu")}
     </div>
     <div class="cot">
-      ${anhKhoi("3.6", "Hình 2. Phòng đấu — mã PIN, mã QR và bảng xếp hạng trực tiếp")}
-      ${anhKhoi("3.17", "Hình 4. Độ trễ phát câu hỏi theo số người chơi trong phòng")}
+      ${anhKhoi("3.5", "Hình 2. Phòng đấu — mã PIN, mã QR và bảng xếp hạng trực tiếp")}
+      ${anhKhoi("3.14", "Hình 4. Độ trễ phát câu hỏi theo số người chơi trong phòng")}
     </div>
   </div>
 

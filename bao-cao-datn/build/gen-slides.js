@@ -250,7 +250,7 @@ for (const [tieuDe, hinh, chu] of MAN) {
 /* Ảnh phòng đấu — hinh-3.6 ghép phòng chờ trên màn chơi, nên để riêng một slide mới đủ chỗ. */
 {
   const s = trang("4. Phòng đấu — phòng chờ và màn chơi");
-  const p = anh("3.6");
+  const p = anh("3.5");
   if (p) datAnh(s, p, { x: 0.5, y: 0.8, w: W - 1.0, h: 3.6 });
   s.addText("Mã PIN sáu số và mã QR để vào phòng; bảng xếp hạng cập nhật ngay sau mỗi câu.", {
     x: 0.55, y: 4.5, w: W - 1.1, h: 0.45, fontSize: 11.5, color: MUC, align: "center", valign: "middle",
@@ -260,7 +260,7 @@ for (const [tieuDe, hinh, chu] of MAN) {
 /* ─────────────────────────────── 14. Hiệu năng ─────────────────────────────── */
 {
   const s = trang("5. Kết quả đo hiệu năng phòng đấu thời gian thực");
-  const p = anh("3.17");
+  const p = anh("3.14");
   if (p) datAnh(s, p, { x: 0.5, y: 0.8, w: 5.9, h: 3.1 });
   the(s, 6.6, 0.9, 1.5, 1.35, "216 ms", "P95", "ở 100 người");
   the(s, 8.25, 0.9, 1.3, 1.35, "0", "sự kiện mất", "mọi mức tải");
