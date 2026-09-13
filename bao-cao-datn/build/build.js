@@ -399,9 +399,49 @@ function tenBanRa() {
   return path.join(DIR, `bao-cao-datn-v${tiepTheo}.docx`);
 }
 
+/**
+ * Chỉ giữ {@link SO_BAN_GIU} bản đánh số gần nhất, xoá các bản cũ hơn.
+ *
+ * Mỗi bản nặng khoảng 7 MB vì nhúng toàn bộ ảnh, nên sau vài chục lần dựng thì thư mục vừa nặng vừa
+ * khó nhìn ra đâu là bản đang dùng. Giữ 5 bản là đủ cho việc đối chiếu lùi vài bước khi trao đổi với
+ * giảng viên.
+ *
+ * KHÔNG bao giờ đụng tới `bao-cao-datn-final.docx` (bản chốt để nộp) hay bất cứ tệp nào không theo
+ * khuôn `bao-cao-datn-v{số}.docx` — mẫu tên ở đây cố ý hẹp vì đây là thao tác xoá.
+ *
+ * Bản đang mở trong Word sẽ xoá không được; bỏ qua và báo ra, không để lỗi đó làm hỏng cả lần dựng.
+ */
+const SO_BAN_GIU = 5;
+
+function donBanCu(vuaTao) {
+  const ban = fs.readdirSync(DIR)
+    .map((f) => ({ f, m: /^bao-cao-datn-v(\d+)\.docx$/.exec(f) }))
+    .filter((x) => x.m)
+    .map((x) => ({ ten: x.f, so: Number(x.m[1]) }))
+    .sort((a, b) => b.so - a.so);
+
+  const boDi = ban.slice(SO_BAN_GIU);
+  if (!boDi.length) return;
+
+  const daXoa = [];
+  const khongXoaDuoc = [];
+  for (const b of boDi) {
+    if (path.join(DIR, b.ten) === vuaTao) continue; // không tự xoá bản vừa dựng
+    try {
+      fs.unlinkSync(path.join(DIR, b.ten));
+      daXoa.push("v" + b.so);
+    } catch (e) {
+      khongXoaDuoc.push(`v${b.so} (${e.code === "EBUSY" || e.code === "EPERM" ? "đang mở" : e.code})`);
+    }
+  }
+  if (daXoa.length) console.log(`   dọn ${daXoa.length} bản cũ: ${daXoa.reverse().join(", ")} — giữ ${SO_BAN_GIU} bản gần nhất`);
+  if (khongXoaDuoc.length) console.log(`   không xoá được: ${khongXoaDuoc.join(", ")}`);
+}
+
 Packer.toBuffer(doc).then((buf) => {
   const out = tenBanRa();
   // Không bắt EBUSY nữa: tên file luôn mới nên không đụng bản đang mở trong Word.
   fs.writeFileSync(out, buf);
   console.log("OK ->", out, "| bytes=", buf.length, "| figures=", figures.length, "| tables=", tables.length);
+  donBanCu(out);
 });

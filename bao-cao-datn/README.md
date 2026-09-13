@@ -44,6 +44,10 @@ node build.js --final      # -> ../bao-cao-datn-final.docx (bản chốt để n
 Bản Word đánh số phiên bản để trong lúc trao đổi với giảng viên còn chỉ đích danh được "bản nào",
 thay vì "bản mới nhất". Bản cũ không bị ghi đè, nên build lại lúc đang mở file trong Word cũng không sao.
 
+Mỗi lần dựng, `build.js` **giữ lại 5 bản đánh số gần nhất** và xoá các bản cũ hơn — mỗi bản nặng
+khoảng 7 MB vì nhúng toàn bộ ảnh. Bản `-final` và mọi tệp không theo khuôn `bao-cao-datn-v{số}.docx`
+không bao giờ bị đụng tới. Bản đang mở trong Word thì xoá không được, script bỏ qua và báo ra.
+
 Mở file trong Word rồi nhấn `Ctrl+A` → `F9` → *Update entire table*. Mục lục và danh mục hình/bảng là
 field của Word nên số trang chỉ điền sau bước này.
 
