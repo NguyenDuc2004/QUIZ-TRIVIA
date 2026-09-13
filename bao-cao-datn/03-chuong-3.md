@@ -26,57 +26,35 @@ Toàn bộ hạ tầng dữ liệu khởi động bằng một lệnh `docker co
 
 **Khoá bí mật không nằm trong mã nguồn.** Khoá của hai nhà cung cấp mô hình, mật khẩu cơ sở dữ liệu, khoá ký JWT và mật khẩu ứng dụng của hộp thư đều đọc từ biến môi trường trong tệp `.env`; tệp này bị loại khỏi hệ thống quản lý phiên bản, và kho mã chỉ chứa tệp mẫu `.env.example` liệt kê **tên biến** kèm hướng dẫn lấy khoá, không chứa giá trị nào.
 
-[HÌNH 3.1: Sơ đồ triển khai — máy chủ ứng dụng, giao diện, ba hệ quản trị dữ liệu trong Docker và hai nhà cung cấp mô hình bên ngoài — cần chèn]
-
-*Hình 3.1. Sơ đồ triển khai hệ thống*
+[HÌNH 3.1: Sơ đồ triển khai hệ thống — cần chèn]
 
 ## 3.2. Giao diện phía người dùng
 
 Giao diện tuân theo bộ quy ước đã trình bày ở mục 2.2.3: màu sắc, bo góc và đổ bóng khai báo tập trung dưới dạng biến; trang dành cho người học trình bày theo lưới thẻ, trang quản lý theo bảng; các thành phần dùng chung như tiêu đề trang và trạng thái danh sách rỗng được tái sử dụng.
 
-[HÌNH 3.2: Màn hình đăng nhập và đăng ký — biểu mẫu email, nút đăng nhập bằng Google, ô chọn vai trò — cần chèn]
+Mười một màn dưới đây trải đủ các nhóm chức năng của người học. Màn đăng nhập có thêm lối đăng nhập bằng tài khoản Google và ô chọn vai trò; trang khám phá có thanh tìm kiếm, bộ lọc theo danh mục và độ khó, cùng lưới thẻ quiz; màn làm bài hiển thị đồng hồ đếm ngược và thanh điều hướng giữa các câu; màn kết quả liệt kê từng câu kèm đáp án đúng, lời giải thích và nhận xét của AI cho câu tự luận. Phòng đấu gồm phòng chờ có mã PIN sáu số cùng mã QR, và màn chơi có bảng xếp hạng cập nhật sau mỗi câu. Các màn còn lại lần lượt là học liệu và sinh đề bằng AI, trợ lý học tập kèm khối trích dẫn nguồn, gợi ý cùng lộ trình học, thẻ ghi nhớ với bốn mức tự đánh giá, lớp học kèm bảng theo dõi nộp bài, và trang thành tích cùng bảng xếp hạng theo mùa.
 
-*Hình 3.2. Màn hình đăng nhập và đăng ký*
+[HÌNH 3.2: Màn hình đăng nhập — cần chèn]
 
-[HÌNH 3.3: Màn hình khám phá quiz — thanh tìm kiếm, bộ lọc danh mục và độ khó, lưới thẻ quiz kèm số người đã học — cần chèn]
+[HÌNH 3.3: Trang khám phá quiz — cần chèn]
 
-*Hình 3.3. Màn hình khám phá quiz*
+[HÌNH 3.4: Màn hình làm bài — cần chèn]
 
-[HÌNH 3.4: Màn hình làm bài — nội dung câu hỏi, danh sách phương án, đồng hồ đếm ngược, điều hướng câu — cần chèn]
+[HÌNH 3.5: Màn hình kết quả bài làm — cần chèn]
 
-*Hình 3.4. Màn hình làm bài quiz*
+[HÌNH 3.6: Phòng chờ và phòng đấu — cần chèn]
 
-[HÌNH 3.5: Màn hình kết quả — tổng điểm, danh sách câu kèm đáp án đúng, lời giải thích và nhận xét của AI cho câu tự luận — cần chèn]
+[HÌNH 3.7: Trang học liệu và sinh đề bằng AI — cần chèn]
 
-*Hình 3.5. Màn hình kết quả làm bài*
+[HÌNH 3.8: Màn hình trợ lý học tập — cần chèn]
 
-[HÌNH 3.6: Phòng chờ và phòng đấu — mã PIN sáu số, mã QR, danh sách người chơi kèm nhân vật; màn chơi với câu hỏi và bảng xếp hạng trực tiếp — cần chèn]
+[HÌNH 3.9: Trang gợi ý và lộ trình học — cần chèn]
 
-*Hình 3.6. Phòng đấu thời gian thực*
+[HÌNH 3.10: Thẻ ghi nhớ và phiên ôn tập — cần chèn]
 
-[HÌNH 3.7: Màn hình học liệu và sinh đề bằng AI — danh sách học liệu kèm trạng thái xử lý, biểu mẫu sinh đề, danh sách câu hỏi nháp chờ duyệt kèm đoạn học liệu nguồn — cần chèn]
+[HÌNH 3.11: Trang lớp học — cần chèn]
 
-*Hình 3.7. Màn hình học liệu và sinh đề bằng AI*
-
-[HÌNH 3.8: Màn hình trợ lý học tập — khung hội thoại, phản hồi hiện dần theo luồng, khối trích dẫn nguồn dưới câu trả lời — cần chèn]
-
-*Hình 3.8. Màn hình trợ lý học tập*
-
-[HÌNH 3.9: Màn hình gợi ý và lộ trình học — danh sách quiz được gợi ý kèm lý do, thứ tự chủ đề nên ôn — cần chèn]
-
-*Hình 3.9. Màn hình gợi ý và lộ trình học*
-
-[HÌNH 3.10: Màn hình thẻ ghi nhớ và phiên ôn tập — danh sách bộ thẻ kèm số thẻ đến hạn, thẻ lật được và bốn nút tự đánh giá mức nhớ — cần chèn]
-
-*Hình 3.10. Màn hình thẻ ghi nhớ và phiên ôn tập*
-
-[HÌNH 3.11: Màn hình lớp học — trang lớp với danh sách thành viên, danh sách bài tập kèm hạn nộp, bảng theo dõi nộp bài — cần chèn]
-
-*Hình 3.11. Màn hình lớp học và giao bài*
-
-[HÌNH 3.12: Màn hình thành tích và bảng xếp hạng mùa — cấp độ, huy hiệu, chuỗi ngày học, thử thách hằng ngày, bảng xếp hạng kèm phân hạng — cần chèn]
-
-*Hình 3.12. Màn hình thành tích và bảng xếp hạng theo mùa*
+[HÌNH 3.12: Thành tích và bảng xếp hạng mùa — cần chèn]
 
 **Một quyết định giao diện cần nêu rõ.** Thẻ quiz trên màn hình khám phá hiển thị **số người đã học**, nhưng không hiển thị điểm đánh giá. Hệ thống chưa có chức năng đánh giá nên chưa có dữ liệu đó; hiển thị một con số không có thật ở vị trí này không phải lỗi trang trí mà là **đưa ra một lời khuyên sai**, vì điểm đánh giá chính là thứ người học dựa vào để chọn bài học. Cùng lý do, số người đã học đếm theo **người** chứ không theo **lượt**: hệ thống khuyến khích ôn lại nhiều lần, nên đếm theo lượt sẽ khiến một người làm mười lần đọc thành mười người đã học.
 
@@ -84,21 +62,15 @@ Giao diện tuân theo bộ quy ước đã trình bày ở mục 2.2.3: màu s�
 
 Khu quản trị dùng khung giao diện riêng, tách khỏi khung của người dùng thường, để không nhầm lẫn giữa thao tác học tập và thao tác quản trị.
 
-[HÌNH 3.13: Trang tổng quan quản trị — các chỉ số người dùng, quiz, lượt làm bài, phòng đang chạy, chi phí AI trong tháng, biểu đồ tăng trưởng — cần chèn]
+Bốn màn quản trị dưới đây phục vụ bốn việc khác nhau. Trang tổng quan gom các chỉ số người dùng, quiz, lượt làm bài, phòng đang chạy và chi phí AI trong tháng. Trang quản lý người dùng cho lọc theo vai trò và trạng thái khoá, kèm thao tác khoá tài khoản, đổi vai trò và thu hồi phiên. Trang giám sát AI ghi nhật ký từng lời gọi kèm nhà cung cấp, số token, độ trễ và tỉ lệ dùng nhà cung cấp dự phòng, cùng ô đặt hạn mức mỗi ngày cho từng người dùng. Trang rà soát tính toàn vẹn liệt kê những lượt thi vượt ngưỡng rủi ro kèm lý do cụ thể của từng cờ, nhận định của mô hình và hai nút kết luận.
 
-*Hình 3.13. Trang tổng quan quản trị*
+[HÌNH 3.13: Trang tổng quan quản trị — cần chèn]
 
-[HÌNH 3.14: Trang quản lý người dùng — danh sách có lọc theo vai trò và trạng thái khoá, thao tác khoá, đổi vai trò, thu hồi phiên — cần chèn]
+[HÌNH 3.14: Trang quản lý người dùng — cần chèn]
 
-*Hình 3.14. Trang quản lý người dùng*
+[HÌNH 3.15: Trang giám sát AI — cần chèn]
 
-[HÌNH 3.15: Trang giám sát AI — nhật ký lời gọi kèm nhà cung cấp, số token, độ trễ, tỉ lệ lỗi và tỉ lệ dùng dự phòng; ô đặt hạn mức mỗi ngày cho từng người dùng — cần chèn]
-
-*Hình 3.15. Trang giám sát chi phí và độ tin cậy AI*
-
-[HÌNH 3.16: Trang báo cáo tính toàn vẹn — danh sách lượt thi kèm điểm rủi ro và cờ có lý do cụ thể, thẻ chi tiết kèm nhận định của mô hình và hai nút kết luận — cần chèn]
-
-*Hình 3.16. Trang báo cáo tính toàn vẹn*
+[HÌNH 3.16: Trang rà soát tính toàn vẹn — cần chèn]
 
 Trang cấu hình nhà cung cấp mô hình chỉ hiển thị **trạng thái** của mỗi khoá — *đã cấu hình* hoặc *để trống* — chứ không hiển thị giá trị khoá, kể cả ở dạng che một phần. Một khoá bị lộ trên màn hình quản trị vẫn là một khoá bị lộ.
 
@@ -225,9 +197,7 @@ Kế hoạch ban đầu dự định dùng k6 hoặc Gatling. Cả hai **không 
 | 150 | 11 454 ms | 542 ms | 566 ms | 568 ms | **0** |
 | 200 | 25 101 ms | 1 411 ms | 1 509 ms | 1 511 ms | **0** |
 
-[HÌNH 3.17: Biểu đồ độ trễ P50 và P95 theo số người chơi trong phòng, trục hoành 10–200 người — cần chèn]
-
-*Hình 3.17. Độ trễ phát câu hỏi theo số người chơi*
+[HÌNH 3.17: Độ trễ phát câu hỏi theo số người chơi — cần chèn]
 
 Hai nhận xét quan trọng.
 
