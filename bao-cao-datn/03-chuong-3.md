@@ -441,7 +441,9 @@ Phát biểu đúng phạm vi là: **nhà cung cấp dự phòng đã phục v�
 
 ---
 
-**Tóm kết chương 3.** Chương này đã trình bày hệ thống ở trạng thái hoàn chỉnh: 16 nhóm chức năng hiện thực xong, chạy trên môi trường ba hệ quản trị dữ liệu dựng bằng Docker, với **649 phép kiểm tự động đều đạt** trên 63 lớp kiểm thử.
+## 3.7. Kết luận chương 3
+
+Chương này đã trình bày hệ thống ở trạng thái hoàn chỉnh: 16 nhóm chức năng hiện thực xong, chạy trên môi trường ba hệ quản trị dữ liệu dựng bằng Docker, với **649 phép kiểm tự động đều đạt** trên 63 lớp kiểm thử.
 
 Hai phép đo bắt buộc theo phiếu giao đề tài đều cho kết quả cụ thể. Về hiệu năng thời gian thực, hệ thống phục vụ **100 người mỗi phòng với P95 là 216 ms và không mất sự kiện nào**, đồng thời xác định được nghẽn nằm ở kênh xử lý đáp án gửi lên chứ không ở khâu phát tán — kết luận chỉ rút ra được nhờ tách hai nguồn ra đo riêng. Về độ chính xác AI, chức năng chấm tự luận có sai lệch trung bình **0,13 trên thang 10**, chặn được cả hai kiểu tấn công tiêm chỉ thị, sinh đề đạt **10/10** câu đúng chuẩn cấu trúc, và trợ lý học tập **không suy đoán** khi câu hỏi nằm ngoài học liệu.
 

@@ -165,4 +165,6 @@ Riêng về bảo mật AI, ngoài bốn lớp chống tiêm chỉ thị khi ch�
 
 Hệ thống cần đồng thời ba dịch vụ dữ liệu là PostgreSQL 16 kèm pgvector, Neo4j 5 và Redis 7. Cài đặt thủ công cả ba vừa tốn thời gian vừa dễ lệch phiên bản, nên toàn bộ được khai báo trong Docker Compose [13] với phiên bản ghi thẳng trong tệp cấu hình và bật bằng một lệnh. Việc dùng container còn phục vụ kiểm thử tự động: các bài kiểm thử tích hợp dùng Testcontainers để dựng PostgreSQL thật có pgvector cho mỗi lần chạy, nhờ đó kiểm thử truy vấn vector trên đúng hệ quản trị sẽ dùng khi triển khai thay vì thay bằng cơ sở dữ liệu trong bộ nhớ có hành vi khác.
 
-Kết luận chương 1. Chương 1 đã khảo sát hiện trạng các nền tảng quiz trực tuyến và chỉ ra ba khoảng trống về sinh đề từ học liệu, chấm câu tự luận và gợi ý theo năng lực; xác định yêu cầu chức năng và phi chức năng; đồng thời trình bày cơ sở lý thuyết và công nghệ của hệ thống. Các nội dung này là nền tảng cho việc phân tích và thiết kế ở Chương 2.
+## 1.4. Kết luận chương 1
+
+Chương 1 đã khảo sát hiện trạng các nền tảng quiz trực tuyến và chỉ ra ba khoảng trống về sinh đề từ học liệu, chấm câu tự luận và gợi ý theo năng lực; xác định yêu cầu chức năng và phi chức năng; đồng thời trình bày cơ sở lý thuyết và công nghệ của hệ thống. Các nội dung này là nền tảng cho việc phân tích và thiết kế ở Chương 2.
