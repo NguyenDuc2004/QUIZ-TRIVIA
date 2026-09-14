@@ -268,9 +268,53 @@ async function main() {
   // ── Người tạo nội dung ─────────────────────────────────────────────────
   const gv = await dangNhap(browser, GV, "người tạo nội dung");
 
-  await man("3.6", "Học liệu và sinh đề AI", async () => {
-    await toi(gv, "/ai/materials", 2500);
-    await chup(gv, "3.6");
+  /* Chú thích hình hứa CẢ "học liệu" LẪN "sinh đề bằng AI", nên ghép hai màn — cùng cách làm với
+   * phòng đấu và thẻ ghi nhớ. Trước đây hình này chỉ có danh sách học liệu, tức là ĐẦU VÀO của tính
+   * năng chứ không phải tính năng; trụ cột sinh đề của đề tài vì thế không có ảnh nào.
+   *
+   * Phải sinh đề THẬT qua giao diện: trang giữ mã công việc trong state cục bộ nên tải lại là mất,
+   * không có cách nào mở sẵn kết quả của một lần sinh trước. Tốn một lượt gọi mô hình mỗi lần chạy. */
+  await man("3.6", "Học liệu và sinh đề bằng AI", async () => {
+    await toi(gv, "/ai/materials", 2200);
+    const t1 = path.join(ASSETS, "_tmp-3.6-hl.png");
+    await gv.screenshot({ path: t1 });
+
+    await toi(gv, "/ai/generate", 2000);
+    await gv.type('input[placeholder="Ví dụ: mã trạng thái HTTP"]', "Chuẩn hoá cơ sở dữ liệu quan hệ: 1NF, 2NF, 3NF");
+    // Chọn đường RAG chứ không để mặc định "Kiến thức chung" — hình này minh hoạ trụ cột sinh đề BÁM
+    // HỌC LIỆU, và chỉ đường RAG mới hiện dòng "bám theo N đoạn học liệu" trong kết quả.
+    await gv.evaluate(() => {
+      const nhan = [...document.querySelectorAll("label, span")].find((e) => /Bám theo học liệu/.test(e.textContent ?? ""));
+      nhan?.click();
+    });
+    await nghi(600);
+    await gv.evaluate(() => {
+      const b = [...document.querySelectorAll("button")].find((e) => /Sinh câu hỏi/.test(e.textContent ?? ""));
+      b?.click();
+    });
+    // Mô hình soạn xong thì danh sách câu nháp hiện ra; để rộng vì còn thời gian xếp hàng khi bị chặn hạn mức
+    /* Điều kiện chờ đã hỏng BA lần, mỗi lần một kiểu — ghi lại để không ai đặt lại chuỗi dễ dãi:
+     *   1. "câu nháp" không khớp "câu hỏi nháp" -> chờ hết giờ dù job đã xong từ lâu.
+     *   2. "vào ngân hàng" khớp NGAY dòng mô tả tĩnh đầu trang ("...mới lưu vào ngân hàng").
+     *   3. "câu hỏi nháp" CŨNG nằm trong dòng mô tả tĩnh ("AI soạn câu hỏi nháp; bạn xem lại..."),
+     *      và ngay sau khi bấm thì vòng quay chưa kịp hiện nên guard "AI đang soạn" chưa chặn được.
+     * Chỉ dòng KẾT QUẢ mới có con số đứng trước ("5 câu hỏi nháp"), nên neo vào đó. Thêm một nhịp
+     * nghỉ trước khi bắt đầu dò, để vòng quay kịp xuất hiện. */
+    await nghi(4000);
+    await gv.waitForFunction(
+      () => {
+        const t = document.body.innerText;
+        return /\d+\s*câu hỏi nháp/i.test(t) && !/AI đang soạn/i.test(t);
+      },
+      { timeout: 180000, polling: 1000 },
+    );
+    await nghi(1500);
+    const t2 = path.join(ASSETS, "_tmp-3.6-sd.png");
+    await gv.screenshot({ path: t2 });
+
+    await ghepDoc(t1, t2, path.join(ASSETS, "hinh-3.6.png"));
+    console.log(`  ✓ hinh-3.6.png  (${fs.statSync(path.join(ASSETS, "hinh-3.6.png")).size} bytes, ghép 2 màn)`);
+    xong.push("3.6");
   });
 
   /* Hỏi thật một câu chứ không chụp khung rỗng: chú thích hình hứa có "khối trích dẫn nguồn dưới câu

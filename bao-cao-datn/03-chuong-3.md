@@ -60,7 +60,7 @@ Phòng chờ hiển thị mã PIN sáu số và mã QR để người chơi vào
 
 ### 3.2.5. Học liệu và sinh đề bằng AI
 
-Trang học liệu liệt kê tài liệu đã nạp kèm trạng thái xử lý, vì việc chia đoạn và dựng vector chạy nền nên tài liệu chưa sẵn sàng ngay sau khi tải lên. Từ đây người tạo nội dung sang màn sinh đề, chọn chủ đề và độ khó, rồi duyệt từng câu trước khi chúng vào ngân hàng.
+Hình 3.6 ghép hai màn của cùng một luồng. Nửa trên là trang học liệu, liệt kê tài liệu đã nạp kèm trạng thái xử lý — việc chia đoạn và dựng vector chạy nền nên tài liệu chưa sẵn sàng ngay sau khi tải lên. Nửa dưới là màn sinh đề sau khi mô hình soạn xong: dòng đầu ghi rõ nhà cung cấp đã phục vụ, thời gian chờ và **số đoạn học liệu mà câu hỏi bám theo**; mỗi câu hiển thị đầy đủ phương án, đáp án đúng và lời giải thích. Câu hỏi ở đây mới là **bản nháp** — chúng chỉ vào ngân hàng khi người tạo nội dung chọn và bấm lưu, đúng nguyên tắc con người ở vòng cuối đã nêu ở mục 1.3.2.
 
 [HÌNH 3.6: Trang học liệu và sinh đề bằng AI — cần chèn]
 
