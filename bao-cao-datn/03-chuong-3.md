@@ -32,39 +32,89 @@ Toàn bộ hạ tầng dữ liệu khởi động bằng một lệnh `docker co
 
 Giao diện tuân theo bộ quy ước đã trình bày ở mục 2.2.3: màu sắc, bo góc và đổ bóng khai báo tập trung dưới dạng biến; trang dành cho người học trình bày theo lưới thẻ, trang quản lý theo bảng; các thành phần dùng chung như tiêu đề trang và trạng thái danh sách rỗng được tái sử dụng.
 
-Tám màn dưới đây là những màn thể hiện rõ nhất phần nghiệp vụ riêng của hệ thống; các màn còn lại theo khuôn quen thuộc của một ứng dụng web nên không đưa vào báo cáo. Trang khám phá có thanh tìm kiếm, bộ lọc theo danh mục và độ khó, cùng lưới thẻ quiz; màn làm bài hiển thị đồng hồ đếm ngược và thanh điều hướng giữa các câu; màn kết quả liệt kê từng câu kèm đáp án đúng, lời giải thích và nhận xét của AI cho câu tự luận. Phòng đấu gồm phòng chờ có mã PIN sáu số cùng mã QR, và màn chơi có bảng xếp hạng cập nhật sau mỗi câu. Bốn màn cuối là học liệu và sinh đề bằng AI, trợ lý học tập kèm khối trích dẫn nguồn, gợi ý cùng lộ trình học, và thẻ ghi nhớ với bốn mức tự đánh giá.
+Mỗi mục dưới đây trình bày một màn thể hiện rõ phần nghiệp vụ riêng của hệ thống; những màn theo khuôn quen thuộc của một ứng dụng web không đưa vào báo cáo.
+
+### 3.2.1. Khám phá quiz
+
+Trang khám phá có thanh tìm kiếm theo tiêu đề, bộ lọc theo danh mục và độ khó, và lưới thẻ quiz. Phần đầu trang là các quiz được gợi ý riêng cho người đang đăng nhập, mỗi gợi ý kèm lý do vì sao nó xuất hiện.
 
 [HÌNH 3.2: Trang khám phá quiz — cần chèn]
 
+### 3.2.2. Làm bài
+
+Màn làm bài hiển thị nội dung câu hỏi, danh sách phương án, đồng hồ đếm ngược với bài có tính giờ, và thanh điều hướng cho phép nhảy tới câu bất kỳ. Với bài ở chế độ thi nghiêm ngặt, phía trên đề có dòng thông báo hệ thống đang ghi nhận những tín hiệu nào.
+
 [HÌNH 3.3: Màn hình làm bài — cần chèn]
+
+### 3.2.3. Kết quả bài làm
+
+Màn kết quả liệt kê từng câu kèm đáp án đúng và lời giải thích. Riêng câu trả lời ngắn có thêm đáp án mẫu, nhận xét của AI về bài làm và gợi ý việc cần làm để khá hơn — hai phần sau tách riêng để người học phân biệt được đâu là đánh giá, đâu là hướng dẫn.
 
 [HÌNH 3.4: Màn hình kết quả bài làm — cần chèn]
 
+### 3.2.4. Phòng đấu thời gian thực
+
+Phòng chờ hiển thị mã PIN sáu số và mã QR để người chơi vào phòng, cùng danh sách người đang có mặt. Khi ván bắt đầu, mọi người nhận câu hỏi cùng lúc và bảng xếp hạng cập nhật ngay sau mỗi câu.
+
 [HÌNH 3.5: Phòng chờ và phòng đấu — cần chèn]
+
+### 3.2.5. Học liệu và sinh đề bằng AI
+
+Trang học liệu liệt kê tài liệu đã nạp kèm trạng thái xử lý, vì việc chia đoạn và dựng vector chạy nền nên tài liệu chưa sẵn sàng ngay sau khi tải lên. Từ đây người tạo nội dung sang màn sinh đề, chọn chủ đề và độ khó, rồi duyệt từng câu trước khi chúng vào ngân hàng.
 
 [HÌNH 3.6: Trang học liệu và sinh đề bằng AI — cần chèn]
 
+### 3.2.6. Trợ lý học tập
+
+Trợ lý trả lời theo luồng, chữ hiện dần thay vì đợi xong cả câu. Dưới mỗi câu trả lời là khối trích dẫn nêu rõ tài liệu và đoạn văn bản đã dựa vào, để người học đối chiếu được.
+
 [HÌNH 3.7: Màn hình trợ lý học tập — cần chèn]
+
+### 3.2.7. Gợi ý và lộ trình học
+
+Trang này hiển thị các quiz được gợi ý kèm lý do cụ thể, và thứ tự chủ đề nên ôn dựng từ năng lực đo được trên từng chủ đề.
 
 [HÌNH 3.8: Trang gợi ý và lộ trình học — cần chèn]
 
+### 3.2.8. Thẻ ghi nhớ
+
+Danh sách bộ thẻ hiển thị số thẻ đến hạn ôn hôm nay. Trong phiên ôn, thẻ lật được để xem mặt sau, và người học tự đánh giá mức nhớ theo bốn mức — chính lựa chọn này quyết định khi nào thẻ quay lại.
+
 [HÌNH 3.9: Thẻ ghi nhớ và phiên ôn tập — cần chèn]
+
+### 3.2.9. Lớp học và giao bài
+
+Trang lớp hiển thị mã lớp để học sinh vào, danh sách thành viên, và danh sách bài tập kèm hạn nộp. Giáo viên theo dõi tình hình nộp bài ngay trên trang này.
 
 [HÌNH 3.10: Trang lớp học — cần chèn]
 
-**Một quyết định giao diện cần nêu rõ.** Thẻ quiz trên màn hình khám phá hiển thị **số người đã học**, nhưng không hiển thị điểm đánh giá. Hệ thống chưa có chức năng đánh giá nên chưa có dữ liệu đó; hiển thị một con số không có thật ở vị trí này không phải lỗi trang trí mà là **đưa ra một lời khuyên sai**, vì điểm đánh giá chính là thứ người học dựa vào để chọn bài học. Cùng lý do, số người đã học đếm theo **người** chứ không theo **lượt**: hệ thống khuyến khích ôn lại nhiều lần, nên đếm theo lượt sẽ khiến một người làm mười lần đọc thành mười người đã học.
+### 3.2.10. Một quyết định giao diện cần nêu rõ
+
+Thẻ quiz trên màn hình khám phá hiển thị **số người đã học**, nhưng không hiển thị điểm đánh giá. Hệ thống chưa có chức năng đánh giá nên chưa có dữ liệu đó; hiển thị một con số không có thật ở vị trí này không phải lỗi trang trí mà là **đưa ra một lời khuyên sai**, vì điểm đánh giá chính là thứ người học dựa vào để chọn bài học. Cùng lý do, số người đã học đếm theo **người** chứ không theo **lượt**: hệ thống khuyến khích ôn lại nhiều lần, nên đếm theo lượt sẽ khiến một người làm mười lần đọc thành mười người đã học.
 
 ## 3.3. Giao diện phía quản trị
 
 Khu quản trị dùng khung giao diện riêng, tách khỏi khung của người dùng thường, để không nhầm lẫn giữa thao tác học tập và thao tác quản trị.
 
-Ba màn quản trị dưới đây phục vụ ba việc khác nhau. Trang tổng quan gom các chỉ số người dùng, quiz, lượt làm bài, phòng đang chạy và chi phí AI trong tháng. Trang giám sát AI ghi nhật ký từng lời gọi kèm nhà cung cấp, số token, độ trễ và tỉ lệ dùng nhà cung cấp dự phòng, cùng ô đặt hạn mức mỗi ngày cho từng người dùng. Trang rà soát tính toàn vẹn liệt kê những lượt thi vượt ngưỡng rủi ro kèm lý do cụ thể của từng cờ, nhận định của mô hình và hai nút kết luận.
+### 3.3.1. Tổng quan hệ thống
+
+Trang tổng quan gom các chỉ số đọc trực tiếp từ cơ sở dữ liệu tại thời điểm mở trang: số người dùng theo vai trò, số quiz và câu hỏi, lượt làm bài, phòng đang chạy, và lượng token AI đã dùng trong tháng.
 
 [HÌNH 3.11: Trang tổng quan quản trị — cần chèn]
 
+### 3.3.2. Giám sát chi phí và độ tin cậy AI
+
+Trang này ghi nhật ký từng lời gọi mô hình kèm nhà cung cấp phục vụ, số token, độ trễ và tỉ lệ lỗi, tách theo từng chức năng. Đây cũng là nơi đặt hạn mức mỗi ngày cho từng người dùng.
+
 [HÌNH 3.12: Trang giám sát AI — cần chèn]
 
+### 3.3.3. Rà soát tính toàn vẹn
+
+Trang liệt kê những lượt thi có điểm rủi ro vượt ngưỡng, kèm lý do cụ thể của từng cờ. Mở một lượt ra sẽ thấy nhận định của mô hình và hai nút kết luận; hệ thống không tự xử lý bài nào.
+
 [HÌNH 3.13: Trang rà soát tính toàn vẹn — cần chèn]
+
+### 3.3.4. Khoá của nhà cung cấp mô hình
 
 Trang cấu hình nhà cung cấp mô hình chỉ hiển thị **trạng thái** của mỗi khoá — *đã cấu hình* hoặc *để trống* — chứ không hiển thị giá trị khoá, kể cả ở dạng che một phần. Một khoá bị lộ trên màn hình quản trị vẫn là một khoá bị lộ.
 
