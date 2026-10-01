@@ -89,9 +89,10 @@ cd bao-cao-datn/build && node gen-huongdan.js  # sinh HuongDanThuyetTrinh-QuizAI
 node scripts/kiem-tra-web.mjs         # quét 38 trang bằng 4 vai trò, thu lỗi console/API
 ```
 
-> **Cổng backend.** Trên máy phát triển hiện tại cổng 8080 bị dịch vụ khác của Windows chiếm, nên
-> `frontend/.env` trỏ `BACKEND_ORIGIN=http://localhost:8081`. Chạy BE kèm `-Dspring-boot.run.arguments=--server.port=8081`
-> cho khớp, nếu không FE sẽ proxy vào chỗ trống.
+> **Cổng backend.** Chạy mặc định ở 8080, không cần tham số thêm. Trước đây cổng này bị dịch vụ
+> `MTAgentService` (MiniTool ShadowMaker) chiếm nên dự án từng phải lách sang 8081; dịch vụ đó đã
+> dừng và chuyển sang khởi động thủ công. `frontend/.env.local` trỏ `BACKEND_ORIGIN=http://localhost:8080`.
+> Nếu một ngày backend không chiếm được 8080 nữa thì kiểm dịch vụ ấy trước khi đổi cổng.
 
 > **`npm run build` chạy `oxlint` trước khi biên dịch.** Luật `react/rules-of-hooks` đã bật từ đầu và bắt
 > đúng lỗi "gọi hook sau lệnh return sớm" — nhưng nó chỉ chạy khi ai đó gõ `npm run lint`, mà không ai gõ.
