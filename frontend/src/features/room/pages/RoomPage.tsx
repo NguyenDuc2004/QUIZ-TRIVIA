@@ -172,6 +172,26 @@ export default function RoomPage() {
   // chuyện bình thường.
   useRoomProctoring(send, room?.status === 'PLAYING')
 
+  /**
+   * Đồng hồ về 0 thì khoá nút đáp án ngay, không chờ server đóng câu.
+   *
+   * Trước đây `canAnswer` không xét mốc hết giờ, nên hết giờ nút vẫn bấm được: người chơi bấm xong
+   * nhận một thông báo lỗi đỏ "Đã hết giờ trả lời câu này" do server trả về. Server chặn đúng, nhưng
+   * báo sai chỗ — người chơi tưởng hệ thống hỏng. Dòng chữ "Hết giờ trả lời câu này." vốn đã nằm sẵn
+   * trong giao diện, chỉ là chưa bao giờ hiện ra vì điều kiện không bao giờ đúng.
+   */
+  const [hetGio, setHetGio] = useState(false)
+  useEffect(() => {
+    if (!question) {
+      setHetGio(false)
+      return
+    }
+    const tick = () => setHetGio(Date.now() >= question.deadlineAtMillis)
+    tick()
+    const id = window.setInterval(tick, 250)
+    return () => window.clearInterval(id)
+  }, [question])
+
   if (loadError) {
     return (
       <div className="mx-auto max-w-2xl p-6">
@@ -190,7 +210,8 @@ export default function RoomPage() {
   const isHost = currentPlayerId === room.hostId
   const me = players.find((player) => player.playerId === currentPlayerId)
   const answered = myResult !== null
-  const canAnswer = room.status === 'PLAYING' && question !== null && !answered && !closed
+  const canAnswer =
+    room.status === 'PLAYING' && question !== null && !answered && !closed && !hetGio
   const isChoice = question
     ? ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE'].includes(question.type)
     : false
