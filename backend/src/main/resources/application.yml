@@ -77,7 +77,12 @@ app:
     # Hiểu là *mẫu* origin (Spring allowedOriginPatterns), không phải danh sách cứng.
     # Mặc định mở cho localhost và các dải IP nội bộ để điện thoại cùng Wi-Fi quét QR vào được.
     # TRIỂN KHAI THẬT: đặt CORS_ALLOWED_ORIGINS thành đúng tên miền, đừng để mặc định này.
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:[*],http://127.0.0.1:[*],http://192.168.*.*:[*],http://10.*.*.*:[*],http://172.16.*.*:[*]}
+    #
+    # Dải 172 phải là `172.*.*.*` chứ không phải `172.16.*.*`: dải riêng 172.16.0.0/12 trải từ
+    # 172.16 tới 172.31, và hotspot của iPhone luôn cấp 172.20.10.x. Mẫu cũ không khớp dải đó, mà
+    # WebSocketConfig dùng chung danh sách này để duyệt origin của bắt tay STOMP — nên hệ quả không
+    # phải là một lời gọi API bị chặn, mà là PHÒNG ĐẤU không kết nối được khi demo qua hotspot iPhone.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:[*],http://127.0.0.1:[*],http://192.168.*.*:[*],http://10.*.*.*:[*],http://172.*.*.*:[*]}
   oauth:
     google:
       # OAuth 2.0 Client ID (loại Web application) từ Google Cloud Console.
