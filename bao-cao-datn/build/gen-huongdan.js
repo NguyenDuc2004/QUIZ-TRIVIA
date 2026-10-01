@@ -63,26 +63,23 @@ const KICH_BAN = [
   ["1", "Bìa", "0:20", "Chào hội đồng, giới thiệu tên và tên đề tài. Không đọc lại cả trang bìa."],
   ["2", "Nội dung thuyết trình", "0:15", "Đọc lướt bốn phần để hội đồng biết đường đi. Đừng dừng lâu."],
   ["3", "NGĂN — I. Lý do chọn đề tài", "0:05", "Slide ngăn: chỉ đọc tên phần rồi lật ngay. Đừng giải thích gì ở đây."],
-  ["4", "Ba khoảng trống", "1:00", "Soạn đề thủ công, không chấm được tự luận, gợi ý theo lượt xem chứ không theo năng lực. Đây là chỗ thuyết phục hội đồng rằng đề tài có lý do tồn tại."],
+  ["4", "Ba khoảng trống", "1:10", "Soạn đề thủ công, không chấm được tự luận, gợi ý theo lượt xem chứ không theo năng lực. Đây là chỗ thuyết phục hội đồng rằng đề tài có lý do tồn tại."],
   ["5", "Bốn trọng tâm", "0:50", "Bám nguyên bốn mục của phiếu giao đề tài. Nói rõ trọng tâm thứ tư là ĐO chứ không phải làm thêm chức năng."],
   ["6", "NGĂN — II. Cơ sở lý thuyết", "0:05", "Lật ngay."],
-  ["7", "Kiến trúc tổng quan", "0:50", "Ba kênh giao tiếp cho ba dạng dữ liệu: REST, WebSocket, SSE. Chỉ vào hình khi nói."],
+  ["7", "Kiến trúc tổng quan", "1:05", "Ba kênh giao tiếp cho ba dạng dữ liệu: REST, WebSocket, SSE. Chỉ vào hình khi nói. Dòng chữ nhỏ dưới sơ đồ gánh luôn phần công nghệ — nếu bị hỏi thì nêu ba lựa chọn đáng nói: pgvector để lọc quyền cùng lúc với tìm vector, Neo4j cho quan hệ, và lớp điều phối mô hình tự viết."],
   ["8", "Pipeline RAG", "1:10", "Hai pha: nạp học liệu và truy hồi. Nhấn vào điểm lọc quyền TRƯỚC khi xếp hạng — đây là chỗ từng có lỗi thật, kể ra được thì rất có sức nặng."],
-  ["9", "Công nghệ sử dụng", "0:40", "Không đọc hết danh sách. Chỉ nêu ba lựa chọn đáng nói: pgvector để lọc quyền cùng lúc với tìm vector, Neo4j cho quan hệ, và lớp điều phối mô hình tự viết."],
-  ["10", "NGĂN — III. Thực nghiệm", "0:05", "Lật ngay. Đây là phần dài nhất, chín slide."],
-  ["11", "Phòng đấu — cách làm", "1:00", "Mã PIN và QR, khách vào được, đồng bộ qua STOMP, phát tán qua Redis. Nhấn: điểm phụ thuộc tốc độ nên độ trễ thành yêu cầu CHỨC NĂNG, không phải chỉ tiêu kỹ thuật. Đây là bệ đỡ cho slide 17."],
-  ["12", "Phòng đấu — màn thật", "0:35", "Chỉ vào mã PIN, mã QR và bảng xếp hạng. Không mô tả lại những gì slide trước đã nói."],
-  ["13", "Sinh đề — cách làm", "1:00", "Bốn bước: nạp học liệu, truy hồi có lọc quyền, sinh JSON có kiểm chứng lược đồ, người duyệt cuối. Nhấn bước cuối: AI không tự đưa câu hỏi vào ngân hàng."],
-  ["14", "Sinh đề — màn thật", "0:45", "Chỉ vào dòng ghi số đoạn học liệu câu hỏi bám theo — đó là bằng chứng nhìn thấy được rằng câu hỏi đi ra từ tài liệu chứ không từ trí nhớ của mô hình."],
-  ["15", "Trợ lý học tập", "0:35", "Dừng ở khối trích dẫn nguồn dưới câu trả lời. Nói thêm một câu: hỏi ngoài học liệu thì trợ lý nói không biết chứ không đoán."],
-  ["16", "Lộ trình học", "0:30", "Đây là màn đại diện cho trụ cột Neo4j. Nêu ba truy vấn: chủ đề còn yếu, người học tương tự, thứ tự chủ đề nên ôn."],
-  ["17", "Kết quả đo hiệu năng", "1:20", "Câu phải nói đúng chữ: \"P95 là 216 mili giây ở mức 100 người mỗi phòng, và không mất một sự kiện nào ở mọi mức tải đã thử tới 200 người.\" Nói ngay giới hạn: đo trên một máy đơn, không có độ trễ mạng thật."],
-  ["18", "Độ chính xác AI", "1:20", "Câu phải nói đúng chữ: \"Sai lệch điểm trung bình 0,13 trên thang 10 khi đối chiếu với đáp án theo tiêu chí.\" Nói ngay: cỡ mẫu nhỏ, chưa đối chiếu với nhiều giáo viên chấm độc lập. Đừng đọc hết tám dòng trong bảng."],
-  ["19", "Kiểm thử", "0:40", "568 phép kiểm máy chủ và 128 phép kiểm giao diện, đều đạt. Rồi nói thẳng: ba lỗi thật lộ ra khi dùng chứ không qua kiểm thử — đây là chỗ ghi điểm thành thật, đừng bỏ."],
-  ["20", "NGĂN — IV. Kết luận", "0:05", "Lật ngay."],
-  ["21", "Kết quả đạt được và hạn chế", "1:00", "Đã làm được gì, chưa làm được gì. Đọc câu cuối trong khung về việc dựng hàng rào quanh mô hình."],
-  ["22", "Hướng phát triển", "0:35", "Ngắn hạn, trung hạn, dài hạn — mỗi mục một câu. Mỗi hướng là lời đáp cho một hạn chế ở slide trước."],
-  ["23", "Cảm ơn", "0:15", "Cảm ơn và mời hội đồng đặt câu hỏi."],
+  ["9", "NGĂN — III. Thực nghiệm", "0:05", "Lật ngay. Đây là phần dài nhất, bảy slide."],
+  ["10", "Phòng đấu — cách làm", "1:15", "Bốn bước ở cột trái, ảnh màn thật ở cột phải. ĐỪNG mô tả lại ảnh — chỉ tay vào mã PIN và mã QR rồi nói tiếp về cách làm. Nhấn: điểm phụ thuộc tốc độ nên độ trễ thành yêu cầu CHỨC NĂNG, không phải chỉ tiêu kỹ thuật. Đây là bệ đỡ cho slide 14."],
+  ["11", "Sinh đề — cách làm", "1:20", "Bốn bước: nạp học liệu, truy hồi có lọc quyền, sinh JSON có kiểm chứng lược đồ, người duyệt cuối. Nhấn bước cuối: AI không tự đưa câu hỏi vào ngân hàng. Số để sẵn nếu bị hỏi: chia đoạn 1 500 ký tự chồng lấp 200, mỗi đoạn thành vector 768 chiều, sinh đề lấy 6 đoạn gần nhất và KHÔNG áp ngưỡng khoảng cách."],
+  ["12", "Trợ lý học tập — cách làm", "0:50", "Nhấn hai điều: câu trả lời kèm khối trích dẫn nguồn, và hỏi ngoài học liệu thì trợ lý nói không tìm thấy chứ không đoán. Số để sẵn: trợ lý lấy 5 đoạn và bỏ đoạn vượt ngưỡng khoảng cách 0,75 — KHÁC sinh đề. Bảng 1.4 của báo cáo ghi một bộ tham số chung; nếu thầy đối chiếu thì nói rõ bảng đó là tham số của trợ lý, còn sinh đề lấy 6 đoạn và sinh thẻ ghi nhớ lấy 8."],
+  ["13", "Lộ trình học — cách làm", "0:50", "Slide đại diện cho trụ cột Neo4j. Nêu ba truy vấn: chủ đề còn yếu, người học tương tự, thứ tự chủ đề nên ôn. Nói rõ PostgreSQL là nguồn sự thật, Neo4j chỉ là hình chiếu."],
+  ["14", "Kết quả đo hiệu năng", "1:20", "Câu phải nói đúng chữ: \"P95 là 216 mili giây ở mức 100 người mỗi phòng, và không mất một sự kiện nào ở mọi mức tải đã thử tới 200 người.\" Nói ngay giới hạn: đo trên một máy đơn, không có độ trễ mạng thật."],
+  ["15", "Độ chính xác AI", "1:20", "Câu phải nói đúng chữ: \"Sai lệch điểm trung bình 0,13 trên thang 10 khi đối chiếu với đáp án theo tiêu chí.\" Nói ngay: cỡ mẫu nhỏ, chưa đối chiếu với nhiều giáo viên chấm độc lập. Đừng đọc hết tám dòng trong bảng."],
+  ["16", "Kiểm thử", "0:40", "568 phép kiểm máy chủ và 128 phép kiểm giao diện, đều đạt. Rồi nói thẳng: ba lỗi thật lộ ra khi dùng chứ không qua kiểm thử — đây là chỗ ghi điểm thành thật, đừng bỏ."],
+  ["17", "NGĂN — IV. Kết luận", "0:05", "Lật ngay."],
+  ["18", "Kết quả đạt được", "1:20", "Bốn hàng nói về sản phẩm trên tổng thể trang web, cố ý KHÔNG có con số — số đã nói hết ở slide 14 và 15. Đừng đọc lại y nguyên chữ trên màn, mỗi hàng diễn giải thêm một câu. Kết lại bằng một câu tự nói: phần khó nhất của hệ thống tích hợp mô hình ngôn ngữ không nằm ở việc gọi được mô hình, mà ở việc dựng đủ hàng rào quanh nó."],
+  ["19", "Hướng phát triển và hạn chế", "0:40", "Ba hướng ở trên, ba hạn chế ở dưới. Nói theo CẶP — mỗi hướng là lời đáp cho đúng một hạn chế ngay bên dưới. Tự nêu hạn chế trước khi hội đồng hỏi thì đó là điểm cộng, để bị chỉ ra thì thành thiếu sót."],
+  ["20", "Cảm ơn", "0:15", "Cảm ơn và mời hội đồng đặt câu hỏi."],
 ];
 
 /* ─────────────────── câu hỏi có thể gặp ─────────────────── */
@@ -144,7 +141,7 @@ noi.push(p("Xây dựng ứng dụng Quiz/Trivia tích hợp trí tuệ nhân t�
 noi.push(p("Nguyễn Khắc Minh Đức — 2022601585 — GVHD: ThS. Nguyễn Đức Lưu", { giua: true, nghieng: true, co: 24 }));
 
 noi.push(h("1. Phân bổ thời gian"));
-noi.push(p("Bộ slide gồm 23 slide, trong đó bốn slide ngăn chỉ mất năm giây mỗi cái. Cộng lại đúng 15 phút theo bảng dưới. Ba mốc quan trọng nhất là slide 4 (thuyết phục về lý do đề tài), slide 17 và 18 (hai phép đo bắt buộc theo phiếu giao đề tài). Nếu bị nhắc rút ngắn, cắt ở slide 15 và 16 — hai màn đó nói được bằng lời trong khi vẫn chiếu slide trước; tuyệt đối không cắt hai slide kết quả đo."));
+noi.push(p("Bộ slide gồm 20 slide, trong đó bốn slide ngăn chỉ mất năm giây mỗi cái. Cộng lại đúng 15 phút theo bảng dưới. Bốn slide cách làm ở phần III đặt ảnh màn hình thật bên phải chữ: ảnh ở đó để hội đồng thấy sản phẩm có thật, KHÔNG phải để đọc — mọi màn hình ấy đều được demo trực tiếp ngay sau phần thuyết trình. Ba mốc quan trọng nhất là slide 4 (thuyết phục về lý do đề tài), slide 14 và 15 (hai phép đo bắt buộc theo phiếu giao đề tài). Nếu bị nhắc rút ngắn, cắt bớt ở slide 12 và 13; tuyệt đối không cắt hai slide kết quả đo."));
 noi.push(bang(["Slide", "Nội dung", "Thời lượng", "Ý cần nói"], KICH_BAN.map((k) => [k[0], k[1], k[2], k[3]]), [900, 1900, 1100, CW - 3900]));
 
 noi.push(h("2. Những câu phải nói đúng chữ"));

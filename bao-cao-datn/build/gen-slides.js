@@ -170,14 +170,56 @@ function slideAnh(tenPhan, mucCon, hinh, tuKhoa, chu) {
   anhVaChu(trang(tenPhan, mucCon), anh(hinh, tuKhoa), chu);
 }
 
-/** Khối "nhãn | mô tả" dùng cho các slide mô tả cách làm. */
-function khoiCachLam(s, muc, batDau = 1.36) {
+/** Khối "nhãn | mô tả" dùng cho các slide mô tả cách làm.
+ *
+ * `batDau` để 1,58 chứ không phải 1,36: hình trang trí chéo ở góc trên phải của mẫu khoa buông xuống
+ * tới khoảng y = 1,74in trong dải x > 7,9in, và ở mốc cũ nó đè lên dòng đầu của hàng thứ nhất — chữ
+ * bị che mất một đoạn giữa câu, chỉ thấy khi render ra ảnh mà nhìn. Giãn cách hàng rút từ 0,86 xuống
+ * 0,80 để bốn hàng vẫn kết thúc trước dòng chú thích cuối slide. */
+function khoiCachLam(s, muc, batDau = 1.58) {
   muc.forEach(([t, m], i) => {
-    const yy = batDau + i * 0.86;
+    const yy = batDau + i * 0.8;
     s.addShape(pres.ShapeType.rect, { x: 0.62, y: yy, w: 0.07, h: 0.72, fill: { color: XANH_DAM } });
     s.addText(t, { x: 0.82, y: yy, w: 2.2, h: 0.72, fontSize: 12.5, bold: true, color: XANH_DAM, fontFace: FONT, valign: "middle" });
-    s.addText(m, { x: 3.0, y: yy, w: W - 3.6, h: 0.72, fontSize: 11, color: DAM, fontFace: FONT, valign: "middle" });
+    s.addText(m, { x: 3.0, y: yy, w: W - 3.6, h: 0.72, fontSize: 12.5, color: DAM, fontFace: FONT, valign: "middle" });
   });
+}
+
+/**
+ * Slide "cách làm": bốn bước xếp thành cột hẹp bên trái, ảnh màn hình thật bên phải.
+ *
+ * Cột hẹp nên nhãn nằm TRÊN mô tả chứ không nằm cạnh — để cạnh nhau thì mỗi bên chỉ còn hơn hai inch
+ * và câu nào cũng vỡ dòng.
+ *
+ * Ảnh dọc thì khớp theo chiều cao, ảnh ngang thì khớp theo chiều rộng, rồi căn giữa trong khung phải;
+ * không ép cùng một cách cho cả hai, vì ảnh phòng đấu tỉ lệ 0,80 còn ảnh trợ lý tỉ lệ 1,60.
+ */
+function cachLamCoAnh(tenPhan, mucCon, hinh, tuKhoa, muc) {
+  const s = trang(tenPhan, mucCon);
+
+  muc.forEach(([t, m], i) => {
+    const yy = 1.45 + i * 0.85;
+    s.addShape(pres.ShapeType.rect, { x: 0.55, y: yy, w: 0.07, h: 0.78, fill: { color: XANH_DAM } });
+    s.addText(t, { x: 0.76, y: yy, w: 4.1, h: 0.3, fontSize: 12, bold: true, color: XANH_DAM, fontFace: FONT, valign: "middle" });
+    s.addText(m, { x: 0.76, y: yy + 0.3, w: 4.1, h: 0.46, fontSize: 10.5, color: DAM, fontFace: FONT, valign: "top", lineSpacingMultiple: 1.05 });
+  });
+
+  const p = anh(hinh, tuKhoa);
+  if (!p) return s;
+  const { w, h } = coAnh(p);
+
+  /* Khung ảnh né hình trang trí chéo của mẫu khoa, vốn phủ dải x > 7,87in ở phía trên y = 1,74in.
+   *
+   * Ảnh DỌC cao hết khung nên mép trên chạm vùng đó — xử lý bằng cách thu bề ngang khung lại để mép
+   * phải dừng trước 7,85in. Ảnh NGANG thì thấp, chỉ cần đẩy khung xuống dưới 1,8in là dùng được trọn
+   * bề ngang. Ép chung một khung cho cả hai thì hoặc ảnh dọc bị đè, hoặc ảnh ngang bé đi một cách
+   * vô cớ — hai ảnh ở phần này tỉ lệ 0,80 và 1,60, chênh nhau gấp đôi. */
+  const K = w / h < 1
+    ? { x: 5.1, y: 1.4, w: 2.74, h: 3.42 }
+    : { x: 5.1, y: 1.8, w: 4.3, h: 3.0 };
+  const ty = Math.min(K.w / w, K.h / h);
+  s.addImage({ path: p, x: K.x + (K.w - w * ty) / 2, y: K.y + (K.h - h * ty) / 2, w: w * ty, h: h * ty });
+  return s;
 }
 
 /* ═══════════════════ BÌA ═══════════════════ */
@@ -274,69 +316,113 @@ const P1 = "I. LÝ DO CHỌN ĐỀ TÀI";
 /* ═══════════════════ PHẦN II ═══════════════════ */
 slideNgan("II", "CƠ SỞ LÝ THUYẾT");
 const P2 = "II. CƠ SỞ LÝ THUYẾT";
-slideAnh(P2, "1. Kiến trúc tổng quan hệ thống", "1.1", "kiến trúc tổng thể",
-  "Khối đơn phân lớp · ba kênh giao tiếp: REST cho nghiệp vụ, WebSocket cho phòng đấu, SSE cho luồng trả lời của trợ lý.");
+/* Kiến trúc vẽ bằng hình khối chứ KHÔNG chèn Hình 1.1 của báo cáo.
+ *
+ * Hình 1.1 có 15 khối và hơn 20 mũi tên. Chiếu lên màn chiếu thì chữ nhỏ tới mức không đọc được, mà
+ * mỗi nhãn con trong đó — "Security Filter — JWT + RBAC", "Circuit Breaker", "Service Layer" — lại là
+ * một lời mời hội đồng hỏi sang chuyện ngoài bốn trụ cột của đề tài.
+ *
+ * Bản slide giữ đúng ba điều cần nói: ba tầng, BA KÊNH GIAO TIẾP (chỗ đáng để bị hỏi, và người bảo vệ
+ * có câu trả lời), bốn kho dữ liệu. Báo cáo vẫn giữ nguyên sơ đồ đầy đủ — ai muốn soi thì soi ở đó. */
+{
+  const s = trang(P2, "1. Kiến trúc tổng quan hệ thống");
+  const hop = (x, yy, w, h, vien, net) =>
+    s.addShape(pres.ShapeType.roundRect, {
+      x, y: yy, w, h, fill: { color: TRANG }, rectRadius: 0.08,
+      line: { color: vien, width: 1.25, ...(net ? { dashType: net } : {}) },
+    });
+
+  // Tầng 1 — trình duyệt.
+  // Mép phải phải dừng trước 7,8in: hình trang trí chéo của mẫu khoa đổ xuống tới đó ở dải y này và
+  // cắt ngang qua khung. Bản trước đã bị đúng lỗi ấy, chỉ thấy khi render ra ảnh mà nhìn.
+  hop(1.5, 1.3, 6.0, 0.56, XANH_DAM);
+  s.addText(
+    [
+      { text: "Trình duyệt", options: { bold: true, fontSize: 14.5, color: XANH_DAM } },
+      { text: "     React 19 · TypeScript", options: { fontSize: 11.5, color: MUC } },
+    ],
+    { x: 1.5, y: 1.3, w: 6.0, h: 0.56, fontFace: FONT, align: "center", valign: "middle" },
+  );
+
+  // Ba kênh giao tiếp — mỗi dạng dữ liệu một kênh, đây là điểm đáng nói nhất của slide
+  [
+    ["REST", "nghiệp vụ thông thường"],
+    ["WebSocket", "phòng đấu thời gian thực"],
+    ["SSE", "luồng trả lời của trợ lý"],
+  ].forEach(([t, m], i) => {
+    const x = 1.5 + i * 2.0;
+    s.addShape(pres.ShapeType.downArrow, { x: x + 0.7, y: 1.94, w: 0.6, h: 0.44, fill: { color: XANH } });
+    s.addText(t, { x, y: 2.4, w: 2.0, h: 0.26, fontSize: 13, bold: true, color: XANH_DAM, fontFace: FONT, align: "center", valign: "middle" });
+    s.addText(m, { x: x - 0.15, y: 2.63, w: 2.3, h: 0.24, fontSize: 10.5, color: MUC, fontFace: FONT, align: "center", valign: "middle" });
+  });
+
+  // Tầng 2 — máy chủ. Liệt kê bốn việc theo đúng bốn trụ cột của phiếu giao đề tài, không liệt kê
+  // tên lớp hay tên bộ lọc: hỏi vào bốn cái này thì người bảo vệ nói được.
+  hop(0.6, 2.94, 8.8, 0.68, XANH_DAM);
+  s.addText(
+    [
+      { text: "Máy chủ ứng dụng", options: { bold: true, fontSize: 14.5, color: XANH_DAM } },
+      { text: "     Spring Boot 3.5 · Java 21", options: { fontSize: 11.5, color: MUC } },
+      { text: "\nXác thực và phân quyền  ·  Quiz và bài làm  ·  Phòng đấu  ·  Sinh đề và trợ lý (RAG)", options: { fontSize: 10.5, color: DAM } },
+    ],
+    { x: 0.6, y: 2.94, w: 8.8, h: 0.68, fontFace: FONT, align: "center", valign: "middle", lineSpacingMultiple: 1.15 },
+  );
+
+  s.addShape(pres.ShapeType.downArrow, { x: 4.87, y: 3.68, w: 0.26, h: 0.2, fill: { color: XANH } });
+
+  // Tầng 3 — ba kho dữ liệu trong Docker + một dịch vụ ngoài. Khung nét đứt để phân biệt trong/ngoài
+  // mà không phải vẽ thêm khung nhóm.
+  [
+    ["PostgreSQL 16", "dữ liệu nghiệp vụ\nvà kho vector", false],
+    ["Neo4j 5", "đồ thị hành vi\nđể gợi ý", false],
+    ["Redis 7", "phiên và\ntrạng thái phòng", false],
+    ["Gemini → Groq", "mô hình ngôn ngữ\n(dịch vụ ngoài)", true],
+  ].forEach(([t, m, ngoai], i) => {
+    const x = 0.6 + i * 2.25;
+    hop(x, 3.94, 2.05, 0.82, ngoai ? XANH : XANH_NHAT, ngoai ? "dash" : null);
+    s.addText(t, { x, y: 3.99, w: 2.05, h: 0.26, fontSize: 12.5, bold: true, color: XANH_DAM, fontFace: FONT, align: "center", valign: "middle" });
+    s.addText(m, { x, y: 4.24, w: 2.05, h: 0.46, fontSize: 10, color: MUC, fontFace: FONT, align: "center", valign: "middle", lineSpacingMultiple: 1.1 });
+  });
+
+  // Dòng này gánh luôn phần của slide "Công nghệ sử dụng" đã bỏ: nó nêu đúng những thành phần mà
+  // sơ đồ trên không hiện tên.
+  s.addText("Khối đơn phân lớp; ba kho dữ liệu chạy trong Docker, mô hình ngôn ngữ là dịch vụ ngoài có dự phòng tự chuyển.\nNgoài ra: Spring Security · Flyway · Apache Tika · Ant Design v6 · Tailwind CSS v4 — lớp điều phối mô hình tự hiện thực, không dùng Spring AI hay LangChain4j.",
+    { x: 0.6, y: 4.78, w: W - 1.2, h: 0.46, fontSize: 10, italic: true, color: MUC, fontFace: FONT, align: "center", valign: "middle", lineSpacingMultiple: 1.1 });
+}
 slideAnh(P2, "2. Pipeline RAG — nạp học liệu và truy hồi", "1.2", "pipeline rag", [
   "Một đường ống phục vụ cả hai chức năng AI: sinh đề và trợ lý.",
   "Pha lập chỉ mục chạy nền: Tika bóc tách, chia đoạn có chồng lấp, mỗi đoạn thành vector 768 chiều trong pgvector.",
   "Pha truy hồi lọc quyền đọc TRƯỚC khi xếp hạng theo khoảng cách cosine, và không dùng chỉ mục xấp xỉ.",
 ]);
-{
-  const s = trang(P2, "3. Công nghệ sử dụng");
-  const nhom = [
-    ["Máy chủ", "Java 21 · Spring Boot 3.5\nSpring Security · Data JPA\nWebSocket (STOMP) · Flyway"],
-    ["Giao diện", "React 19 · TypeScript\nVite 8 · Ant Design v6\nTailwind CSS v4"],
-    ["Dữ liệu", "PostgreSQL 16 + pgvector\nNeo4j 5\nRedis 7"],
-    ["Trí tuệ nhân tạo", "Google Gemini (chính)\nGroq (dự phòng)\nApache Tika · RAG tự viết"],
-  ];
-  nhom.forEach(([t, m], i) => {
-    const x = 0.55 + i * 2.28;
-    s.addShape(pres.ShapeType.roundRect, { x, y: 1.4, w: 2.1, h: 2.62, fill: { color: TRANG }, line: { color: XANH_NHAT, width: 1 }, rectRadius: 0.09 });
-    s.addShape(pres.ShapeType.rect, { x, y: 1.4, w: 2.1, h: 0.46, fill: { color: XANH_DAM } });
-    s.addText(t, { x, y: 1.4, w: 2.1, h: 0.46, fontSize: 12.5, bold: true, color: TRANG, fontFace: FONT, align: "center", valign: "middle" });
-    s.addText(m, { x: x + 0.12, y: 1.9, w: 1.86, h: 2.1, fontSize: 11, color: DAM, fontFace: FONT, align: "center", valign: "middle", lineSpacingMultiple: 1.3 });
-  });
-  s.addText("Không dùng Spring AI hay LangChain4j — lớp điều phối mô hình tự hiện thực để kiểm soát dự phòng, hạn mức và nhật ký.", {
-    x: 0.6, y: 4.26, w: W - 1.2, h: 0.4, fontSize: 10.5, italic: true, color: MUC, fontFace: FONT, align: "center",
-  });
-}
-
 /* ═══════════════════ PHẦN III ═══════════════════ */
 slideNgan("III", "THỰC NGHIỆM");
 const P3 = "III. THỰC NGHIỆM";
-khoiCachLam(trang(P3, "1. Phòng đấu thời gian thực — cách làm"), [
-  ["Vào phòng", "Mã PIN sáu số hoặc quét mã QR. Khách chưa có tài khoản vẫn chơi được khi chủ phòng cho phép, dùng khoá phiên riêng chỉ mở đúng một phòng."],
-  ["Đồng bộ trạng thái", "STOMP trên WebSocket; xác thực tại khung CONNECT vì trình duyệt không cho gắn tiêu đề vào yêu cầu nâng cấp WebSocket."],
-  ["Chạy nhiều tiến trình", "Sự kiện phát tán qua Redis Pub/Sub để mọi tiến trình đang giữ kết nối của phòng đều nhận được và phát tiếp cho người chơi của mình."],
-  ["Tính điểm theo tốc độ", "Điểm phụ thuộc thời gian trả lời — nên độ trễ trở thành yêu cầu chức năng, không chỉ là chỉ tiêu kỹ thuật."],
+cachLamCoAnh(P3, "1. Phòng đấu thời gian thực — cách làm", "3.5", "phòng đấu", [
+  ["Vào phòng", "Mã PIN sáu số hoặc quét mã QR — khách không cần tài khoản"],
+  ["Đồng bộ trạng thái", "STOMP trên WebSocket, xác thực tại khung CONNECT"],
+  ["Chạy nhiều tiến trình", "Phát tán sự kiện qua Redis Pub/Sub"],
+  ["Tính điểm theo tốc độ", "Độ trễ thành yêu cầu CHỨC NĂNG, không chỉ là chỉ tiêu"],
 ]);
-slideAnh(P3, "2. Phòng đấu — phòng chờ và màn chơi", "3.5", "phòng đấu", [
-  "Phòng chờ hiện mã PIN sáu số và mã QR để vào phòng.",
-  "Khi ván chạy, mọi người nhận câu hỏi cùng lúc; bảng xếp hạng cập nhật ngay sau mỗi câu.",
-  "Khách chưa có tài khoản vẫn chơi được khi chủ phòng cho phép.",
+cachLamCoAnh(P3, "2. Sinh đề bằng AI từ học liệu — cách làm", "3.6", "sinh đề", [
+  ["Nạp học liệu", "Tika bóc tách → chia đoạn → vector trong pgvector"],
+  ["Truy hồi có lọc quyền", "Lọc quyền đọc TRƯỚC khi xếp hạng theo cosine"],
+  ["Sinh có cấu trúc", "Buộc trả JSON theo lược đồ, máy chủ kiểm chứng lại"],
+  ["Người duyệt cuối", "Câu sinh ra là BẢN NHÁP, người tạo tích chọn mới lưu"],
+]);
+cachLamCoAnh(P3, "3. Trợ lý học tập — cách làm", "3.7", "trợ lý học tập", [
+  ["Dùng chung đường ống", "Cùng kho vector với chức năng sinh đề"],
+  ["Trả lời theo luồng", "Đẩy từng mảnh qua SSE, chữ hiện dần"],
+  ["Nêu nguồn", "Kèm trích dẫn: tài liệu và đoạn đã dựa vào"],
+  ["Không suy đoán", "Ngoài học liệu thì trả lời không tìm thấy"],
+]);
+cachLamCoAnh(P3, "4. Lộ trình học cá nhân hoá — cách làm", "3.8", "lộ trình học", [
+  ["Dựng đồ thị", "Ba loại nút: người học, quiz, chủ đề"],
+  ["Đồng bộ một chiều", "PostgreSQL là nguồn sự thật, Neo4j là hình chiếu"],
+  ["Tìm chủ đề còn yếu", "Xếp thứ tự chủ đề nên ôn theo độ chính xác"],
+  ["Gợi ý theo người giống mình", "Truy vấn đi qua hai cạnh của đồ thị"],
 ]);
 {
-  const s = trang(P3, "3. Sinh đề bằng AI từ học liệu — cách làm");
-  khoiCachLam(s, [
-    ["Nạp học liệu", "Apache Tika bóc tách PDF, DOCX, TXT; chia đoạn có chồng lấp; mỗi đoạn thành một vector 768 chiều trong pgvector. Chạy nền."],
-    ["Truy hồi có lọc quyền", "Lấy 5 đoạn gần nhất theo khoảng cách cosine, lọc phạm vi người gọi được đọc TRƯỚC khi xếp hạng, rồi bỏ đoạn vượt ngưỡng 0,75."],
-    ["Sinh có cấu trúc", "Prompt buộc trả JSON theo lược đồ; máy chủ kiểm chứng lược đồ rồi loại câu trùng và câu sai định dạng."],
-    ["Người duyệt cuối", "Câu sinh ra là BẢN NHÁP. Chúng chỉ vào ngân hàng câu hỏi khi người tạo nội dung tích chọn rồi bấm lưu."],
-  ]);
-  s.addText("Kết quả đo ở mục 3.6: 10/10 câu đúng chuẩn cấu trúc — kiểm lại độc lập ở phía kịch bản đo, không tin vào việc máy chủ đã lọc.", {
-    x: 0.6, y: 4.88, w: W - 1.2, h: 0.36, fontSize: 10.5, italic: true, color: MUC, fontFace: FONT, align: "center",
-  });
-}
-slideAnh(P3, "4. Sinh đề bằng AI — học liệu và câu hỏi nháp", "3.6", "sinh đề", [
-  "Trên: học liệu đã nạp, kèm trạng thái xử lý.",
-  "Dưới: kết quả sinh đề. Dòng đầu ghi nhà cung cấp đã phục vụ, thời gian chờ, và SỐ ĐOẠN HỌC LIỆU mà câu hỏi bám theo — bằng chứng câu hỏi đi ra từ tài liệu chứ không từ trí nhớ của mô hình.",
-]);
-slideAnh(P3, "5. Trợ lý học tập", "3.7", "trợ lý học tập",
-  "Trả lời theo luồng, kèm khối trích dẫn nêu rõ tài liệu và đoạn đã dựa vào.");
-slideAnh(P3, "6. Lộ trình học cá nhân hoá", "3.8", "lộ trình học",
-  "Thứ tự chủ đề nên ôn, dựng từ năng lực đo được trên từng chủ đề.");
-{
-  const s = trang(P3, "7. Kết quả đo hiệu năng phòng đấu thời gian thực");
+  const s = trang(P3, "5. Kết quả đo hiệu năng phòng đấu thời gian thực");
   const p = anh("3.14", "độ trễ");
   if (p) {
     const { w, h } = coAnh(p);
@@ -352,7 +438,7 @@ slideAnh(P3, "6. Lộ trình học cá nhân hoá", "3.8", "lộ trình học",
   });
 }
 {
-  const s = trang(P3, "8. Kết quả đo độ chính xác các chức năng AI");
+  const s = trang(P3, "6. Kết quả đo độ chính xác các chức năng AI");
   const hang = [
     ["Chấm tự luận", "Sai lệch điểm trung bình", "0,13 / 10"],
     ["Chấm tự luận", "Bài có điểm trong khoảng chuẩn", "7 / 8"],
@@ -374,53 +460,89 @@ slideAnh(P3, "6. Lộ trình học cá nhân hoá", "3.8", "lộ trình học",
   });
 }
 {
-  const s = trang(P3, "9. Kiểm thử");
+  const s = trang(P3, "7. Kiểm thử");
   the(s, 0.62, 1.44, 2.0, 1.4, "568", "phép kiểm máy chủ", "56 lớp · 0 hỏng");
   the(s, 2.82, 1.44, 2.0, 1.4, "128", "phép kiểm giao diện", "21 tệp · 0 hỏng");
   the(s, 5.02, 1.44, 2.0, 1.4, "31", "ca kiểm thử tay", "trên trình duyệt thật");
   the(s, 7.22, 1.44, 2.16, 1.4, "38", "trang được quét", "bằng 4 vai trò");
   y(s, [
-    "Kiểm thử theo tháp: nhiều phép kiểm ở tầng thấp, ít nhưng phủ đường đi thật ở tầng cao.",
-    "Kiểm thử tích hợp dùng Testcontainers dựng PostgreSQL thật có pgvector cho mỗi lần chạy.",
-    "Ba lỗi thật của sản phẩm lộ ra khi dùng thật chứ không qua kiểm thử — một trong số đó có hẳn một phép kiểm khẳng định đúng cái hành vi sai.",
+    "Kiểm thử theo tháp — nhiều ở tầng thấp, ít ở tầng cao nhưng phủ đường đi thật.",
+    "Testcontainers dựng PostgreSQL thật có pgvector cho mỗi lần chạy.",
+    "Ba lỗi thật lộ ra khi dùng, không qua kiểm thử.",
   ], { y: 3.1, h: 1.6, co: 12 });
 }
 
 /* ═══════════════════ PHẦN IV ═══════════════════ */
 slideNgan("IV", "KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN");
 const P4 = "IV. KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN";
+/* Hai slide dưới đây theo đúng bố cục mẫu của khoa: cột nhãn bên trái nối bằng một đường dọc, thẻ mô
+ * tả bên phải; riêng slide hướng phát triển dùng nhãn hình mũi tên và có khối "Một số hạn chế" bên
+ * dưới. Hạn chế vì thế chuyển hẳn sang slide 22, trả slide 21 về đúng một việc là kết quả. */
 {
-  const s = trang(P4, "1. Kết quả đạt được và hạn chế");
-  s.addText("Đã hoàn thành", { x: 0.62, y: 1.34, w: 4.2, h: 0.32, fontSize: 13.5, bold: true, color: XANH_DAM, fontFace: FONT });
-  y(s, [
-    "16 nhóm chức năng với 87 yêu cầu chức năng",
-    "Bốn trọng tâm của phiếu giao đề tài đều có sản phẩm và số liệu đối chứng",
-    "Bảy nhóm chức năng mở rộng ngoài yêu cầu bắt buộc",
-  ], { x: 0.62, y: 1.7, w: 4.2, h: 2.1, co: 11.5 });
-  s.addText("Hạn chế", { x: 5.2, y: 1.34, w: 4.2, h: 0.32, fontSize: 13.5, bold: true, color: "B45309", fontFace: FONT });
-  y(s, [
-    "Số liệu đo trên một máy đơn, không có độ trễ mạng thật",
-    "Cỡ mẫu đánh giá AI nhỏ; chấm đối chiếu với đáp án theo tiêu chí, chưa phải với nhiều giáo viên",
-    "Chưa quan sát được một lần chuyển nhà cung cấp mô hình do lỗi tạm thời",
-  ], { x: 5.2, y: 1.7, w: 4.2, h: 2.1, co: 11.5 });
-  s.addShape(pres.ShapeType.roundRect, { x: 0.62, y: 3.92, w: W - 1.24, h: 0.95, fill: { color: TRANG }, line: { color: XANH_DAM, width: 1 }, rectRadius: 0.08 });
-  s.addText("Phần khó nhất của một hệ thống tích hợp mô hình ngôn ngữ không nằm ở việc gọi được mô hình, mà ở việc dựng đủ hàng rào quanh nó: giới hạn miền giá trị, kiểm chứng cấu trúc đầu ra, cách ly quyền đọc dữ liệu, và giữ quyền kết luận cuối cùng cho con người.", {
-    x: 0.85, y: 3.99, w: W - 1.7, h: 0.8, fontSize: 11, italic: true, color: DAM, fontFace: FONT, valign: "middle",
+  const s = trang(P4, "1. Kết quả đạt được");
+
+  /* Bốn hàng nói về SẢN PHẨM — đã dựng được những gì trên tổng thể trang web — chứ không đặt con số
+   * đo đạc ở đây.
+   *
+   * Vì sao không để số: slide 17 và 18 đã là hai slide số liệu, mỗi con số ở đó đều có phương pháp đo
+   * và phần giới hạn đi kèm để trả lời. Rải thêm số sang slide kết quả là mở thêm một mặt trận nữa mà
+   * không thêm được thông tin gì — hội đồng sẽ hỏi lại đúng những con số ấy ở một chỗ không có chỗ
+   * trình bày cách đo. */
+  const ket = [
+    ["NGÂN HÀNG\nCÂU HỎI VÀ ĐỀ THI", "Xây dựng được chức năng soạn câu hỏi đủ loại, quản lý ngân hàng đề và phân quyền công khai hay riêng tư."],
+    ["LÀM BÀI\nVÀ PHÒNG ĐẤU", "Xây dựng chức năng luyện tập, thi có giới hạn thời gian và phòng đấu nhiều người theo thời gian thực."],
+    ["TÍCH HỢP\nTRÍ TUỆ NHÂN TẠO", "Xây dựng chức năng sinh đề và trợ lý bám theo học liệu, cùng chức năng chấm câu tự luận."],
+    ["GỢI Ý\nVÀ THỐNG KÊ", "Xây dựng hệ gợi ý quiz và lộ trình cá nhân hoá, bảng xếp hạng và trang thống kê."],
+  ];
+
+  // Đường nối dọc vẽ TRƯỚC các huy hiệu để huy hiệu nằm đè lên, không bị đường cắt ngang qua.
+  const tam = (i) => 1.4 + i * 0.88 + 0.4;
+  s.addShape(pres.ShapeType.line, { x: 0.87, y: tam(0), w: 0, h: tam(3) - tam(0), line: { color: XANH_NHAT, width: 1.75 } });
+
+  ket.forEach(([t, m], i) => {
+    const yy = 1.4 + i * 0.88;
+    s.addShape(pres.ShapeType.ellipse, { x: 0.62, y: yy + 0.15, w: 0.5, h: 0.5, fill: { color: XANH_DAM } });
+    s.addText(String(i + 1), { x: 0.62, y: yy + 0.15, w: 0.5, h: 0.5, fontSize: 15, bold: true, color: TRANG, fontFace: FONT, align: "center", valign: "middle" });
+    s.addShape(pres.ShapeType.roundRect, { x: 1.26, y: yy, w: 2.3, h: 0.8, fill: { color: XANH_DAM }, rectRadius: 0.1 });
+    s.addText(t, { x: 1.3, y: yy, w: 2.22, h: 0.8, fontSize: 10.5, bold: true, color: TRANG, fontFace: FONT, align: "center", valign: "middle", lineSpacingMultiple: 1.05 });
+    s.addShape(pres.ShapeType.roundRect, { x: 3.68, y: yy, w: 5.72, h: 0.8, fill: { color: TRANG }, line: { color: XANH_NHAT, width: 1 }, rectRadius: 0.08 });
+    s.addText(m, { x: 3.86, y: yy, w: 5.4, h: 0.8, fontSize: 11.5, color: DAM, fontFace: FONT, valign: "middle", lineSpacingMultiple: 1.12 });
   });
 }
 {
   const s = trang(P4, "2. Hướng phát triển");
-  const gd = [
-    ["Ngắn hạn", "Đo phân bố khoảng cách thực tế rồi mới chọn ngưỡng hiển thị nguồn của trợ lý · dọn tệp ảnh mồ côi"],
-    ["Trung hạn", "Đo trên hạ tầng nhiều máy chủ có độ trễ mạng thật · tăng cỡ mẫu đánh giá AI, mời nhiều người chấm độc lập"],
-    ["Dài hạn", "Ứng dụng di động cho phòng đấu · sinh câu hỏi theo nhiều mức nhận thức · mở rộng phân tích đồ thị sang câu hỏi có giá trị sư phạm"],
-  ];
-  gd.forEach(([t, m], i) => {
-    const yy = 1.5 + i * 1.12;
-    s.addShape(pres.ShapeType.roundRect, { x: 0.62, y: yy, w: W - 1.24, h: 0.98, fill: { color: TRANG }, line: { color: XANH_NHAT, width: 1 }, rectRadius: 0.08 });
-    s.addShape(pres.ShapeType.rect, { x: 0.62, y: yy, w: 0.09, h: 0.98, fill: { color: XANH_DAM } });
-    s.addText(t, { x: 0.9, y: yy + 0.06, w: 1.9, h: 0.38, fontSize: 13.5, bold: true, color: XANH_DAM, fontFace: FONT, valign: "middle" });
-    s.addText(m, { x: 0.9, y: yy + 0.44, w: W - 1.9, h: 0.46, fontSize: 11, color: DAM, fontFace: FONT, valign: "top" });
+
+  // Nhãn hình mũi tên (homePlate) đúng như mẫu — mỗi hướng là lời đáp cho một hạn chế ở khối dưới.
+  [
+    ["Nâng cấp phép đo", "Nhiều máy chủ, có độ trễ mạng thật"],
+    ["Mở rộng đánh giá AI", "Tăng cỡ mẫu, nhiều người chấm độc lập"],
+    ["Mở rộng sản phẩm", "Ứng dụng di động  ·  nhiều mức nhận thức"],
+  ].forEach(([t, m], i) => {
+    const yy = 1.32 + i * 0.82;
+    s.addShape(pres.ShapeType.ellipse, { x: 0.62, y: yy + 0.08, w: 0.56, h: 0.56, fill: { color: XANH_DAM } });
+    s.addText(String(i + 1), { x: 0.62, y: yy + 0.08, w: 0.56, h: 0.56, fontSize: 15, bold: true, color: TRANG, fontFace: FONT, align: "center", valign: "middle" });
+    s.addShape(pres.ShapeType.homePlate, { x: 1.22, y: yy, w: 2.5, h: 0.72, fill: { color: XANH_DAM } });
+    s.addText(t, { x: 1.3, y: yy, w: 2.2, h: 0.72, fontSize: 11.5, bold: true, color: TRANG, fontFace: FONT, align: "center", valign: "middle" });
+    s.addShape(pres.ShapeType.roundRect, { x: 3.84, y: yy, w: 5.56, h: 0.72, fill: { color: TRANG }, line: { color: XANH_NHAT, width: 1 }, rectRadius: 0.08 });
+    s.addText(m, { x: 3.98, y: yy, w: 5.28, h: 0.72, fontSize: 12.5, color: DAM, fontFace: FONT, align: "center", valign: "middle" });
+  });
+
+  s.addShape(pres.ShapeType.roundRect, { x: 3.55, y: 3.84, w: 2.9, h: 0.36, fill: { color: XANH_DAM }, rectRadius: 0.1 });
+  s.addText("Một số hạn chế", { x: 3.55, y: 3.84, w: 2.9, h: 0.36, fontSize: 12.5, bold: true, color: TRANG, fontFace: FONT, align: "center", valign: "middle" });
+
+  /* Hạn chế thứ ba KHÔNG dùng lại câu "chưa quan sát được một lần chuyển nhà cung cấp" của báo cáo:
+   * nhật ký gọi AI tối 01/10 cho thấy đúng việc đó đã xảy ra (Gemini lỗi tạm thời → Groq trả lời
+   * thành công), nên câu ấy nay không còn đúng. Thay bằng một hạn chế vẫn đúng và kiểm được trong mã
+   * nguồn: chỉ Gemini có API embedding nên phần truy hồi không có nhà cung cấp dự phòng. */
+  [
+    ["Phạm vi đo", "Một máy đơn, không có mạng thật"],
+    ["Cỡ mẫu AI", "Mẫu nhỏ, chưa có nhiều người chấm"],
+    ["Dự phòng mô hình", "Embedding chưa có dự phòng"],
+  ].forEach(([t, m], i) => {
+    const x = 0.6 + i * 2.95;
+    s.addShape(pres.ShapeType.roundRect, { x, y: 4.3, w: 2.75, h: 0.76, fill: { color: TRANG }, line: { color: XANH_NHAT, width: 1 }, rectRadius: 0.08 });
+    s.addText(`${i + 1}. ${t}`, { x: x + 0.14, y: 4.36, w: 2.47, h: 0.26, fontSize: 11.5, bold: true, color: XANH_DAM, fontFace: FONT, valign: "middle" });
+    s.addText(m, { x: x + 0.14, y: 4.62, w: 2.47, h: 0.38, fontSize: 10.5, color: MUC, fontFace: FONT, valign: "top", lineSpacingMultiple: 1.05 });
   });
 }
 
