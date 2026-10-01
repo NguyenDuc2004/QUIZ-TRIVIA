@@ -61,23 +61,28 @@ function bang(dauMuc, hang, rong) {
 /* ─────────────────── kịch bản theo slide ─────────────────── */
 const KICH_BAN = [
   ["1", "Bìa", "0:20", "Chào hội đồng, giới thiệu tên và tên đề tài. Không đọc lại cả trang bìa."],
-  ["2", "Nội dung trình bày", "0:15", "Đọc lướt sáu phần để hội đồng biết đường đi. Đừng dừng lâu."],
-  ["3", "Đặt vấn đề", "1:00", "Ba khoảng trống: soạn đề thủ công, không chấm được tự luận, gợi ý theo lượt xem chứ không theo năng lực. Đây là chỗ thuyết phục hội đồng rằng đề tài có lý do tồn tại."],
-  ["4", "Bốn trọng tâm", "0:50", "Bám nguyên bốn mục của phiếu giao đề tài. Nói rõ trọng tâm thứ tư là ĐO chứ không phải làm thêm chức năng."],
-  ["5", "Công nghệ", "0:40", "Không đọc hết danh sách. Chỉ nêu ba lựa chọn đáng nói: pgvector để lọc quyền cùng lúc với tìm vector, Neo4j cho quan hệ, và lớp điều phối mô hình tự viết."],
-  ["6", "Kiến trúc tổng thể", "1:00", "Ba kênh giao tiếp cho ba dạng dữ liệu: REST, WebSocket, SSE. Chỉ vào hình khi nói."],
-  ["7", "Pipeline RAG", "1:10", "Hai pha: nạp học liệu và truy hồi. Nhấn vào điểm lọc quyền TRƯỚC khi xếp hạng — đây là chỗ từng có lỗi thật, kể ra được thì rất có sức nặng."],
-  ["8", "Biểu đồ use case", "0:40", "Bốn tác nhân. Nói nhanh, hội đồng đọc được hình."],
-  ["9", "Thiết kế cơ sở dữ liệu", "0:50", "35 bảng, 23 tệp migration. Nêu một quyết định: vector lưu chung PostgreSQL chứ không tách hệ riêng, và vì sao."],
-  ["10", "Phân lớp và mô-đun", "0:40", "Khối đơn mô-đun hoá, chia theo nghiệp vụ, mỗi mô-đun đủ năm tầng."],
-  ["11-15", "Năm màn sản phẩm", "2:30", "Đi nhanh, mỗi màn khoảng 30 giây. Dừng lâu hơn ở màn Trợ lý để chỉ vào khối trích dẫn nguồn."],
-  ["16", "Phòng đấu", "1:00", "Mã PIN và QR, khách vào được, bảng xếp hạng cập nhật sau mỗi câu. Nhấn: điểm phụ thuộc tốc độ nên độ trễ thành yêu cầu chức năng."],
+  ["2", "Nội dung thuyết trình", "0:15", "Đọc lướt bốn phần để hội đồng biết đường đi. Đừng dừng lâu."],
+  ["3", "NGĂN — I. Lý do chọn đề tài", "0:05", "Slide ngăn: chỉ đọc tên phần rồi lật ngay. Đừng giải thích gì ở đây."],
+  ["4", "Ba khoảng trống", "1:00", "Soạn đề thủ công, không chấm được tự luận, gợi ý theo lượt xem chứ không theo năng lực. Đây là chỗ thuyết phục hội đồng rằng đề tài có lý do tồn tại."],
+  ["5", "Bốn trọng tâm", "0:50", "Bám nguyên bốn mục của phiếu giao đề tài. Nói rõ trọng tâm thứ tư là ĐO chứ không phải làm thêm chức năng."],
+  ["6", "NGĂN — II. Cơ sở lý thuyết", "0:05", "Lật ngay."],
+  ["7", "Kiến trúc tổng quan", "0:50", "Ba kênh giao tiếp cho ba dạng dữ liệu: REST, WebSocket, SSE. Chỉ vào hình khi nói."],
+  ["8", "Pipeline RAG", "1:10", "Hai pha: nạp học liệu và truy hồi. Nhấn vào điểm lọc quyền TRƯỚC khi xếp hạng — đây là chỗ từng có lỗi thật, kể ra được thì rất có sức nặng."],
+  ["9", "Công nghệ sử dụng", "0:40", "Không đọc hết danh sách. Chỉ nêu ba lựa chọn đáng nói: pgvector để lọc quyền cùng lúc với tìm vector, Neo4j cho quan hệ, và lớp điều phối mô hình tự viết."],
+  ["10", "NGĂN — III. Thực nghiệm", "0:05", "Lật ngay. Đây là phần dài nhất, chín slide."],
+  ["11", "Phòng đấu — cách làm", "1:00", "Mã PIN và QR, khách vào được, đồng bộ qua STOMP, phát tán qua Redis. Nhấn: điểm phụ thuộc tốc độ nên độ trễ thành yêu cầu CHỨC NĂNG, không phải chỉ tiêu kỹ thuật. Đây là bệ đỡ cho slide 17."],
+  ["12", "Phòng đấu — màn thật", "0:35", "Chỉ vào mã PIN, mã QR và bảng xếp hạng. Không mô tả lại những gì slide trước đã nói."],
+  ["13", "Sinh đề — cách làm", "1:00", "Bốn bước: nạp học liệu, truy hồi có lọc quyền, sinh JSON có kiểm chứng lược đồ, người duyệt cuối. Nhấn bước cuối: AI không tự đưa câu hỏi vào ngân hàng."],
+  ["14", "Sinh đề — màn thật", "0:45", "Chỉ vào dòng ghi số đoạn học liệu câu hỏi bám theo — đó là bằng chứng nhìn thấy được rằng câu hỏi đi ra từ tài liệu chứ không từ trí nhớ của mô hình."],
+  ["15", "Trợ lý học tập", "0:35", "Dừng ở khối trích dẫn nguồn dưới câu trả lời. Nói thêm một câu: hỏi ngoài học liệu thì trợ lý nói không biết chứ không đoán."],
+  ["16", "Lộ trình học", "0:30", "Đây là màn đại diện cho trụ cột Neo4j. Nêu ba truy vấn: chủ đề còn yếu, người học tương tự, thứ tự chủ đề nên ôn."],
   ["17", "Kết quả đo hiệu năng", "1:20", "Câu phải nói đúng chữ: \"P95 là 216 mili giây ở mức 100 người mỗi phòng, và không mất một sự kiện nào ở mọi mức tải đã thử tới 200 người.\" Nói ngay giới hạn: đo trên một máy đơn, không có độ trễ mạng thật."],
-  ["18", "Độ chính xác AI", "1:20", "Câu phải nói đúng chữ: \"Sai lệch điểm trung bình 0,13 trên thang 10 khi đối chiếu với đáp án theo tiêu chí.\" Nói ngay: cỡ mẫu nhỏ, chưa đối chiếu với nhiều giáo viên chấm độc lập."],
-  ["19", "Kiểm thử", "0:50", "606 phép kiểm máy chủ và 128 phép kiểm giao diện, đều đạt. Rồi nói thẳng: ba lỗi thật lộ ra khi dùng chứ không qua kiểm thử."],
-  ["20", "Kết luận", "0:50", "Đã làm được gì, chưa làm được gì. Đọc câu cuối về việc dựng hàng rào quanh mô hình."],
-  ["21", "Hướng phát triển", "0:30", "Ngắn hạn, trung hạn, dài hạn — mỗi mục một câu."],
-  ["22", "Cảm ơn", "0:15", "Cảm ơn và mời hội đồng đặt câu hỏi."],
+  ["18", "Độ chính xác AI", "1:20", "Câu phải nói đúng chữ: \"Sai lệch điểm trung bình 0,13 trên thang 10 khi đối chiếu với đáp án theo tiêu chí.\" Nói ngay: cỡ mẫu nhỏ, chưa đối chiếu với nhiều giáo viên chấm độc lập. Đừng đọc hết tám dòng trong bảng."],
+  ["19", "Kiểm thử", "0:40", "568 phép kiểm máy chủ và 128 phép kiểm giao diện, đều đạt. Rồi nói thẳng: ba lỗi thật lộ ra khi dùng chứ không qua kiểm thử — đây là chỗ ghi điểm thành thật, đừng bỏ."],
+  ["20", "NGĂN — IV. Kết luận", "0:05", "Lật ngay."],
+  ["21", "Kết quả đạt được và hạn chế", "1:00", "Đã làm được gì, chưa làm được gì. Đọc câu cuối trong khung về việc dựng hàng rào quanh mô hình."],
+  ["22", "Hướng phát triển", "0:35", "Ngắn hạn, trung hạn, dài hạn — mỗi mục một câu. Mỗi hướng là lời đáp cho một hạn chế ở slide trước."],
+  ["23", "Cảm ơn", "0:15", "Cảm ơn và mời hội đồng đặt câu hỏi."],
 ];
 
 /* ─────────────────── câu hỏi có thể gặp ─────────────────── */
@@ -139,7 +144,7 @@ noi.push(p("Xây dựng ứng dụng Quiz/Trivia tích hợp trí tuệ nhân t�
 noi.push(p("Nguyễn Khắc Minh Đức — 2022601585 — GVHD: ThS. Nguyễn Đức Lưu", { giua: true, nghieng: true, co: 24 }));
 
 noi.push(h("1. Phân bổ thời gian"));
-noi.push(p("Tổng thời lượng trình bày dự kiến khoảng 15 phút, chia theo bảng dưới. Ba mốc quan trọng nhất là slide 3 (thuyết phục về lý do đề tài), slide 17 và 18 (hai phép đo bắt buộc theo phiếu giao đề tài). Nếu bị nhắc rút ngắn, cắt bớt ở nhóm slide 11-15 chứ không cắt hai slide kết quả đo."));
+noi.push(p("Bộ slide gồm 23 slide, trong đó bốn slide ngăn chỉ mất năm giây mỗi cái. Cộng lại đúng 15 phút theo bảng dưới. Ba mốc quan trọng nhất là slide 4 (thuyết phục về lý do đề tài), slide 17 và 18 (hai phép đo bắt buộc theo phiếu giao đề tài). Nếu bị nhắc rút ngắn, cắt ở slide 15 và 16 — hai màn đó nói được bằng lời trong khi vẫn chiếu slide trước; tuyệt đối không cắt hai slide kết quả đo."));
 noi.push(bang(["Slide", "Nội dung", "Thời lượng", "Ý cần nói"], KICH_BAN.map((k) => [k[0], k[1], k[2], k[3]]), [900, 1900, 1100, CW - 3900]));
 
 noi.push(h("2. Những câu phải nói đúng chữ"));
@@ -148,7 +153,7 @@ noi.push(bang(["Câu", "Giới hạn phải nói kèm"], [
   ["P95 là 216 mili giây ở mức 100 người mỗi phòng, không mất một sự kiện nào ở mọi mức tải đã thử tới 200 người.", "Đo trên một máy đơn, không bao gồm độ trễ mạng thật."],
   ["Sai lệch điểm trung bình 0,13 trên thang 10 khi AI chấm câu tự luận.", "Đối chiếu với đáp án theo tiêu chí, chưa phải với nhiều giáo viên chấm độc lập; cỡ mẫu 8 bài."],
   ["10 trên 10 câu AI sinh ra đúng chuẩn cấu trúc, không câu nào bị bộ kiểm loại.", "Đây là đúng CẤU TRÚC, không phải đúng chất lượng sư phạm — đồ án không đánh giá phần đó."],
-  ["606 phép kiểm máy chủ và 128 phép kiểm giao diện, tất cả đều đạt.", "Vẫn có ba lỗi thật lọt qua và chỉ lộ khi dùng thật; trình bày ở mục 3.4.4."],
+  ["568 phép kiểm máy chủ và 128 phép kiểm giao diện, tất cả đều đạt.", "Vẫn có ba lỗi thật lọt qua và chỉ lộ khi dùng thật; trình bày ở mục 3.4.4."],
 ], [4600, CW - 4600]));
 
 noi.push(h("3. Câu hỏi hội đồng có thể đặt"));
@@ -166,6 +171,8 @@ for (const [hoi, dap] of CAU_HOI) {
 noi.push(h("4. Chuẩn bị trước buổi bảo vệ"));
 noi.push(bang(["Việc", "Ghi chú"], [
   ["Bật sẵn hệ thống", "docker compose up -d, backend và frontend chạy trước ít nhất 5 phút. Mở sẵn các tab cần demo để không phải gõ địa chỉ."],
+  ["Backend chạy cổng 8081, KHÔNG phải 8080", "Trên máy demo, cổng 8080 đang bị một dịch vụ khác của Windows chiếm. Chạy backend kèm --server.port=8081 cho khớp frontend/.env.local; quên bước này thì mọi lời gọi API rơi vào chỗ trống và màn hình trắng dữ liệu."],
+  ["Đừng demo đăng nhập bằng Google", "Client ID chưa khai báo http://localhost:5173 trong danh sách origin được phép, nên nút đó không chạy trên máy demo. Đăng nhập bằng email và mật khẩu. Nếu hội đồng hỏi, nói rõ đây là cấu hình origin phía Google cho từng địa chỉ triển khai, không phải lỗi mã nguồn."],
   ["Chuẩn bị sẵn một phòng đấu", "Nếu định demo trực tiếp: mở phòng và để sẵn mã PIN. Có người thứ hai vào bằng điện thoại thì phần này thuyết phục nhất."],
   ["Kiểm tra khoá API của mô hình", "Hạn mức gói miễn phí có thể cạn. Nếu demo sinh đề mà bị chặn hạn mức thì nói rõ đó là giới hạn của gói miễn phí, và cho xem kết quả đã sinh sẵn."],
   ["Mang bản in", "Báo cáo, và một tờ ghi bốn con số ở mục 2 phòng khi quên."],

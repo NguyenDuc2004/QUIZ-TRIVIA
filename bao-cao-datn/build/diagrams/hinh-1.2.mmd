@@ -5,34 +5,31 @@ flowchart TB
   classDef llm fill:#FEE2E2,stroke:#B91C1C,color:#7F1D1D;
   classDef guard fill:#FEF9C3,stroke:#A16207,color:#713F12;
 
-  subgraph P1["Pha 1 — Nạp học liệu (chạy nền, một lần cho mỗi tài liệu)"]
+  subgraph P2["Pha 2 — Truy hồi và sinh"]
+    direction TB
+    Q["Câu hỏi hoặc yêu cầu sinh đề<br/>→ sinh vector cho truy vấn"]:::ret
+    W2[("material_chunks<br/>— cùng kho Pha 1 —")]:::store
+    FILT["Lọc quyền đọc TRƯỚC — tài liệu của tôi<br/>hoặc đã chia sẻ — rồi mới xếp theo<br/>khoảng cách cosine &lt;=&gt;, lấy top-K = 5"]:::guard
+    THR{"Loại đoạn vượt<br/>ngưỡng 0,75"}:::guard
+    NONE["Trả lời 'không biết',<br/>KHÔNG suy đoán"]:::guard
+    LLM["Dựng prompt — chỉ dẫn hệ thống + ngữ cảnh<br/>rào trong khối dữ liệu — rồi gọi<br/>AiOrchestrator → Gemini (dự phòng Groq)"]:::llm
+    OUT1["Câu hỏi nháp + đoạn nguồn<br/>→ người tạo nội dung duyệt"]:::ing
+    OUT2["Trả lời theo luồng (SSE)<br/>+ danh sách tài liệu đã dựa vào"]:::ret
+    Q --> FILT
+    W2 --> FILT
+    FILT --> THR
+    THR -->|"còn đoạn"| LLM
+    THR -->|"rỗng"| NONE
+    LLM --> OUT1
+    LLM --> OUT2
+  end
+
+  subgraph P1["Pha 1 — Nạp học liệu (chạy nền)"]
+    direction TB
     F["Tệp PDF / DOCX / TXT<br/>hoặc văn bản dán tay"]:::ing
     TK["Apache Tika<br/>bóc tách văn bản"]:::ing
-    CH["TextChunker<br/>chia đoạn, có chồng lấp,<br/>cắt theo ranh giới câu"]:::ing
+    CH["TextChunker — chia đoạn<br/>có chồng lấp"]:::ing
     EMB["Gemini embedding<br/>vector 768 chiều"]:::ing
+    W1[("material_chunks<br/>(pgvector)")]:::store
+    F --> TK --> CH --> EMB --> W1
   end
-
-  VDB[("material_chunks (pgvector)<br/>content + embedding vector(768)")]:::store
-
-  subgraph P2["Pha 2 — Truy hồi và sinh (mỗi lần có yêu cầu)"]
-    Q["Câu hỏi của người dùng<br/>hoặc yêu cầu sinh đề"]:::ret
-    QE["Sinh vector cho truy vấn"]:::ret
-    FILT["Lọc quyền đọc TRƯỚC<br/>tài liệu của tôi HOẶC đã chia sẻ"]:::guard
-    SIM["Xếp theo khoảng cách cosine &lt;=&gt;<br/>lấy top-K = 5"]:::ret
-    THR["Loại đoạn vượt ngưỡng 0,75"]:::guard
-    PB["Dựng prompt: chỉ dẫn hệ thống<br/>+ ngữ cảnh rào trong khối dữ liệu"]:::ret
-  end
-
-  LLM["AiOrchestrator → Gemini (dự phòng Groq)"]:::llm
-  OUT1["Câu hỏi nháp + đoạn nguồn<br/>→ người tạo nội dung duyệt"]:::ing
-  OUT2["Câu trả lời theo luồng (SSE)<br/>+ danh sách tài liệu đã dựa vào"]:::ret
-  NONE["Không còn đoạn nào đủ liên quan<br/>→ trả lời 'không biết', KHÔNG suy đoán"]:::guard
-
-  F --> TK --> CH --> EMB --> VDB
-  Q --> QE --> FILT --> SIM --> THR
-  THR -->|"còn đoạn hợp lệ"| PB
-  THR -->|"rỗng"| NONE
-  VDB --> FILT
-  PB --> LLM
-  LLM --> OUT1
-  LLM --> OUT2

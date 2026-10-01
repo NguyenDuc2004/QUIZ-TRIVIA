@@ -1,4 +1,4 @@
-/* Chụp wireframe trong mockup.html -> assets/hinh-2.30.png, hinh-2.31.png
+/* Chụp wireframe trong mockup.html -> assets/hinh-2.19.png, hinh-2.20.png
  *
  * Chỉ hai màn, không phải cả mười. Mục 2.2.3 của báo cáo trước đây có đủ 10 bản phác (2.30-2.39),
  * nhưng Chương 3 lại có ảnh chụp thật của ĐÚNG mười màn đó sau khi hiện thực — vẽ phác rồi vài chục
@@ -24,7 +24,7 @@ const fs = require("fs");
 
   /* Chỉ số màn (đếm từ 0 theo thứ tự trong mockup.html) -> số hình trong báo cáo.
    * 1 = trang khám phá quiz (đại diện lưới thẻ) · 8 = quản lý người dùng (đại diện bảng) */
-  const CAN_CHUP = { 1: "2.30", 8: "2.31" };
+  const CAN_CHUP = { 1: "2.19", 8: "2.20" };
 
   for (const [chiSo, so] of Object.entries(CAN_CHUP)) {
     const man = screens[Number(chiSo)];

@@ -101,6 +101,10 @@ const D = {};
 /* ============================================================
  * 2.1 — USE CASE TỔNG QUÁT
  * ============================================================ */
+/* Chỉ còn 7 sơ đồ: báo cáo đã lược bớt use case, và những sơ đồ bị bỏ cũng phải bỏ ở đây.
+ * Giữ lại mà đánh số cũ thì lần chạy sau ghi đè nhầm lên ảnh của sơ đồ khác — tên tệp lấy từ
+ * khoá của D, nên khoá sai là ảnh sai mà không có gì báo. */
+
 D["2.1"] = `@startuml
 ${SKIN}
 left to right direction
@@ -155,132 +159,7 @@ note bottom of L
 end note
 @enduml`;
 
-/* ============================================================
- * 2.2 - 2.5 — USE CASE THEO TỪNG TÁC NHÂN
- * ============================================================ */
 D["2.2"] = `@startuml
-${SKIN}
-left to right direction
-actor "Khách" as G
-rectangle "Chức năng dành cho khách chưa đăng nhập" {
-  usecase "Xem danh sách quiz công khai" as U1
-  usecase "Xem thông tin giới thiệu một quiz\\n(không xem được nội dung câu hỏi)" as U2
-  usecase "Tìm kiếm và lọc quiz" as U3
-  usecase "Đăng ký tài khoản" as U4
-  usecase "Đăng nhập" as U5
-  usecase "Đăng nhập bằng Google" as U6
-  usecase "Quên mật khẩu (OTP qua email)" as U7
-  usecase "Vào phòng đấu bằng mã PIN\\nvới tư cách khách" as U8
-}
-G --> U1
-G --> U2
-G --> U3
-G --> U4
-G --> U5
-G --> U6
-G --> U7
-G --> U8
-U6 .up.> U5 : <<extend>>
-note right of U8
-  Chỉ khi chủ phòng bật
-  tùy chọn cho khách
-end note
-@enduml`;
-
-D["2.3"] = `@startuml
-${SKIN}
-left to right direction
-actor "Người học" as L
-rectangle "Chức năng dành cho người học" {
-  usecase "Làm bài quiz cá nhân" as U1
-  usecase "Nộp bài và xem kết quả" as U2
-  usecase "Xem lời giải thích đáp án" as U3
-  usecase "Xem lịch sử làm bài" as U4
-  usecase "Xem tiến độ học theo chủ đề" as U5
-  usecase "Tham gia phòng đấu\\nthời gian thực" as U6
-  usecase "Trả lời trong phòng đấu" as U7
-  usecase "Xem bảng xếp hạng trực tiếp" as U8
-  usecase "Hỏi trợ lý học tập" as U9
-  usecase "Xem hội thoại đã lưu" as U10
-  usecase "Nhận gợi ý quiz" as U11
-  usecase "Xem lộ trình học" as U12
-  usecase "Quản lý hồ sơ, đổi mật khẩu" as U13
-}
-L --> U1
-L --> U4
-L --> U5
-L --> U6
-L --> U9
-L --> U10
-L --> U11
-L --> U12
-L --> U13
-U1 ..> U2 : <<include>>
-U2 ..> U3 : <<include>>
-U6 ..> U7 : <<include>>
-U7 ..> U8 : <<include>>
-@enduml`;
-
-D["2.4"] = `@startuml
-${SKIN}
-left to right direction
-actor "Người tạo nội dung" as C
-rectangle "Chức năng dành cho người tạo nội dung" {
-  usecase "Quản lý quiz\\n(thêm, sửa, xóa)" as U1
-  usecase "Quản lý ngân hàng câu hỏi\\n(5 loại câu hỏi)" as U2
-  usecase "Tải ảnh bìa quiz" as U3
-  usecase "Nạp học liệu\\n(PDF/DOCX/TXT/dán tay)" as U4
-  usecase "Chia sẻ học liệu\\ncho người học" as U5
-  usecase "Sinh đề bằng AI từ học liệu" as U6
-  usecase "Duyệt câu hỏi do AI sinh" as U7
-  usecase "Mở phòng đấu" as U8
-  usecase "Điều khiển ván đấu" as U9
-  usecase "Chấm tay câu tự luận" as U10
-  usecase "Xem thống kê quiz của mình" as U11
-}
-C --> U1
-C --> U2
-C --> U4
-C --> U5
-C --> U6
-C --> U8
-C --> U10
-C --> U11
-U1 ..> U3 : <<include>>
-U6 ..> U7 : <<include>>
-U8 ..> U9 : <<include>>
-note right of U6
-  Yêu cầu học liệu đã ở
-  trạng thái sẵn sàng
-end note
-@enduml`;
-
-D["2.5"] = `@startuml
-${SKIN}
-left to right direction
-actor "Quản trị viên" as A
-rectangle "Chức năng dành cho quản trị viên" {
-  usecase "Quản lý tài khoản người dùng" as U1
-  usecase "Đổi vai trò người dùng" as U2
-  usecase "Quản lý toàn bộ nội dung\\n(quiz, câu hỏi)" as U3
-  usecase "Quản lý danh mục" as U4
-  usecase "Cấu hình nhà cung cấp AI\\n(thứ tự Gemini → Groq)" as U5
-  usecase "Giám sát nhật ký gọi AI" as U6
-  usecase "Giám sát chi phí và số token" as U7
-}
-A --> U1
-A --> U3
-A --> U4
-A --> U5
-A --> U6
-U1 ..> U2 : <<include>>
-U6 ..> U7 : <<include>>
-@enduml`;
-
-/* ============================================================
- * 2.6 - 2.12 — USE CASE CHI TIẾT CHO 7 ĐẶC TẢ
- * ============================================================ */
-D["2.6"] = `@startuml
 ${SKIN}
 left to right direction
 actor "Khách" as G
@@ -298,53 +177,7 @@ U4 .up.> U1 : <<extend>>
 U5 .up.> U1 : <<extend>>
 @enduml`;
 
-D["2.7"] = `@startuml
-${SKIN}
-left to right direction
-actor "Người tạo nội dung" as C
-rectangle "UC-03 — Quản lý quiz và ngân hàng câu hỏi" {
-  usecase "Quản lý quiz" as U1
-  usecase "Kiểm tra quyền sở hữu" as U2
-  usecase "Soạn câu hỏi mới" as U3
-  usecase "Chọn câu từ ngân hàng" as U4
-  usecase "Sắp thứ tự câu trong đề" as U5
-  usecase "Tải ảnh bìa\\n(kiểm tra chữ ký byte)" as U6
-  usecase "Sinh đề bằng AI" as U7
-}
-C --> U1
-U1 ..> U2 : <<include>>
-U1 ..> U5 : <<include>>
-U3 .up.> U1 : <<extend>>
-U4 .up.> U1 : <<extend>>
-U6 .up.> U1 : <<extend>>
-U7 .up.> U3 : <<extend>>
-@enduml`;
-
-D["2.8"] = `@startuml
-${SKIN}
-left to right direction
-actor "Người học" as L
-rectangle "UC-05 — Làm bài quiz cá nhân" {
-  usecase "Làm bài quiz" as U1
-  usecase "Chốt đề tại thời điểm bắt đầu" as U2
-  usecase "Tự động lưu câu trả lời" as U3
-  usecase "Nộp bài" as U4
-  usecase "Chấm tự động\\n(câu có đáp án xác định)" as U5
-  usecase "Chấm câu tự luận bằng AI" as U6
-  usecase "Đồng bộ hành vi sang Neo4j" as U7
-  usecase "Xem kết quả và giải thích" as U8
-}
-L --> U1
-U1 ..> U2 : <<include>>
-U1 ..> U3 : <<include>>
-U1 ..> U4 : <<include>>
-U4 ..> U5 : <<include>>
-U4 ..> U7 : <<include>>
-U4 ..> U8 : <<include>>
-U6 .up.> U4 : <<extend>>
-@enduml`;
-
-D["2.9"] = `@startuml
+D["2.3"] = `@startuml
 ${SKIN}
 left to right direction
 actor "Người học" as L
@@ -375,7 +208,7 @@ note bottom of U3
 end note
 @enduml`;
 
-D["2.10"] = `@startuml
+D["2.4"] = `@startuml
 ${SKIN}
 left to right direction
 actor "Người tạo nội dung" as C
@@ -405,7 +238,7 @@ note right of U7
 end note
 @enduml`;
 
-D["2.11"] = `@startuml
+D["2.5"] = `@startuml
 ${SKIN}
 left to right direction
 actor "Người học" as L
@@ -431,7 +264,7 @@ U5 ..> U6 : <<include>>
 U7 .up.> U4 : <<extend>>
 @enduml`;
 
-D["2.12"] = `@startuml
+D["2.6"] = `@startuml
 ${SKIN}
 left to right direction
 actor "Người học" as L
@@ -457,10 +290,7 @@ note right of U7
 end note
 @enduml`;
 
-/* ============================================================
- * 2.13 — BIỂU ĐỒ LỚP THIẾT KẾ TỔNG THỂ
- * ============================================================ */
-D["2.13"] = `@startuml
+D["2.7"] = `@startuml
 ' Style sạch cho biểu đồ lớp thiết kế tổng thể (khác phong cách hồng của VOPC)
 skinparam dpi 150
 skinparam defaultFontName "Times New Roman"
@@ -618,10 +448,7 @@ GameRoom "1" *-- "1..*" GameRoomPlayer
 ChatSession "1" *-- "0..*" ChatMessage
 @enduml`;
 
-/* ============================================================
- * 2.14 / 2.15 — ĐĂNG NHẬP
- * ============================================================ */
-D["2.14"] = `@startuml
+D["2.8"] = `@startuml
 ${SKIN}
 title Biểu đồ trình tự — Use case Đăng nhập
 
@@ -658,7 +485,7 @@ else Xác thực thành công
 end
 @enduml`;
 
-D["2.15"] = `@startuml
+D["2.9"] = `@startuml
 ${SKIN}
 title Biểu đồ lớp VOPC — Use case Đăng nhập
 left to right direction
@@ -679,170 +506,7 @@ AuthService --> JwtService
 AuthService --> RefreshTokenService
 @enduml`;
 
-/* ============================================================
- * 2.16 / 2.17 — QUẢN LÝ QUIZ VÀ NGÂN HÀNG CÂU HỎI
- * ============================================================ */
-D["2.16"] = `@startuml
-${SKIN}
-title Biểu đồ trình tự — Use case Quản lý quiz và ngân hàng câu hỏi
-
-actor "Người tạo nội dung" as C
-boundary "QuizEditorPage" as B
-control "QuizController" as QC
-control "QuizService" as QS
-control "OwnershipGuard" as OG
-control "QuestionService" as QNS
-entity "Quiz" as Q
-entity "Question" as QN
-entity "QuestionOption" as QO
-control "FileStorageService" as FS
-
-C -> B : nhập tiêu đề, danh mục, độ khó, thời lượng
-B -> QC : POST /api/v1/quizzes
-QC -> QS : create(request, currentUser)
-QS -> Q : new Quiz(ownerId = currentUser)
-QS --> QC : QuizResponse
-QC --> B : 201 Created
-
-C -> B : soạn câu hỏi mới
-B -> QC : POST /api/v1/questions
-QC -> QNS : create(request)
-QNS -> QNS : kiểm tra dữ liệu theo từng loại câu hỏi
-alt Dữ liệu không hợp lệ
-  QNS --> B : 400 kèm lỗi từng trường
-else Hợp lệ
-  QNS -> QN : lưu Question
-  QNS -> QO : lưu các phương án
-end
-
-C -> B : thêm câu vào quiz, sắp thứ tự
-B -> QC : PUT /api/v1/quizzes/{id}/questions
-QC -> QS : setQuestions(quizId, ids)
-QS -> OG : requireOwner(quiz, currentUser)
-alt Không phải chủ sở hữu
-  OG --> QC : NotFoundException
-  QC --> B : 404 (không tiết lộ tài nguyên tồn tại)
-else Là chủ sở hữu
-  QS -> Q : cập nhật liên kết kèm orderIndex
-end
-
-C -> B : tải ảnh bìa
-B -> QC : POST /api/v1/files/images
-QC -> FS : store(file)
-FS -> FS : nhận dạng theo chữ ký byte, giới hạn 2MB
-FS --> QC : đường dẫn /uploads/images/{uuid}.ext
-@enduml`;
-
-D["2.17"] = `@startuml
-${SKIN}
-title Biểu đồ lớp VOPC — Use case Quản lý quiz và ngân hàng câu hỏi
-left to right direction
-
-class QuizEditorPage <<boundary>>
-class QuizController <<control>>
-class QuizService <<control>>
-class QuestionService <<control>>
-class OwnershipGuard <<control>>
-class FileStorageService <<control>>
-class Quiz <<entity>>
-class Question <<entity>>
-class QuestionOption <<entity>>
-class QuizQuestion <<entity>>
-
-QuizEditorPage --> QuizController
-QuizController --> QuizService
-QuizController --> QuestionService
-QuizService --> OwnershipGuard
-QuizService --> Quiz
-QuizService --> QuizQuestion
-QuestionService --> Question
-QuestionService --> QuestionOption
-QuizController --> FileStorageService
-@enduml`;
-
-/* ============================================================
- * 2.18 / 2.19 — LÀM BÀI QUIZ CÁ NHÂN
- * ============================================================ */
-D["2.18"] = `@startuml
-${SKIN}
-title Biểu đồ trình tự — Use case Làm bài quiz cá nhân
-
-actor "Người học" as L
-boundary "AttemptPage" as B
-control "AttemptController" as AC
-control "AttemptService" as AS
-entity "QuizAttempt" as QA
-entity "AttemptAnswer" as AA
-control "AnswerGrader" as AG
-control "AiGradingService" as AI
-control "AttemptGraphSyncService" as GS
-database "Neo4j" as NEO
-
-L -> B : chọn chế độ và bắt đầu
-B -> AC : POST /api/v1/quizzes/{id}/attempts
-AC -> AS : start(quizId, userId, mode)
-alt Đã có lượt đang làm dở
-  AS --> AC : trả về đúng lượt đó để làm tiếp
-else Tạo lượt mới
-  AS -> QA : new QuizAttempt(maxScore chốt lúc này)
-  AS -> AA : sinh sẵn từng câu của riêng lượt này
-  note right of AA : chốt đề — sửa quiz sau đó\\nkhông ảnh hưởng bài đang làm
-end
-AS --> B : đề bài (KHÔNG kèm đáp án đúng)
-
-loop mỗi câu trả lời
-  L -> B : chọn đáp án
-  B -> AC : PUT /api/v1/attempts/{id}/answers/{qid}
-  AC -> AS : saveAnswer(...)
-  AS -> AA : lưu ngay, không chờ tới lúc nộp
-end
-
-L -> B : nộp bài
-B -> AC : POST /api/v1/attempts/{id}/submit
-AC -> AS : submit(attemptId, userId)
-alt Đã quá thời điểm hết hạn
-  AS -> QA : status = EXPIRED, chỉ chấm câu đã trả lời
-else Còn hạn
-  AS -> AG : chấm các câu có đáp án xác định
-  AG --> AS : điểm từng câu
-  AS -> AI : xếp câu tự luận vào hàng đợi chấm AI
-  AS -> QA : tính tổng điểm, status = SUBMITTED
-end
-AS -> GS : publish AttemptSubmittedEvent (AFTER_COMMIT)
-GS -> NEO : MERGE (User)-[:ATTEMPTED]->(Quiz), cập nhật PRACTICED
-AS --> B : kết quả kèm đáp án đúng và lời giải thích
-B --> L : hiển thị điểm và giải thích
-@enduml`;
-
-D["2.19"] = `@startuml
-${SKIN}
-title Biểu đồ lớp VOPC — Use case Làm bài quiz cá nhân
-left to right direction
-
-class AttemptPage <<boundary>>
-class AttemptController <<control>>
-class AttemptService <<control>>
-class AnswerGrader <<control>>
-class AiGradingService <<control>>
-class AttemptGraphSyncService <<control>>
-class QuizAttempt <<entity>>
-class AttemptAnswer <<entity>>
-class Question <<entity>>
-
-AttemptPage --> AttemptController
-AttemptController --> AttemptService
-AttemptService --> QuizAttempt
-AttemptService --> AttemptAnswer
-AttemptService --> AnswerGrader
-AnswerGrader --> Question
-AttemptService --> AiGradingService
-AttemptService --> AttemptGraphSyncService
-@enduml`;
-
-/* ============================================================
- * 2.20 / 2.21 — THAM GIA PHÒNG ĐẤU THỜI GIAN THỰC
- * ============================================================ */
-D["2.20"] = `@startuml
+D["2.10"] = `@startuml
 ${SKIN}
 title Biểu đồ trình tự — Use case Tham gia phòng đấu thời gian thực
 
@@ -903,7 +567,7 @@ note over ST, RD
 end note
 @enduml`;
 
-D["2.21"] = `@startuml
+D["2.11"] = `@startuml
 ${SKIN}
 title Biểu đồ lớp VOPC — Use case Tham gia phòng đấu thời gian thực
 left to right direction
@@ -933,10 +597,7 @@ GameEventPublisher --> GameEventRelay
 GameEventRelay --> RoomPage
 @enduml`;
 
-/* ============================================================
- * 2.22 / 2.23 — SINH ĐỀ BẰNG AI TỪ HỌC LIỆU
- * ============================================================ */
-D["2.22"] = `@startuml
+D["2.12"] = `@startuml
 ${SKIN}
 title Biểu đồ trình tự — Use case Sinh đề bằng AI từ học liệu
 
@@ -1001,7 +662,7 @@ group Pha 2 — Sinh đề
 end
 @enduml`;
 
-D["2.23"] = `@startuml
+D["2.13"] = `@startuml
 ${SKIN}
 title Biểu đồ lớp VOPC — Use case Sinh đề bằng AI từ học liệu
 left to right direction
@@ -1043,10 +704,7 @@ QuestionGenerationService --> Question
 AiOrchestrator --> AiRequestLogger
 @enduml`;
 
-/* ============================================================
- * 2.24 / 2.25 — HỎI TRỢ LÝ HỌC TẬP
- * ============================================================ */
-D["2.24"] = `@startuml
+D["2.14"] = `@startuml
 ${SKIN}
 title Biểu đồ trình tự — Use case Hỏi trợ lý học tập
 
@@ -1103,7 +761,7 @@ end
 CS -> MSG : lưu câu hỏi và câu trả lời
 @enduml`;
 
-D["2.25"] = `@startuml
+D["2.15"] = `@startuml
 ${SKIN}
 title Biểu đồ lớp VOPC — Use case Hỏi trợ lý học tập
 left to right direction
@@ -1130,10 +788,7 @@ ChatService --> ChatSession
 ChatSession --> ChatMessage
 @enduml`;
 
-/* ============================================================
- * 2.26 / 2.27 — GỢI Ý BÀI THI VÀ LỘ TRÌNH HỌC
- * ============================================================ */
-D["2.26"] = `@startuml
+D["2.16"] = `@startuml
 ${SKIN}
 title Biểu đồ trình tự — Use case Nhận gợi ý bài thi và lộ trình học
 
@@ -1177,7 +832,7 @@ RC --> B : 200 OK
 B --> L : hiển thị quiz gợi ý kèm lý do và lộ trình học
 @enduml`;
 
-D["2.27"] = `@startuml
+D["2.17"] = `@startuml
 ${SKIN}
 title Biểu đồ lớp VOPC — Use case Nhận gợi ý bài thi và lộ trình học
 left to right direction
@@ -1203,6 +858,9 @@ AttemptGraphSyncService --> UserNode
 AttemptGraphSyncService --> QuizNode
 AttemptGraphSyncService --> TopicNode
 @enduml`;
+
+
+
 
 /* ===================== RENDER ===================== */
 const keys = Object.keys(D);
