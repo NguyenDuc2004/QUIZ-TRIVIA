@@ -1,4 +1,4 @@
-/* Sinh biểu đồ số liệu -> assets/hinh-3.17.png (dựng SVG rồi chụp bằng Chrome).
+/* Sinh biểu đồ số liệu -> assets/hinh-3.14.png (dựng SVG rồi chụp bằng Chrome).
  *
  * Số liệu lấy nguyên từ docs/bao-cao/so-lieu-3.5-hieu-nang-realtime.md (đo 08/08/2026).
  * SỬA SỐ Ở ĐÂY THÌ PHẢI SỬA CẢ BẢNG trong 03-chuong-3.md — hai chỗ phải khớp nhau.
@@ -122,11 +122,11 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
   const page = await browser.newPage();
   await page.setViewport({ width: W, height: H, deviceScaleFactor: 2 });
   await page.goto("file://" + tmp.replace(/\\/g, "/"), { waitUntil: "networkidle0" });
-  const out = path.join(__dirname, "..", "assets", "hinh-3.17.png");
+  const out = path.join(__dirname, "..", "assets", "hinh-3.14.png");
   await page.screenshot({ path: out });
   await browser.close();
   fs.unlinkSync(tmp);
-  console.log("OK hinh-3.17.png", fs.statSync(out).size, "bytes");
+  console.log("OK hinh-3.14.png", fs.statSync(out).size, "bytes");
 })().catch((e) => {
   console.error("FAIL:", e.message);
   process.exit(1);

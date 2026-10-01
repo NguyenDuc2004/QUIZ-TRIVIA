@@ -76,6 +76,11 @@ async function chup(page, so, { toanTrang = false } = {}) {
   xong.push(so);
 }
 
+/* Khi đánh số lại hình, phải soát CẢ tên tệp ghi ra bên trong mỗi khối, không chỉ tham số `so`.
+ * Hai khối ghép ảnh tự đặt tên tệp nên chúng không đi theo `so`: sau lần đánh số lại, khối "3.9"
+ * vẫn ghi ra hinh-3.10.png và khối "3.5" vẫn ghi ra hinh-3.6.png — tức là mỗi lần chụp đầy đủ sẽ
+ * đè ảnh Lớp học lên Thẻ ghi nhớ, và đè ảnh Phòng đấu lên ảnh Sinh đề. Không có lỗi nào báo ra,
+ * vì tệp vẫn ghi thành công. */
 async function man(so, mo, fn) {
   if (!canChup(so)) return;
   console.log(`\n▸ ${so} — ${mo}`);
@@ -247,7 +252,7 @@ async function main() {
    * tự đánh giá mức nhớ), nên chụp hai màn rồi ghép dọc — cùng cách làm với hình phòng đấu. */
   await man("3.9", "Thẻ ghi nhớ và phiên ôn tập", async () => {
     await toi(hs, "/flashcards", 2200);
-    const t1 = path.join(ASSETS, "_tmp-3.10-ds.png");
+    const t1 = path.join(ASSETS, "_tmp-3.9-ds.png");
     await hs.screenshot({ path: t1 });
 
     await toi(hs, "/flashcards/review", 2500);
@@ -257,11 +262,11 @@ async function main() {
       b?.click();
     });
     await nghi(1200);
-    const t2 = path.join(ASSETS, "_tmp-3.10-on.png");
+    const t2 = path.join(ASSETS, "_tmp-3.9-on.png");
     await hs.screenshot({ path: t2 });
 
-    await ghepDoc(t1, t2, path.join(ASSETS, "hinh-3.10.png"));
-    console.log(`  ✓ hinh-3.10.png  (${fs.statSync(path.join(ASSETS, "hinh-3.10.png")).size} bytes, ghép 2 ảnh)`);
+    await ghepDoc(t1, t2, path.join(ASSETS, "hinh-3.9.png"));
+    console.log(`  ✓ hinh-3.9.png  (${fs.statSync(path.join(ASSETS, "hinh-3.9.png")).size} bytes, ghép 2 ảnh)`);
     xong.push("3.9");
   });
 
@@ -430,12 +435,12 @@ async function main() {
         { input: await b.toBuffer(), top: ma_.height + KE, left: 0 },
       ])
       .png()
-      .toFile(path.join(ASSETS, "hinh-3.6.png"));
+      .toFile(path.join(ASSETS, "hinh-3.5.png"));
 
     fs.unlinkSync(tmp1);
     fs.unlinkSync(tmp2);
     await ctx2.close();
-    console.log(`  ✓ hinh-3.6.png  (${fs.statSync(path.join(ASSETS, "hinh-3.6.png")).size} bytes, ghép 2 ảnh)`);
+    console.log(`  ✓ hinh-3.5.png  (${fs.statSync(path.join(ASSETS, "hinh-3.5.png")).size} bytes, ghép 2 ảnh)`);
     xong.push("3.5");
   });
 
