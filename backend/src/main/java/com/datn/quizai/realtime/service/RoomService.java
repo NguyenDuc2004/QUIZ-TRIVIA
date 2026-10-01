@@ -29,10 +29,15 @@ import com.datn.quizai.realtime.dto.SubmitRoomAnswerRequest;
 import com.datn.quizai.realtime.repository.GameRoomRepository;
 import com.datn.quizai.user.domain.User;
 import com.datn.quizai.user.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -56,6 +61,8 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 public class RoomService {
 
+    private static final Logger log = LoggerFactory.getLogger(RoomService.class);
+
     /**
      * Mã PIN toàn chữ số: người chơi gõ trên bàn phím số của điện thoại, không phải chuyển qua
      * lại giữa chữ và số, và không có chuyện nhầm O với 0 hay I với 1.
@@ -67,6 +74,16 @@ public class RoomService {
     /** Dùng khi cả phòng lẫn câu hỏi đều không cấu hình thời gian. */
     private static final int DEFAULT_SECONDS_PER_QUESTION = 20;
 
+    /**
+     * Khoảng nới thêm sau mốc hết giờ rồi mới tự đóng câu.
+     * <p>
+     * Hẹn đúng khít mốc thì đáp án của người bấm ở giây cuối có thể đang trên đường tới mà câu đã
+     * đóng mất; nửa giây đủ cho một vòng mạng trong lớp học mà người xem không nhận ra độ trễ. Nó
+     * cũng tránh việc bộ hẹn giờ chạy sớm hơn mốc vài mili giây rồi thấy {@code now <= deadline}
+     * nên bỏ qua, khiến câu không bao giờ được đóng.
+     */
+    private static final long NOI_THEM_TRUOC_KHI_DONG_MS = 500;
+
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final GameRoomRepository roomRepository;
@@ -76,6 +93,17 @@ public class RoomService {
     private final GameEventPublisher publisher;
     private final GuestSessionStore guestSessionStore;
     private final JoinUrlBuilder joinUrlBuilder;
+    private final TaskScheduler scheduler;
+
+    /**
+     * Tham chiếu tới chính bean này, lấy qua container.
+     * <p>
+     * Bộ hẹn giờ phải gọi {@link #tuDongChuyenCau} <b>qua proxy</b> thì {@code @Transactional} mới có
+     * hiệu lực. Gọi thẳng {@code this.tuDongChuyenCau(...)} trong lambda là tự gọi chính mình, proxy
+     * bị bỏ qua hoàn toàn và tác vụ chạy ngoài giao dịch — lỗi im lặng, chỉ lộ ra khi ghi điểm cuối
+     * ván. Dùng {@link ObjectProvider} thay vì tiêm thẳng để không tạo phụ thuộc vòng lúc khởi tạo.
+     */
+    private final ObjectProvider<RoomService> chinhNo;
 
     public RoomService(GameRoomRepository roomRepository,
                        QuizRepository quizRepository,
@@ -83,7 +111,9 @@ public class RoomService {
                        RoomStateStore stateStore,
                        GameEventPublisher publisher,
                        GuestSessionStore guestSessionStore,
-                       JoinUrlBuilder joinUrlBuilder) {
+                       JoinUrlBuilder joinUrlBuilder,
+                       TaskScheduler scheduler,
+                       ObjectProvider<RoomService> chinhNo) {
         this.roomRepository = roomRepository;
         this.quizRepository = quizRepository;
         this.userRepository = userRepository;
@@ -91,6 +121,8 @@ public class RoomService {
         this.publisher = publisher;
         this.guestSessionStore = guestSessionStore;
         this.joinUrlBuilder = joinUrlBuilder;
+        this.scheduler = scheduler;
+        this.chinhNo = chinhNo;
     }
 
     // ------------------------------------------------------------------ REST
@@ -300,8 +332,40 @@ public class RoomService {
     /** Host chuyển câu: đóng câu hiện tại rồi sang câu kế, hết câu thì kết thúc ván. */
     @Transactional
     public void next(String roomCode, RoomParticipant current) {
+        requireHost(requireRoom(roomCode), current);
+        chuyenCau(roomCode, null);
+    }
+
+    /**
+     * Hết giờ thì tự đóng câu, không bắt cả phòng ngồi chờ host bấm.
+     * <p>
+     * <b>Công khai và {@code @Transactional} là có chủ ý:</b> bộ hẹn giờ gọi phương thức này qua
+     * proxy của container (xem {@link #chinhNo}), vì nó đọc CSDL và có thể phải ghi điểm cuối ván.
+     *
+     * @param indexMongDoi câu hỏi mà bộ hẹn giờ được đặt cho; khác đi nghĩa là ván đã đi tiếp rồi
+     */
+    @Transactional
+    public void tuDongChuyenCau(String roomCode, int indexMongDoi) {
+        try {
+            chuyenCau(roomCode, indexMongDoi);
+        } catch (RuntimeException e) {
+            // Phòng bị xoá, ván đã kết thúc, Redis chớp tắt — đều là chuyện bình thường với một tác
+            // vụ chạy nền. Ném ra khỏi đây thì không ai bắt, và một ngoại lệ không bắt trong bộ hẹn
+            // giờ dùng chung có thể làm chết luôn các job định kỳ khác.
+            log.warn("Không tự chuyển được câu {} của phòng {}: {}",
+                    indexMongDoi, roomCode, e.getMessage());
+        }
+    }
+
+    /**
+     * Đóng câu hiện tại rồi sang câu kế, hết câu thì kết thúc ván.
+     *
+     * @param chiKhiDangOCau {@code null} khi host tự bấm — chuyển vô điều kiện. Khác {@code null}
+     *                       khi bộ hẹn giờ gọi: chỉ chuyển nếu phòng <b>vẫn đang ở đúng câu đó</b>
+     *                       và <b>đã thật sự quá hạn</b>.
+     */
+    private void chuyenCau(String roomCode, Integer chiKhiDangOCau) {
         GameRoom room = requireRoom(roomCode);
-        requireHost(room, current);
 
         long now = System.currentTimeMillis();
         AtomicReference<RoomState> beforeRef = new AtomicReference<>();
@@ -312,7 +376,18 @@ public class RoomService {
         // (host bấm nhanh hai lần, hoặc mạng dồn hai frame) có thể được xử lý song song. Nếu đọc
         // trạng thái ngoài khoá rồi mới quyết định, cả hai cùng thấy câu hiện tại là câu N và
         // cùng phát câu N+1 — ván đấu nhảy cóc hoặc không bao giờ kết thúc.
+        //
+        // Chốt `chiKhiDangOCau` cũng nằm trong khoá này, và chính nó làm cho bộ hẹn giờ an toàn khi
+        // chạy NHIỀU TIẾN TRÌNH: mỗi tiến trình giữ kết nối của phòng đều hẹn giờ cho cùng một câu,
+        // nhưng khoá Redis cho vào từng cái một, cái đầu đổi currentIndex, những cái sau thấy lệch
+        // và bỏ qua. Không cần bầu chọn tiến trình nào được quyền hẹn giờ.
         RoomState after = stateStore.update(roomCode, before -> {
+            if (chiKhiDangOCau != null
+                    && (before.status() != RoomStatus.PLAYING
+                        || before.currentIndex() != chiKhiDangOCau
+                        || now <= before.questionDeadlineMillis())) {
+                return before;   // host đã bấm trước, hoặc ván đã xong — để yên
+            }
             if (before.status() != RoomStatus.PLAYING) {
                 throw BusinessException.conflict("Ván đấu chưa bắt đầu hoặc đã kết thúc");
             }
@@ -325,6 +400,11 @@ public class RoomService {
             int seconds = secondsFor(room, questionAt(room, nextIndex));
             return before.withQuestion(nextIndex, now, now + seconds * 1000L);
         });
+
+        // beforeRef chỉ được đặt khi thật sự có chuyển câu; còn trống nghĩa là chốt trên đã chặn lại.
+        if (beforeRef.get() == null) {
+            return;
+        }
 
         // Công bố đáp án câu vừa đóng, rồi mới sang bước kế tiếp
         closeQuestion(room, beforeRef.get());
@@ -354,7 +434,7 @@ public class RoomService {
         broadcastQuestion(room, state);
     }
 
-    /** Phát câu hỏi hiện tại của trạng thái cho cả phòng. */
+    /** Phát câu hỏi hiện tại của trạng thái cho cả phòng, rồi hẹn giờ đóng câu. */
     private void broadcastQuestion(GameRoom room, RoomState state) {
         Question question = questionAt(room, state.currentIndex());
         int seconds = secondsFor(room, question);
@@ -362,6 +442,35 @@ public class RoomService {
         publisher.broadcast(room.getRoomCode(), GameEvent.of(GameEventType.QUESTION,
                 LiveQuestionView.of(question, state.currentIndex(), state.totalQuestions(),
                         seconds, state.questionDeadlineMillis())));
+
+        henGioDongCau(room.getRoomCode(), state);
+    }
+
+    /**
+     * Hẹn giờ tự đóng câu ở mốc hết giờ.
+     * <p>
+     * Đặt ngay sau mỗi lần phát câu hỏi, nên câu nào cũng có giờ của nó — kể cả câu đầu ván.
+     * <p>
+     * Không giữ lại {@code ScheduledFuture} để huỷ khi host bấm sớm: tác vụ hết hạn tự nhận ra mình
+     * đã lỗi thời nhờ chốt {@code chiKhiDangOCau} rồi thoát, nên huỷ chỉ tiết kiệm được một lần đánh
+     * thức luồng. Đổi lại, không phải giữ một bảng future theo mã phòng — thứ sẽ rò rỉ khi phòng tan
+     * giữa chừng, và sẽ sai khi phòng chạy trên nhiều tiến trình vì mỗi tiến trình chỉ thấy future
+     * của riêng mình.
+     * <p>
+     * Hẹn giờ hỏng thì chỉ mất phần tự động: host vẫn bấm chuyển câu được như trước. Vì vậy nuốt lỗi
+     * ở đây thay vì để nó làm hỏng lượt phát câu hỏi vừa thành công.
+     */
+    private void henGioDongCau(String roomCode, RoomState state) {
+        if (state.status() != RoomStatus.PLAYING || state.currentIndex() < 0) {
+            return;
+        }
+        int index = state.currentIndex();
+        Instant luc = Instant.ofEpochMilli(state.questionDeadlineMillis() + NOI_THEM_TRUOC_KHI_DONG_MS);
+        try {
+            scheduler.schedule(() -> chinhNo.getObject().tuDongChuyenCau(roomCode, index), luc);
+        } catch (RuntimeException e) {
+            log.warn("Không hẹn được giờ đóng câu {} của phòng {}: {}", index, roomCode, e.getMessage());
+        }
     }
 
     /** Công bố đáp án + bảng xếp hạng cho cả phòng. Đây là lúc đáp án đúng mới rời khỏi server. */

@@ -166,6 +166,59 @@ class RoomFlowIntegrationTest {
     }
 
     @Test
+    @DisplayName("Hết giờ mà host chưa bấm thì server tự đóng câu và phát câu kế")
+    void shouldAutoCloseQuestionWhenDeadlinePasses() throws Exception {
+        // Lỗi thật phát hiện khi dùng: đồng hồ về 0 nhưng câu vẫn treo, cả phòng ngồi chờ host bấm.
+        // Server chặn đáp án nộp muộn nên điểm vẫn đúng, nhưng ván đấu thì đứng im vô thời hạn.
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken, false, 5);
+        mockMvc.perform(post("/api/v1/rooms/{code}/join", roomCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + playerToken))
+                .andExpect(status().isOk());
+
+        try (Client host = connect(hostToken, roomCode);
+             Client player = connect(playerToken, roomCode)) {
+
+            host.session.send("/app/room/" + roomCode + "/start", null);
+            JsonNode cauDau = player.nextOfType(GameEventType.QUESTION);
+            assertThat(cauDau.get("index").asInt()).isZero();
+
+            // KHÔNG ai trả lời và KHÔNG ai bấm chuyển câu. Chỉ chờ hết giờ.
+            JsonNode closed = player.nextOfType(GameEventType.QUESTION_CLOSED, 15);
+            assertThat(closed.get("correctOptionIds")).isNotEmpty();
+
+            JsonNode cauSau = player.nextOfType(GameEventType.QUESTION, 15);
+            assertThat(cauSau.get("index").asInt()).isEqualTo(1);
+            assertThat(cauSau.get("questionId").asText())
+                    .isNotEqualTo(cauDau.get("questionId").asText());
+        }
+    }
+
+    @Test
+    @DisplayName("Host bấm sớm thì bộ hẹn giờ của câu cũ không làm ván nhảy thêm một câu")
+    void shouldNotDoubleAdvanceWhenHostPressesBeforeDeadline() throws Exception {
+        // Chốt an toàn: bộ hẹn giờ đặt cho câu 0 vẫn thức dậy sau khi host đã sang câu 1. Nếu nó
+        // không kiểm lại chỉ số câu thì ván nhảy thẳng sang câu 2 và một câu biến mất.
+        String roomCode = createRoom(createQuizWithQuestions(), hostToken, false, 5);
+        mockMvc.perform(post("/api/v1/rooms/{code}/join", roomCode)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + playerToken))
+                .andExpect(status().isOk());
+
+        try (Client host = connect(hostToken, roomCode)) {
+            host.session.send("/app/room/" + roomCode + "/start", null);
+            assertThat(host.nextOfType(GameEventType.QUESTION).get("index").asInt()).isZero();
+
+            host.session.send("/app/room/" + roomCode + "/next", null);
+            assertThat(host.nextOfType(GameEventType.QUESTION).get("index").asInt()).isEqualTo(1);
+
+            // Quá mốc hết giờ của câu 0 — bộ hẹn giờ cũ phải nhận ra mình đã lỗi thời.
+            Thread.sleep(6_000);
+            assertThat(stateStore.require(roomCode).currentIndex())
+                    .as("câu 0 hết giờ không được đẩy ván đi thêm một bước")
+                    .isEqualTo(1);
+        }
+    }
+
+    @Test
     @DisplayName("Chỉ host điều khiển được ván; người chơi thường bấm bắt đầu bị từ chối")
     void shouldRejectStartFromNonHost() throws Exception {
         String roomCode = createRoom(createQuizWithQuestions(), hostToken);
@@ -438,18 +491,28 @@ class RoomFlowIntegrationTest {
 
         /** Chờ tới khi nhận được sự kiện đúng loại, bỏ qua các sự kiện khác xen giữa. */
         JsonNode nextOfType(GameEventType type) throws InterruptedException {
-            return await(events, type);
+            return await(events, type, TIMEOUT_SEC);
+        }
+
+        /**
+         * Như trên nhưng chờ lâu hơn.
+         * <p>
+         * Cần cho phép thử hết giờ: câu ngắn nhất tạo được là 5 giây, cộng nửa giây nới thêm của
+         * server, nên mốc chờ mặc định 5 giây chắc chắn hụt.
+         */
+        JsonNode nextOfType(GameEventType type, long timeoutSec) throws InterruptedException {
+            return await(events, type, timeoutSec);
         }
 
         JsonNode nextPrivate(GameEventType type) throws InterruptedException {
-            return await(privateEvents, type);
+            return await(privateEvents, type, TIMEOUT_SEC);
         }
 
-        private JsonNode await(BlockingQueue<JsonNode> queue, GameEventType type)
+        private JsonNode await(BlockingQueue<JsonNode> queue, GameEventType type, long timeoutSec)
                 throws InterruptedException {
-            long deadline = System.currentTimeMillis() + TIMEOUT_SEC * 1000;
+            long deadline = System.currentTimeMillis() + timeoutSec * 1000;
             while (System.currentTimeMillis() < deadline) {
-                JsonNode event = queue.poll(TIMEOUT_SEC, TimeUnit.SECONDS);
+                JsonNode event = queue.poll(timeoutSec, TimeUnit.SECONDS);
                 if (event == null) {
                     break;
                 }
@@ -899,11 +962,16 @@ class RoomFlowIntegrationTest {
     }
 
     private String createRoom(String quizId, String token, boolean allowGuests) throws Exception {
+        return createRoom(quizId, token, allowGuests, 30);
+    }
+
+    private String createRoom(String quizId, String token, boolean allowGuests, int giayMoiCau)
+            throws Exception {
         String body = mockMvc.perform(post("/api/v1/rooms")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(("{\"quizId\":\"%s\",\"secondsPerQuestion\":30,\"allowGuests\":%s}")
-                                .formatted(quizId, allowGuests)))
+                        .content(("{\"quizId\":\"%s\",\"secondsPerQuestion\":%d,\"allowGuests\":%s}")
+                                .formatted(quizId, giayMoiCau, allowGuests)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(body).get("roomCode").asText();

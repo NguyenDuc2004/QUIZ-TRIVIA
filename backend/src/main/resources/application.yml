@@ -2,6 +2,14 @@ spring:
   application:
     name: quizai
 
+  task:
+    scheduling:
+      # Mặc định của Spring Boot là MỘT luồng cho mọi tác vụ hẹn giờ. Phòng đấu nay hẹn giờ đóng câu
+      # cho từng câu hỏi, nên một luồng duy nhất phải chia sẻ với các job định kỳ (nhắc hạn bài tập,
+      # chốt mùa giải, nhắc ôn tập). Một job chạy lâu là cả loạt câu hỏi bị đóng muộn.
+      pool:
+        size: ${TASK_SCHEDULER_POOL_SIZE:4}
+
   datasource:
     url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/quizdb}
     username: ${POSTGRES_USER:quiz}
