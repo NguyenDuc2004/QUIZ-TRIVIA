@@ -85,6 +85,10 @@ const KICH_BAN = [
 /* ─────────────────── câu hỏi có thể gặp ─────────────────── */
 const CAU_HOI = [
   [
+    "Vì sao đồng hồ đếm ngược trên máy chủ phòng và trên điện thoại người chơi hiện số khác nhau?",
+    "Vì phần hiển thị lấy giờ của chính thiết bị đem trừ mốc hết giờ do máy chủ gửi xuống. Máy tính chạy demo cũng là máy chạy máy chủ nên hai vế dùng chung một đồng hồ, số hiện ra đúng tuyệt đối; điện thoại có đồng hồ riêng, lệch bao nhiêu thì hiện hụt hoặc dư bấy nhiêu. Đây KHÔNG phải độ trễ mạng: mốc hết giờ là một thời điểm tuyệt đối nên sự kiện tới muộn cũng không làm con số đổi — thiết kế này miễn nhiễm với độ trễ mạng nhưng phơi mình trước lệch đồng hồ. Điều quan trọng cần nói ngay: ĐIỂM SỐ KHÔNG BỊ ẢNH HƯỞNG. Máy chủ tự đo thời gian trả lời bằng đồng hồ của nó và tự từ chối đáp án nộp sau mốc hết giờ, nên đồng hồ trên máy người chơi chỉ là phần hiển thị — chỉnh giờ máy hay sửa JavaScript cũng không kéo dài thêm được một giây. Hướng sửa đã xác định: đếm ngược theo khoảng thời gian trôi qua kể từ lúc nhận được câu hỏi thay vì so với giờ tuyệt đối; khi đó sai số chỉ còn bằng độ trễ mạng một chiều, đã đo được là 20 mili giây ở mức 10 người.",
+  ],
+  [
     "Vì sao không dùng Spring AI hay LangChain4j cho phần AI?",
     "Ba thứ đồ án phải đo và báo cáo là cơ chế dự phòng giữa hai nhà cung cấp, hạn mức, và nhật ký lời gọi. Cả ba đều nằm ở lớp điều phối. Dùng thư viện trừu tượng hoá sẵn thì ba thứ đó bị gói lại phía sau một giao diện chung, khó can thiệp và khó đo. Lớp AiOrchestrator tự viết bằng WebClient chỉ khoảng vài trăm dòng.",
   ],
