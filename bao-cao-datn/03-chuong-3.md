@@ -8,6 +8,8 @@ Toàn bộ số liệu trong hai mục 3.5 và 3.6 đến từ những lần ch�
 
 Hệ thống chạy trên một máy đơn, ba hệ quản trị dữ liệu dựng bằng Docker Compose, máy chủ ứng dụng và giao diện chạy trực tiếp trên máy chủ phát triển.
 
+Bảng 3.1 liệt kê cấu hình của môi trường dùng cho toàn bộ phần thực nghiệm và đánh giá dưới đây.
+
 **Bảng 3.1. Môi trường triển khai và đánh giá**
 
 | Thành phần | Cấu hình |
@@ -26,6 +28,8 @@ Toàn bộ hạ tầng dữ liệu khởi động bằng một lệnh `docker co
 
 **Khoá bí mật không nằm trong mã nguồn.** Khoá của hai nhà cung cấp mô hình, mật khẩu cơ sở dữ liệu, khoá ký JWT và mật khẩu ứng dụng của hộp thư đều đọc từ biến môi trường trong tệp `.env`; tệp này bị loại khỏi hệ thống quản lý phiên bản, và kho mã chỉ chứa tệp mẫu `.env.example` liệt kê **tên biến** kèm hướng dẫn lấy khoá, không chứa giá trị nào.
 
+Hình 3.1 thể hiện sơ đồ triển khai: các dịch vụ dữ liệu chạy trong container, máy chủ ứng dụng và giao diện chạy trực tiếp trên máy phát triển.
+
 [HÌNH 3.1: Sơ đồ triển khai hệ thống — cần chèn]
 
 ## 3.2. Giao diện phía người dùng
@@ -36,7 +40,7 @@ Mỗi mục dưới đây trình bày một màn thể hiện rõ phần nghiệ
 
 ### 3.2.1. Khám phá quiz
 
-Trang khám phá có thanh tìm kiếm theo tiêu đề, bộ lọc theo danh mục và độ khó, và lưới thẻ quiz. Phần đầu trang là các quiz được gợi ý riêng cho người đang đăng nhập, mỗi gợi ý kèm lý do vì sao nó xuất hiện.
+Trang khám phá có thanh tìm kiếm theo tiêu đề, bộ lọc theo danh mục và độ khó, và lưới thẻ quiz. Phần đầu trang là các quiz được gợi ý riêng cho người đang đăng nhập, mỗi gợi ý kèm lý do vì sao nó xuất hiện (Hình 3.2).
 
 [HÌNH 3.2: Trang khám phá quiz — cần chèn]
 
@@ -78,19 +82,19 @@ Trang này hiển thị các quiz được gợi ý kèm lý do cụ thể, và 
 
 ### 3.2.8. Thẻ ghi nhớ
 
-Danh sách bộ thẻ hiển thị số thẻ đến hạn ôn hôm nay. Trong phiên ôn, thẻ lật được để xem mặt sau, và người học tự đánh giá mức nhớ theo bốn mức — chính lựa chọn này quyết định khi nào thẻ quay lại.
+Danh sách bộ thẻ hiển thị số thẻ đến hạn ôn hôm nay (Hình 3.9). Trong phiên ôn, thẻ lật được để xem mặt sau, và người học tự đánh giá mức nhớ theo bốn mức — chính lựa chọn này quyết định khi nào thẻ quay lại.
 
 [HÌNH 3.9: Thẻ ghi nhớ và phiên ôn tập — cần chèn]
 
 ### 3.2.9. Lớp học và giao bài
 
-Trang lớp hiển thị mã lớp để học sinh vào, danh sách thành viên, và danh sách bài tập kèm hạn nộp. Giáo viên theo dõi tình hình nộp bài ngay trên trang này.
+Trang lớp (Hình 3.10) hiển thị mã lớp để học sinh vào, danh sách thành viên, và danh sách bài tập kèm hạn nộp. Giáo viên theo dõi tình hình nộp bài ngay trên trang này.
 
 [HÌNH 3.10: Trang lớp học — cần chèn]
 
 ### 3.2.10. Một quyết định giao diện cần nêu rõ
 
-Thẻ quiz trên màn hình khám phá hiển thị **số người đã học**, nhưng không hiển thị điểm đánh giá. Hệ thống chưa có chức năng đánh giá nên chưa có dữ liệu đó; hiển thị một con số không có thật ở vị trí này không phải lỗi trang trí mà là **đưa ra một lời khuyên sai**, vì điểm đánh giá chính là thứ người học dựa vào để chọn bài học. Cùng lý do, số người đã học đếm theo **người** chứ không theo **lượt**: hệ thống khuyến khích ôn lại nhiều lần, nên đếm theo lượt sẽ khiến một người làm mười lần đọc thành mười người đã học.
+Thẻ quiz trên màn hình khám phá (Hình 3.2) hiển thị **số người đã học**, nhưng không hiển thị điểm đánh giá. Hệ thống chưa có chức năng đánh giá nên chưa có dữ liệu đó; hiển thị một con số không có thật ở vị trí này không phải lỗi trang trí mà là **đưa ra một lời khuyên sai**, vì điểm đánh giá chính là thứ người học dựa vào để chọn bài học. Cùng lý do, số người đã học đếm theo **người** chứ không theo **lượt**: hệ thống khuyến khích ôn lại nhiều lần, nên đếm theo lượt sẽ khiến một người làm mười lần đọc thành mười người đã học.
 
 ## 3.3. Giao diện phía quản trị
 
@@ -98,7 +102,7 @@ Khu quản trị dùng khung giao diện riêng, tách khỏi khung của ngư�
 
 ### 3.3.1. Tổng quan hệ thống
 
-Trang tổng quan gom các chỉ số đọc trực tiếp từ cơ sở dữ liệu tại thời điểm mở trang: số người dùng theo vai trò, số quiz và câu hỏi, lượt làm bài, phòng đang chạy, và lượng token AI đã dùng trong tháng.
+Trang tổng quan (Hình 3.11) gom các chỉ số đọc trực tiếp từ cơ sở dữ liệu tại thời điểm mở trang: số người dùng theo vai trò, số quiz và câu hỏi, lượt làm bài, phòng đang chạy, và lượng token AI đã dùng trong tháng.
 
 [HÌNH 3.11: Trang tổng quan quản trị — cần chèn]
 
@@ -110,13 +114,13 @@ Trang này ghi nhật ký từng lời gọi mô hình kèm nhà cung cấp ph�
 
 ### 3.3.3. Rà soát tính toàn vẹn
 
-Trang liệt kê những lượt thi có điểm rủi ro vượt ngưỡng, kèm lý do cụ thể của từng cờ. Mở một lượt ra sẽ thấy nhận định của mô hình và hai nút kết luận; hệ thống không tự xử lý bài nào.
+Trang rà soát (Hình 3.13) liệt kê những lượt thi có điểm rủi ro vượt ngưỡng, kèm lý do cụ thể của từng cờ. Mở một lượt ra sẽ thấy nhận định của mô hình và hai nút kết luận; hệ thống không tự xử lý bài nào.
 
 [HÌNH 3.13: Trang rà soát tính toàn vẹn — cần chèn]
 
 ### 3.3.4. Khoá của nhà cung cấp mô hình
 
-Trang cấu hình nhà cung cấp mô hình chỉ hiển thị **trạng thái** của mỗi khoá — *đã cấu hình* hoặc *để trống* — chứ không hiển thị giá trị khoá, kể cả ở dạng che một phần. Một khoá bị lộ trên màn hình quản trị vẫn là một khoá bị lộ.
+Khối cấu hình nhà cung cấp mô hình trong Hình 3.12 chỉ hiển thị **trạng thái** của mỗi khoá — *đã cấu hình* hoặc *để trống* — chứ không hiển thị giá trị khoá, kể cả ở dạng che một phần. Một khoá bị lộ trên màn hình quản trị vẫn là một khoá bị lộ.
 
 ## 3.4. Kiểm thử chức năng
 
@@ -132,30 +136,15 @@ Lý do không dùng cơ sở dữ liệu trong bộ nhớ để chạy nhanh hơ
 
 ### 3.4.2. Kịch bản kiểm thử
 
-Bảng 3.2 trình bày các kịch bản tiêu biểu, chọn theo tiêu chí **mỗi kịch bản kiểm một ranh giới khác nhau** thay vì liệt kê các trường hợp thuận lợi.
-
-**Bảng 3.2. Các kịch bản kiểm thử tiêu biểu**
-
-| STT | Chức năng | Kịch bản | Kết quả mong đợi | Kết quả |
-|----:|-----------|----------|------------------|---------|
-| 1 | Đăng ký | Tự đăng ký vai trò quản trị | Hạ xuống vai trò người học | Đạt |
-| 2 | Đăng nhập Google | Tài khoản đã có, gửi kèm vai trò cao hơn | Giữ nguyên vai trò cũ | Đạt |
-| 3 | Đổi mật khẩu | Hai thiết bị đang đăng nhập | Thu hồi phiên trên **mọi** thiết bị | Đạt |
-| 4 | Xem quiz | Khách xem quiz riêng tư của người khác | Trả về 404 chứ không phải 403 | Đạt |
-| 5 | Làm bài | Chủ quiz sửa đề khi có người đang làm dở | Lượt đang làm giữ nguyên đề đã chốt | Đạt |
-| 6 | Chấm tự luận | Mô hình trả điểm vượt trần của câu | Giới hạn cứng về trần thật | Đạt |
-| 7 | Phòng đấu | Người chơi chia trên hai tiến trình máy chủ | Cả hai bên nhận đủ sự kiện | Đạt |
-| 8 | Sinh đề AI | Người dùng đã hết hạn mức trong ngày | Trả 429 ngay, không gọi mô hình | Đạt |
-| 9 | Trợ lý học tập | Học liệu của người khác chưa chia sẻ | Không xuất hiện trong truy hồi | Đạt |
-| 10 | Gợi ý | Neo4j ngừng hoạt động | Trả danh sách rỗng, không làm hỏng việc nộp bài | Đạt |
-| 11 | Tải ảnh | Tệp mã lệnh đặt đuôi `.png` | Từ chối theo chữ ký byte | Đạt |
-| 12 | Chống gian lận | Mốc thời gian ở tương lai do đồng hồ máy khách sai | Cắt về thời điểm hiện tại | Đạt |
+Các kịch bản được chọn theo tiêu chí **mỗi kịch bản kiểm một ranh giới khác nhau** thay vì liệt kê các trường hợp thuận lợi. **Bảng C.1 ở Phụ lục C trình bày đầy đủ các kịch bản tiêu biểu cùng kết quả thực tế.**
 
 Bảng trên giữ mỗi nhóm chức năng một kịch bản đại diện. Toàn bộ 31 ca kiểm thử kèm dữ liệu và kết quả từng ca nằm ở tệp `Test_Case_QuizAI.xlsx`, còn phạm vi, chiến lược theo tầng và tiêu chí chấp nhận sản phẩm nằm ở `Test_Plan_QuizAI.docx`; cả hai là sản phẩm bàn giao kèm đồ án.
 
 ### 3.4.3. Kết quả kiểm thử
 
-**Bảng 3.3. Kết quả chạy bộ kiểm thử tự động**
+Bảng 3.2 tổng hợp kết quả chạy toàn bộ bộ kiểm thử tự động ở cả hai tầng; **phân bố phép kiểm theo từng nhóm chức năng trình bày ở Bảng C.2, Phụ lục C**.
+
+**Bảng 3.2. Kết quả chạy bộ kiểm thử tự động**
 
 | Tầng | Công cụ | Số lớp | Số phép kiểm | Đạt | Hỏng |
 |------|---------|-------:|-------------:|----:|-----:|
@@ -165,27 +154,15 @@ Bảng trên giữ mỗi nhóm chức năng một kịch bản đại diện. To
 
 Bộ kiểm thử máy chủ chạy sau lệnh dọn sạch thư mục biên dịch để loại trừ ảnh hưởng của những lần chạy có lọc trước đó.
 
-**Bảng 3.4. Phân bố phép kiểm theo nhóm chức năng (máy chủ)**
-
-| Nhóm chức năng | Số phép kiểm | Nhóm chức năng | Số phép kiểm |
-|----------------|-------------:|----------------|-------------:|
-| AI: RAG, sinh đề, chấm tự luận, hạn mức | 116 | Flashcard và lặp lại ngắt quãng | 25 |
-| Làm bài và chấm điểm | 57 | Thông báo và nhắc ôn | 24 |
-| Xác thực và phân quyền | 43 | Bảng xếp hạng theo mùa | 24 |
-| Quản lý quiz và câu hỏi | 38 | Gamification | 21 |
-| Lớp học và giao bài | 38 | Trợ lý học tập | 20 |
-| Chống gian lận | 33 | Quản trị hệ thống | 19 |
-| Phòng đấu thời gian thực | 30 | Thống kê và báo cáo | 17 |
-| Tải ảnh lên | 28 | Hồ sơ người dùng | 16 |
-| Gợi ý cá nhân hoá (Neo4j) | 28 | Khởi động ứng dụng | 1 |
-
 Nhóm chức năng AI chiếm tỉ trọng lớn nhất, phản ánh đúng đặc điểm của phần này: kết quả trả về từ mô hình ngôn ngữ **không xác định**, nên phần lớn phép kiểm không kiểm nội dung câu trả lời mà kiểm **hàng rào quanh nó** — giới hạn miền điểm, bộ kiểm cấu trúc JSON, điều kiện chuyển nhà cung cấp dự phòng, hạn mức, và cách ly quyền đọc học liệu.
 
 ### 3.4.4. Những lỗi bộ kiểm thử không phát hiện được
 
 Phần này ghi lại một kết quả **âm tính** đáng chú ý: trong quá trình hiện thực, ba lỗi thật được phát hiện khi **mở sản phẩm ra sử dụng**, trong khi toàn bộ bộ kiểm thử vẫn báo đạt.
 
-**Bảng 3.5. Ba lỗi lộ ra khi dùng thật, không lộ ra qua kiểm thử**
+Bảng 3.3 liệt kê ba lỗi đó cùng lý do bộ kiểm thử không bắt được chúng.
+
+**Bảng 3.3. Ba lỗi lộ ra khi dùng thật, không lộ ra qua kiểm thử**
 
 | Lỗi | Vì sao kiểm thử không bắt được |
 |-----|-------------------------------|
@@ -230,7 +207,9 @@ Kế hoạch ban đầu dự định dùng k6 hoặc Gatling. Cả hai **không 
 
 ### 3.5.2. Độ trễ phát câu hỏi theo số người trong phòng
 
-**Bảng 3.6. Độ trễ phát câu hỏi theo số người chơi trong một phòng**
+Bảng 3.4 ghi độ trễ đo được ở từng mức số người trong phòng.
+
+**Bảng 3.4. Độ trễ phát câu hỏi theo số người chơi trong một phòng**
 
 | Người chơi | Thời gian nối vào phòng | P50 | P95 | Lớn nhất | Sự kiện mất |
 |-----------:|------------------------:|----:|----:|---------:|------------:|
@@ -243,7 +222,7 @@ Kế hoạch ban đầu dự định dùng k6 hoặc Gatling. Cả hai **không 
 
 [HÌNH 3.14: Độ trễ phát câu hỏi theo số người chơi — cần chèn]
 
-Hai nhận xét quan trọng.
+Hình 3.14 biểu diễn quan hệ giữa số người trong phòng và độ trễ phát câu hỏi. Hai nhận xét quan trọng.
 
 **Không mất một sự kiện nào ở mọi mức tải đã thử.** Hệ thống không rơi rớt thông điệp — nó chỉ chậm dần. Đây là kiểu suy giảm dễ chịu: người chơi thấy câu hỏi tới muộn, chứ không có ai bị bỏ lại giữa ván.
 
@@ -255,7 +234,9 @@ Hai nhận xét quan trọng.
 
 Giả thuyết này được kiểm chứng bằng cách chạy lại đúng mức 200 người nhưng không gửi đáp án lên.
 
-**Bảng 3.7. Tách phần nhận và phần gửi ở mức 200 người chơi**
+Bảng 3.5 đối chiếu hai lần chạy để tách riêng phần nhận đáp án và phần phát câu hỏi.
+
+**Bảng 3.5. Tách phần nhận và phần gửi ở mức 200 người chơi**
 
 | Kịch bản | P50 | P95 |
 |----------|----:|----:|
@@ -272,7 +253,9 @@ Phiếu giao đề tài yêu cầu *so sánh có và không có Redis Pub/Sub*. 
 
 Vai trò của Redis vì vậy được chứng minh bằng **suy luận loại trừ**: chạy hai tiến trình máy chủ trên hai cổng khác nhau dùng chung một Redis, chia 40 người chơi ra hai bên, chủ phòng bắt đầu ván trên tiến trình thứ nhất.
 
-**Bảng 3.8. Phòng đấu chạy trên hai tiến trình máy chủ**
+Bảng 3.6 ghi kết quả của phép thử chạy phòng đấu trên hai tiến trình máy chủ.
+
+**Bảng 3.6. Phòng đấu chạy trên hai tiến trình máy chủ**
 
 | Người chơi nối vào | Sự kiện mong đợi | Nhận được | P50 | P95 |
 |--------------------|-----------------:|----------:|----:|----:|
@@ -303,7 +286,9 @@ Một điều kiện nữa cần ghi: số liệu đo trước ngày 13/08 lấy
 
 ### 3.6.2. Kết quả tổng hợp
 
-**Bảng 3.9. Tổng hợp kết quả đánh giá các chức năng AI**
+Bảng 3.7 tổng hợp kết quả của toàn bộ các phép đo trong mục này.
+
+**Bảng 3.7. Tổng hợp kết quả đánh giá các chức năng AI**
 
 | Hạng mục | Chỉ số | Kết quả |
 |----------|--------|--------:|
@@ -327,7 +312,9 @@ Ba hạng mục đầu đạt mức dùng được trong thực tế. Hàng áp 
 
 Câu hỏi dùng để đo: *"Nêu ba nguyên nhân chính khiến một ứng dụng web chạy chậm."*
 
-**Bảng 3.10. Đối chiếu điểm AI chấm với khoảng điểm chuẩn theo tiêu chí**
+Bảng 3.8 đối chiếu điểm mô hình trả về với khoảng điểm chuẩn của từng bài.
+
+**Bảng 3.8. Đối chiếu điểm AI chấm với khoảng điểm chuẩn theo tiêu chí**
 
 | Bài làm mẫu | Điểm chuẩn | AI chấm | Lệch |
 |-------------|-----------:|--------:|-----:|
@@ -348,7 +335,9 @@ Bảy bài còn lại nằm đúng khoảng chuẩn, và quan trọng hơn là m
 
 Đây là bề mặt tấn công lớn nhất của hệ thống, vì bài làm là nội dung người học tự gõ rồi đi thẳng vào phần nhắc của mô hình.
 
-**Bảng 3.11. Kết quả thử tấn công tiêm chỉ thị qua bài làm**
+Bảng 3.9 ghi kết quả hai lần thử tấn công tiêm chỉ thị.
+
+**Bảng 3.9. Kết quả thử tấn công tiêm chỉ thị qua bài làm**
 
 | Kiểu tấn công | Nội dung | Kết quả |
 |---------------|----------|---------|
@@ -359,7 +348,9 @@ Cả hai nhận 0 điểm, đúng như chỉ dẫn hệ thống quy định. Ngo
 
 ### 3.6.5. Sinh đề và trợ lý học tập
 
-**Bảng 3.12. Kết quả sinh đề từ học liệu**
+Bảng 3.10 ghi kết quả sinh đề từ học liệu theo từng chủ đề.
+
+**Bảng 3.10. Kết quả sinh đề từ học liệu**
 
 | Chủ đề | Yêu cầu | Nhận được | Bộ kiểm loại | Đúng chuẩn cấu trúc |
 |--------|--------:|----------:|-------------:|--------------------:|
@@ -374,7 +365,9 @@ Phép đo này **không trả lời** được chất lượng *sư phạm* củ
 
 Với trợ lý học tập, học liệu dùng để đo chứa một sự thật **bịa ra** — một giao thức không tồn tại kèm số cổng, thời gian chờ và thời hạn hiệu lực — để biết chắc câu trả lời lấy từ học liệu chứ không từ kiến thức nền của mô hình.
 
-**Bảng 3.13. Kết quả đánh giá khả năng bám nguồn của trợ lý học tập**
+Bảng 3.11 ghi kết quả đánh giá khả năng bám nguồn của trợ lý học tập.
+
+**Bảng 3.11. Kết quả đánh giá khả năng bám nguồn của trợ lý học tập**
 
 | Câu hỏi | Có trong học liệu | Có trích nguồn | Nói không biết | Kết quả |
 |---------|:-----------------:|:--------------:|:--------------:|:-------:|
@@ -394,7 +387,9 @@ Hai hướng xử lý — siết ngưỡng khoảng cách, hoặc chuyển danh 
 
 Đây là phép đo đầu tiên của đường dự phòng trong cả dự án. Trước ngày 20/08 nó **chưa một lần chạy**, vì nhà cung cấp dự phòng ban đầu không có gói miễn phí — khoá hợp lệ vẫn trả về lỗi từ chối quyền.
 
-**Bảng 3.14. So sánh hai phương án nhà cung cấp dự phòng**
+Bảng 3.12 so sánh hai phương án nhà cung cấp dự phòng theo các tiêu chí quyết định.
+
+**Bảng 3.12. So sánh hai phương án nhà cung cấp dự phòng**
 
 | Tiêu chí | Phương án ban đầu | Groq (đang dùng) |
 |----------|-------------------|------------------|
@@ -406,7 +401,9 @@ Cột *trả lời theo luồng* có hệ quả trực tiếp: trước khi đ�
 
 Một chi tiết phải xử lý ngay trước khi đo: mô hình dự định dùng đã bị nhà cung cấp gỡ bỏ, phát hiện khi truy vấn danh sách mô hình còn hoạt động. Đây là lần thứ **ba** dự án gặp đúng tình huống này với ba nhà cung cấp khác nhau. Nếu không kiểm trước, cấu hình sẽ *trông như* đã có đường dự phòng trong khi nó không bao giờ chạy được.
 
-**Bảng 3.15. Sinh đề qua nhà cung cấp dự phòng**
+Bảng 3.13 ghi kết quả sinh đề khi đi qua nhà cung cấp dự phòng.
+
+**Bảng 3.13. Sinh đề qua nhà cung cấp dự phòng**
 
 | Chủ đề | Câu nhận được / yêu cầu | Thời gian |
 |--------|------------------------:|----------:|
@@ -417,7 +414,9 @@ Một chi tiết phải xử lý ngay trước khi đo: mô hình dự định d
 
 Toàn bộ 9 câu đi qua bộ kiểm cấu trúc của chính hệ thống, không câu nào bị loại; nội dung tiếng Việt đúng chính tả và có dấu.
 
-**Bảng 3.16. Độ trễ hai nhà cung cấp, lấy từ nhật ký giám sát**
+Bảng 3.14 đối chiếu độ trễ trung bình của hai nhà cung cấp trên cùng loại tác vụ.
+
+**Bảng 3.14. Độ trễ hai nhà cung cấp, lấy từ nhật ký giám sát**
 
 | Nhà cung cấp | Số lượt | Độ trễ trung bình | Token vào TB | Token ra TB |
 |--------------|--------:|------------------:|-------------:|------------:|

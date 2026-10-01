@@ -146,3 +146,6 @@ bao-cao-datn/kiem-tra-web.json
 tham khao/
 docs/*EduExam*
 docs/Poster.pptx
+
+# Ảnh đã bỏ khỏi báo cáo — bản gốc vẫn nằm trong lịch sử git nên không cần theo dõi lại
+bao-cao-datn/assets/_khong-dung/
